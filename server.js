@@ -205,6 +205,7 @@ app.post('/api/login', (req, res) => {
 
 // Маршрут для адмін-панелі
 app.get('/admin', (req, res) => {
+    console.log('Serving admin.html for /admin route');
     res.sendFile(adminPath);
 });
 
