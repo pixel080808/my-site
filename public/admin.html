@@ -578,24 +578,14 @@
  </head>
  <body>
   <div class="content">
-   <div class="section active" id="admin-login">
-    <h2>
-     Вхід в адмін-панель
-    </h2>
-    <input id="admin-username" placeholder="Логін" type="text"/>
-    <br/>
-    <label for="admin-username">
-     Введіть логін
-    </label>
-    <input id="admin-password" placeholder="Пароль" type="password"/>
-    <br/>
-    <label for="admin-password">
-     Введіть пароль
-    </label>
-    <button onclick="login()">
-     Увійти
-    </button>
-   </div>
+<div class="section active" id="admin-login">
+    <h2>Вхід в адмін-панель</h2>
+    <input id="admin-username" placeholder="Логін" type="text"/><br/>
+    <label for="admin-username">Введіть логін</label>
+    <input id="admin-password" placeholder="Пароль" type="password"/><br/>
+    <label for="admin-password">Введіть пароль</label>
+    <button id="login-btn">Увійти</button>
+</div>
    <div class="section" id="admin-panel">
     <h2>
      Адмін-панель
@@ -1227,12 +1217,18 @@
     settings = {"name":"Меблевий магазин","logo":"https://via.placeholder.com/100x50","logoWidth":150,"favicon":"https://via.placeholder.com/16x16","contacts":{"phones":"+38 (067) 123-45-67","addresses":"м. Київ, вул. Меблева, 1","schedule":"Пн-Пт: 9:00-18:00"},"socials":[],"showSocials":false,"about":"Ми продаємо якісні меблі!","showSlides":true,"slideWidth":75,"slideHeight":200,"slideInterval":3000,"categoryWidth":200,"categoryHeight":150,"productWidth":300,"productHeight":280,"baseUrl":"www.aaaa.ua"};
     console.log('Використано значення settings за замовчуванням:', settings);
 }
+
+async function loadProducts() {
     try {
-        products = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('products')) || '[]');
+        const response = await fetch('/api/products');
+        products = await response.json();
+        renderAdmin('products');
     } catch (e) {
-        console.error('Помилка парсингу products:', e);
+        console.error('Помилка завантаження товарів:', e);
         products = [];
     }
+}
+loadProducts();
     try {
         categories = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('categories')) || '[]');
     } catch (e) {
@@ -1532,19 +1528,19 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         }
     }
 
-    function login() {
-        const username = document.getElementById('admin-username').value;
-        const password = document.getElementById('admin-password').value;
-        if (username === 'admin' && password === 'gglembern') {
-            session = { isActive: true, timestamp: Date.now() };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-panel');
-            showNotification('Вхід успішний!');
-            resetInactivityTimer();
-        } else {
-            alert('Невірний логін або пароль!');
-        }
+function login() {
+    const username = document.getElementById('admin-username').value;
+    const password = document.getElementById('admin-password').value;
+    if (username === 'admin' && password === 'Nata1989') {
+        session = { isActive: true, timestamp: Date.now() };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-panel');
+        showNotification('Вхід успішний!');
+        resetInactivityTimer();
+    } else {
+        alert('Невірний логін або пароль!');
     }
+}
 
     document.getElementById('admin-password').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -3128,13 +3124,9 @@ function addProductPhoto() {
 
     if (files.length > 0) {
         Array.from(files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                newProduct.photos.push(e.target.result);
-                renderPhotoList();
-                resetInactivityTimer();
-            };
-            reader.readAsDataURL(file);
+            newProduct.photos.push(file); // Зберігаємо файли, а не Base64
+            renderPhotoList();
+            resetInactivityTimer();
         });
         document.getElementById('product-photo-url').value = '';
         document.getElementById('product-photo-file').value = '';
@@ -3149,15 +3141,15 @@ function addProductPhoto() {
     }
 }
 
-    function renderPhotoList() {
-        const photoList = document.getElementById('product-photo-list');
-        photoList.innerHTML = newProduct.photos.map((photo, index) => `
-            <div class="photo-item draggable" draggable="true" ondragstart="dragPhoto(event, ${index})" ondragover="allowDropPhoto(event)" ondrop="dropPhoto(event, ${index})">
-                <img src="${photo}" style="max-width: 50px;">
-                <button class="delete-btn" onclick="deleteProductPhoto(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
+function renderPhotoList() {
+    const photoList = document.getElementById('product-photo-list');
+    photoList.innerHTML = newProduct.photos.map((photo, index) => `
+        <div class="photo-item draggable" draggable="true" ondragstart="dragPhoto(event, ${index})" ondragover="allowDropPhoto(event)" ondrop="dropPhoto(event, ${index})">
+            ${typeof photo === 'string' ? `<img src="${photo}" style="max-width: 50px;">` : `<span>${photo.name}</span>`}
+            <button class="delete-btn" onclick="deleteProductPhoto(${index})">Видалити</button>
+        </div>
+    `).join('');
+}
 
     function dragPhoto(event, index) {
         event.dataTransfer.setData('text/plain', index);
@@ -3186,65 +3178,61 @@ function addProductPhoto() {
         resetInactivityTimer();
     }
 
-    function addProductColor() {
-        const name = document.getElementById('product-color-name').value;
-        const value = document.getElementById('product-color-value').value;
-        const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-        const url = document.getElementById('product-color-photo-url').value;
-        const file = document.getElementById('product-color-photo-file').files[0];
+function addProductColor() {
+    const name = document.getElementById('product-color-name').value;
+    const value = document.getElementById('product-color-value').value;
+    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+    const url = document.getElementById('product-color-photo-url').value;
+    const file = document.getElementById('product-color-photo-file').files[0];
 
-        if (name && value) {
-            const color = { name, value, priceChange };
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    color.photo = e.target.result;
-                    newProduct.colors.push(color);
-                    document.getElementById('product-color-name').value = '';
-                    document.getElementById('product-color-value').value = '#000000';
-                    document.getElementById('product-color-price-change').value = '';
-                    document.getElementById('product-color-photo-url').value = '';
-                    document.getElementById('product-color-photo-file').value = '';
-                    renderColorsList();
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(file);
-            } else if (url) {
-                color.photo = url;
-                newProduct.colors.push(color);
-                document.getElementById('product-color-name').value = '';
-                document.getElementById('product-color-value').value = '#000000';
-                document.getElementById('product-color-price-change').value = '';
-                document.getElementById('product-color-photo-url').value = '';
-                document.getElementById('product-color-photo-file').value = '';
-                renderColorsList();
-                resetInactivityTimer();
-            } else {
-                newProduct.colors.push(color);
-                document.getElementById('product-color-name').value = '';
-                document.getElementById('product-color-value').value = '#000000';
-                document.getElementById('product-color-price-change').value = '';
-                document.getElementById('product-color-photo-url').value = '';
-                document.getElementById('product-color-photo-file').value = '';
-                renderColorsList();
-                resetInactivityTimer();
-            }
+    if (name && value) {
+        const color = { name, value, priceChange };
+        if (file) {
+            color.photo = file; // Зберігаємо файл, а не Base64
+            newProduct.colors.push(color);
+            document.getElementById('product-color-name').value = '';
+            document.getElementById('product-color-value').value = '#000000';
+            document.getElementById('product-color-price-change').value = '';
+            document.getElementById('product-color-photo-url').value = '';
+            document.getElementById('product-color-photo-file').value = '';
+            renderColorsList();
+            resetInactivityTimer();
+        } else if (url) {
+            color.photo = url;
+            newProduct.colors.push(color);
+            document.getElementById('product-color-name').value = '';
+            document.getElementById('product-color-value').value = '#000000';
+            document.getElementById('product-color-price-change').value = '';
+            document.getElementById('product-color-photo-url').value = '';
+            document.getElementById('product-color-photo-file').value = '';
+            renderColorsList();
+            resetInactivityTimer();
         } else {
-            alert('Введіть назву та виберіть колір!');
+            newProduct.colors.push(color);
+            document.getElementById('product-color-name').value = '';
+            document.getElementById('product-color-value').value = '#000000';
+            document.getElementById('product-color-price-change').value = '';
+            document.getElementById('product-color-photo-url').value = '';
+            document.getElementById('product-color-photo-file').value = '';
+            renderColorsList();
+            resetInactivityTimer();
         }
+    } else {
+        alert('Введіть назву та виберіть колір!');
     }
+}
 
-    function renderColorsList() {
-        const colorList = document.getElementById('product-color-list');
-        colorList.innerHTML = newProduct.colors.map((color, index) => `
-            <div class="color-item">
-                <span class="color-preview" style="background-color: ${color.value};"></span>
-                ${color.name} (Зміна ціни: ${color.priceChange} грн)
-                ${color.photo ? `<img src="${color.photo}" style="max-width: 30px;">` : ''}
-                <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
+function renderColorsList() {
+    const colorList = document.getElementById('product-color-list');
+    colorList.innerHTML = newProduct.colors.map((color, index) => `
+        <div class="color-item">
+            <span class="color-preview" style="background-color: ${color.value};"></span>
+            ${color.name} (Зміна ціни: ${color.priceChange} грн)
+            ${color.photo ? (typeof color.photo === 'string' ? `<img src="${color.photo}" style="max-width: 30px;">` : `<span>${color.photo.name}</span>`) : ''}
+            <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
+        </div>
+    `).join('');
+}
 
     function deleteProductColor(index) {
         newProduct.colors.splice(index, 1);
@@ -3353,7 +3341,7 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
-function saveNewProduct() {
+async function saveNewProduct() {
     const name = document.getElementById('product-name').value;
     const slug = document.getElementById('product-slug').value;
     const brand = document.getElementById('product-brand').value;
@@ -3369,7 +3357,7 @@ function saveNewProduct() {
     const saleEnd = document.getElementById('product-sale-end').value;
     const visible = document.getElementById('product-visible').value === 'true';
     const description = document.getElementById('product-description').value;
-    const descriptionDelta = productEditor.getContents(); // Отримуємо Delta-формат
+    const descriptionDelta = productEditor.getContents();
     const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
     const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
     const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
@@ -3380,7 +3368,10 @@ function saveNewProduct() {
         return;
     }
 
-    if (products.some(p => p.slug === slug)) {
+    // Перевірка унікальності slug на сервері
+    const slugCheck = await fetch(`/api/products?slug=${slug}`);
+    const existingProducts = await slugCheck.json();
+    if (existingProducts.some(p => p.slug === slug)) {
         alert('Шлях товару має бути унікальним!');
         return;
     }
@@ -3406,7 +3397,6 @@ function saveNewProduct() {
     }
 
     const product = {
-        id: products.length ? Math.max(...products.map(p => p.id)) + 1 : 1,
         type: newProduct.type,
         name,
         slug,
@@ -3418,26 +3408,70 @@ function saveNewProduct() {
         salePrice: salePrice,
         saleEnd: saleEnd || null,
         description: description || '',
-        descriptionDelta: descriptionDelta || null, // Зберігаємо Delta-формат
+        descriptionDelta: descriptionDelta || null,
         widthCm,
         depthCm,
         heightCm,
         lengthCm,
-        photos: newProduct.photos,
-        colors: newProduct.colors,
+        photos: newProduct.photos.filter(photo => typeof photo === 'string'), // Зберігаємо лише URL-и, файли відправимо окремо
+        colors: newProduct.colors.map(color => ({
+            name: color.name,
+            value: color.value,
+            priceChange: color.priceChange,
+            photo: typeof color.photo === 'string' ? color.photo : null // Зберігаємо лише URL, файли відправимо окремо
+        })),
         sizes: newProduct.sizes,
         groupProducts: newProduct.groupProducts,
         active: true,
         visible: visible
     };
 
-    products.push(product);
-    localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
-    closeModal();
-    renderAdmin('products');
-    showNotification('Товар додано!');
-    unsavedChanges = false;
-    resetInactivityTimer();
+    // Створюємо FormData для відправки даних і файлів
+    const formData = new FormData();
+    formData.append('product', JSON.stringify(product));
+
+    // Додаємо фотографії товару
+    newProduct.photos.forEach((photo, index) => {
+        if (typeof photo !== 'string') {
+            formData.append('photos', photo);
+        }
+    });
+
+    // Додаємо фотографії кольорів
+    const colorPhotos = newProduct.colors.map(color => {
+        if (typeof color.photo !== 'string' && color.photo) {
+            return { filename: color.photo.name };
+        }
+        return null;
+    }).filter(Boolean);
+    newProduct.colors.forEach((color, index) => {
+        if (typeof color.photo !== 'string' && color.photo) {
+            formData.append(`colorPhoto${index}`, color.photo);
+        }
+    });
+    formData.append('colorPhotos', JSON.stringify(colorPhotos));
+
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Помилка при додаванні товару: ' + response.statusText);
+        }
+
+        const newProductData = await response.json();
+        products.push(newProductData);
+        closeModal();
+        renderAdmin('products');
+        showNotification('Товар додано!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при додаванні товару:', err);
+        alert('Не вдалося додати товар: ' + err.message);
+    }
 }
 
 function openEditProductModal(productId) {
@@ -3554,117 +3588,193 @@ function openEditProductModal(productId) {
     }
 }
 
-function saveEditedProduct(productId) {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
-        const category = document.getElementById('product-category').value;
-        const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
-        let price = null;
-        let salePrice = null;
-        if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value);
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+async function saveEditedProduct(productId) {
+    const name = document.getElementById('product-name').value;
+    const slug = document.getElementById('product-slug').value;
+    const brand = document.getElementById('product-brand').value;
+    const category = document.getElementById('product-category').value;
+    const subcategory = document.getElementById('product-subcategory').value;
+    const material = document.getElementById('product-material').value;
+    let price = null;
+    let salePrice = null;
+    if (newProduct.type === 'simple') {
+        price = parseFloat(document.getElementById('product-price')?.value);
+        salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+    }
+    const saleEnd = document.getElementById('product-sale-end').value;
+    const visible = document.getElementById('product-visible').value === 'true';
+    const description = document.getElementById('product-description').value;
+    const descriptionDelta = productEditor.getContents();
+    const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || null;
+    const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
+    const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
+    const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+
+    if (!name || !slug) {
+        alert('Введіть назву та шлях товару!');
+        return;
+    }
+
+    // Перевірка унікальності slug на сервері
+    const slugCheck = await fetch(`/api/products?slug=${slug}`);
+    const existingProducts = await slugCheck.json();
+    if (existingProducts.some(p => p.slug === slug && p.id !== parseInt(productId))) {
+        alert('Шлях товару має бути унікальним!');
+        return;
+    }
+
+    if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
+        alert('Введіть коректну ціну для простого товару!');
+        return;
+    }
+
+    if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
+        alert('Додайте хоча б один розмір для матрацу!');
+        return;
+    }
+
+    if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
+        alert('Додайте хоча б один товар до групового товару!');
+        return;
+    }
+
+    if (brand && !brands.includes(brand)) {
+        brands.push(brand);
+        localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
+    }
+
+    const product = {
+        type: newProduct.type,
+        name,
+        slug,
+        brand: brand || '',
+        category: category || '',
+        subcategory: subcategory || '',
+        material: material || '',
+        price: newProduct.type === 'simple' ? price : null,
+        salePrice: salePrice,
+        saleEnd: saleEnd || null,
+        description: description || '',
+        descriptionDelta: descriptionDelta || null,
+        widthCm,
+        depthCm,
+        heightCm,
+        lengthCm,
+        photos: newProduct.photos.filter(photo => typeof photo === 'string'),
+        colors: newProduct.colors.map(color => ({
+            name: color.name,
+            value: color.value,
+            priceChange: color.priceChange,
+            photo: typeof color.photo === 'string' ? color.photo : null
+        })),
+        sizes: newProduct.sizes,
+        groupProducts: newProduct.groupProducts,
+        active: true,
+        visible: visible
+    };
+
+    const formData = new FormData();
+    formData.append('product', JSON.stringify(product));
+
+    newProduct.photos.forEach((photo, index) => {
+        if (typeof photo !== 'string') {
+            formData.append('photos', photo);
         }
-        const saleEnd = document.getElementById('product-sale-end').value;
-        const visible = document.getElementById('product-visible').value === 'true';
-        const description = document.getElementById('product-description').value;
-        const descriptionDelta = productEditor.getContents(); // Отримуємо Delta-формат
-        const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || null;
-        const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
-        const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
-        const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+    });
 
-        if (!name || !slug) {
-            alert('Введіть назву та шлях товару!');
-            return;
+    const colorPhotos = newProduct.colors.map(color => {
+        if (typeof color.photo !== 'string' && color.photo) {
+            return { filename: color.photo.name };
+        }
+        return null;
+    }).filter(Boolean);
+    newProduct.colors.forEach((color, index) => {
+        if (typeof color.photo !== 'string' && color.photo) {
+            formData.append(`colorPhoto${index}`, color.photo);
+        }
+    });
+    formData.append('colorPhotos', JSON.stringify(colorPhotos));
+
+    try {
+        const response = await fetch(`/api/products/${productId}`, {
+            method: 'PUT',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Помилка при оновленні товару: ' + response.statusText);
         }
 
-        if (products.some(p => p.slug === slug && p.id !== productId)) {
-            alert('Шлях товару має бути унікальним!');
-            return;
+        const updatedProduct = await response.json();
+        const index = products.findIndex(p => p.id === parseInt(productId));
+        if (index !== -1) {
+            products[index] = updatedProduct;
         }
-
-        if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
-            alert('Введіть коректну ціну для простого товару!');
-            return;
-        }
-
-        if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
-            alert('Додайте хоча б один розмір для матрацу!');
-            return;
-        }
-
-        if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
-            alert('Додайте хоча б один товар до групового товару!');
-            return;
-        }
-
-        if (brand && !brands.includes(brand)) {
-            brands.push(brand);
-            localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
-        }
-
-        product.type = newProduct.type;
-        product.name = name;
-        product.slug = slug;
-        product.brand = brand || '';
-        product.category = category || '';
-        product.subcategory = subcategory || '';
-        product.material = material || '';
-        product.price = price;
-        product.salePrice = salePrice;
-        product.saleEnd = saleEnd || null;
-        product.visible = visible;
-        product.description = description || '';
-        product.descriptionDelta = descriptionDelta || null; // Зберігаємо Delta-формат
-        product.photos = newProduct.photos;
-        product.colors = newProduct.colors;
-        product.sizes = newProduct.sizes;
-        product.groupProducts = newProduct.groupProducts;
-        product.widthCm = widthCm;
-        product.depthCm = depthCm;
-        product.heightCm = heightCm;
-        product.lengthCm = lengthCm;
-
-        localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
         closeModal();
         renderAdmin('products');
         showNotification('Товар відредаговано!');
         unsavedChanges = false;
         resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при оновленні товару:', err);
+        alert('Не вдалося оновити товар: ' + err.message);
     }
 }
 
-    function deleteProduct(productId) {
-        if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+async function deleteProduct(productId) {
+    if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+        try {
+            const response = await fetch(`/api/products/${productId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Помилка при видаленні товару: ' + response.statusText);
+            }
+
             products = products.filter(p => p.id !== productId);
             products.forEach(p => {
                 if (p.type === 'group') {
                     p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
                 }
             });
-            localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
             renderAdmin('products');
             showNotification('Товар видалено!');
             unsavedChanges = false;
             resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка при видаленні товару:', err);
+            alert('Не вдалося видалити товар: ' + err.message);
         }
     }
+}
 
-    function toggleProductActive(productId) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            product.active = !product.active;
-            localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
+async function toggleProductActive(productId) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.active = !product.active;
+        try {
+            const response = await fetch(`/api/products/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(product)
+            });
+
+            if (!response.ok) {
+                throw new Error('Помилка при оновленні статусу товару: ' + response.statusText);
+            }
+
             renderAdmin('products');
             showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
             resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка при оновленні статусу товару:', err);
+            alert('Не вдалося оновити статус товару: ' + err.message);
         }
     }
+}
 
     function sortAdminProducts(sortType) {
         const [key, order] = sortType.split('-');
@@ -3927,15 +4037,21 @@ function saveOrderStatus(index) {
         resetInactivityTimer();
     }
 
-    if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-        showSection('admin-panel');
-        resetInactivityTimer();
-    } else {
-        showSection('admin-login');
-    }
+if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+    showSection('admin-panel');
+    resetInactivityTimer();
+} else {
+    showSection('admin-login');
+}
 
     document.addEventListener('mousemove', resetInactivityTimer);
     document.addEventListener('keypress', resetInactivityTimer);
+    document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    }
+});
   </script>
  </body>
 </html>
