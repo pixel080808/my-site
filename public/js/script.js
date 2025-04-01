@@ -22,6 +22,7 @@
         let filteredProducts = [];
         let selectedColors = {};
         let parentGroupProduct = null; // Додаємо оголошення
+        const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
 
         function transliterate(str) {
             const uaToEn = {
@@ -66,7 +67,7 @@ async function initializeData() {
     
     // Завантажуємо продукти з API
     try {
-        const response = await fetch('/api/products');
+        const response = await fetch(`${BASE_URL}/api/products`);
         if (!response.ok) throw new Error('Failed to fetch products');
         products = await response.json();
         saveToStorage('products', products);
