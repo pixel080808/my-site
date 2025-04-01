@@ -62,18 +62,29 @@
             }
         }
 
+async function fetchWithRetry(url, retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch products');
+            return await response.json();
+        } catch (error) {
+            if (i === retries - 1) throw error; // Останній раз кидаємо помилку
+            console.warn(`Спроба ${i + 1} не вдалася. Повтор через ${delay}мс...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
 async function initializeData() {
     cart = loadFromStorage('cart', []);
     
-    // Завантажуємо продукти з API
     try {
-        const response = await fetch(`${BASE_URL}/api/products`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        products = await response.json();
+        products = await fetchWithRetry(`${BASE_URL}/api/products`);
         saveToStorage('products', products);
     } catch (error) {
         console.error('Error fetching products:', error);
-        // Якщо API недоступне, використовуємо локальні дані
+        showNotification('Не вдалося завантажити продукти з сервера. Використовуються локальні дані.', 'error');
         products = loadFromStorage('products', [
             { id: 1, name: 'Вітальня', brand: 'Сокме', price: 12590, salePrice: 9999, saleEnd: '2025-04-01T00:00:00Z', slug: 'sokme-mark', url: 'sokme-mark', category: 'Вітальні', subcategory: 'Модульні', type: 'simple', visible: true, active: true, photos: ['https://picsum.photos/300/200'], material: 'Дерево', colors: [{ name: 'Коричневий', value: '#8B4513', priceChange: 0, photo: '' }, { name: 'Венге/Дуб Тахо', value: '#4A2F1A', priceChange: 500, photo: 'https://picsum.photos/80/80' }], widthCm: 200, depthCm: 50, heightCm: 180, lengthCm: null, description: 'Сучасна модульна вітальня' },
             { id: 2, name: 'Матрац Sofia', brand: 'Матролюкс', slug: 'Matroluxe-Sofia-New', url: 'Matroluxe-Sofia-New', category: 'Спальні', subcategory: 'Матраци', type: 'mattresses', visible: true, active: true, sizes: [{ name: '70x190', price: 4262 }, { name: '80x190', price: 4795 }], photos: ['https://picsum.photos/300/200'], material: 'Пружинний блок', colors: [{ name: 'Білий', value: '#FFFFFF', priceChange: 0, photo: 'https://picsum.photos/80/80' }], description: 'Ортопедичний матрац' },

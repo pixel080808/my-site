@@ -12,14 +12,17 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Перевірка MONGO_URI
+if (!process.env.MONGO_URI) {
+    console.error('MONGO_URI is not defined in environment variables');
+    process.exit(1);
+}
+
 // Роздача статичних файлів із папки public
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Підключення до MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.error('MongoDB connection error:', err));
 
@@ -30,7 +33,8 @@ app.get('/api/products', async (req, res) => {
         const products = await Product.find();
         res.json(products);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Error fetching products:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -41,7 +45,8 @@ app.post('/api/products', async (req, res) => {
         await product.save();
         res.status(201).json(product);
     } catch (err) {
-        res.status(400).json({ error: 'Invalid data' });
+        console.error('Error adding product:', err);
+        res.status(400).json({ error: 'Invalid data', details: err.message });
     }
 });
 
@@ -52,7 +57,8 @@ app.put('/api/products/:id', async (req, res) => {
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.json(product);
     } catch (err) {
-        res.status(400).json({ error: 'Invalid data' });
+        console.error('Error updating product:', err);
+        res.status(400).json({ error: 'Invalid data', details: err.message });
     }
 });
 
@@ -63,13 +69,14 @@ app.delete('/api/products/:id', async (req, res) => {
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.json({ message: 'Product deleted' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Error deleting product:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
 // Простий логін для адмінки
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD_HASH = bcrypt.hashSync('password123', 10); // Зміни пароль!
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'password123', 10);
 
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
