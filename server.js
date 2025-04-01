@@ -62,6 +62,12 @@ if (!fs.existsSync(adminPath)) {
     process.exit(1);
 }
 
+// Маршрут для адмін-панелі
+app.get('/admin', (req, res) => {
+    console.log('Serving admin.html for /admin route');
+    res.sendFile(adminPath);
+});
+
 // Роздача статичних файлів із папки public
 app.use(express.static(publicPath));
 
@@ -201,12 +207,6 @@ app.post('/api/login', (req, res) => {
     } else {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-});
-
-// Маршрут для адмін-панелі
-app.get('/admin', (req, res) => {
-    console.log('Serving admin.html for /admin route');
-    res.sendFile(adminPath);
 });
 
 // Обробка всіх інших маршрутів — повертаємо index.html
