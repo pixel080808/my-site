@@ -94,8 +94,16 @@ app.get('/test-admin', (req, res) => {
     res.send('This is a test admin route');
 });
 
-// Роздача статичних файлів із папки public (після всіх маршрутів)
+// Роздача статичних файлів із папки public
 app.use(express.static(publicPath));
+
+// Якщо файл у /uploads/ не знайдено, повертаємо 404
+app.use((req, res, next) => {
+    if (req.path.startsWith('/uploads/') && !fs.existsSync(path.join(publicPath, req.path))) {
+        return res.status(404).send('File not found');
+    }
+    next();
+});
 
 // Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -137,7 +145,8 @@ const productSchema = new mongoose.Schema({
     }],
     groupProducts: [Number],
     active: Boolean,
-    visible: Boolean
+    visible: Boolean,
+    descriptionMedia: [String] // Додаємо поле для медіа в описі
 });
 
 const Product = mongoose.model('Product', productSchema);
@@ -154,25 +163,47 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+// Маршрут для завантаження медіа з опису
+app.post('/api/upload-media', upload.single('descriptionMedia'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const url = `/uploads/products/${req.file.filename}`;
+    res.json({ url });
+});
+
 // Додати товар
-app.post('/api/products', upload.array('photos', 10), async (req, res) => {
+app.post('/api/products', upload.fields([
+    { name: 'photos', maxCount: 10 },
+    { name: 'colorPhoto0', maxCount: 1 },
+    { name: 'colorPhoto1', maxCount: 1 },
+    { name: 'colorPhoto2', maxCount: 1 },
+    { name: 'colorPhoto3', maxCount: 1 },
+    { name: 'colorPhoto4', maxCount: 1 },
+    { name: 'descriptionMedia', maxCount: 10 }
+]), async (req, res) => {
     try {
         const productData = JSON.parse(req.body.product);
         const files = req.files;
 
-        // Додаємо шляхи до фотографій
-        if (files && files.length > 0) {
-            productData.photos = files.map(file => `/uploads/products/${file.filename}`);
+        // Обробка основних фото товару
+        if (files['photos']) {
+            productData.photos = files['photos'].map(file => `/uploads/products/${file.filename}`);
         }
 
-        // Обробляємо фото кольорів, якщо вони є
-        if (productData.colors && req.body.colorPhotos) {
-            const colorPhotos = JSON.parse(req.body.colorPhotos);
+        // Обробка фото кольорів
+        if (productData.colors) {
             productData.colors.forEach((color, index) => {
-                if (colorPhotos[index] && colorPhotos[index].filename) {
-                    color.photo = `/uploads/products/${colorPhotos[index].filename}`;
+                const colorPhotoField = files[`colorPhoto${index}`];
+                if (colorPhotoField && colorPhotoField[0]) {
+                    color.photo = `/uploads/products/${colorPhotoField[0].filename}`;
                 }
             });
+        }
+
+        // Обробка медіа в описі
+        if (files['descriptionMedia']) {
+            productData.descriptionMedia = files['descriptionMedia'].map(file => `/uploads/products/${file.filename}`);
         }
 
         // Знаходимо максимальний ID
@@ -189,22 +220,37 @@ app.post('/api/products', upload.array('photos', 10), async (req, res) => {
 });
 
 // Оновити товар
-app.put('/api/products/:id', upload.array('photos', 10), async (req, res) => {
+app.put('/api/products/:id', upload.fields([
+    { name: 'photos', maxCount: 10 },
+    { name: 'colorPhoto0', maxCount: 1 },
+    { name: 'colorPhoto1', maxCount: 1 },
+    { name: 'colorPhoto2', maxCount: 1 },
+    { name: 'colorPhoto3', maxCount: 1 },
+    { name: 'colorPhoto4', maxCount: 1 },
+    { name: 'descriptionMedia', maxCount: 10 }
+]), async (req, res) => {
     try {
         const productData = JSON.parse(req.body.product);
         const files = req.files;
 
-        if (files && files.length > 0) {
-            productData.photos = files.map(file => `/uploads/products/${file.filename}`);
+        // Обробка основних фото товару
+        if (files['photos']) {
+            productData.photos = files['photos'].map(file => `/uploads/products/${file.filename}`);
         }
 
-        if (productData.colors && req.body.colorPhotos) {
-            const colorPhotos = JSON.parse(req.body.colorPhotos);
+        // Обробка фото кольорів
+        if (productData.colors) {
             productData.colors.forEach((color, index) => {
-                if (colorPhotos[index] && colorPhotos[index].filename) {
-                    color.photo = `/uploads/products/${colorPhotos[index].filename}`;
+                const colorPhotoField = files[`colorPhoto${index}`];
+                if (colorPhotoField && colorPhotoField[0]) {
+                    color.photo = `/uploads/products/${colorPhotoField[0].filename}`;
                 }
             });
+        }
+
+        // Обробка медіа в описі
+        if (files['descriptionMedia']) {
+            productData.descriptionMedia = files['descriptionMedia'].map(file => `/uploads/products/${file.filename}`);
         }
 
         const product = await Product.findOneAndUpdate({ id: req.params.id }, productData, { new: true });

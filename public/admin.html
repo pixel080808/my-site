@@ -1472,6 +1472,48 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     }
     document.getElementById('product-description').value = productEditor.root.innerHTML;
 
+    // Додаємо обробник для завантаження зображень і відео через панель інструментів
+    const toolbar = productEditor.getModule('toolbar');
+    toolbar.addHandler('image', () => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.click();
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (file) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.url) {
+                        const range = productEditor.getSelection();
+                        productEditor.insertEmbed(range.index, 'image', data.url);
+                        setDefaultVideoSizes(productEditor, 'product-description');
+                    } else {
+                        alert('Помилка завантаження зображення!');
+                    }
+                } catch (err) {
+                    console.error('Помилка завантаження зображення:', err);
+                    alert('Не вдалося завантажити зображення: ' + err.message);
+                }
+            }
+        };
+    });
+
+    toolbar.addHandler('video', () => {
+        const url = prompt('Введіть URL відео (наприклад, YouTube embed URL):');
+        if (url) {
+            const range = productEditor.getSelection();
+            productEditor.insertEmbed(range.index, 'video', url);
+            setDefaultVideoSizes(productEditor, 'product-description');
+        }
+    });
+
     // Обробник для оновлення прихованого поля
     productEditor.on('text-change', () => {
         document.getElementById('product-description').value = productEditor.root.innerHTML;
@@ -3078,6 +3120,42 @@ function openAddProductModal() {
     renderPhotoList();
     renderMattressSizes();
     renderGroupProducts();
+
+    // Обробник для відображення прев’ю основних фото
+    const photoInput = document.getElementById('product-photo-file');
+    photoInput.addEventListener('change', () => {
+        const files = photoInput.files;
+        Array.from(files).forEach(file => {
+            if (!newProduct.photos.includes(file)) {
+                newProduct.photos.push(file);
+            }
+        });
+        renderPhotoList();
+        resetInactivityTimer();
+    });
+
+    // Обробник для відображення прев’ю фото кольорів
+    const colorPhotoInput = document.getElementById('product-color-photo-file');
+    colorPhotoInput.addEventListener('change', () => {
+        const file = colorPhotoInput.files[0];
+        if (file) {
+            const name = document.getElementById('product-color-name').value;
+            const value = document.getElementById('product-color-value').value;
+            const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+            if (name && value) {
+                const color = { name, value, priceChange, photo: file };
+                newProduct.colors.push(color);
+                document.getElementById('product-color-name').value = '';
+                document.getElementById('product-color-value').value = '#000000';
+                document.getElementById('product-color-price-change').value = '';
+                document.getElementById('product-color-photo-url').value = '';
+                document.getElementById('product-color-photo-file').value = '';
+                renderColorsList();
+                resetInactivityTimer();
+            }
+        }
+    });
+
     resetInactivityTimer();
 }
 
@@ -3143,12 +3221,20 @@ function addProductPhoto() {
 
 function renderPhotoList() {
     const photoList = document.getElementById('product-photo-list');
-    photoList.innerHTML = newProduct.photos.map((photo, index) => `
-        <div class="photo-item draggable" draggable="true" ondragstart="dragPhoto(event, ${index})" ondragover="allowDropPhoto(event)" ondrop="dropPhoto(event, ${index})">
-            ${typeof photo === 'string' ? `<img src="${photo}" style="max-width: 50px;">` : `<span>${photo.name}</span>`}
-            <button class="delete-btn" onclick="deleteProductPhoto(${index})">Видалити</button>
-        </div>
-    `).join('');
+    photoList.innerHTML = newProduct.photos.map((photo, index) => {
+        let photoSrc = '';
+        if (typeof photo === 'string') {
+            photoSrc = photo;
+        } else if (photo instanceof File) {
+            photoSrc = URL.createObjectURL(photo);
+        }
+        return `
+            <div class="photo-item draggable" draggable="true" ondragstart="dragPhoto(event, ${index})" ondragover="allowDropPhoto(event)" ondrop="dropPhoto(event, ${index})">
+                <img src="${photoSrc}" style="max-width: 50px;">
+                <button class="delete-btn" onclick="deleteProductPhoto(${index})">Видалити</button>
+            </div>
+        `;
+    }).join('');
 }
 
     function dragPhoto(event, index) {
@@ -3224,14 +3310,24 @@ function addProductColor() {
 
 function renderColorsList() {
     const colorList = document.getElementById('product-color-list');
-    colorList.innerHTML = newProduct.colors.map((color, index) => `
-        <div class="color-item">
-            <span class="color-preview" style="background-color: ${color.value};"></span>
-            ${color.name} (Зміна ціни: ${color.priceChange} грн)
-            ${color.photo ? (typeof color.photo === 'string' ? `<img src="${color.photo}" style="max-width: 30px;">` : `<span>${color.photo.name}</span>`) : ''}
-            <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
-        </div>
-    `).join('');
+    colorList.innerHTML = newProduct.colors.map((color, index) => {
+        let photoSrc = '';
+        if (color.photo) {
+            if (typeof color.photo === 'string') {
+                photoSrc = color.photo;
+            } else if (color.photo instanceof File) {
+                photoSrc = URL.createObjectURL(color.photo);
+            }
+        }
+        return `
+            <div class="color-item">
+                <span class="color-preview" style="background-color: ${color.value};"></span>
+                ${color.name} (Зміна ціни: ${color.priceChange} грн)
+                ${photoSrc ? `<img src="${photoSrc}" style="max-width: 30px;">` : ''}
+                <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
+            </div>
+        `;
+    }).join('');
 }
 
     function deleteProductColor(index) {
@@ -3396,7 +3492,8 @@ async function saveNewProduct() {
         localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
     }
 
-    const product = {
+    // Створюємо об’єкт продукту
+    let product = {
         type: newProduct.type,
         name,
         slug,
@@ -3425,6 +3522,64 @@ async function saveNewProduct() {
         active: true,
         visible: visible
     };
+
+    // Перевірка медіа в описі (зображення та відео з blob: URL)
+    const mediaUrls = [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(description, 'text/html');
+    const images = doc.querySelectorAll('img');
+    const videos = doc.querySelectorAll('iframe');
+
+    // Обробка зображень
+    for (let img of images) {
+        const src = img.getAttribute('src');
+        if (src && src.startsWith('blob:')) {
+            try {
+                const response = await fetch(src);
+                const blob = await response.blob();
+                const formData = new FormData();
+                formData.append('file', blob, `description-image-${Date.now()}.png`);
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadData = await uploadResponse.json();
+                if (uploadData.url) {
+                    mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                } else {
+                    throw new Error('Не вдалося завантажити зображення');
+                }
+            } catch (err) {
+                console.error('Помилка завантаження зображення з опису:', err);
+                alert('Не вдалося завантажити зображення з опису: ' + err.message);
+                return;
+            }
+        }
+    }
+
+    // Оновлюємо description, замінюючи blob: URL на нові URL
+    let updatedDescription = description;
+    mediaUrls.forEach(({ oldUrl, newUrl }) => {
+        updatedDescription = updatedDescription.replace(oldUrl, newUrl);
+    });
+
+    // Оновлюємо descriptionDelta
+    let updatedDelta = descriptionDelta;
+    if (mediaUrls.length > 0) {
+        updatedDelta = { ops: [] };
+        descriptionDelta.ops.forEach(op => {
+            if (op.insert && typeof op.insert === 'object' && op.insert.image) {
+                const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
+                updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
+            } else {
+                updatedDelta.ops.push(op);
+            }
+        });
+    }
+
+    // Оновлюємо об’єкт продукту з новими description і descriptionDelta
+    product.description = updatedDescription;
+    product.descriptionDelta = updatedDelta;
 
     // Створюємо FormData для відправки даних і файлів
     const formData = new FormData();
@@ -3584,6 +3739,42 @@ function openEditProductModal(productId) {
         renderPhotoList();
         renderMattressSizes();
         renderGroupProducts();
+
+        // Обробник для відображення прев’ю основних фото
+        const photoInput = document.getElementById('product-photo-file');
+        photoInput.addEventListener('change', () => {
+            const files = photoInput.files;
+            Array.from(files).forEach(file => {
+                if (!newProduct.photos.includes(file)) {
+                    newProduct.photos.push(file);
+                }
+            });
+            renderPhotoList();
+            resetInactivityTimer();
+        });
+
+        // Обробник для відображення прев’ю фото кольорів
+        const colorPhotoInput = document.getElementById('product-color-photo-file');
+        colorPhotoInput.addEventListener('change', () => {
+            const file = colorPhotoInput.files[0];
+            if (file) {
+                const name = document.getElementById('product-color-name').value;
+                const value = document.getElementById('product-color-value').value;
+                const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+                if (name && value) {
+                    const color = { name, value, priceChange, photo: file };
+                    newProduct.colors.push(color);
+                    document.getElementById('product-color-name').value = '';
+                    document.getElementById('product-color-value').value = '#000000';
+                    document.getElementById('product-color-price-change').value = '';
+                    document.getElementById('product-color-photo-url').value = '';
+                    document.getElementById('product-color-photo-file').value = '';
+                    renderColorsList();
+                    resetInactivityTimer();
+                }
+            }
+        });
+
         resetInactivityTimer();
     }
 }
@@ -3605,20 +3796,20 @@ async function saveEditedProduct(productId) {
     const visible = document.getElementById('product-visible').value === 'true';
     const description = document.getElementById('product-description').value;
     const descriptionDelta = productEditor.getContents();
-    const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || null;
-    const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
-    const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
-    const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+    const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
+    const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
+    const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
+    const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
 
     if (!name || !slug) {
         alert('Введіть назву та шлях товару!');
         return;
     }
 
-    // Перевірка унікальності slug на сервері
+    // Перевірка унікальності slug на сервері (крім поточного товару)
     const slugCheck = await fetch(`/api/products?slug=${slug}`);
     const existingProducts = await slugCheck.json();
-    if (existingProducts.some(p => p.slug === slug && p.id !== parseInt(productId))) {
+    if (existingProducts.some(p => p.slug === slug && p.id !== productId)) {
         alert('Шлях товару має бути унікальним!');
         return;
     }
@@ -3643,7 +3834,9 @@ async function saveEditedProduct(productId) {
         localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
     }
 
-    const product = {
+    // Створюємо об’єкт продукту
+    let product = {
+        id: productId,
         type: newProduct.type,
         name,
         slug,
@@ -3669,10 +3862,69 @@ async function saveEditedProduct(productId) {
         })),
         sizes: newProduct.sizes,
         groupProducts: newProduct.groupProducts,
-        active: true,
+        active: newProduct.active,
         visible: visible
     };
 
+    // Перевірка медіа в описі (зображення та відео з blob: URL)
+    const mediaUrls = [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(description, 'text/html');
+    const images = doc.querySelectorAll('img');
+    const videos = doc.querySelectorAll('iframe');
+
+    // Обробка зображень
+    for (let img of images) {
+        const src = img.getAttribute('src');
+        if (src && src.startsWith('blob:')) {
+            try {
+                const response = await fetch(src);
+                const blob = await response.blob();
+                const formData = new FormData();
+                formData.append('file', blob, `description-image-${Date.now()}.png`);
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadData = await uploadResponse.json();
+                if (uploadData.url) {
+                    mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                } else {
+                    throw new Error('Не вдалося завантажити зображення');
+                }
+            } catch (err) {
+                console.error('Помилка завантаження зображення з опису:', err);
+                alert('Не вдалося завантажити зображення з опису: ' + err.message);
+                return;
+            }
+        }
+    }
+
+    // Оновлюємо description, замінюючи blob: URL на нові URL
+    let updatedDescription = description;
+    mediaUrls.forEach(({ oldUrl, newUrl }) => {
+        updatedDescription = updatedDescription.replace(oldUrl, newUrl);
+    });
+
+    // Оновлюємо descriptionDelta
+    let updatedDelta = descriptionDelta;
+    if (mediaUrls.length > 0) {
+        updatedDelta = { ops: [] };
+        descriptionDelta.ops.forEach(op => {
+            if (op.insert && typeof op.insert === 'object' && op.insert.image) {
+                const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
+                updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
+            } else {
+                updatedDelta.ops.push(op);
+            }
+        });
+    }
+
+    // Оновлюємо об’єкт продукту з новими description і descriptionDelta
+    product.description = updatedDescription;
+    product.descriptionDelta = updatedDelta;
+
+    // Створюємо FormData для відправки даних і файлів
     const formData = new FormData();
     formData.append('product', JSON.stringify(product));
 
@@ -3706,13 +3958,11 @@ async function saveEditedProduct(productId) {
         }
 
         const updatedProduct = await response.json();
-        const index = products.findIndex(p => p.id === parseInt(productId));
-        if (index !== -1) {
-            products[index] = updatedProduct;
-        }
+        const index = products.findIndex(p => p.id === productId);
+        products[index] = updatedProduct;
         closeModal();
         renderAdmin('products');
-        showNotification('Товар відредаговано!');
+        showNotification('Товар оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
