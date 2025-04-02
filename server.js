@@ -10,7 +10,14 @@ const fs = require('fs');
 dotenv.config();
 
 const app = express();
+
+// Налаштування Express для нечутливості до регістру в маршрутах
+app.set('case sensitive routing', false);
+
+// Парсинг JSON для API-запитів
 app.use(express.json());
+
+// Дозволяємо CORS для всіх запитів (корисно для тестування)
 app.use(cors());
 
 // Перевірка MONGO_URI
@@ -33,7 +40,12 @@ const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 // Налаштування Multer для завантаження файлів
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'public/uploads/products');
+        const uploadDir = path.join(__dirname, 'public/uploads/products');
+        // Створюємо папку, якщо вона не існує
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -62,19 +74,36 @@ if (!fs.existsSync(adminPath)) {
     process.exit(1);
 }
 
-// Маршрут для адмін-панелі
+// Маршрут для адмін-панелі (розміщений до express.static для пріоритету)
 app.get('/admin', (req, res) => {
-    console.log('Serving admin.html for /admin route');
-    res.sendFile(adminPath);
+    console.log('Request received for /admin');
+    console.log('Admin path:', adminPath);
+    res.sendFile(adminPath, (err) => {
+        if (err) {
+            console.error('Error sending admin.html:', err);
+            res.status(500).send('Error serving admin.html');
+        } else {
+            console.log('Successfully sent admin.html');
+        }
+    });
 });
 
-// Роздача статичних файлів із папки public
+// Тестовий маршрут для перевірки роботи маршрутизації
+app.get('/test-admin', (req, res) => {
+    console.log('Request received for /test-admin');
+    res.send('This is a test admin route');
+});
+
+// Роздача статичних файлів із папки public (після всіх маршрутів)
 app.use(express.static(publicPath));
 
 // Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+        process.exit(1);
+    });
 
 // Схема для товарів
 const productSchema = new mongoose.Schema({
@@ -211,7 +240,19 @@ app.post('/api/login', (req, res) => {
 
 // Обробка всіх інших маршрутів — повертаємо index.html
 app.get('*', (req, res) => {
-    res.sendFile(indexPath);
+    console.log(`Request received for ${req.path}, serving index.html`);
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error('Error sending index.html:', err);
+            res.status(500).send('Error serving index.html');
+        }
+    });
+});
+
+// Глобальний обробник помилок
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
 const PORT = process.env.PORT || 3000;
