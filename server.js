@@ -4,29 +4,41 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const fs = require('fs');
 
 dotenv.config();
 
 const app = express();
 
-// Налаштування Express для нечутливості до регістру в маршрутах
+// Налаштування Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Налаштування Multer для Cloudinary
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'products', // Папка в Cloudinary
+        allowed_formats: ['jpg', 'png', 'jpeg', 'gif']
+    }
+});
+const upload = multer({ storage });
+
 app.set('case sensitive routing', false);
-
-// Парсинг JSON для API-запитів
 app.use(express.json());
-
-// Дозволяємо CORS для всіх запитів (корисно для тестування)
 app.use(cors());
 
-// Перевірка MONGO_URI
+// Перевірка змінних середовища
 if (!process.env.MONGO_URI) {
     console.error('MONGO_URI is not defined in environment variables');
     process.exit(1);
 }
 
-// Перевірка ADMIN_USERNAME і ADMIN_PASSWORD
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -37,44 +49,24 @@ if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
 
 const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 
-// Налаштування Multer для завантаження файлів
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, 'public/uploads/products');
-        // Створюємо папку, якщо вона не існує
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage });
-
-// Перевірка наявності папки public
 const publicPath = path.join(__dirname, 'public');
 if (!fs.existsSync(publicPath)) {
     console.error(`Public directory not found at: ${publicPath}`);
     process.exit(1);
 }
 
-// Перевірка наявності index.html
 const indexPath = path.join(publicPath, 'index.html');
 if (!fs.existsSync(indexPath)) {
     console.error(`index.html not found at: ${indexPath}`);
     process.exit(1);
 }
 
-// Перевірка наявності admin.html
 const adminPath = path.join(publicPath, 'admin.html');
 if (!fs.existsSync(adminPath)) {
     console.error(`admin.html not found at: ${adminPath}`);
     process.exit(1);
 }
 
-// Маршрут для адмін-панелі (розміщений до express.static для пріоритету)
 app.get('/admin', (req, res) => {
     console.log('Request received for /admin');
     console.log('Admin path:', adminPath);
@@ -88,24 +80,13 @@ app.get('/admin', (req, res) => {
     });
 });
 
-// Тестовий маршрут для перевірки роботи маршрутизації
 app.get('/test-admin', (req, res) => {
     console.log('Request received for /test-admin');
     res.send('This is a test admin route');
 });
 
-// Роздача статичних файлів із папки public
 app.use(express.static(publicPath));
 
-// Якщо файл у /uploads/ не знайдено, повертаємо 404
-app.use((req, res, next) => {
-    if (req.path.startsWith('/uploads/') && !fs.existsSync(path.join(publicPath, req.path))) {
-        return res.status(404).send('File not found');
-    }
-    next();
-});
-
-// Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
     .catch(err => {
@@ -113,7 +94,6 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схема для товарів
 const productSchema = new mongoose.Schema({
     id: Number,
     type: String,
@@ -146,13 +126,19 @@ const productSchema = new mongoose.Schema({
     groupProducts: [Number],
     active: Boolean,
     visible: Boolean,
-    descriptionMedia: [String] // Додаємо поле для медіа в описі
+    descriptionMedia: [String]
 });
 
 const Product = mongoose.model('Product', productSchema);
 
-// API для товарів
-// Отримати всі товари
+// Додаємо ендпоінт /api/upload
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    res.json({ url: req.file.path }); // Cloudinary повертає URL у req.file.path
+});
+
 app.get('/api/products', async (req, res) => {
     try {
         const products = await Product.find();
@@ -163,16 +149,6 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// Маршрут для завантаження медіа з опису
-app.post('/api/upload-media', upload.single('descriptionMedia'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
-    const url = `/uploads/products/${req.file.filename}`;
-    res.json({ url });
-});
-
-// Додати товар
 app.post('/api/products', upload.fields([
     { name: 'photos', maxCount: 10 },
     { name: 'colorPhoto0', maxCount: 1 },
@@ -186,27 +162,23 @@ app.post('/api/products', upload.fields([
         const productData = JSON.parse(req.body.product);
         const files = req.files;
 
-        // Обробка основних фото товару
         if (files['photos']) {
-            productData.photos = files['photos'].map(file => `/uploads/products/${file.filename}`);
+            productData.photos = files['photos'].map(file => file.path);
         }
 
-        // Обробка фото кольорів
         if (productData.colors) {
             productData.colors.forEach((color, index) => {
                 const colorPhotoField = files[`colorPhoto${index}`];
                 if (colorPhotoField && colorPhotoField[0]) {
-                    color.photo = `/uploads/products/${colorPhotoField[0].filename}`;
+                    color.photo = colorPhotoField[0].path;
                 }
             });
         }
 
-        // Обробка медіа в описі
         if (files['descriptionMedia']) {
-            productData.descriptionMedia = files['descriptionMedia'].map(file => `/uploads/products/${file.filename}`);
+            productData.descriptionMedia = files['descriptionMedia'].map(file => file.path);
         }
 
-        // Знаходимо максимальний ID
         const maxIdProduct = await Product.findOne().sort({ id: -1 });
         productData.id = maxIdProduct ? maxIdProduct.id + 1 : 1;
 
@@ -219,7 +191,6 @@ app.post('/api/products', upload.fields([
     }
 });
 
-// Оновити товар
 app.put('/api/products/:id', upload.fields([
     { name: 'photos', maxCount: 10 },
     { name: 'colorPhoto0', maxCount: 1 },
@@ -233,24 +204,21 @@ app.put('/api/products/:id', upload.fields([
         const productData = JSON.parse(req.body.product);
         const files = req.files;
 
-        // Обробка основних фото товару
         if (files['photos']) {
-            productData.photos = files['photos'].map(file => `/uploads/products/${file.filename}`);
+            productData.photos = files['photos'].map(file => file.path);
         }
 
-        // Обробка фото кольорів
         if (productData.colors) {
             productData.colors.forEach((color, index) => {
                 const colorPhotoField = files[`colorPhoto${index}`];
                 if (colorPhotoField && colorPhotoField[0]) {
-                    color.photo = `/uploads/products/${colorPhotoField[0].filename}`;
+                    color.photo = colorPhotoField[0].path;
                 }
             });
         }
 
-        // Обробка медіа в описі
         if (files['descriptionMedia']) {
-            productData.descriptionMedia = files['descriptionMedia'].map(file => `/uploads/products/${file.filename}`);
+            productData.descriptionMedia = files['descriptionMedia'].map(file => file.path);
         }
 
         const product = await Product.findOneAndUpdate({ id: req.params.id }, productData, { new: true });
@@ -262,7 +230,6 @@ app.put('/api/products/:id', upload.fields([
     }
 });
 
-// Видалити товар
 app.delete('/api/products/:id', async (req, res) => {
     try {
         const product = await Product.findOneAndDelete({ id: req.params.id });
@@ -274,7 +241,6 @@ app.delete('/api/products/:id', async (req, res) => {
     }
 });
 
-// Простий логін для адмінки
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
@@ -284,7 +250,6 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Обробка всіх інших маршрутів — повертаємо index.html
 app.get('*', (req, res) => {
     console.log(`Request received for ${req.path}, serving index.html`);
     res.sendFile(indexPath, (err) => {
@@ -295,7 +260,6 @@ app.get('*', (req, res) => {
     });
 });
 
-// Глобальний обробник помилок
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });

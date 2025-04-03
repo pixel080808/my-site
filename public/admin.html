@@ -1474,36 +1474,45 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
 
     // Додаємо обробник для завантаження зображень і відео через панель інструментів
     const toolbar = productEditor.getModule('toolbar');
-    toolbar.addHandler('image', () => {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/*');
-        input.click();
-        input.onchange = async () => {
-            const file = input.files[0];
-            if (file) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    const response = await fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    if (data.url) {
-                        const range = productEditor.getSelection();
-                        productEditor.insertEmbed(range.index, 'image', data.url);
-                        setDefaultVideoSizes(productEditor, 'product-description');
-                    } else {
-                        alert('Помилка завантаження зображення!');
-                    }
-                } catch (err) {
-                    console.error('Помилка завантаження зображення:', err);
-                    alert('Не вдалося завантажити зображення: ' + err.message);
+toolbar.addHandler('image', async () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw new Error(`Сервер повернув помилку: ${response.status} ${response.statusText}`);
                 }
+                const text = await response.text(); // Спочатку отримуємо текст відповіді
+                let data;
+                try {
+                    data = JSON.parse(text); // Спробуємо розпарсити як JSON
+                } catch (jsonError) {
+                    throw new Error(`Некоректна відповідь сервера: ${text}`);
+                }
+                if (data.url) {
+                    const range = productEditor.getSelection() || { index: 0 };
+                    productEditor.insertEmbed(range.index, 'image', data.url);
+                    setDefaultVideoSizes(productEditor, 'product-description');
+                } else {
+                    throw new Error('URL зображення не отримано від сервера');
+                }
+            } catch (err) {
+                console.error('Помилка завантаження зображення:', err);
+                alert('Не вдалося завантажити зображення: ' + err.message);
             }
-        };
-    });
+        }
+    };
+});
 
     toolbar.addHandler('video', () => {
         const url = prompt('Введіть URL відео (наприклад, YouTube embed URL):');
@@ -3510,7 +3519,7 @@ async function saveNewProduct() {
         depthCm,
         heightCm,
         lengthCm,
-        photos: newProduct.photos.filter(photo => typeof photo === 'string'), // Зберігаємо лише URL-и, файли відправимо окремо
+        photos: [...newProduct.photos.filter(photo => typeof photo === 'string')],
         colors: newProduct.colors.map(color => ({
             name: color.name,
             value: color.value,
@@ -3586,11 +3595,12 @@ async function saveNewProduct() {
     formData.append('product', JSON.stringify(product));
 
     // Додаємо фотографії товару
-    newProduct.photos.forEach((photo, index) => {
-        if (typeof photo !== 'string') {
-            formData.append('photos', photo);
-        }
-    });
+const existingPhotos = newProduct.photos.filter(photo => typeof photo === 'string');
+const newPhotos = newProduct.photos.filter(photo => typeof photo !== 'string');
+newPhotos.forEach((photo, index) => {
+    formData.append('photos', photo);
+});
+product.photos = [...existingPhotos]; // Зберігаємо лише URL-и в об’єкті продукту
 
     // Додаємо фотографії кольорів
     const colorPhotos = newProduct.colors.map(color => {
@@ -3853,7 +3863,7 @@ async function saveEditedProduct(productId) {
         depthCm,
         heightCm,
         lengthCm,
-        photos: newProduct.photos.filter(photo => typeof photo === 'string'),
+        photos: [...newProduct.photos.filter(photo => typeof photo === 'string')],
         colors: newProduct.colors.map(color => ({
             name: color.name,
             value: color.value,
@@ -3928,11 +3938,12 @@ async function saveEditedProduct(productId) {
     const formData = new FormData();
     formData.append('product', JSON.stringify(product));
 
-    newProduct.photos.forEach((photo, index) => {
-        if (typeof photo !== 'string') {
-            formData.append('photos', photo);
-        }
-    });
+const existingPhotos = newProduct.photos.filter(photo => typeof photo === 'string');
+const newPhotos = newProduct.photos.filter(photo => typeof photo !== 'string');
+newPhotos.forEach((photo, index) => {
+    formData.append('photos', photo);
+});
+product.photos = [...existingPhotos];
 
     const colorPhotos = newProduct.colors.map(color => {
         if (typeof color.photo !== 'string' && color.photo) {
@@ -4002,20 +4013,22 @@ async function deleteProduct(productId) {
 async function toggleProductActive(productId) {
     const product = products.find(p => p.id === productId);
     if (product) {
-        product.active = !product.active;
+        const newActiveStatus = !product.active;
         try {
             const response = await fetch(`/api/products/${productId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(product)
+                body: JSON.stringify({ ...product, active: newActiveStatus })
             });
 
             if (!response.ok) {
-                throw new Error('Помилка при оновленні статусу товару: ' + response.statusText);
+                const errorText = await response.text();
+                throw new Error(`Помилка при оновленні статусу товару: ${response.status} ${response.statusText}. Сервер повернув: ${errorText}`);
             }
 
+            product.active = newActiveStatus; // Оновлюємо статус лише після успішного запиту
             renderAdmin('products');
             showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
             resetInactivityTimer();
