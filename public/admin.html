@@ -1218,16 +1218,57 @@
     console.log('Використано значення settings за замовчуванням:', settings);
 }
 
+function validateFile(file) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']; // Додано WebP
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+
+    if (!file) {
+        return { valid: false, error: 'Файл не вибрано' };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, error: 'Дозволені лише файли JPEG, PNG, GIF або WebP' };
+    }
+
+    if (file.size > maxSize) {
+        return { valid: false, error: 'Файл занадто великий. Максимальний розмір — 5 МБ.' };
+    }
+
+    return { valid: true };
+}
+
 async function loadProducts() {
     try {
-        const response = await fetch('/api/products');
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+const response = await fetch('/api/products', {
+    headers: {
+        'Authorization': `Bearer ${token}`
+    }
+});
+if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
+        showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+        return;
+    }
+    const errorData = await response.json();
+    throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
+}
         products = await response.json();
         renderAdmin('products');
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
+        showNotification(e.message);
         products = [];
     }
 }
+
 loadProducts();
     try {
         categories = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('categories')) || '[]');
@@ -1414,8 +1455,8 @@ function initializeEditors() {
         return delta;
     });
 
-    // Додаємо затримку, щоб переконатися, що панель інструментів ініціалізована
-    setTimeout(() => {
+    // Функція для додавання обробників кнопок Undo і Redo
+    function addToolbarEventListeners() {
         const toolbar = document.querySelector('#about-editor').previousElementSibling;
         if (toolbar && toolbar.classList.contains('ql-toolbar')) {
             const undoButton = toolbar.querySelector('.ql-undo');
@@ -1433,10 +1474,20 @@ function initializeEditors() {
         } else {
             console.error('Панель інструментів для aboutEditor не знайдена');
         }
-    }, 100);
+    }
+
+    // Виконуємо негайно, якщо документ уже завантажений, або чекаємо події
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(addToolbarEventListeners, 100);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(addToolbarEventListeners, 100);
+        });
+    }
 }
 
 function initializeProductEditor(description = '', descriptionDelta = null) {
+    // Ініціалізуємо Quill редактор
     productEditor = new Quill('#product-description-editor', {
         theme: 'snow',
         modules: {
@@ -1445,7 +1496,7 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
                 [{ 'header': 2 }, { 'header': 3 }],
                 ['link', 'image', 'video'],
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'],
+                ['undo', 'redo'], // Використовуємо вбудовані кнопки undo/redo
                 ['clean']
             ],
             history: {
@@ -1472,52 +1523,91 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     }
     document.getElementById('product-description').value = productEditor.root.innerHTML;
 
-    // Додаємо обробник для завантаження зображень і відео через панель інструментів
+    // Додаємо обробник для завантаження зображень через панель інструментів
     const toolbar = productEditor.getModule('toolbar');
 toolbar.addHandler('image', async () => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
+    input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp'); // Додано WebP
     input.click();
     input.onchange = async () => {
         const file = input.files[0];
         if (file) {
+            const validation = validateFile(file); // Використовуємо оновлену функцію
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
             try {
                 const formData = new FormData();
                 formData.append('file', file);
                 const response = await fetch('/api/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
+
                 if (!response.ok) {
-                    throw new Error(`Сервер повернув помилку: ${response.status} ${response.statusText}`);
+                    throw new Error(`Помилка завантаження: ${response.statusText}`);
                 }
-                const text = await response.text(); // Спочатку отримуємо текст відповіді
-                let data;
-                try {
-                    data = JSON.parse(text); // Спробуємо розпарсити як JSON
-                } catch (jsonError) {
-                    throw new Error(`Некоректна відповідь сервера: ${text}`);
-                }
+
+                const data = await response.json();
                 if (data.url) {
                     const range = productEditor.getSelection() || { index: 0 };
                     productEditor.insertEmbed(range.index, 'image', data.url);
                     setDefaultVideoSizes(productEditor, 'product-description');
-                } else {
-                    throw new Error('URL зображення не отримано від сервера');
                 }
             } catch (err) {
-                console.error('Помилка завантаження зображення:', err);
-                alert('Не вдалося завантажити зображення: ' + err.message);
+                showNotification('Не вдалося завантажити зображення: ' + err.message);
             }
         }
     };
 });
 
+    // Додаємо обробник для вставки відео
     toolbar.addHandler('video', () => {
-        const url = prompt('Введіть URL відео (наприклад, YouTube embed URL):');
+        let url = prompt('Введіть URL відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID):');
         if (url) {
-            const range = productEditor.getSelection();
+            // Перетворюємо URL у формат embed
+            const watchRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=([^\s&]+)/;
+            const embedRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/([^\s]+)/;
+            const shortRegex = /^(https?:\/\/)?youtu\.be\/([^\s]+)/;
+
+            let videoId = null;
+
+            // Перевіряємо формат watch?v=
+            if (watchRegex.test(url)) {
+                const match = url.match(watchRegex);
+                videoId = match[3];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            // Перевіряємо формат embed
+            else if (embedRegex.test(url)) {
+                const match = url.match(embedRegex);
+                videoId = match[3];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            // Перевіряємо формат youtu.be
+            else if (shortRegex.test(url)) {
+                const match = url.match(shortRegex);
+                videoId = match[2];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            else {
+                showNotification('Введіть коректний URL для YouTube відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID)');
+                return;
+            }
+
+            const range = productEditor.getSelection() || { index: 0 };
             productEditor.insertEmbed(range.index, 'video', url);
             setDefaultVideoSizes(productEditor, 'product-description');
         }
@@ -1548,7 +1638,7 @@ toolbar.addHandler('image', async () => {
         return delta;
     });
 
-    // Додаємо затримку, щоб переконатися, що панель інструментів ініціалізована
+    // Додаємо обробники для кнопок "Undo" і "Redo"
     setTimeout(() => {
         const toolbar = document.querySelector('#product-description-editor').previousElementSibling;
         if (toolbar && toolbar.classList.contains('ql-toolbar')) {
@@ -1579,17 +1669,32 @@ toolbar.addHandler('image', async () => {
         }
     }
 
-function login() {
+async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
-    if (username === 'admin' && password === 'Nata1989') {
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+            throw new Error('Помилка входу: ' + response.statusText);
+        }
+
+        const data = await response.json();
+        localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
-        showNotification('Вхід успішний!');
         resetInactivityTimer();
-    } else {
-        alert('Невірний логін або пароль!');
+    } catch (err) {
+        console.error('Помилка входу:', err);
+        showNotification('Не вдалося увійти: ' + err.message);
     }
 }
 
@@ -1604,15 +1709,16 @@ function login() {
         }
     });
 
-    function logout() {
-        if (unsavedChanges && !confirm('У вас є незбережені зміни. Ви впевнені, що хочете вийти?')) return;
-        clearTimeout(inactivityTimer);
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-        showNotification('Ви вийшли з адмін-панелі!');
-        unsavedChanges = false;
-    }
+function logout() {
+    if (unsavedChanges && !confirm('У вас є незбережені зміни. Ви впевнені, що хочете вийти?')) return;
+    clearTimeout(inactivityTimer);
+    session = { isActive: false, timestamp: 0 };
+    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+    localStorage.removeItem('adminToken'); // Видаляємо токен
+    showSection('admin-login');
+    showNotification('Ви вийшли з адмін-панелі!');
+    unsavedChanges = false;
+}
 
     function showNotification(message) {
         const notification = document.getElementById('notification');
@@ -2117,13 +2223,13 @@ function closeModal() {
             modal.innerHTML = `
                 <div class="modal-content">
                     <h3>Редагувати категорію</h3>
-                    <input type="text" id="edit-cat-name" value="${category.name}"><br>
+                    <input type="text" id="edit-cat-name" value="${category.name}"><br/>
                     <label for="edit-cat-name">Назва категорії</label>
-                    <input type="text" id="edit-cat-slug" value="${category.slug}"><br>
+                    <input type="text" id="edit-cat-slug" value="${category.slug}"><br/>
                     <label for="edit-cat-slug">Шлях категорії</label>
-                    <input type="text" id="edit-cat-img-url" value="${category.img || ''}"><br>
+                    <input type="text" id="edit-cat-img-url" value="${category.img || ''}"><br/>
                     <label for="edit-cat-img-url">URL зображення</label>
-                    <input type="file" id="edit-cat-img-file" accept="image/*"><br>
+                    <input type="file" id="edit-cat-img-file" accept="image/*"><br/>
                     <label for="edit-cat-img-file">Завантажте зображення</label>
                     ${category.img ? `<img src="${category.img}" style="max-width: 100px;">` : ''}
                     <div class="modal-actions">
@@ -2285,13 +2391,13 @@ function closeModal() {
                 modal.innerHTML = `
                     <div class="modal-content">
                         <h3>Редагувати підкатегорію</h3>
-                        <input type="text" id="edit-subcat-name" value="${subcategory.name}"><br>
+                        <input type="text" id="edit-subcat-name" value="${subcategory.name}"><br/>
                         <label for="edit-subcat-name">Назва підкатегорії</label>
-                        <input type="text" id="edit-subcat-slug" value="${subcategory.slug}"><br>
+                        <input type="text" id="edit-subcat-slug" value="${subcategory.slug}"><br/>
                         <label for="edit-subcat-slug">Шлях підкатегорії</label>
-                        <input type="text" id="edit-subcat-img-url" value="${subcategory.img || ''}"><br>
+                        <input type="text" id="edit-subcat-img-url" value="${subcategory.img || ''}"><br/>
                         <label for="edit-subcat-img-url">URL зображення</label>
-                        <input type="file" id="edit-subcat-img-file" accept="image/*"><br>
+                        <input type="file" id="edit-subcat-img-file" accept="image/*"><br/>
                         <label for="edit-subcat-img-file">Завантажте зображення</label>
                         ${subcategory.img ? `<img src="${subcategory.img}" style="max-width: 100px;">` : ''}
                         <div class="modal-actions">
@@ -2465,11 +2571,11 @@ function closeModal() {
             modal.innerHTML = `
                 <div class="modal-content">
                     <h3>Редагувати фільтр</h3>
-                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br>
+                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
                     <label for="edit-filter-name">Назва фільтру</label>
-                    <input type="text" id="edit-filter-label" value="${filter.label}"><br>
+                    <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
                     <label for="edit-filter-label">Відображувана назва</label>
-                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br>
+                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
                     <label for="edit-filter-options">Опції (через кому)</label>
                     <div class="modal-actions">
                         <button id="save-filter-btn">Зберегти</button>
@@ -2568,17 +2674,17 @@ function closeModal() {
             modal.innerHTML = `
                 <div class="modal-content">
                     <h3>Редагувати поле замовлення</h3>
-                    <input type="text" id="edit-order-field-name" value="${field.name}" readonly><br>
+                    <input type="text" id="edit-order-field-name" value="${field.name}" readonly><br/>
                     <label for="edit-order-field-name">Назва поля</label>
-                    <input type="text" id="edit-order-field-label" value="${field.label}"><br>
+                    <input type="text" id="edit-order-field-label" value="${field.label}"><br/>
                     <label for="edit-order-field-label">Відображувана назва</label>
                     <select id="edit-order-field-type">
                         <option value="text" ${field.type === 'text' ? 'selected' : ''}>Текст</option>
                         <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
                         <option value="select" ${field.type === 'select' ? 'selected' : ''}>Вибір</option>
-                    </select><br>
+                    </select><br/>
                     <label for="edit-order-field-type">Тип поля</label>
-                    <input type="text" id="edit-order-field-options" value="${field.options ? field.options.join(', ') : ''}" ${field.type !== 'select' ? 'disabled' : ''}><br>
+                    <input type="text" id="edit-order-field-options" value="${field.options ? field.options.join(', ') : ''}" ${field.type !== 'select' ? 'disabled' : ''}><br/>
                     <label for="edit-order-field-options">Опції (через кому, для select)</label>
                     <div class="modal-actions">
                         <button id="save-order-field-btn">Зберегти</button>
@@ -2726,14 +2832,14 @@ function addSlide() {
             modal.innerHTML = `
                 <div class="modal-content">
                     <h3>Редагувати слайд</h3>
-                    <input type="number" id="edit-slide-order" value="${slide.order}"><br>
+                    <input type="number" id="edit-slide-order" value="${slide.order}"><br/>
                     <label for="edit-slide-order">Порядковий номер</label>
-                    <input type="text" id="edit-slide-img-url" value="${slide.img || ''}"><br>
+                    <input type="text" id="edit-slide-img-url" value="${slide.img || ''}"><br/>
                     <label for="edit-slide-img-url">URL зображення</label>
-                    <input type="file" id="edit-slide-img-file" accept="image/*"><br>
+                    <input type="file" id="edit-slide-img-file" accept="image/*"><br/>
                     <label for="edit-slide-img-file">Завантажте зображення</label>
                     ${slide.img ? `<img src="${slide.img}" style="max-width: 100px;">` : ''}
-                    <input type="text" id="edit-slide-url" value="${slide.url}"><br>
+                    <input type="text" id="edit-slide-url" value="${slide.url}"><br/>
                     <label for="edit-slide-url">Посилання</label>
                     <div class="modal-actions">
                         <button id="save-slide-btn">Зберегти</button>
@@ -3022,12 +3128,10 @@ document.getElementById('bulk-price-file').addEventListener('change', function()
 function openAddProductModal() {
     newProduct = {
         type: 'simple',
-        colors: [],
         photos: [],
+        colors: [],
         sizes: [],
-        groupProducts: [],
-        active: true,
-        visible: true
+        groupProducts: []
     };
     const modal = document.getElementById('modal');
     modal.innerHTML = `
@@ -3037,70 +3141,70 @@ function openAddProductModal() {
                 <option value="simple">Простий товар</option>
                 <option value="mattresses">Матраци</option>
                 <option value="group">Груповий товар</option>
-            </select><br>
+            </select><br/>
             <label for="product-type">Тип товару</label>
-            <input type="text" id="product-name" placeholder="Назва товару"><br>
+            <input type="text" id="product-name" placeholder="Назва товару"><br/>
             <label for="product-name">Назва товару</label>
-            <input type="text" id="product-slug" placeholder="Шлях товару (наприклад, kuhnya-1)"><br>
+            <input type="text" id="product-slug" placeholder="Шлях товару"><br/>
             <label for="product-slug">Шлях товару</label>
-            <input type="text" id="product-brand" placeholder="Виробник"><br>
+            <input type="text" id="product-brand" placeholder="Виробник"><br/>
             <label for="product-brand">Виробник</label>
             <select id="product-category">
                 <option value="">Без категорії</option>
                 ${categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
-            </select><br>
+            </select><br/>
             <label for="product-category">Категорія</label>
             <select id="product-subcategory">
                 <option value="">Без підкатегорії</option>
-            </select><br>
+            </select><br/>
             <label for="product-subcategory">Підкатегорія</label>
-            <input type="text" id="product-material" placeholder="Матеріал"><br>
+            <input type="text" id="product-material" placeholder="Матеріал"><br/>
             <label for="product-material">Матеріал</label>
             <div id="price-fields"></div>
-            <input type="datetime-local" id="product-sale-end" placeholder="Дата закінчення акції"><br>
+            <input type="datetime-local" id="product-sale-end" placeholder="Дата закінчення акції"><br/>
             <label for="product-sale-end">Дата закінчення акції</label>
             <select id="product-visible">
                 <option value="true">Показувати на сайті</option>
                 <option value="false">Не показувати</option>
-            </select><br>
+            </select><br/>
             <label for="product-visible">Видимість</label>
             <div id="product-description-editor"></div>
             <input type="hidden" id="product-description">
             <label for="product-description">Опис товару</label>
             <h4>Розміри</h4>
-            <input type="number" id="product-width-cm" placeholder="Ширина (см)" min="0" step="0.1"><br>
+            <input type="number" id="product-width-cm" placeholder="Ширина (см)" min="0" step="0.1"><br/>
             <label for="product-width-cm">Ширина (см)</label>
-            <input type="number" id="product-depth-cm" placeholder="Глибина (см)" min="0" step="0.1"><br>
+            <input type="number" id="product-depth-cm" placeholder="Глибина (см)" min="0" step="0.1"><br/>
             <label for="product-depth-cm">Глибина (см)</label>
-            <input type="number" id="product-height-cm" placeholder="Висота (см)" min="0" step="0.1"><br>
+            <input type="number" id="product-height-cm" placeholder="Висота (см)" min="0" step="0.1"><br/>
             <label for="product-height-cm">Висота (см)</label>
-            <input type="number" id="product-length-cm" placeholder="Довжина (см)" min="0" step="0.1"><br>
+            <input type="number" id="product-length-cm" placeholder="Довжина (см)" min="0" step="0.1"><br/>
             <label for="product-length-cm">Довжина (см)</label>
             <h4>Фотографії</h4>
-            <input type="text" id="product-photo-url" placeholder="URL фотографії"><br>
+            <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
             <label for="product-photo-url">URL фотографії</label>
-            <input type="file" id="product-photo-file" accept="image/*" multiple><br>
+            <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" multiple><br/>
             <label for="product-photo-file">Завантажте фотографію</label>
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
             <h4>Кольори</h4>
-            <input type="text" id="product-color-name" placeholder="Назва кольору"><br>
+            <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
             <label for="product-color-name">Назва кольору</label>
-            <input type="color" id="product-color-value"><br>
+            <input type="color" id="product-color-value" value="#000000"><br/>
             <label for="product-color-value">Значення кольору</label>
-            <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br>
+            <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br/>
             <label for="product-color-price-change">Зміна ціни для кольору (грн)</label>
-            <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br>
+            <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br/>
             <label for="product-color-photo-url">URL фото кольору</label>
-            <input type="file" id="product-color-photo-file" accept="image/*"><br>
+            <input type="file" id="product-color-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
             <label for="product-color-photo-file">Завантажте фото кольору</label>
             <button onclick="addProductColor()">Додати колір</button>
             <div id="product-color-list" class="color-photo-list"></div>
             <div id="mattress-sizes" class="type-specific">
                 <h4>Розміри матраців</h4>
-                <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br>
+                <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br/>
                 <label for="mattress-size-name">Розмір</label>
-                <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br>
+                <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br/>
                 <label for="mattress-size-price">Ціна (грн)</label>
                 <button onclick="addMattressSize()">Додати розмір</button>
                 <div id="mattress-size-list"></div>
@@ -3121,49 +3225,53 @@ function openAddProductModal() {
     `;
     modal.classList.add('active');
     updateProductType();
-    // Передаємо description і descriptionDelta (для нового товару вони порожні)
-    initializeProductEditor(newProduct.description || '', newProduct.descriptionDelta || null);
-    document.getElementById('product-category').addEventListener('change', updateSubcategories);
-    updateSubcategories();
-    renderColorsList();
-    renderPhotoList();
-    renderMattressSizes();
-    renderGroupProducts();
+    initializeProductEditor();
 
-    // Обробник для відображення прев’ю основних фото
-    const photoInput = document.getElementById('product-photo-file');
-    photoInput.addEventListener('change', () => {
-        const files = photoInput.files;
-        Array.from(files).forEach(file => {
-            if (!newProduct.photos.includes(file)) {
-                newProduct.photos.push(file);
-            }
-        });
-        renderPhotoList();
-        resetInactivityTimer();
-    });
-
-    // Обробник для відображення прев’ю фото кольорів
-    const colorPhotoInput = document.getElementById('product-color-photo-file');
-    colorPhotoInput.addEventListener('change', () => {
-        const file = colorPhotoInput.files[0];
-        if (file) {
-            const name = document.getElementById('product-color-name').value;
-            const value = document.getElementById('product-color-value').value;
-            const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-            if (name && value) {
-                const color = { name, value, priceChange, photo: file };
-                newProduct.colors.push(color);
-                document.getElementById('product-color-name').value = '';
-                document.getElementById('product-color-value').value = '#000000';
-                document.getElementById('product-color-price-change').value = '';
-                document.getElementById('product-color-photo-url').value = '';
-                document.getElementById('product-color-photo-file').value = '';
-                renderColorsList();
-                resetInactivityTimer();
-            }
+    // Додаємо обробники подій після ініціалізації DOM
+    setTimeout(() => {
+        const categorySelect = document.getElementById('product-category');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', updateSubcategories);
+            updateSubcategories();
         }
-    });
+
+        const photoInput = document.getElementById('product-photo-file');
+        if (photoInput) {
+            photoInput.addEventListener('change', () => {
+                const files = photoInput.files;
+                Array.from(files).forEach(file => {
+                    if (!newProduct.photos.includes(file)) {
+                        newProduct.photos.push(file);
+                    }
+                });
+                renderPhotoList();
+                resetInactivityTimer();
+            });
+        }
+
+        const colorPhotoInput = document.getElementById('product-color-photo-file');
+        if (colorPhotoInput) {
+            colorPhotoInput.addEventListener('change', () => {
+                const file = colorPhotoInput.files[0];
+                if (file) {
+                    const name = document.getElementById('product-color-name').value;
+                    const value = document.getElementById('product-color-value').value;
+                    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+                    if (name && value) {
+                        const color = { name, value, priceChange, photo: file };
+                        newProduct.colors.push(color);
+                        document.getElementById('product-color-name').value = '';
+                        document.getElementById('product-color-value').value = '#000000';
+                        document.getElementById('product-color-price-change').value = '';
+                        document.getElementById('product-color-photo-url').value = '';
+                        document.getElementById('product-color-photo-file').value = '';
+                        renderColorsList();
+                        resetInactivityTimer();
+                    }
+                }
+            });
+        }
+    }, 0);
 
     resetInactivityTimer();
 }
@@ -3186,9 +3294,9 @@ function renderPriceFields() {
 
     if (newProduct.type === 'simple') {
         priceFields.innerHTML = `
-            <input type="number" id="product-price" value="${newProduct.price || ''}" placeholder="Ціна (грн)" min="0"><br>
+            <input type="number" id="product-price" value="${newProduct.price || ''}" placeholder="Ціна (грн)" min="0"><br/>
             <label for="product-price">Ціна (грн)</label>
-            <input type="number" id="product-sale-price" value="${newProduct.salePrice || ''}" placeholder="Акційна ціна (грн)" min="0"><br>
+            <input type="number" id="product-sale-price" value="${newProduct.salePrice || ''}" placeholder="Акційна ціна (грн)" min="0"><br/>
             <label for="product-sale-price">Акційна ціна (грн)</label>
         `;
     } else {
@@ -3207,16 +3315,26 @@ function renderPriceFields() {
 
 function addProductPhoto() {
     const url = document.getElementById('product-photo-url').value;
-    const files = document.getElementById('product-photo-file').files;
+    const fileInput = document.getElementById('product-photo-file');
+    const files = fileInput.files;
 
     if (files.length > 0) {
+        let allValid = true;
         Array.from(files).forEach(file => {
-            newProduct.photos.push(file); // Зберігаємо файли, а не Base64
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
+                allValid = false;
+                return;
+            }
+            newProduct.photos.push(file);
+        });
+        if (allValid) {
+            fileInput.value = '';
+            document.getElementById('product-photo-url').value = '';
             renderPhotoList();
             resetInactivityTimer();
-        });
-        document.getElementById('product-photo-url').value = '';
-        document.getElementById('product-photo-file').value = '';
+        }
     } else if (url) {
         newProduct.photos.push(url);
         document.getElementById('product-photo-url').value = '';
@@ -3278,18 +3396,24 @@ function addProductColor() {
     const value = document.getElementById('product-color-value').value;
     const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
     const url = document.getElementById('product-color-photo-url').value;
-    const file = document.getElementById('product-color-photo-file').files[0];
+    const colorPhotoInput = document.getElementById('product-color-photo-file');
+    const file = colorPhotoInput ? colorPhotoInput.files[0] : null;
 
     if (name && value) {
         const color = { name, value, priceChange };
         if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
             color.photo = file; // Зберігаємо файл, а не Base64
             newProduct.colors.push(color);
             document.getElementById('product-color-name').value = '';
             document.getElementById('product-color-value').value = '#000000';
             document.getElementById('product-color-price-change').value = '';
             document.getElementById('product-color-photo-url').value = '';
-            document.getElementById('product-color-photo-file').value = '';
+            if (colorPhotoInput) colorPhotoInput.value = '';
             renderColorsList();
             resetInactivityTimer();
         } else if (url) {
@@ -3299,7 +3423,7 @@ function addProductColor() {
             document.getElementById('product-color-value').value = '#000000';
             document.getElementById('product-color-price-change').value = '';
             document.getElementById('product-color-photo-url').value = '';
-            document.getElementById('product-color-photo-file').value = '';
+            if (colorPhotoInput) colorPhotoInput.value = '';
             renderColorsList();
             resetInactivityTimer();
         } else {
@@ -3308,7 +3432,7 @@ function addProductColor() {
             document.getElementById('product-color-value').value = '#000000';
             document.getElementById('product-color-price-change').value = '';
             document.getElementById('product-color-photo-url').value = '';
-            document.getElementById('product-color-photo-file').value = '';
+            if (colorPhotoInput) colorPhotoInput.value = '';
             renderColorsList();
             resetInactivityTimer();
         }
@@ -3332,7 +3456,7 @@ function renderColorsList() {
             <div class="color-item">
                 <span class="color-preview" style="background-color: ${color.value};"></span>
                 ${color.name} (Зміна ціни: ${color.priceChange} грн)
-                ${photoSrc ? `<img src="${photoSrc}" style="max-width: 30px;">` : ''}
+                ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px;">` : ''}
                 <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
             </div>
         `;
@@ -3473,11 +3597,39 @@ async function saveNewProduct() {
         return;
     }
 
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
     // Перевірка унікальності slug на сервері
-    const slugCheck = await fetch(`/api/products?slug=${slug}`);
-    const existingProducts = await slugCheck.json();
-    if (existingProducts.some(p => p.slug === slug)) {
-        alert('Шлях товару має бути унікальним!');
+    try {
+        const slugCheck = await fetch(`/api/products?slug=${slug}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!slugCheck.ok) {
+            if (slugCheck.status === 401 || slugCheck.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            throw new Error('Помилка перевірки унікальності шляху: ' + slugCheck.statusText);
+        }
+        const existingProducts = await slugCheck.json();
+        if (existingProducts.some(p => p.slug === slug)) {
+            alert('Шлях товару має бути унікальним!');
+            return;
+        }
+    } catch (err) {
+        console.error('Помилка перевірки унікальності шляху:', err);
+        showNotification(err.message);
         return;
     }
 
@@ -3519,12 +3671,12 @@ async function saveNewProduct() {
         depthCm,
         heightCm,
         lengthCm,
-        photos: [...newProduct.photos.filter(photo => typeof photo === 'string')],
+        photos: [],
         colors: newProduct.colors.map(color => ({
             name: color.name,
             value: color.value,
             priceChange: color.priceChange,
-            photo: typeof color.photo === 'string' ? color.photo : null // Зберігаємо лише URL, файли відправимо окремо
+            photo: null
         })),
         sizes: newProduct.sizes,
         groupProducts: newProduct.groupProducts,
@@ -3550,6 +3702,9 @@ async function saveNewProduct() {
                 formData.append('file', blob, `description-image-${Date.now()}.png`);
                 const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
                 const uploadData = await uploadResponse.json();
@@ -3590,40 +3745,95 @@ async function saveNewProduct() {
     product.description = updatedDescription;
     product.descriptionDelta = updatedDelta;
 
-    // Створюємо FormData для відправки даних і файлів
-    const formData = new FormData();
-    formData.append('product', JSON.stringify(product));
-
-    // Додаємо фотографії товару
-const existingPhotos = newProduct.photos.filter(photo => typeof photo === 'string');
-const newPhotos = newProduct.photos.filter(photo => typeof photo !== 'string');
-newPhotos.forEach((photo, index) => {
-    formData.append('photos', photo);
-});
-product.photos = [...existingPhotos]; // Зберігаємо лише URL-и в об’єкті продукту
-
-    // Додаємо фотографії кольорів
-    const colorPhotos = newProduct.colors.map(color => {
-        if (typeof color.photo !== 'string' && color.photo) {
-            return { filename: color.photo.name };
+    // Завантажуємо основні фотографії
+    const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
+    for (let file of photoFiles) {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+            alert(validation.error);
+            return;
         }
-        return null;
-    }).filter(Boolean);
-    newProduct.colors.forEach((color, index) => {
-        if (typeof color.photo !== 'string' && color.photo) {
-            formData.append(`colorPhoto${index}`, color.photo);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            if (!response.ok) {
+                throw new Error(`Помилка завантаження фото: ${response.statusText}`);
+            }
+            const data = await response.json();
+            product.photos.push(data.url);
+        } catch (err) {
+            console.error('Помилка завантаження фото:', err);
+            showNotification('Не вдалося завантажити фото: ' + err.message);
+            return;
         }
-    });
-    formData.append('colorPhotos', JSON.stringify(colorPhotos));
+    }
 
+    // Додаємо URL фотографій, які вже є
+    product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
+
+    // Завантажуємо фотографії кольорів
+    for (let i = 0; i < newProduct.colors.length; i++) {
+        const color = newProduct.colors[i];
+        if (color.photo instanceof File) {
+            const validation = validateFile(color.photo);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', color.photo);
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
+                }
+                const data = await response.json();
+                product.colors[i].photo = data.url;
+            } catch (err) {
+                console.error('Помилка завантаження фото кольору:', err);
+                showNotification('Не вдалося завантажити фото кольору: ' + err.message);
+                return;
+            }
+        } else if (typeof color.photo === 'string') {
+            product.colors[i].photo = color.photo;
+        }
+    }
+
+    // Відправляємо запит на сервер
     try {
         const response = await fetch('/api/products', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(product)
         });
 
         if (!response.ok) {
-            throw new Error('Помилка при додаванні товару: ' + response.statusText);
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Помилка при додаванні товару: ${response.statusText}. Деталі: ${JSON.stringify(errorData)}`);
         }
 
         const newProductData = await response.json();
@@ -3635,7 +3845,7 @@ product.photos = [...existingPhotos]; // Зберігаємо лише URL-и в
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
-        alert('Не вдалося додати товар: ' + err.message);
+        showNotification('Не вдалося додати товар: ' + err.message);
     }
 }
 
@@ -3653,70 +3863,70 @@ function openEditProductModal(productId) {
                     <option value="simple" ${product.type === 'simple' ? 'selected' : ''}>Простий товар</option>
                     <option value="mattresses" ${product.type === 'mattresses' ? 'selected' : ''}>Матраци</option>
                     <option value="group" ${product.type === 'group' ? 'selected' : ''}>Груповий товар</option>
-                </select><br>
+                </select><br/>
                 <label for="product-type">Тип товару</label>
-                <input type="text" id="product-name" value="${escapedName}"><br>
+                <input type="text" id="product-name" value="${escapedName}"><br/>
                 <label for="product-name">Назва товару</label>
-                <input type="text" id="product-slug" value="${product.slug || ''}"><br>
+                <input type="text" id="product-slug" value="${product.slug || ''}"><br/>
                 <label for="product-slug">Шлях товару</label>
-                <input type="text" id="product-brand" value="${product.brand || ''}"><br>
+                <input type="text" id="product-brand" value="${product.brand || ''}"><br/>
                 <label for="product-brand">Виробник</label>
                 <select id="product-category">
                     <option value="">Без категорії</option>
                     ${categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('')}
-                </select><br>
+                </select><br/>
                 <label for="product-category">Категорія</label>
                 <select id="product-subcategory">
                     <option value="">Без підкатегорії</option>
-                </select><br>
+                </select><br/>
                 <label for="product-subcategory">Підкатегорія</label>
-                <input type="text" id="product-material" value="${product.material || ''}" placeholder="Матеріал"><br>
+                <input type="text" id="product-material" value="${product.material || ''}" placeholder="Матеріал"><br/>
                 <label for="product-material">Матеріал</label>
                 <div id="price-fields"></div>
-                <input type="datetime-local" id="product-sale-end" value="${product.saleEnd || ''}"><br>
+                <input type="datetime-local" id="product-sale-end" value="${product.saleEnd || ''}"><br/>
                 <label for="product-sale-end">Дата закінчення акції</label>
                 <select id="product-visible">
                     <option value="true" ${product.visible ? 'selected' : ''}>Показувати на сайті</option>
                     <option value="false" ${!product.visible ? 'selected' : ''}>Не показувати</option>
-                </select><br>
+                </select><br/>
                 <label for="product-visible">Видимість</label>
                 <div id="product-description-editor"></div>
                 <input type="hidden" id="product-description">
                 <label for="product-description">Опис товару</label>
                 <h4>Розміри</h4>
-                <input type="number" id="product-width-cm" value="${product.widthCm || ''}" placeholder="Ширина (см)" min="0" step="0.1"><br>
+                <input type="number" id="product-width-cm" value="${product.widthCm || ''}" placeholder="Ширина (см)" min="0" step="0.1"><br/>
                 <label for="product-width-cm">Ширина (см)</label>
-                <input type="number" id="product-depth-cm" value="${product.depthCm || ''}" placeholder="Глибина (см)" min="0" step="0.1"><br>
+                <input type="number" id="product-depth-cm" value="${product.depthCm || ''}" placeholder="Глибина (см)" min="0" step="0.1"><br/>
                 <label for="product-depth-cm">Глибина (см)</label>
-                <input type="number" id="product-height-cm" value="${product.heightCm || ''}" placeholder="Висота (см)" min="0" step="0.1"><br>
+                <input type="number" id="product-height-cm" value="${product.heightCm || ''}" placeholder="Висота (см)" min="0" step="0.1"><br/>
                 <label for="product-height-cm">Висота (см)</label>
-                <input type="number" id="product-length-cm" value="${product.lengthCm || ''}" placeholder="Довжина (см)" min="0" step="0.1"><br>
+                <input type="number" id="product-length-cm" value="${product.lengthCm || ''}" placeholder="Довжина (см)" min="0" step="0.1"><br/>
                 <label for="product-length-cm">Довжина (см)</label>
                 <h4>Фотографії</h4>
-                <input type="text" id="product-photo-url" placeholder="URL фотографії"><br>
+                <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
                 <label for="product-photo-url">URL фотографії</label>
-                <input type="file" id="product-photo-file" accept="image/*" multiple><br>
+                <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" multiple><br/>
                 <label for="product-photo-file">Завантажте фотографію</label>
                 <button onclick="addProductPhoto()">Додати фото</button>
                 <div id="product-photo-list" class="photo-list"></div>
                 <h4>Кольори</h4>
-                <input type="text" id="product-color-name" placeholder="Назва кольору"><br>
+                <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
                 <label for="product-color-name">Назва кольору</label>
-                <input type="color" id="product-color-value"><br>
+                <input type="color" id="product-color-value"><br/>
                 <label for="product-color-value">Значення кольору</label>
-                <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br>
+                <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br/>
                 <label for="product-color-price-change">Зміна ціни для кольору (грн)</label>
-                <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br>
+                <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br/>
                 <label for="product-color-photo-url">URL фото кольору</label>
-                <input type="file" id="product-color-photo-file" accept="image/*"><br>
+                <input type="file" id="product-color-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
                 <label for="product-color-photo-file">Завантажте фото кольору</label>
                 <button onclick="addProductColor()">Додати колір</button>
                 <div id="product-color-list" class="color-photo-list"></div>
                 <div id="mattress-sizes" class="type-specific">
                     <h4>Розміри матраців</h4>
-                    <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br>
+                    <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br/>
                     <label for="mattress-size-name">Розмір</label>
-                    <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br>
+                    <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br/>
                     <label for="mattress-size-price">Ціна (грн)</label>
                     <button onclick="addMattressSize()">Додати розмір</button>
                     <div id="mattress-size-list"></div>
@@ -3816,11 +4026,39 @@ async function saveEditedProduct(productId) {
         return;
     }
 
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
     // Перевірка унікальності slug на сервері (крім поточного товару)
-    const slugCheck = await fetch(`/api/products?slug=${slug}`);
-    const existingProducts = await slugCheck.json();
-    if (existingProducts.some(p => p.slug === slug && p.id !== productId)) {
-        alert('Шлях товару має бути унікальним!');
+    try {
+        const slugCheck = await fetch(`/api/products?slug=${slug}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!slugCheck.ok) {
+            if (slugCheck.status === 401 || slugCheck.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            throw new Error('Помилка перевірки унікальності шляху: ' + slugCheck.statusText);
+        }
+        const existingProducts = await slugCheck.json();
+        if (existingProducts.some(p => p.slug === slug && p.id !== productId)) {
+            alert('Шлях товару має бути унікальним!');
+            return;
+        }
+    } catch (err) {
+        console.error('Помилка перевірки унікальності шляху:', err);
+        showNotification(err.message);
         return;
     }
 
@@ -3863,12 +4101,12 @@ async function saveEditedProduct(productId) {
         depthCm,
         heightCm,
         lengthCm,
-        photos: [...newProduct.photos.filter(photo => typeof photo === 'string')],
+        photos: [],
         colors: newProduct.colors.map(color => ({
             name: color.name,
             value: color.value,
             priceChange: color.priceChange,
-            photo: typeof color.photo === 'string' ? color.photo : null
+            photo: null
         })),
         sizes: newProduct.sizes,
         groupProducts: newProduct.groupProducts,
@@ -3894,6 +4132,9 @@ async function saveEditedProduct(productId) {
                 formData.append('file', blob, `description-image-${Date.now()}.png`);
                 const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
                 const uploadData = await uploadResponse.json();
@@ -3934,38 +4175,95 @@ async function saveEditedProduct(productId) {
     product.description = updatedDescription;
     product.descriptionDelta = updatedDelta;
 
-    // Створюємо FormData для відправки даних і файлів
-    const formData = new FormData();
-    formData.append('product', JSON.stringify(product));
-
-const existingPhotos = newProduct.photos.filter(photo => typeof photo === 'string');
-const newPhotos = newProduct.photos.filter(photo => typeof photo !== 'string');
-newPhotos.forEach((photo, index) => {
-    formData.append('photos', photo);
-});
-product.photos = [...existingPhotos];
-
-    const colorPhotos = newProduct.colors.map(color => {
-        if (typeof color.photo !== 'string' && color.photo) {
-            return { filename: color.photo.name };
+    // Завантажуємо основні фотографії
+    const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
+    for (let file of photoFiles) {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+            alert(validation.error);
+            return;
         }
-        return null;
-    }).filter(Boolean);
-    newProduct.colors.forEach((color, index) => {
-        if (typeof color.photo !== 'string' && color.photo) {
-            formData.append(`colorPhoto${index}`, color.photo);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            if (!response.ok) {
+                throw new Error(`Помилка завантаження фото: ${response.statusText}`);
+            }
+            const data = await response.json();
+            product.photos.push(data.url);
+        } catch (err) {
+            console.error('Помилка завантаження фото:', err);
+            showNotification('Не вдалося завантажити фото: ' + err.message);
+            return;
         }
-    });
-    formData.append('colorPhotos', JSON.stringify(colorPhotos));
+    }
 
+    // Додаємо URL фотографій, які вже є
+    product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
+
+    // Завантажуємо фотографії кольорів
+    for (let i = 0; i < newProduct.colors.length; i++) {
+        const color = newProduct.colors[i];
+        if (color.photo instanceof File) {
+            const validation = validateFile(color.photo);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', color.photo);
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
+                }
+                const data = await response.json();
+                product.colors[i].photo = data.url;
+            } catch (err) {
+                console.error('Помилка завантаження фото кольору:', err);
+                showNotification('Не вдалося завантажити фото кольору: ' + err.message);
+                return;
+            }
+        } else if (typeof color.photo === 'string') {
+            product.colors[i].photo = color.photo;
+        }
+    }
+
+    // Відправляємо запит на сервер
     try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
-            body: formData
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(product)
         });
 
         if (!response.ok) {
-            throw new Error('Помилка при оновленні товару: ' + response.statusText);
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Помилка при оновленні товару: ${response.statusText}. Деталі: ${JSON.stringify(errorData)}`);
         }
 
         const updatedProduct = await response.json();
@@ -3978,18 +4276,36 @@ product.photos = [...existingPhotos];
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
-        alert('Не вдалося оновити товар: ' + err.message);
+        showNotification('Не вдалося оновити товар: ' + err.message);
     }
 }
 
 async function deleteProduct(productId) {
     if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
         try {
             const response = await fetch(`/api/products/${productId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('adminToken');
+                    session = { isActive: false, timestamp: 0 };
+                    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                    showSection('admin-login');
+                    showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                    return;
+                }
                 throw new Error('Помилка при видаленні товару: ' + response.statusText);
             }
 
@@ -4005,7 +4321,7 @@ async function deleteProduct(productId) {
             resetInactivityTimer();
         } catch (err) {
             console.error('Помилка при видаленні товару:', err);
-            alert('Не вдалося видалити товар: ' + err.message);
+            showNotification('Не вдалося видалити товар: ' + err.message);
         }
     }
 }
@@ -4013,17 +4329,33 @@ async function deleteProduct(productId) {
 async function toggleProductActive(productId) {
     const product = products.find(p => p.id === productId);
     if (product) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
         const newActiveStatus = !product.active;
         try {
             const response = await fetch(`/api/products/${productId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ ...product, active: newActiveStatus })
             });
 
             if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('adminToken');
+                    session = { isActive: false, timestamp: 0 };
+                    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                    showSection('admin-login');
+                    showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                    return;
+                }
                 const errorText = await response.text();
                 throw new Error(`Помилка при оновленні статусу товару: ${response.status} ${response.statusText}. Сервер повернув: ${errorText}`);
             }
@@ -4034,7 +4366,7 @@ async function toggleProductActive(productId) {
             resetInactivityTimer();
         } catch (err) {
             console.error('Помилка при оновленні статусу товару:', err);
-            alert('Не вдалося оновити статус товару: ' + err.message);
+            showNotification('Не вдалося оновити статус товару: ' + err.message);
         }
     }
 }
@@ -4241,7 +4573,7 @@ function changeOrderStatus(index) {
                     <option value="В обробці" ${order.status === 'В обробці' ? 'selected' : ''}>В обробці</option>
                     <option value="Відправлено" ${order.status === 'Відправлено' ? 'selected' : ''}>Відправлено</option>
                     <option value="Завершено" ${order.status === 'Завершено' ? 'selected' : ''}>Завершено</option>
-                </select><br>
+                </select><br/>
                 <label for="new-order-status">Новий статус</label>
                 <div class="modal-actions">
                     <button onclick="saveOrderStatus(${index})">Зберегти</button>
@@ -4300,10 +4632,13 @@ function saveOrderStatus(index) {
         resetInactivityTimer();
     }
 
-if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
     showSection('admin-panel');
     resetInactivityTimer();
 } else {
+    localStorage.removeItem('adminToken');
+    session = { isActive: false, timestamp: 0 };
+    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
     showSection('admin-login');
 }
 
