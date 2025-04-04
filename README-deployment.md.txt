@@ -1,3 +1,12 @@
+git status
+git add .
+git status
+git commit -m "Зміни"
+git log --oneline
+git remote -v
+git push origin main
+
+
 ## Детальна інструкція: Як оновити файли на GitHub та розгорнути зміни на Render після внесення змін у проєкті My-site
 
 ### Передумови

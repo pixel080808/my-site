@@ -159,25 +159,11 @@ async function initializeData() {
 }
 
 function showSection(sectionId) {
-    // Очищаємо всі таймери перед перемиканням секції
-    document.querySelectorAll('.sale-timer').forEach(timer => {
-        if (timer.dataset.intervalId) {
-            clearInterval(parseInt(timer.dataset.intervalId));
-        }
-    });
-
-    const searchInput = document.getElementById('search');
-    if (searchInput && sectionId !== 'catalog' && !isSearchActive) {
-        searchInput.value = '';
-        isSearchActive = false;
-        searchResults = [];
-        baseSearchResults = [];
-    }
-
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
+        let newPath = '/'; // Базовий шлях
         if (sectionId === 'home') {
             currentProduct = null;
             currentCategory = null;
@@ -187,8 +173,8 @@ function showSection(sectionId) {
             isSearchActive = false;
             searchResults = [];
             baseSearchResults = [];
-            window.location.hash = '';
             renderCategories();
+            newPath = '/';
         } else if (sectionId === 'catalog') {
             if (!isSearchActive && !currentCategory) {
                 currentProduct = null;
@@ -199,31 +185,32 @@ function showSection(sectionId) {
             renderCatalog(currentCategory, currentSubcategory, currentProduct);
             if (currentProduct) {
                 showSection('product-details');
+                return;
             } else if (currentSubcategory) {
                 const catSlug = transliterate(currentCategory.replace('ь', ''));
                 const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
-                window.location.hash = `#${catSlug}/${subCatSlug}`;
+                newPath = `/${catSlug}/${subCatSlug}`;
             } else if (currentCategory) {
                 const catSlug = transliterate(currentCategory.replace('ь', ''));
-                window.location.hash = `#${catSlug}`;
+                newPath = `/${catSlug}`;
             } else {
-                window.location.hash = '#catalog';
+                newPath = '/catalog';
             }
         } else if (sectionId === 'cart') {
             parentGroupProduct = null;
             saveToStorage('parentGroupProduct', null);
             renderCart();
-            window.location.hash = '#cart';
+            newPath = '/cart';
         } else if (sectionId === 'contacts') {
             parentGroupProduct = null;
             saveToStorage('parentGroupProduct', null);
             renderContacts();
-            window.location.hash = '#contacts';
+            newPath = '/contacts';
         } else if (sectionId === 'about') {
             parentGroupProduct = null;
             saveToStorage('parentGroupProduct', null);
             renderAbout();
-            window.location.hash = '#about';
+            newPath = '/about';
         } else if (sectionId === 'product-details') {
             if (!currentProduct) {
                 showNotification('Товар не знайдено!', 'error');
@@ -231,8 +218,12 @@ function showSection(sectionId) {
                 return;
             }
             renderProductDetails();
-            window.location.hash = `#${transliterate(currentCategory.replace('ь', ''))}/${transliterate(currentSubcategory.replace('ь', ''))}/${currentProduct.slug}`;
+            const catSlug = transliterate(currentCategory.replace('ь', ''));
+            const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
+            newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
         }
+        // Змінюємо URL без #
+        history.pushState({ sectionId }, '', newPath);
         renderBreadcrumbs();
         window.scrollTo(0, 0);
     }
@@ -243,17 +234,15 @@ function renderBreadcrumbs() {
     const breadcrumbsContainer = document.getElementById('breadcrumbs');
     if (!breadcrumbsContainer) return;
 
-    // Очищаємо контейнер
     while (breadcrumbsContainer.firstChild) {
         breadcrumbsContainer.removeChild(breadcrumbsContainer.firstChild);
     }
 
     breadcrumbsContainer.classList.add('breadcrumbs-container');
 
-    // Додаємо "Головна"
     const homeSpan = document.createElement('span');
     const homeLink = document.createElement('a');
-    homeLink.href = '#';
+    homeLink.href = '/';
     homeLink.textContent = 'Головна';
     homeLink.classList.add('breadcrumb-link');
     homeLink.style.display = 'inline-block';
@@ -268,12 +257,12 @@ function renderBreadcrumbs() {
     homeSpan.appendChild(homeLink);
     breadcrumbsContainer.appendChild(homeSpan);
 
-    const pathSegments = window.location.hash.slice(1).split('/').filter(segment => segment);
+    const pathSegments = window.location.pathname.slice(1).split('/').filter(segment => segment);
     if (isSearchActive && document.getElementById('search')?.value) {
         homeSpan.appendChild(document.createTextNode(' > '));
         const searchSpan = document.createElement('span');
         const searchLink = document.createElement('a');
-        searchLink.href = '#catalog';
+        searchLink.href = '/catalog';
         searchLink.textContent = `Результати пошуку "${document.getElementById('search').value}"`;
         searchLink.classList.add('breadcrumb-link');
         searchLink.style.display = 'inline-block';
@@ -292,7 +281,7 @@ function renderBreadcrumbs() {
         let currentPath = '';
 
         pathSegments.forEach((segment, index) => {
-            currentPath = index === 0 ? `#${segment}` : `${currentPath}/${segment}`;
+            currentPath = index === 0 ? `/${segment}` : `${currentPath}/${segment}`;
 
             const span = document.createElement('span');
             const link = document.createElement('a');
@@ -307,8 +296,8 @@ function renderBreadcrumbs() {
             else if (segment === 'cart') displayText = 'Кошик';
             else if (index === pathSegments.length - 1 && currentProduct) {
                 displayText = currentProduct.name;
-                link.style.cursor = 'default'; // Останній елемент (назва товару) не клікабельний
-                link.onclick = (e) => e.preventDefault(); // Блокуємо перехід для назви товару
+                link.style.cursor = 'default';
+                link.onclick = (e) => e.preventDefault();
             } else {
                 const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === segment);
                 if (cat) displayText = cat.name;
@@ -321,7 +310,6 @@ function renderBreadcrumbs() {
             link.textContent = displayText;
             link.dataset.path = currentPath;
 
-            // Додаємо обробку кліку для всіх частин шляху, крім останньої (назви товару)
             if (index !== pathSegments.length - 1 || !currentProduct) {
                 link.onclick = (e) => {
                     e.preventDefault();
@@ -1850,8 +1838,8 @@ function changeQuantity(productId, change) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await initializeData(); // Чекаємо завершення ініціалізації
-    
+    await initializeData();
+
     const logo = document.getElementById('logo');
     if (logo) {
         logo.style.backgroundImage = `url(${settings.logo})`;
@@ -1867,7 +1855,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     updateCartCount();
     
-    // Додаємо обробник для меню "Каталог"
     const catalogToggle = document.getElementById('catalog-toggle');
     const catalogDropdown = document.getElementById('catalog-dropdown');
     if (catalogToggle && catalogDropdown) {
@@ -1877,18 +1864,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Закриття меню при кліку поза ним
-    document.addEventListener('click', (e) => {
-        const catalogMenu = document.querySelector('.catalog-menu');
-        const dropdown = document.getElementById('catalog-dropdown');
-        if (!catalogMenu.contains(e.target) && dropdown.classList.contains('active')) {
-            dropdown.classList.remove('active');
-        }
-    });
-
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-        const parts = hash.split('/');
+    const path = window.location.pathname.slice(1); // Беремо шлях без початкового "/"
+    if (path) {
+        const parts = path.split('/').filter(p => p); // Розбиваємо шлях на частини
         if (parts[0] === 'cart') {
             showSection('cart');
         } else if (parts[0] === 'contacts') {
