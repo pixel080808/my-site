@@ -23,6 +23,7 @@
         let selectedColors = {};
         let parentGroupProduct = null; // Додаємо оголошення
         const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
+        const NO_IMAGE_URL = 'https://via.placeholder.com/300x200.png?text=Фото+відсутнє';
 
         function transliterate(str) {
             const uaToEn = {
@@ -66,10 +67,14 @@ async function fetchWithRetry(url, retries = 3, delay = 1000) {
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Failed to fetch products');
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return await response.json();
         } catch (error) {
-            if (i === retries - 1) throw error; // Останній раз кидаємо помилку
+            if (i === retries - 1) {
+                showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
+                console.error('Помилка fetchWithRetry:', error.message, error.stack);
+                throw error;
+            }
             console.warn(`Спроба ${i + 1} не вдалася. Повтор через ${delay}мс...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -78,63 +83,33 @@ async function fetchWithRetry(url, retries = 3, delay = 1000) {
 
 async function initializeData() {
     cart = loadFromStorage('cart', []);
-    
     try {
-        products = await fetchWithRetry(`${BASE_URL}/api/products`);
+        products = await fetchWithRetry(`${BASE_URL}/api/public/products`);
         saveToStorage('products', products);
     } catch (error) {
         console.error('Error fetching products:', error);
         showNotification('Не вдалося завантажити продукти з сервера. Використовуються локальні дані.', 'error');
-        products = loadFromStorage('products', [
-            { id: 1, name: 'Вітальня', brand: 'Сокме', price: 12590, salePrice: 9999, saleEnd: '2025-04-01T00:00:00Z', slug: 'sokme-mark', url: 'sokme-mark', category: 'Вітальні', subcategory: 'Модульні', type: 'simple', visible: true, active: true, photos: ['https://picsum.photos/300/200'], material: 'Дерево', colors: [{ name: 'Коричневий', value: '#8B4513', priceChange: 0, photo: '' }, { name: 'Венге/Дуб Тахо', value: '#4A2F1A', priceChange: 500, photo: 'https://picsum.photos/80/80' }], widthCm: 200, depthCm: 50, heightCm: 180, lengthCm: null, description: 'Сучасна модульна вітальня' },
-            { id: 2, name: 'Матрац Sofia', brand: 'Матролюкс', slug: 'Matroluxe-Sofia-New', url: 'Matroluxe-Sofia-New', category: 'Спальні', subcategory: 'Матраци', type: 'mattresses', visible: true, active: true, sizes: [{ name: '70x190', price: 4262 }, { name: '80x190', price: 4795 }], photos: ['https://picsum.photos/300/200'], material: 'Пружинний блок', colors: [{ name: 'Білий', value: '#FFFFFF', priceChange: 0, photo: 'https://picsum.photos/80/80' }], description: 'Ортопедичний матрац' },
-            { id: 3, name: 'Кухонна секція', brand: 'Еверест', price: 5000, slug: 'kitchen-section', url: 'kitchen-section', category: 'Кухні', subcategory: 'Модульні', type: 'simple', visible: false, active: true, photos: ['https://picsum.photos/300/200'], material: 'Дерево', colors: [{ name: 'Сірий', value: '#808080', priceChange: 0, photo: '' }], description: 'Окрема секція кухні' },
-            { id: 4, name: 'Групова кухня', brand: 'Еверест', slug: 'everest-group', url: 'everest-group', category: 'Кухні', subcategory: 'Модульні', type: 'group', visible: true, active: true, groupProducts: [3], photos: ['https://picsum.photos/300/200'], material: 'Дерево', colors: [{ name: 'Сірий', value: '#808080', priceChange: 0, photo: '' }], description: 'Груповий комплект кухні' }
-        ]);
-        if (!localStorage.getItem('products')) saveToStorage('products', products);
+        products = loadFromStorage('products', []);
     }
 
-    categories = loadFromStorage('categories', [
-        { name: 'Вітальні', slug: 'vitalni', img: 'https://picsum.photos/150', subcategories: [{ name: 'Модульні', slug: 'modulni' }] },
-        { name: 'Спальні', slug: 'spalni', img: 'https://picsum.photos/150', subcategories: [{ name: 'Матраци', slug: 'matraci' }] },
-        { name: 'Кухні', slug: 'kukhni', img: 'https://picsum.photos/150', subcategories: [{ name: 'Модульні', slug: 'modulni' }] }
-    ]);
-    if (!localStorage.getItem('categories')) saveToStorage('categories', categories);
-
+    categories = loadFromStorage('categories', []);
     orders = loadFromStorage('orders', []);
-    slides = loadFromStorage('slides', [
-        { url: 'https://picsum.photos/800/400', title: 'Акція!', text: 'Знижки на вітальні!', link: '#vitalni', linkText: 'Дізнатися більше' },
-        { url: 'https://picsum.photos/800/400', title: 'Нові матраци', text: 'Комфорт для вашого сну', link: '#spalni', linkText: 'Переглянути' }
-    ]);
-    filters = loadFromStorage('filters', [
-        { name: 'brand', label: 'Виробник', type: 'checkbox', options: ['Дубок', 'Matroluxe', 'Сокме', 'Еверест'] },
-        { name: 'price', label: 'Ціна', type: 'checkbox', options: ['0-2000', '2000-5000', '5000-10000', '10000+'] },
-        { name: 'material', label: 'Матеріал', type: 'checkbox', options: ['Дерево', 'Пружинний блок', 'Метал', 'Тканина'] }
-    ]);
-    if (!localStorage.getItem('filters')) saveToStorage('filters', filters);
-
-    orderFields = loadFromStorage('orderFields', [
-        { name: 'name', label: 'Ім\'я', type: 'text', required: true },
-        { name: 'surname', label: 'Прізвище', type: 'text', required: true },
-        { name: 'phone', label: 'Телефон', type: 'tel', required: true },
-        { name: 'email', label: 'Email', type: 'email', required: false },
-        { name: 'address', label: 'Адреса доставки', type: 'text', required: true },
-        { name: 'payment', label: 'Оплата', type: 'select', options: ['Готівкою', 'Безготівковий розрахунок'], required: true }
-    ]);
-    if (!localStorage.getItem('orderFields')) saveToStorage('orderFields', orderFields);
-
+    slides = loadFromStorage('slides', []);
+    filters = loadFromStorage('filters', []);
+    orderFields = loadFromStorage('orderFields', []);
     settings = loadFromStorage('settings', {
         name: 'Меблевий магазин',
-        logo: 'https://picsum.photos/150/50',
+        logo: NO_IMAGE_URL, // Використовуємо семпл для логотипу за замовчуванням
         logoWidth: 150,
-        contacts: { phones: '+38 (067) 123-45-67', addresses: 'м. Київ, вул. Меблева, 1', schedule: 'Пн-Пт: 9:00-18:00' },
-        socials: [{ url: 'https://facebook.com', icon: '🌐', name: 'Facebook' }],
+        contacts: { phones: '', addresses: '', schedule: '' },
+        socials: [],
         showSocials: true,
-        about: 'Ми продаємо якісні меблі!',
+        about: '',
         showSlides: true,
         slideInterval: 3000,
         favicon: ''
     });
+
     const oldFavicon = document.querySelector('link[rel="icon"]');
     if (oldFavicon) oldFavicon.remove();
     const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
@@ -143,8 +118,6 @@ async function initializeData() {
     favicon.type = 'image/x-icon';
     favicon.href = faviconUrl;
     document.head.appendChild(favicon);
-
-    if (!localStorage.getItem('settings')) saveToStorage('settings', settings);
 
     if (orders.length > 5) orders = orders.slice(-5);
     if (cart.length > 10) cart = cart.slice(-10);
@@ -367,7 +340,7 @@ function renderBreadcrumbs() {
                 categoryDiv.className = 'category';
 
                 const img = document.createElement('img');
-                img.src = cat.img || 'https://picsum.photos/150';
+                img.src = cat.img || NO_IMAGE_URL;
                 img.alt = cat.name;
                 img.loading = 'lazy';
                 img.onclick = () => { currentCategory = cat.name; currentSubcategory = null; showSection('catalog'); };
@@ -473,7 +446,7 @@ function renderBreadcrumbs() {
                     itemDiv.className = 'category-item';
 
                     const img = document.createElement('img');
-                    img.src = cat.img || 'https://picsum.photos/150';
+                    img.src = cat.img || NO_IMAGE_URL;
                     img.alt = cat.name;
                     img.loading = 'lazy';
                     img.onclick = () => renderCatalog(cat.name);
@@ -731,7 +704,7 @@ function renderProducts(filtered) {
         productDiv.className = 'product';
 
         const img = document.createElement('img');
-        img.src = product.photos?.[0] || 'https://picsum.photos/300/200';
+        img.src = product.photos?.[0] || NO_IMAGE_URL;
         img.alt = product.name;
         img.loading = 'lazy';
         img.onclick = () => openProduct(product.id);
@@ -830,11 +803,12 @@ function renderProductDetails() {
     if (!productDetails || !currentProduct) return;
 
     try {
-        // Очищаємо попередній таймер, якщо він існує
-        const existingTimer = productDetails.querySelector('.sale-timer');
-        if (existingTimer && existingTimer.dataset.intervalId) {
-            clearInterval(parseInt(existingTimer.dataset.intervalId));
-        }
+        // Очищаємо всі таймери
+        document.querySelectorAll('.sale-timer').forEach(timer => {
+            if (timer.dataset.intervalId) {
+                clearInterval(parseInt(timer.dataset.intervalId));
+            }
+        });
         while (productDetails.firstChild) productDetails.removeChild(productDetails.firstChild);
 
         const product = currentProduct;
@@ -864,7 +838,7 @@ if (parentGroupProduct) {
         const leftDiv = document.createElement('div');
         leftDiv.className = 'product-detail-left';
         const mainImg = document.createElement('img');
-        mainImg.src = product.photos?.[0] || 'https://picsum.photos/300/200';
+        mainImg.src = product.photos?.[0] || NO_IMAGE_URL;
         mainImg.className = 'main-product-image';
         mainImg.alt = product.name;
         mainImg.loading = 'lazy';
@@ -1046,7 +1020,7 @@ if (parentGroupProduct) {
                 label.appendChild(checkbox);
 
                 const img = document.createElement('img');
-                img.src = p.photos?.[0] || 'https://picsum.photos/300/200';
+                img.src = p.photos?.[0] || NO_IMAGE_URL;
                 img.alt = p.name;
                 img.onclick = () => openProduct(p.id);
                 label.appendChild(img);
@@ -1143,7 +1117,7 @@ if (parentGroupProduct) {
         }
         renderBreadcrumbs();
     } catch (error) {
-        console.error('Помилка в renderProductDetails:', error);
+        console.error('Помилка в renderProductDetails:', error.message, error.stack);
         showNotification('Помилка при відображенні товару!', 'error');
         showSection('home'); // Повертаємося на головну сторінку у разі помилки
     }
@@ -1186,11 +1160,17 @@ function updateSaleTimer(productId, saleEnd) {
                 }
                 // Оновлюємо кошик, якщо товар є в кошику
                 const cartItem = cart.find(item => item.id === productId);
-                if (cartItem) {
-                    cartItem.price = product.price; // Оновлюємо ціну в кошику
-                    saveToStorage('cart', cart);
-                    renderCart();
-                }
+if (cartItem) {
+    const colorIndex = selectedColors[productId] || 0;
+    const colorPriceChange = product.colors?.[colorIndex]?.priceChange || 0;
+    if (product.type === 'mattresses' && selectedMattressSizes[productId]) {
+        cartItem.price = product.sizes.find(s => s.name === selectedMattressSizes[productId])?.price || product.price;
+    } else {
+        cartItem.price = product.price + colorPriceChange;
+    }
+    saveToStorage('cart', cart);
+    renderCart();
+}
             }
             clearInterval(parseInt(timerElement.dataset.intervalId));
             return;
@@ -1338,7 +1318,7 @@ function updateGroupSelection(productId) {
                 color: colorName || 'Не вказано',
                 price, 
                 quantity, 
-                photo: product.photos?.[0] || 'https://picsum.photos/50'
+                photo: product.photos?.[0] || NO_IMAGE_URL
             };
             const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
             if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
@@ -1367,7 +1347,7 @@ function updateGroupSelection(productId) {
                         name: p.name,
                         price,
                         quantity: 1,
-                        photo: p.photos?.[0] || 'https://picsum.photos/50'
+                        photo: p.photos?.[0] || NO_IMAGE_URL
                     };
                     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.name === cartItem.name);
                     if (existingItemIndex > -1) cart[existingItemIndex].quantity += 1;
@@ -1725,7 +1705,7 @@ function submitOrder() {
                 slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
                 const img = document.createElement('img');
-                img.src = slide.url || 'https://picsum.photos/800/400';
+                img.src = slide.url || NO_IMAGE_URL;
                 img.alt = slide.name || `Слайд ${i + 1}`;
                 img.loading = 'lazy';
                 slideDiv.appendChild(img);
@@ -1842,7 +1822,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const logo = document.getElementById('logo');
     if (logo) {
-        logo.style.backgroundImage = `url(${settings.logo})`;
+        logo.style.backgroundImage = `url(${settings.logo || NO_IMAGE_URL})`;
         logo.style.width = `${settings.logoWidth}px`;
         logo.style.height = `${settings.logoHeight || 60}px`;
     }

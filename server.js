@@ -279,7 +279,24 @@ app.post('/api/upload', authenticateToken, (req, res, next) => {
     });
 });
 
-// Захищені маршрути для /api/products
+// Публічний ендпоінт для перегляду товарів
+app.get('/api/public/products', async (req, res) => {
+    try {
+        const { slug } = req.query;
+        let products;
+        if (slug) {
+            products = await Product.find({ slug, visible: true, active: true });
+        } else {
+            products = await Product.find({ visible: true, active: true });
+        }
+        res.json(products);
+    } catch (err) {
+        console.error('Помилка при отриманні товарів:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+// Захищений ендпоінт для адмінів
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
         const { slug } = req.query;

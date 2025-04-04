@@ -399,56 +399,7 @@
             </button>
         </div>
     </div>
-<script>
-    async function loadProducts() {
-        try {
-            const response = await fetch('/api/products');
-            const products = await response.json();
-            const productList = document.getElementById('products');
-            if (productList) {
-                productList.innerHTML = products
-                    .filter(p => p.visible && p.active)
-                    .map(product => `
-                        <div class="product-item">
-                            <h3>${product.name}</h3>
-                            ${product.photos && product.photos.length > 0 ? `<img src="${product.photos[0]}" alt="${product.name}" style="max-width: 200px;">` : ''}
-                            <p class="price">
-                                ${product.salePrice ? `
-                                    <span class="sale-price">${product.salePrice} грн</span>
-                                    <s>${product.price} грн</s>
-                                ` : `
-                                    <span class="regular-price">${product.price || (product.sizes && product.sizes.length > 0 ? product.sizes[0].price : 'Н/Д')} грн</span>
-                                `}
-                            </p>
-                            <p>${product.description || ''}</p>
-                            <a href="/product/${product.slug}" onclick="showProductDetails(${product.id}); return false;">Детальніше</a>
-                        </div>
-                    `).join('');
-            }
-        } catch (err) {
-            console.error('Помилка завантаження товарів:', err);
-        }
-    }
-
-    // Завантажуємо товари при завантаженні сторінки
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.location.pathname === '/' || window.location.pathname === '/catalog') {
-            loadProducts();
-        }
-    });
-
-    // Функція для відображення деталей товару (якщо потрібно)
-    function showProductDetails(productId) {
-        // Ця функція має бути визначена у вашому script.js
-        // Вона викликається при кліку на "Детальніше"
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            showSection('product-details');
-            // Логіка відображення деталей товару
-        }
-    }
-</script>
     <!-- Підключаємо script.js -->
-    <script src="js/script.js"></script>
+    <script src="js/script.js" defer></script>
 </body>
 </html>
