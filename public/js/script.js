@@ -99,7 +99,7 @@ async function initializeData() {
     orderFields = loadFromStorage('orderFields', []);
     settings = loadFromStorage('settings', {
         name: 'Меблевий магазин',
-        logo: NO_IMAGE_URL, // Використовуємо семпл для логотипу за замовчуванням
+        logo: NO_IMAGE_URL,
         logoWidth: 150,
         contacts: { phones: '', addresses: '', schedule: '' },
         socials: [],
@@ -110,6 +110,9 @@ async function initializeData() {
         favicon: ''
     });
 
+    // Відновлюємо currentCategory і currentSubcategory
+    currentCategory = loadFromStorage('currentCategory', null);
+    currentSubcategory = loadFromStorage('currentSubcategory', null);
     const oldFavicon = document.querySelector('link[rel="icon"]');
     if (oldFavicon) oldFavicon.remove();
     const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
@@ -136,7 +139,7 @@ function showSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
-        let newPath = '/'; // Базовий шлях
+        let newPath = '/';
         if (sectionId === 'home') {
             currentProduct = null;
             currentCategory = null;
@@ -193,6 +196,9 @@ function showSection(sectionId) {
             const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
             newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
         }
+        // Зберігаємо currentCategory і currentSubcategory
+        saveToStorage('currentCategory', currentCategory);
+        saveToStorage('currentSubcategory', currentSubcategory);
         // Змінюємо URL без #
         history.pushState({ sectionId }, '', newPath);
         renderBreadcrumbs();
@@ -1883,9 +1889,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const path = window.location.pathname.slice(1); // Беремо шлях без початкового "/"
+    const path = window.location.pathname.slice(1);
     if (path) {
-        const parts = path.split('/').filter(p => p); // Розбиваємо шлях на частини
+        const parts = path.split('/').filter(p => p);
         if (parts[0] === 'cart') {
             showSection('cart');
         } else if (parts[0] === 'contacts') {
@@ -1911,7 +1917,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 showSection('catalog');
             } else {
+                // Показуємо 404
                 showSection('home');
+                showNotification('Сторінку не знайдено!', 'error');
             }
         }
     } else {

@@ -99,9 +99,11 @@ app.use(express.static(publicPath, {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
+            res.setHeader('Cache-Control', 'no-store');
         }
         if (path.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
+            res.setHeader('Cache-Control', 'no-store');
         }
     }
 }));
@@ -517,6 +519,14 @@ app.get('*', (req, res) => {
             res.status(500).send('Помилка при відображенні index.html');
         }
     });
+});
+
+// Обробка 404 для API-запитів
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API маршрут не знайдено' });
+    }
+    next();
 });
 
 app.use((err, req, res, next) => {
