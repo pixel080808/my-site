@@ -1321,11 +1321,14 @@ async function loadInitialData() {
         settings = await (await fetch('/api/settings', { headers })).json();
         slides = await (await fetch('/api/slides', { headers })).json();
 
+        // Ініціалізація редакторів після завантаження settings
+        initializeEditors();
         renderAdmin('products');
         showNotification('Дані завантажено успішно!');
     } catch (err) {
         console.error('Помилка завантаження даних:', err);
         showNotification('Не вдалося завантажити дані', 'error');
+        settings = settings || {}; // Ініціалізуємо порожнім об’єктом у разі помилки
     }
 }
 
@@ -1353,11 +1356,14 @@ async function loadProducts() {
             throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
         }
         products = await response.json();
+        // Фільтруємо некоректні продукти
+        products = products.filter(p => p && typeof p === 'object' && p.id && p.name);
         renderAdmin('products');
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification(e.message);
         products = [];
+        renderAdmin('products'); // Все одно рендеримо, щоб показати повідомлення про відсутність товарів
     }
 }
 
@@ -1517,29 +1523,36 @@ function setDefaultVideoSizes(editor, editorId) {
 }
 
 function initializeEditors() {
-aboutEditor = new Quill('#about-editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'header': 2 }, { 'header': 3 }],
-            ['link', 'image', 'video'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            ['undo', 'redo'], // Додано Undo/Redo
-            ['clean']
-        ],
-        history: {
-            delay: 1000,
-            maxStack: 100,
-            userOnly: true
-        }
+    // Перевіряємо, чи елемент існує
+    const aboutEditorElement = document.getElementById('about-editor');
+    if (!aboutEditorElement) {
+        console.error('Елемент #about-editor не знайдено в DOM');
+        return;
     }
-});
 
-// Додаємо обробники для кнопок Undo/Redo
-const aboutToolbar = aboutEditor.getModule('toolbar');
-aboutToolbar.addHandler('undo', () => aboutEditor.history.undo());
-aboutToolbar.addHandler('redo', () => aboutEditor.history.redo());
+    aboutEditor = new Quill('#about-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'header': 2 }, { 'header': 3 }],
+                ['link', 'image', 'video'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['undo', 'redo'], // Додано Undo/Redo
+                ['clean']
+            ],
+            history: {
+                delay: 1000,
+                maxStack: 100,
+                userOnly: true
+            }
+        }
+    });
+
+    // Додаємо обробники для кнопок Undo/Redo
+    const aboutToolbar = aboutEditor.getModule('toolbar');
+    aboutToolbar.addHandler('undo', () => aboutEditor.history.undo());
+    aboutToolbar.addHandler('redo', () => aboutEditor.history.redo());
 
     // Встановлюємо початковий вміст редактора із settings.about
     if (settings.about) {
@@ -1863,28 +1876,49 @@ function logout() {
     }
 
 async function updateStoreInfo() {
-    const name = document.getElementById('store-name').value;
-    let baseUrl = document.getElementById('base-url').value;
-    const logo = document.getElementById('logo-url').value || settings.logo;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
-    const favicon = document.getElementById('favicon-url').value || settings.favicon;
-
-    // Видаляємо завершальний слеш у baseUrl
-    if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-    }
-
-    const updatedSettings = {
-        ...settings,
-        name: name || settings.name,
-        baseUrl: baseUrl || settings.baseUrl,
-        logo,
-        logoWidth,
-        favicon
-    };
+    const name = document.getElement }ById('store-name').value;
+    const baseUrl = document.getElementById('base-url').value;
+    const logoUrl = document.getElementById('logo-url').value;
+    const logoWidth = parseInt(document.getElementById('logo-width').value) || (settings?.logo?.width ?? 100); // Дефолтне значення 100
+    const faviconUrl = document.getElementById('favicon-url').value;
 
     const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        return;
+    }
+
+    const logoFile = document.getElementById('logo-file').files[0];
+    const faviconFile = document.getElementById('favicon-file').files[0];
+    let finalLogoUrl = logoUrl;
+    let finalFaviconUrl = faviconUrl;
+
     try {
+        if (logoFile) {
+            const validation = validateFile(logoFile);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            finalLogoUrl = await uploadFile(logoFile);
+        }
+        if (faviconFile) {
+            const validation = validateFile(faviconFile);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            finalFaviconUrl = await uploadFile(faviconFile);
+        }
+
+        const updatedSettings = {
+            ...settings,
+            name: name || settings?.name || '',
+            baseUrl: baseUrl || settings?.baseUrl || '',
+            logo: { url: finalLogoUrl || settings?.logo?.url || '', width: logoWidth },
+            favicon: finalFaviconUrl || settings?.favicon || ''
+        };
+
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
@@ -1893,12 +1927,14 @@ async function updateStoreInfo() {
             },
             body: JSON.stringify(updatedSettings)
         });
+
         if (!response.ok) throw new Error('Не вдалося оновити налаштування');
-        settings = updatedSettings;
-        showNotification('Інформацію оновлено!');
+        settings = await response.json();
+        showNotification('Налаштування збережено!');
         resetInactivityTimer();
     } catch (err) {
-        showNotification('Помилка оновлення налаштувань: ' + err.message);
+        console.error('Помилка оновлення налаштувань:', err);
+        showNotification('Не вдалося зберегти налаштування');
     }
 }
 
@@ -2009,6 +2045,14 @@ function updateAbout() {
 }
 
 function renderAdmin(activeTab = 'site-editing') {
+    // Додаємо управління вкладками
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+    const tabBtn = document.querySelector(`.tab-btn[onclick="showAdminTab('${activeTab}')"]`);
+    if (tabBtn) tabBtn.classList.add('active');
+    const activeTabElement = document.getElementById(activeTab);
+    if (activeTabElement) activeTabElement.classList.add('active');
+
     const storeName = document.getElementById('store-name');
     if (storeName) storeName.value = settings.name || '';
     const baseUrl = document.getElementById('base-url');
@@ -2032,18 +2076,18 @@ function renderAdmin(activeTab = 'site-editing') {
             initializeEditors();
         }
         // Використовуємо setContents для коректного оновлення вмісту
- if (settings.aboutDelta) {
-    aboutEditor.setContents(settings.aboutDelta, 'silent');
-} else if (settings.about) {
-    try {
-        const delta = aboutEditor.clipboard.convert(settings.about);
-        aboutEditor.setContents(delta, 'silent');
-    } catch (e) {
-        aboutEditor.setContents([{ insert: settings.about }], 'silent');
-    }
-} else {
-    aboutEditor.setContents([], 'silent');
-}
+        if (settings.aboutDelta) {
+            aboutEditor.setContents(settings.aboutDelta, 'silent');
+        } else if (settings.about) {
+            try {
+                const delta = aboutEditor.clipboard.convert(settings.about);
+                aboutEditor.setContents(delta, 'silent');
+            } catch (e) {
+                aboutEditor.setContents([{ insert: settings.about }], 'silent');
+            }
+        } else {
+            aboutEditor.setContents([], 'silent');
+        }
         document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
     } else if (document.getElementById('about-edit')) {
         document.getElementById('about-edit').value = settings.about || '';
@@ -2145,10 +2189,12 @@ function renderAdmin(activeTab = 'site-editing') {
     if (activeTab === 'products') {
         const productList = document.getElementById('product-list-admin');
         if (productList) {
-            if (Array.isArray(products) && products.length > 0) {
+            // Фільтруємо продукти, щоб уникнути undefined або некоректних об’єктів
+            const validProducts = products.filter(p => p && typeof p === 'object' && p.id && p.name);
+            if (validProducts.length > 0) {
                 const start = (currentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                const paginatedProducts = products.slice(start, end);
+                const paginatedProducts = validProducts.slice(start, end);
                 productList.innerHTML = paginatedProducts.map(p => {
                     const saleInfo = p.salePrice ? `<s>${p.price || ''} грн</s> ${p.salePrice} грн ${renderCountdown(p)}` : `${p.price || ''} грн`;
                     const type = p.type || 'simple';
@@ -2157,7 +2203,7 @@ function renderAdmin(activeTab = 'site-editing') {
                         priceDisplay = p.sizes && Array.isArray(p.sizes) && p.sizes.length > 0 ? Math.min(...p.sizes.map(s => s.price || Infinity)) + ' грн' : 'Н/Д';
                     } else if (type === 'group') {
                         priceDisplay = p.groupProducts && Array.isArray(p.groupProducts) && p.groupProducts.length > 0 ? Math.min(...p.groupProducts.map(pid => {
-                            const prod = products.find(pr => pr.id === pid);
+                            const prod = validProducts.find(pr => pr.id === pid); // Змінено products на validProducts
                             return prod ? (prod.price || Infinity) : Infinity;
                         })) + ' грн' : 'Н/Д';
                     } else {
@@ -2173,7 +2219,7 @@ function renderAdmin(activeTab = 'site-editing') {
                             <span>${p.brand || 'Без бренду'}</span>
                             <span>${priceDisplay}</span>
                             <span>${salePriceDisplay}</span>
-                            <div class="status-column" title="${p.visible ? 'Видимість: Так' : 'Видимість: Ні'}">
+                            <div class="status-column" title="${visibilityStatus}">
                                 <div class="buttons">
                                     <button class="edit-btn" onclick="openEditProductModal(${p.id})">Редагувати</button>
                                     <button class="delete-btn" onclick="deleteProduct(${p.id})">Видалити</button>
@@ -2183,7 +2229,7 @@ function renderAdmin(activeTab = 'site-editing') {
                         </div>
                     `;
                 }).join('');
-                renderPagination(products.length, productsPerPage, 'pagination', currentPage);
+                renderPagination(validProducts.length, productsPerPage, 'pagination', currentPage);
             } else {
                 productList.innerHTML = '<p>Немає товарів для відображення.</p>';
             }
@@ -4802,9 +4848,16 @@ if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && loc
 document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
     if (loginBtn) loginBtn.addEventListener('click', login);
+
+    // Ініціалізуємо редактор одразу, якщо панель активна
     if (session.isActive && localStorage.getItem('adminToken')) {
-        loadInitialData();
-        connectWebSocket();
+        showSection('admin-panel');
+        initializeEditors(); // Ініціалізуємо редактор одразу
+        loadInitialData().then(() => {
+            connectWebSocket();
+        });
+    } else {
+        showSection('admin-login');
     }
 });
   </script>
