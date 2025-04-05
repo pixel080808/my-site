@@ -574,6 +574,54 @@
 .ql-redo:hover {
     background: #f0f0f0;
 }
+
+
+@media (max-width: 768px) {
+    .product-admin-item, #product-list-header {
+        grid-template-columns: 10% 20% 30% 20% 20%; /* Спрощуємо сітку */
+        font-size: 12px; /* Зменшуємо розмір шрифту */
+    }
+    .product-admin-item > span, #product-list-header > span {
+        white-space: normal; /* Дозволяємо перенос тексту */
+        text-overflow: unset;
+        overflow: visible;
+    }
+    .product-admin-item .status-column {
+        flex-direction: column; /* Розміщуємо кнопки вертикально */
+        gap: 8px;
+    }
+    .product-admin-item .status-column button {
+        width: 100%; /* Кнопки на всю ширину */
+    }
+}
+
+@media (max-width: 480px) {
+    .product-admin-item, #product-list-header {
+        grid-template-columns: 1fr; /* Одна колонка на дуже маленьких екранах */
+        text-align: left; /* Вирівнюємо текст зліва */
+    }
+    .product-admin-item > span, #product-list-header > span {
+        padding: 5px;
+        border-bottom: 1px solid #ddd; /* Додаємо роздільник між полями */
+    }
+    .product-admin-item .status-column {
+        flex-direction: row; /* Повертаємо горизонтальне розміщення */
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        width: 90%;
+        max-width: none;
+        padding: 15px;
+    }
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+        max-width: 100%;
+    }
+}
   </style>
  </head>
  <body>
@@ -1181,41 +1229,33 @@
    </div>
   </div>
   <script>
-   let session;
-    let products = [];
-    let categories = [];
-    let orders = [];
-    let slides = [];
-    let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
-    let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
-    let settings;
-    let currentPage = 1;
-    const productsPerPage = 20;
-    const ordersPerPage = 20;
-    const sessionTimeout = 30 * 60 * 1000;
-    let inactivityTimer;
-    let materials = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('materials')) || '["Дерево", "Пружинний блок", "Метал"]');
-    let brands = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('brands')) || '["Гербор", "Matroluxe", "Сокме"]');
-    let unsavedChanges = false;
-    let aboutEditor; // Глобальна змінна для редактора
-    let productEditor; // Додаємо глобальну змінну для редактора товару
-    let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
- 
+let session;
+let products = [];
+let categories = [];
+let orders = [];
+let slides = [];
+let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
+let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
+let settings;
+let currentPage = 1;
+const productsPerPage = 20;
+const ordersPerPage = 20;
+const sessionTimeout = 30 * 60 * 1000;
+let inactivityTimer;
+let materials = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('materials')) || '["Дерево", "Пружинний блок", "Метал"]');
+let brands = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('brands')) || '["Гербор", "Matroluxe", "Сокме"]');
+let unsavedChanges = false;
+let aboutEditor; // Глобальна змінна для редактора
+let productEditor; // Додаємо глобальну змінну для редактора товару
+let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 
-    try {
-        session = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('adminSession')) || '{"isActive":false,"timestamp":0}');
-    } catch (e) {
-        console.error('Помилка парсингу session:', e);
-        session = { isActive: false, timestamp: 0 };
-    }
-    try {
-    settings = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('settings')) || '{"name":"Меблевий магазин","logo":"https://via.placeholder.com/100x50","logoWidth":150,"favicon":"https://via.placeholder.com/16x16","contacts":{"phones":"+38 (067) 123-45-67","addresses":"м. Київ, вул. Меблева, 1","schedule":"Пн-Пт: 9:00-18:00"},"socials":[],"showSocials":false,"about":"Ми продаємо якісні меблі!","showSlides":true,"slideWidth":75,"slideHeight":200,"slideInterval":3000,"categoryWidth":200,"categoryHeight":150,"productWidth":300,"productHeight":280,"baseUrl":"www.aaaa.ua"}');
-    console.log('Завантажено settings з localStorage:', settings);
-    console.log('Початкове значення settings.about:', settings.about);
+let ws; // Додаємо змінну для WebSocket
+
+try {
+    session = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('adminSession')) || '{"isActive":false,"timestamp":0}');
 } catch (e) {
-    console.error('Помилка парсингу settings:', e);
-    settings = {"name":"Меблевий магазин","logo":"https://via.placeholder.com/100x50","logoWidth":150,"favicon":"https://via.placeholder.com/16x16","contacts":{"phones":"+38 (067) 123-45-67","addresses":"м. Київ, вул. Меблева, 1","schedule":"Пн-Пт: 9:00-18:00"},"socials":[],"showSocials":false,"about":"Ми продаємо якісні меблі!","showSlides":true,"slideWidth":75,"slideHeight":200,"slideInterval":3000,"categoryWidth":200,"categoryHeight":150,"productWidth":300,"productHeight":280,"baseUrl":"www.aaaa.ua"};
-    console.log('Використано значення settings за замовчуванням:', settings);
+    console.error('Помилка парсингу session:', e);
+    session = { isActive: false, timestamp: 0 };
 }
 
 function validateFile(file) {
@@ -1237,29 +1277,81 @@ function validateFile(file) {
     return { valid: true };
 }
 
+async function uploadFile(file) {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній, будь ласка, увійдіть знову', 'error');
+        throw new Error('Токен відсутній');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Помилка завантаження');
+        }
+
+        const data = await response.json();
+        return data.url;
+    } catch (err) {
+        console.error('Помилка завантаження файлу:', err);
+        showNotification('Не вдалося завантажити файл: ' + err.message, 'error');
+        throw err;
+    }
+}
+
+async function loadInitialData() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+    try {
+        products = await (await fetch('/api/products', { headers })).json();
+        categories = await (await fetch('/api/categories', { headers })).json();
+        orders = await (await fetch('/api/orders', { headers })).json();
+        settings = await (await fetch('/api/settings', { headers })).json();
+        slides = await (await fetch('/api/slides', { headers })).json();
+
+        renderAdmin('products');
+        showNotification('Дані завантажено успішно!');
+    } catch (err) {
+        console.error('Помилка завантаження даних:', err);
+        showNotification('Не вдалося завантажити дані', 'error');
+    }
+}
+
 async function loadProducts() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
             throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
         }
-const response = await fetch('/api/products', {
-    headers: {
-        'Authorization': `Bearer ${token}`
-    }
-});
-if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('adminToken');
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-        showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-        return;
-    }
-    const errorData = await response.json();
-    throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
-}
+        const response = await fetch('/api/products', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
+        }
         products = await response.json();
         renderAdmin('products');
     } catch (e) {
@@ -1269,26 +1361,58 @@ if (!response.ok) {
     }
 }
 
+function connectWebSocket() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        console.error('Токен відсутній, WebSocket не підключено');
+        showNotification('Будь ласка, увійдіть знову', 'error');
+        return;
+    }
+
+    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}?token=${token}`);
+    ws.onopen = () => {
+        console.log('Підключено до WebSocket');
+        resetInactivityTimer();
+    };
+    ws.onmessage = (event) => {
+        try {
+            const { type, data } = JSON.parse(event.data);
+            if (type === 'products') {
+                products = data;
+                renderAdmin('products');
+                showNotification('Список товарів оновлено!');
+            } else if (type === 'categories') {
+                categories = data;
+                renderAdmin('site-editing');
+                showNotification('Категорії оновлено!');
+            } else if (type === 'orders') {
+                orders = data;
+                renderAdmin('orders');
+                showNotification('Замовлення оновлено!');
+            } else if (type === 'settings') {
+                settings = data;
+                renderAdmin('site-editing');
+                showNotification('Налаштування оновлено!');
+            } else if (type === 'slides') {
+                slides = data;
+                renderAdmin('site-editing');
+                showNotification('Слайди оновлено!');
+            }
+        } catch (err) {
+            console.error('Помилка обробки WebSocket повідомлення:', err);
+        }
+    };
+ws.onerror = (err) => {
+    console.error('Помилка WebSocket:', err);
+    showNotification('Помилка підключення до WebSocket', 'error');
+};
+    ws.onclose = () => {
+        console.log('WebSocket від’єднано. Спроба перепідключення...');
+        setTimeout(connectWebSocket, 5000);
+    };
+}
+
 loadProducts();
-    try {
-        categories = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('categories')) || '[]');
-    } catch (e) {
-        console.error('Помилка парсингу categories:', e);
-        categories = [];
-    }
-    try {
-        orders = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('orders')) || '[]');
-        sortOrders('date-desc'); // Сортуємо за замовчуванням (новіші першими)
-    } catch (e) {
-        console.error('Помилка парсингу orders:', e);
-        orders = [];
-    }
-    try {
-        slides = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('slides')) || '[]');
-    } catch (e) {
-        console.error('Помилка парсингу slides:', e);
-        slides = [];
-    }
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -1393,24 +1517,29 @@ function setDefaultVideoSizes(editor, editorId) {
 }
 
 function initializeEditors() {
-    aboutEditor = new Quill('#about-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'],
-                ['clean']
-            ],
-            history: {
-                delay: 1000,
-                maxStack: 100,
-                userOnly: true
-            }
+aboutEditor = new Quill('#about-editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'header': 2 }, { 'header': 3 }],
+            ['link', 'image', 'video'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['undo', 'redo'], // Додано Undo/Redo
+            ['clean']
+        ],
+        history: {
+            delay: 1000,
+            maxStack: 100,
+            userOnly: true
         }
-    });
+    }
+});
+
+// Додаємо обробники для кнопок Undo/Redo
+const aboutToolbar = aboutEditor.getModule('toolbar');
+aboutToolbar.addHandler('undo', () => aboutEditor.history.undo());
+aboutToolbar.addHandler('redo', () => aboutEditor.history.redo());
 
     // Встановлюємо початковий вміст редактора із settings.about
     if (settings.about) {
@@ -1488,24 +1617,29 @@ function initializeEditors() {
 
 function initializeProductEditor(description = '', descriptionDelta = null) {
     // Ініціалізуємо Quill редактор
-    productEditor = new Quill('#product-description-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'], // Використовуємо вбудовані кнопки undo/redo
-                ['clean']
-            ],
-            history: {
-                delay: 1000,
-                maxStack: 100,
-                userOnly: true
-            }
+productEditor = new Quill('#product-description-editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'header': 2 }, { 'header': 3 }],
+            ['link', 'image', 'video'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['undo', 'redo'], // Додано Undo/Redo
+            ['clean']
+        ],
+        history: {
+            delay: 1000,
+            maxStack: 100,
+            userOnly: true
         }
-    });
+    }
+});
+
+// Додаємо обробники для кнопок Undo/Redo
+const productToolbar = productEditor.getModule('toolbar');
+productToolbar.addHandler('undo', () => productEditor.history.undo());
+productToolbar.addHandler('redo', () => productEditor.history.redo());
 
     // Встановлюємо вміст редактора
     if (descriptionDelta) {
@@ -1523,55 +1657,31 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     }
     document.getElementById('product-description').value = productEditor.root.innerHTML;
 
-    // Додаємо обробник для завантаження зображень через панель інструментів
     const toolbar = productEditor.getModule('toolbar');
-toolbar.addHandler('image', async () => {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp'); // Додано WebP
-    input.click();
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (file) {
-            const validation = validateFile(file); // Використовуємо оновлену функцію
-            if (!validation.valid) {
-                showNotification(validation.error);
-                return;
-            }
-            const token = localStorage.getItem('adminToken');
-            if (!token) {
-                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Помилка завантаження: ${response.statusText}`);
+    toolbar.addHandler('image', async () => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp');
+        input.click();
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (file) {
+                const validation = validateFile(file);
+                if (!validation.valid) {
+                    showNotification(validation.error);
+                    return;
                 }
-
-                const data = await response.json();
-                if (data.url) {
+                try {
+                    const url = await uploadFile(file);
                     const range = productEditor.getSelection() || { index: 0 };
-                    productEditor.insertEmbed(range.index, 'image', data.url);
+                    productEditor.insertEmbed(range.index, 'image', url);
                     setDefaultVideoSizes(productEditor, 'product-description');
+                } catch (err) {
+                    // Помилка вже оброблена в uploadFile
                 }
-            } catch (err) {
-                showNotification('Не вдалося завантажити зображення: ' + err.message);
             }
-        }
-    };
-});
+        };
+    });
 
     // Додаємо обробник для вставки відео
     toolbar.addHandler('video', () => {
@@ -1676,25 +1786,25 @@ async function login() {
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
 
-        if (!response.ok) {
-            throw new Error('Помилка входу: ' + response.statusText);
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Помилка входу');
         }
 
-        const data = await response.json();
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
-        resetInactivityTimer();
+        loadInitialData();
+        connectWebSocket();
+        showNotification('Вхід виконано успішно!');
     } catch (err) {
         console.error('Помилка входу:', err);
-        showNotification('Не вдалося увійти: ' + err.message);
+        showNotification('Не вдалося увійти: ' + err.message, 'error');
     }
 }
 
@@ -1710,14 +1820,15 @@ async function login() {
     });
 
 function logout() {
-    if (unsavedChanges && !confirm('У вас є незбережені зміни. Ви впевнені, що хочете вийти?')) return;
-    clearTimeout(inactivityTimer);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+    }
+    localStorage.removeItem('adminToken');
     session = { isActive: false, timestamp: 0 };
     localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-    localStorage.removeItem('adminToken'); // Видаляємо токен
     showSection('admin-login');
-    showNotification('Ви вийшли з адмін-панелі!');
-    unsavedChanges = false;
+    clearTimeout(inactivityTimer);
+    showNotification('Ви вийшли з системи!');
 }
 
     function showNotification(message) {
@@ -1751,63 +1862,43 @@ function logout() {
         }
     }
 
-function updateStoreInfo() {
+async function updateStoreInfo() {
     const name = document.getElementById('store-name').value;
-    const baseUrl = document.getElementById('base-url').value; // Added
-    const logoUrl = document.getElementById('logo-url').value;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || 150;
-    const logoFile = document.getElementById('logo-file').files[0];
-    const faviconUrl = document.getElementById('favicon-url').value;
-    const faviconFile = document.getElementById('favicon-file').files[0];
+    let baseUrl = document.getElementById('base-url').value;
+    const logo = document.getElementById('logo-url').value || settings.logo;
+    const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
+    const favicon = document.getElementById('favicon-url').value || settings.favicon;
 
-    if (name) settings.name = name;
-    if (baseUrl) settings.baseUrl = baseUrl; // Added
-    if (logoUrl) settings.logo = logoUrl;
-    if (logoWidth >= 50 && logoWidth <= 500) settings.logoWidth = logoWidth;
-    if (faviconUrl) settings.favicon = faviconUrl;
+    // Видаляємо завершальний слеш у baseUrl
+    if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+    }
 
-    if (logoFile || faviconFile) {
-        const reader = new FileReader();
-        if (logoFile) {
-            reader.onload = (e) => {
-                settings.logo = e.target.result;
-                if (faviconFile) {
-                    const faviconReader = new FileReader();
-                    faviconReader.onload = (fe) => {
-                        settings.favicon = fe.target.result;
-                        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                        renderAdmin();
-                        showNotification('Логотип, favicon та назву збережено!');
-                        unsavedChanges = false;
-                        resetInactivityTimer();
-                    };
-                    faviconReader.readAsDataURL(faviconFile);
-                } else {
-                    localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                    renderAdmin();
-                    showNotification('Логотип та назву збережено!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                }
-            };
-            reader.readAsDataURL(logoFile);
-        } else if (faviconFile) {
-            reader.onload = (e) => {
-                settings.favicon = e.target.result;
-                localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                renderAdmin();
-                showNotification('Favicon збережено!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            };
-            reader.readAsDataURL(faviconFile);
-        }
-    } else {
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Логотип, favicon та назву збережено!');
-        unsavedChanges = false;
+    const updatedSettings = {
+        ...settings,
+        name: name || settings.name,
+        baseUrl: baseUrl || settings.baseUrl,
+        logo,
+        logoWidth,
+        favicon
+    };
+
+    const token = localStorage.getItem('adminToken');
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedSettings)
+        });
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування');
+        settings = updatedSettings;
+        showNotification('Інформацію оновлено!');
         resetInactivityTimer();
+    } catch (err) {
+        showNotification('Помилка оновлення налаштувань: ' + err.message);
     }
 }
 
@@ -2174,47 +2265,65 @@ function closeModal() {
     resetInactivityTimer();
 }
 
-    function addCategory() {
-        const name = document.getElementById('cat-name').value;
-        const slug = document.getElementById('cat-slug').value;
-        const imgUrl = document.getElementById('cat-img-url').value;
-        const imgFile = document.getElementById('cat-img-file').files[0];
+    function slugify(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Замінюємо небажані символи на дефіс
+        .replace(/-+/g, '-') // Замінюємо кілька дефісів на один
+        .replace(/^-|-$/g, ''); // Видаляємо дефіси на початку і в кінці
+}
 
-        if (name && slug) {
-            if (categories.some(c => c.slug === slug)) {
-                alert('Шлях категорії має бути унікальним!');
-                return;
-            }
-            const category = { name, slug, subcategories: [] };
-            if (imgUrl) category.img = imgUrl;
+async function addCategory() {
+    const name = document.getElementById('cat-name').value;
+    let slug = document.getElementById('cat-slug').value;
+    const img = document.getElementById('cat-img-url').value || 'https://via.placeholder.com/300x200';
 
-            if (imgFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    category.img = e.target.result;
-                    categories.push(category);
-                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                    renderAdmin();
-                    showNotification('Категорію додано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(imgFile);
-            } else {
-                categories.push(category);
-                localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                renderAdmin();
-                showNotification('Категорію додано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            }
-            document.getElementById('cat-name').value = '';
-            document.getElementById('cat-slug').value = '';
-            document.getElementById('cat-img-url').value = '';
-        } else {
-            alert('Введіть назву та шлях категорії!');
-        }
+    if (!name || !slug) {
+        alert('Введіть назву та шлях категорії!');
+        return;
     }
+
+    // Очищаємо slug
+    slug = slugify(slug);
+
+    // Перевіряємо унікальність slug
+    const token = localStorage.getItem('adminToken');
+    try {
+        const response = await fetch(`/api/categories?slug=${slug}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const existingCategories = await response.json();
+        if (existingCategories.some(c => c.slug === slug)) {
+            alert('Шлях категорії має бути унікальним!');
+            return;
+        }
+    } catch (err) {
+        showNotification('Помилка перевірки унікальності шляху: ' + err.message);
+        return;
+    }
+
+    const category = { name, slug, img, subcategories: [] };
+    try {
+        const response = await fetch('/api/categories', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(category)
+        });
+        if (!response.ok) throw new Error('Не вдалося додати категорію');
+        categories.push(category);
+        renderCategoriesAdmin();
+        document.getElementById('cat-name').value = '';
+        document.getElementById('cat-slug').value = '';
+        document.getElementById('cat-img-url').value = '';
+        document.getElementById('cat-img-file').value = '';
+        showNotification('Категорію додано!');
+    } catch (err) {
+        showNotification('Не вдалося додати категорію: ' + err.message);
+    }
+}
 
     function editCategory(name) {
         const category = categories.find(c => c.name === name);
@@ -2334,53 +2443,56 @@ function closeModal() {
         }
     }
 
-    function addSubcategory() {
-        const name = document.getElementById('subcat-name').value;
-        const slug = document.getElementById('subcat-slug').value;
-        const imgUrl = document.getElementById('subcat-img-url').value;
-        const imgFile = document.getElementById('subcat-img-file').files[0];
-        const categoryName = document.getElementById('subcat-category').value;
+async function addSubcategory() {
+    const name = document.getElementById('subcat-name').value;
+    let slug = document.getElementById('subcat-slug').value;
+    const img = document.getElementById('subcat-img-url').value || 'https://via.placeholder.com/150x150';
+    const categoryName = document.getElementById('subcat-category').value;
 
-        if (name && slug && categoryName) {
-            const category = categories.find(c => c.name === categoryName);
-            if (category) {
-                if (category.subcategories.some(s => s.slug === slug)) {
-                    alert('Шлях підкатегорії має бути унікальним у межах категорії!');
-                    return;
-                }
-                const subcategory = { name, slug };
-                if (imgUrl) subcategory.img = imgUrl;
-
-                if (imgFile) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        subcategory.img = e.target.result;
-                        category.subcategories.push(subcategory);
-                        localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                        renderAdmin();
-                        showNotification('Підкатегорію додано!');
-                        unsavedChanges = false;
-                        resetInactivityTimer();
-                    };
-                    reader.readAsDataURL(imgFile);
-                } else {
-                    category.subcategories.push(subcategory);
-                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                    renderAdmin();
-                    showNotification('Підкатегорію додано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                }
-                document.getElementById('subcat-name').value = '';
-                document.getElementById('subcat-slug').value = '';
-                document.getElementById('subcat-img-url').value = '';
-            } else {
-                alert('Виберіть категорію!');
-            }
-        } else {
-            alert('Введіть назву, шлях та виберіть категорію!');
-        }
+    if (!name || !slug || !categoryName) {
+        alert('Введіть назву, шлях підкатегорії та виберіть категорію!');
+        return;
     }
+
+    // Очищаємо slug
+    slug = slugify(slug);
+
+    const category = categories.find(c => c.name === categoryName);
+    if (!category) {
+        alert('Категорію не знайдено!');
+        return;
+    }
+
+    // Перевіряємо унікальність slug у межах категорії
+    if (category.subcategories.some(s => s.slug === slug)) {
+        alert('Шлях підкатегорії має бути унікальним у межах цієї категорії!');
+        return;
+    }
+
+    const subcategory = { name, slug, img };
+    category.subcategories.push(subcategory);
+
+    const token = localStorage.getItem('adminToken');
+    try {
+        const response = await fetch(`/api/categories/${category.slug}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(category)
+        });
+        if (!response.ok) throw new Error('Не вдалося додати підкатегорію');
+        renderCategoriesAdmin();
+        document.getElementById('subcat-name').value = '';
+        document.getElementById('subcat-slug').value = '';
+        document.getElementById('subcat-img-url').value = '';
+        document.getElementById('subcat-img-file').value = '';
+        showNotification('Підкатегорію додано!');
+    } catch (err) {
+        showNotification('Не вдалося додати підкатегорію: ' + err.message);
+    }
+}
 
     function editSubcategory(categoryName, subcatName) {
         const category = categories.find(c => c.name === categoryName);
@@ -3085,18 +3197,46 @@ function addSlide() {
         return sitemap;
     }
 
-    function downloadSitemap() {
-        const sitemap = generateSitemap();
-        const blob = new Blob([sitemap], { type: 'application/xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'sitemap.xml';
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Sitemap завантажено!');
-        resetInactivityTimer();
-    }
+function downloadSitemap() {
+    let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>${settings.baseUrl}/</loc>
+        <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+        <priority>1.0</priority>
+    </url>
+    ${categories.map(c => `
+        <url>
+            <loc>${settings.baseUrl}/category/${c.slug}</loc>
+            <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+            <priority>0.8</priority>
+        </url>
+        ${c.subcategories.map(s => `
+            <url>
+                <loc>${settings.baseUrl}/category/${c.slug}/${s.slug}</loc>
+                <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+                <priority>0.7</priority>
+            </url>
+        `).join('')}
+    `).join('')}
+    ${products.filter(p => p.active && p.visible).map(p => `
+        <url>
+            <loc>${settings.baseUrl}/product/${p.slug}</loc>
+            <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+            <priority>0.6</priority>
+        </url>
+    `).join('')}
+</urlset>`;
+    const blob = new Blob([sitemap], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sitemap.xml';
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Sitemap завантажено!');
+    resetInactivityTimer();
+}
 
     let newProduct = {
         type: 'simple',
@@ -3274,6 +3414,44 @@ function openAddProductModal() {
     }, 0);
 
     resetInactivityTimer();
+}
+
+async function addProduct(productData) {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+    });
+    if (!response.ok) throw new Error((await response.json()).error);
+    return await response.json();
+}
+
+async function updateProduct(id, productData) {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+    });
+    if (!response.ok) throw new Error((await response.json()).error);
+    return await response.json();
+}
+
+async function deleteProduct(id) {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error((await response.json()).error);
+    return await response.json();
 }
 
 function updateProductType() {
@@ -3571,41 +3749,41 @@ function searchGroupProducts() {
     }
 
 async function saveNewProduct() {
-    const name = document.getElementById('product-name').value;
-    const slug = document.getElementById('product-slug').value;
-    const brand = document.getElementById('product-brand').value;
-    const category = document.getElementById('product-category').value;
-    const subcategory = document.getElementById('product-subcategory').value;
-    const material = document.getElementById('product-material').value;
-    let price = null;
-    let salePrice = null;
-    if (newProduct.type === 'simple') {
-        price = parseFloat(document.getElementById('product-price')?.value);
-        salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
-    }
-    const saleEnd = document.getElementById('product-sale-end').value;
-    const visible = document.getElementById('product-visible').value === 'true';
-    const description = document.getElementById('product-description').value;
-    const descriptionDelta = productEditor.getContents();
-    const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
-    const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
-    const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
-    const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
-
-    if (!name || !slug) {
-        alert('Введіть назву та шлях товару!');
-        return;
-    }
-
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    // Перевірка унікальності slug на сервері
     try {
+        const name = document.getElementById('product-name').value;
+        const slug = document.getElementById('product-slug').value;
+        const brand = document.getElementById('product-brand').value;
+        const category = document.getElementById('product-category').value;
+        const subcategory = document.getElementById('product-subcategory').value;
+        const material = document.getElementById('product-material').value;
+        let price = null;
+        let salePrice = null;
+        if (newProduct.type === 'simple') {
+            price = parseFloat(document.getElementById('product-price')?.value);
+            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+        }
+        const saleEnd = document.getElementById('product-sale-end').value;
+        const visible = document.getElementById('product-visible').value === 'true';
+        const description = document.getElementById('product-description').value;
+        const descriptionDelta = productEditor.getContents();
+        const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
+        const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
+        const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
+        const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
+
+        if (!name || !slug) {
+            showNotification('Введіть назву та шлях товару!');
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        // Перевірка унікальності slug
         const slugCheck = await fetch(`/api/products?slug=${slug}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -3620,82 +3798,74 @@ async function saveNewProduct() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error('Помилка перевірки унікальності шляху: ' + slugCheck.statusText);
+            const errorData = await slugCheck.json();
+            throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
         }
         const existingProducts = await slugCheck.json();
         if (existingProducts.some(p => p.slug === slug)) {
-            alert('Шлях товару має бути унікальним!');
+            showNotification('Шлях товару має бути унікальним!');
             return;
         }
-    } catch (err) {
-        console.error('Помилка перевірки унікальності шляху:', err);
-        showNotification(err.message);
-        return;
-    }
 
-    if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
-        alert('Введіть коректну ціну для простого товару!');
-        return;
-    }
+        if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
+            showNotification('Введіть коректну ціну для простого товару!');
+            return;
+        }
 
-    if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
-        alert('Додайте хоча б один розмір для матрацу!');
-        return;
-    }
+        if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
+            showNotification('Додайте хоча б один розмір для матрацу!');
+            return;
+        }
 
-    if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
-        alert('Додайте хоча б один товар до групового товару!');
-        return;
-    }
+        if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
+            showNotification('Додайте хоча б один товар до групового товару!');
+            return;
+        }
 
-    if (brand && !brands.includes(brand)) {
-        brands.push(brand);
-        localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
-    }
+        if (brand && !brands.includes(brand)) {
+            brands.push(brand);
+            localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
+        }
 
-    // Створюємо об’єкт продукту
-    let product = {
-        type: newProduct.type,
-        name,
-        slug,
-        brand: brand || '',
-        category: category || '',
-        subcategory: subcategory || '',
-        material: material || '',
-        price: newProduct.type === 'simple' ? price : null,
-        salePrice: salePrice,
-        saleEnd: saleEnd || null,
-        description: description || '',
-        descriptionDelta: descriptionDelta || null,
-        widthCm,
-        depthCm,
-        heightCm,
-        lengthCm,
-        photos: [],
-        colors: newProduct.colors.map(color => ({
-            name: color.name,
-            value: color.value,
-            priceChange: color.priceChange,
-            photo: null
-        })),
-        sizes: newProduct.sizes,
-        groupProducts: newProduct.groupProducts,
-        active: true,
-        visible: visible
-    };
+        let product = {
+            type: newProduct.type,
+            name,
+            slug,
+            brand: brand || '',
+            category: category || '',
+            subcategory: subcategory || '',
+            material: material || '',
+            price: newProduct.type === 'simple' ? price : null,
+            salePrice: salePrice,
+            saleEnd: saleEnd || null,
+            description: description || '',
+            descriptionDelta: descriptionDelta || null,
+            widthCm,
+            depthCm,
+            heightCm,
+            lengthCm,
+            photos: [],
+            colors: newProduct.colors.map(color => ({
+                name: color.name,
+                value: color.value,
+                priceChange: color.priceChange,
+                photo: null
+            })),
+            sizes: newProduct.sizes,
+            groupProducts: newProduct.groupProducts,
+            active: true,
+            visible: visible
+        };
 
-    // Перевірка медіа в описі (зображення та відео з blob: URL)
-    const mediaUrls = [];
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(description, 'text/html');
-    const images = doc.querySelectorAll('img');
-    const videos = doc.querySelectorAll('iframe');
+        const mediaUrls = [];
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(description, 'text/html');
+        const images = doc.querySelectorAll('img');
+        const videos = doc.querySelectorAll('iframe');
 
-    // Обробка зображень
-    for (let img of images) {
-        const src = img.getAttribute('src');
-        if (src && src.startsWith('blob:')) {
-            try {
+        for (let img of images) {
+            const src = img.getAttribute('src');
+            if (src && src.startsWith('blob:')) {
                 const response = await fetch(src);
                 const blob = await response.blob();
                 const formData = new FormData();
@@ -3707,53 +3877,47 @@ async function saveNewProduct() {
                     },
                     body: formData
                 });
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json();
+                    throw new Error(`Помилка завантаження зображення: ${errorData.error || uploadResponse.statusText}`);
+                }
                 const uploadData = await uploadResponse.json();
                 if (uploadData.url) {
                     mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
                 } else {
                     throw new Error('Не вдалося завантажити зображення');
                 }
-            } catch (err) {
-                console.error('Помилка завантаження зображення з опису:', err);
-                alert('Не вдалося завантажити зображення з опису: ' + err.message);
+            }
+        }
+
+        let updatedDescription = description;
+        mediaUrls.forEach(({ oldUrl, newUrl }) => {
+            updatedDescription = updatedDescription.replace(oldUrl, newUrl);
+        });
+
+        let updatedDelta = descriptionDelta;
+        if (mediaUrls.length > 0) {
+            updatedDelta = { ops: [] };
+            descriptionDelta.ops.forEach(op => {
+                if (op.insert && typeof op.insert === 'object' && op.insert.image) {
+                    const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
+                    updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
+                } else {
+                    updatedDelta.ops.push(op);
+                }
+            });
+        }
+
+        product.description = updatedDescription;
+        product.descriptionDelta = updatedDelta;
+
+        const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
+        for (let file of photoFiles) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
                 return;
             }
-        }
-    }
-
-    // Оновлюємо description, замінюючи blob: URL на нові URL
-    let updatedDescription = description;
-    mediaUrls.forEach(({ oldUrl, newUrl }) => {
-        updatedDescription = updatedDescription.replace(oldUrl, newUrl);
-    });
-
-    // Оновлюємо descriptionDelta
-    let updatedDelta = descriptionDelta;
-    if (mediaUrls.length > 0) {
-        updatedDelta = { ops: [] };
-        descriptionDelta.ops.forEach(op => {
-            if (op.insert && typeof op.insert === 'object' && op.insert.image) {
-                const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
-                updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
-            } else {
-                updatedDelta.ops.push(op);
-            }
-        });
-    }
-
-    // Оновлюємо об’єкт продукту з новими description і descriptionDelta
-    product.description = updatedDescription;
-    product.descriptionDelta = updatedDelta;
-
-    // Завантажуємо основні фотографії
-    const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
-    for (let file of photoFiles) {
-        const validation = validateFile(file);
-        if (!validation.valid) {
-            alert(validation.error);
-            return;
-        }
-        try {
             const formData = new FormData();
             formData.append('file', file);
             const response = await fetch('/api/upload', {
@@ -3764,30 +3928,23 @@ async function saveNewProduct() {
                 body: formData
             });
             if (!response.ok) {
-                throw new Error(`Помилка завантаження фото: ${response.statusText}`);
+                const errorData = await response.json();
+                throw new Error(`Помилка завантаження фото: ${errorData.error || response.statusText}`);
             }
             const data = await response.json();
             product.photos.push(data.url);
-        } catch (err) {
-            console.error('Помилка завантаження фото:', err);
-            showNotification('Не вдалося завантажити фото: ' + err.message);
-            return;
         }
-    }
 
-    // Додаємо URL фотографій, які вже є
-    product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
+        product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-    // Завантажуємо фотографії кольорів
-    for (let i = 0; i < newProduct.colors.length; i++) {
-        const color = newProduct.colors[i];
-        if (color.photo instanceof File) {
-            const validation = validateFile(color.photo);
-            if (!validation.valid) {
-                alert(validation.error);
-                return;
-            }
-            try {
+        for (let i = 0; i < newProduct.colors.length; i++) {
+            const color = newProduct.colors[i];
+            if (color.photo instanceof File) {
+                const validation = validateFile(color.photo);
+                if (!validation.valid) {
+                    showNotification(validation.error);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('file', color.photo);
                 const response = await fetch('/api/upload', {
@@ -3798,22 +3955,16 @@ async function saveNewProduct() {
                     body: formData
                 });
                 if (!response.ok) {
-                    throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
+                    const errorData = await response.json();
+                    throw new Error(`Помилка завантаження фото кольору: ${errorData.error || response.statusText}`);
                 }
                 const data = await response.json();
                 product.colors[i].photo = data.url;
-            } catch (err) {
-                console.error('Помилка завантаження фото кольору:', err);
-                showNotification('Не вдалося завантажити фото кольору: ' + err.message);
-                return;
+            } else if (typeof color.photo === 'string') {
+                product.colors[i].photo = color.photo;
             }
-        } else if (typeof color.photo === 'string') {
-            product.colors[i].photo = color.photo;
         }
-    }
 
-    // Відправляємо запит на сервер
-    try {
         const response = await fetch('/api/products', {
             method: 'POST',
             headers: {
@@ -3833,7 +3984,7 @@ async function saveNewProduct() {
                 return;
             }
             const errorData = await response.json();
-            throw new Error(`Помилка при додаванні товару: ${response.statusText}. Деталі: ${JSON.stringify(errorData)}`);
+            throw new Error(`Помилка при додаванні товару: ${errorData.error || response.statusText}`);
         }
 
         const newProductData = await response.json();
@@ -3841,6 +3992,7 @@ async function saveNewProduct() {
         closeModal();
         renderAdmin('products');
         showNotification('Товар додано!');
+        await loadProducts();
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
@@ -4272,6 +4424,7 @@ async function saveEditedProduct(productId) {
         closeModal();
         renderAdmin('products');
         showNotification('Товар оновлено!');
+        await loadProducts(); // Оновлюємо список товарів
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
@@ -4634,6 +4787,8 @@ function saveOrderStatus(index) {
 
 if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
     showSection('admin-panel');
+    loadInitialData(); // Додано раніше для завантаження даних з сервера
+    connectWebSocket(); // Додаємо виклик WebSocket
     resetInactivityTimer();
 } else {
     localStorage.removeItem('adminToken');
@@ -4644,10 +4799,12 @@ if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && loc
 
     document.addEventListener('mousemove', resetInactivityTimer);
     document.addEventListener('keypress', resetInactivityTimer);
-    document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', login);
+    if (loginBtn) loginBtn.addEventListener('click', login);
+    if (session.isActive && localStorage.getItem('adminToken')) {
+        loadInitialData();
+        connectWebSocket();
     }
 });
   </script>
