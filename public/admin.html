@@ -2045,14 +2045,6 @@ function updateAbout() {
 }
 
 function renderAdmin(activeTab = 'site-editing') {
-    // Додаємо управління вкладками
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
-    const tabBtn = document.querySelector(`.tab-btn[onclick="showAdminTab('${activeTab}')"]`);
-    if (tabBtn) tabBtn.classList.add('active');
-    const activeTabElement = document.getElementById(activeTab);
-    if (activeTabElement) activeTabElement.classList.add('active');
-
     const storeName = document.getElementById('store-name');
     if (storeName) storeName.value = settings.name || '';
     const baseUrl = document.getElementById('base-url');
@@ -2076,18 +2068,18 @@ function renderAdmin(activeTab = 'site-editing') {
             initializeEditors();
         }
         // Використовуємо setContents для коректного оновлення вмісту
-        if (settings.aboutDelta) {
-            aboutEditor.setContents(settings.aboutDelta, 'silent');
-        } else if (settings.about) {
-            try {
-                const delta = aboutEditor.clipboard.convert(settings.about);
-                aboutEditor.setContents(delta, 'silent');
-            } catch (e) {
-                aboutEditor.setContents([{ insert: settings.about }], 'silent');
-            }
-        } else {
-            aboutEditor.setContents([], 'silent');
-        }
+ if (settings.aboutDelta) {
+    aboutEditor.setContents(settings.aboutDelta, 'silent');
+} else if (settings.about) {
+    try {
+        const delta = aboutEditor.clipboard.convert(settings.about);
+        aboutEditor.setContents(delta, 'silent');
+    } catch (e) {
+        aboutEditor.setContents([{ insert: settings.about }], 'silent');
+    }
+} else {
+    aboutEditor.setContents([], 'silent');
+}
         document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
     } else if (document.getElementById('about-edit')) {
         document.getElementById('about-edit').value = settings.about || '';
@@ -2189,12 +2181,10 @@ function renderAdmin(activeTab = 'site-editing') {
     if (activeTab === 'products') {
         const productList = document.getElementById('product-list-admin');
         if (productList) {
-            // Фільтруємо продукти, щоб уникнути undefined або некоректних об’єктів
-            const validProducts = products.filter(p => p && typeof p === 'object' && p.id && p.name);
-            if (validProducts.length > 0) {
+            if (Array.isArray(products) && products.length > 0) {
                 const start = (currentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                const paginatedProducts = validProducts.slice(start, end);
+                const paginatedProducts = products.slice(start, end);
                 productList.innerHTML = paginatedProducts.map(p => {
                     const saleInfo = p.salePrice ? `<s>${p.price || ''} грн</s> ${p.salePrice} грн ${renderCountdown(p)}` : `${p.price || ''} грн`;
                     const type = p.type || 'simple';
@@ -2203,7 +2193,7 @@ function renderAdmin(activeTab = 'site-editing') {
                         priceDisplay = p.sizes && Array.isArray(p.sizes) && p.sizes.length > 0 ? Math.min(...p.sizes.map(s => s.price || Infinity)) + ' грн' : 'Н/Д';
                     } else if (type === 'group') {
                         priceDisplay = p.groupProducts && Array.isArray(p.groupProducts) && p.groupProducts.length > 0 ? Math.min(...p.groupProducts.map(pid => {
-                            const prod = validProducts.find(pr => pr.id === pid); // Змінено products на validProducts
+                            const prod = products.find(pr => pr.id === pid);
                             return prod ? (prod.price || Infinity) : Infinity;
                         })) + ' грн' : 'Н/Д';
                     } else {
@@ -2219,7 +2209,7 @@ function renderAdmin(activeTab = 'site-editing') {
                             <span>${p.brand || 'Без бренду'}</span>
                             <span>${priceDisplay}</span>
                             <span>${salePriceDisplay}</span>
-                            <div class="status-column" title="${visibilityStatus}">
+                            <div class="status-column" title="${p.visible ? 'Видимість: Так' : 'Видимість: Ні'}">
                                 <div class="buttons">
                                     <button class="edit-btn" onclick="openEditProductModal(${p.id})">Редагувати</button>
                                     <button class="delete-btn" onclick="deleteProduct(${p.id})">Видалити</button>
@@ -2229,7 +2219,7 @@ function renderAdmin(activeTab = 'site-editing') {
                         </div>
                     `;
                 }).join('');
-                renderPagination(validProducts.length, productsPerPage, 'pagination', currentPage);
+                renderPagination(products.length, productsPerPage, 'pagination', currentPage);
             } else {
                 productList.innerHTML = '<p>Немає товарів для відображення.</p>';
             }
@@ -2270,6 +2260,33 @@ function renderAdmin(activeTab = 'site-editing') {
         }).join('');
         renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
     }
+}
+
+// Допоміжна функція для пагінації (переконайтесь, що вона є у вашому коді)
+function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
+    const pageCount = Math.ceil(totalItems / itemsPerPage);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let paginationHTML = '';
+    if (pageCount > 1) {
+        if (currentPage > 1) {
+            paginationHTML += `<button onclick="changePage(${currentPage - 1}, '${containerId}')">Попередня</button>`;
+        }
+        for (let i = 1; i <= pageCount; i++) {
+            paginationHTML += `<button onclick="changePage(${i}, '${containerId}')" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+        }
+        if (currentPage < pageCount) {
+            paginationHTML += `<button onclick="changePage(${currentPage + 1}, '${containerId}')">Наступна</button>`;
+        }
+    }
+    container.innerHTML = paginationHTML;
+}
+
+function changePage(page, containerId) {
+    currentPage = page;
+    renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
+    resetInactivityTimer();
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
