@@ -94,6 +94,18 @@ if (!fs.existsSync(adminPath)) {
     process.exit(1);
 }
 
+// Налаштування роздачі статичних файлів (CSS, JS, тощо)
+app.use(express.static(publicPath, {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        }
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
+
 app.get('/admin', (req, res) => {
     console.log('Отримано запит на /admin');
     console.log('Шлях до admin:', adminPath);
@@ -111,8 +123,6 @@ app.get('/test-admin', (req, res) => {
     console.log('Отримано запит на /test-admin');
     res.send('Це тестовий маршрут для адміна');
 });
-
-app.use(express.static(publicPath));
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB підключено'))
@@ -498,6 +508,7 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Обробка всіх інших маршрутів для SPA
 app.get('*', (req, res) => {
     console.log(`Отримано запит на ${req.path}, відправляємо index.html`);
     res.sendFile(indexPath, (err) => {
