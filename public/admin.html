@@ -1181,60 +1181,31 @@
    </div>
   </div>
   <script>
-   let session;
-    let products = [];
-    let categories = [];
-    let orders = [];
-    let slides = [];
-    let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
-    let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
-    let settings;
-    let currentPage = 1;
-    const productsPerPage = 20;
-    const ordersPerPage = 20;
-    const sessionTimeout = 30 * 60 * 1000;
-    let inactivityTimer;
-    let materials = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('materials')) || '["Дерево", "Пружинний блок", "Метал"]');
-    let brands = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('brands')) || '["Гербор", "Matroluxe", "Сокме"]');
-    let unsavedChanges = false;
-    let aboutEditor; // Глобальна змінна для редактора
-    let productEditor; // Додаємо глобальну змінну для редактора товару
-    let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
- 
+let session;
+let products = [];
+let categories = [];
+let orders = [];
+let slides = [];
+let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
+let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
+let settings = {};
+let currentPage = 1;
+const productsPerPage = 20;
+const ordersPerPage = 20;
+const sessionTimeout = 30 * 60 * 1000;
+let inactivityTimer;
+let materials = [];
+let brands = [];
+let unsavedChanges = false;
+let aboutEditor; // Глобальна змінна для редактора
+let productEditor; // Додаємо глобальну змінну для редактора товару
+let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 
-    try {
-        session = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('adminSession')) || '{"isActive":false,"timestamp":0}');
-    } catch (e) {
-        console.error('Помилка парсингу session:', e);
-        session = { isActive: false, timestamp: 0 };
-    }
-    try {
-    settings = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('settings')) || '{"name":"Меблевий магазин","logo":"https://via.placeholder.com/100x50","logoWidth":150,"favicon":"https://via.placeholder.com/16x16","contacts":{"phones":"+38 (067) 123-45-67","addresses":"м. Київ, вул. Меблева, 1","schedule":"Пн-Пт: 9:00-18:00"},"socials":[],"showSocials":false,"about":"Ми продаємо якісні меблі!","showSlides":true,"slideWidth":75,"slideHeight":200,"slideInterval":3000,"categoryWidth":200,"categoryHeight":150,"productWidth":300,"productHeight":280,"baseUrl":"www.aaaa.ua"}');
-    console.log('Завантажено settings з localStorage:', settings);
-    console.log('Початкове значення settings.about:', settings.about);
+try {
+    session = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('adminSession')) || '{"isActive":false,"timestamp":0}');
 } catch (e) {
-    console.error('Помилка парсингу settings:', e);
-    settings = {"name":"Меблевий магазин","logo":"https://via.placeholder.com/100x50","logoWidth":150,"favicon":"https://via.placeholder.com/16x16","contacts":{"phones":"+38 (067) 123-45-67","addresses":"м. Київ, вул. Меблева, 1","schedule":"Пн-Пт: 9:00-18:00"},"socials":[],"showSocials":false,"about":"Ми продаємо якісні меблі!","showSlides":true,"slideWidth":75,"slideHeight":200,"slideInterval":3000,"categoryWidth":200,"categoryHeight":150,"productWidth":300,"productHeight":280,"baseUrl":"www.aaaa.ua"};
-    console.log('Використано значення settings за замовчуванням:', settings);
-}
-
-function validateFile(file) {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']; // Додано WebP
-    const maxSize = 5 * 1024 * 1024; // 5 MB
-
-    if (!file) {
-        return { valid: false, error: 'Файл не вибрано' };
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Дозволені лише файли JPEG, PNG, GIF або WebP' };
-    }
-
-    if (file.size > maxSize) {
-        return { valid: false, error: 'Файл занадто великий. Максимальний розмір — 5 МБ.' };
-    }
-
-    return { valid: true };
+    console.error('Помилка парсингу session:', e);
+    session = { isActive: false, timestamp: 0 };
 }
 
 async function loadProducts() {
@@ -1243,23 +1214,23 @@ async function loadProducts() {
         if (!token) {
             throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
         }
-const response = await fetch('/api/products', {
-    headers: {
-        'Authorization': `Bearer ${token}`
-    }
-});
-if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('adminToken');
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-        showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-        return;
-    }
-    const errorData = await response.json();
-    throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
-}
+        const response = await fetch('/api/products', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
+        }
         products = await response.json();
         renderAdmin('products');
     } catch (e) {
@@ -1269,26 +1240,245 @@ if (!response.ok) {
     }
 }
 
-loadProducts();
+async function loadCategories() {
     try {
-        categories = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('categories')) || '[]');
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/categories', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити категорії: ${errorData.error || response.statusText}`);
+        }
+        categories = await response.json();
+        renderCategoriesAdmin();
     } catch (e) {
-        console.error('Помилка парсингу categories:', e);
+        console.error('Помилка завантаження категорій:', e);
+        showNotification(e.message);
         categories = [];
     }
+}
+
+async function loadSettings() {
     try {
-        orders = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('orders')) || '[]');
-        sortOrders('date-desc'); // Сортуємо за замовчуванням (новіші першими)
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/settings', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
+        }
+        settings = await response.json();
+        if (aboutEditor && settings.about) {
+            try {
+                const delta = aboutEditor.clipboard.convert(settings.about);
+                aboutEditor.setContents(delta, 'silent');
+            } catch (e) {
+                console.error('Помилка при встановленні вмісту редактора "Про нас":', e);
+                aboutEditor.setContents([{ insert: settings.about }], 'silent');
+            }
+            document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+        }
+        renderSettingsAdmin();
     } catch (e) {
-        console.error('Помилка парсингу orders:', e);
+        console.error('Помилка завантаження налаштувань:', e);
+        showNotification(e.message);
+        settings = {};
+    }
+}
+
+async function loadOrders() {
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/orders', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити замовлення: ${errorData.error || response.statusText}`);
+        }
+        orders = await response.json();
+        sortOrders('date-desc');
+        renderAdmin('orders');
+    } catch (e) {
+        console.error('Помилка завантаження замовлень:', e);
+        showNotification(e.message);
         orders = [];
     }
+}
+
+async function loadSlides() {
     try {
-        slides = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('slides')) || '[]');
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/slides', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити слайди: ${errorData.error || response.statusText}`);
+        }
+        slides = await response.json();
+        renderSlidesAdmin();
     } catch (e) {
-        console.error('Помилка парсингу slides:', e);
+        console.error('Помилка завантаження слайдів:', e);
+        showNotification(e.message);
         slides = [];
     }
+}
+
+async function loadMaterials() {
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/materials', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити матеріали: ${errorData.error || response.statusText}`);
+        }
+        materials = await response.json();
+        // Оновлюємо поля, які використовують materials (наприклад, вибір матеріалів у формі товару)
+        updateMaterialOptions();
+    } catch (e) {
+        console.error('Помилка завантаження матеріалів:', e);
+        showNotification(e.message);
+        materials = [];
+    }
+}
+
+async function loadBrands() {
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+        }
+        const response = await fetch('/api/brands', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося завантажити бренди: ${errorData.error || response.statusText}`);
+        }
+        brands = await response.json();
+        // Оновлюємо поля, які використовують brands (наприклад, вибір брендів у формі товару)
+        updateBrandOptions();
+    } catch (e) {
+        console.error('Помилка завантаження брендів:', e);
+        showNotification(e.message);
+        brands = [];
+    }
+}
+
+function updateMaterialOptions() {
+    const materialInput = document.getElementById('product-material');
+    if (materialInput && materialInput.tagName === 'INPUT') {
+        // Якщо це текстове поле, нічого не робимо, але в майбутньому можна замінити на <select>
+    } else if (materialInput && materialInput.tagName === 'SELECT') {
+        materialInput.innerHTML = '<option value="">Виберіть матеріал</option>' +
+            materials.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+}
+
+function updateBrandOptions() {
+    const brandInput = document.getElementById('product-brand');
+    if (brandInput && brandInput.tagName === 'INPUT') {
+        // Якщо це текстове поле, нічого не робимо, але в майбутньому можна замінити на <select>
+    } else if (brandInput && brandInput.tagName === 'SELECT') {
+        brandInput.innerHTML = '<option value="">Виберіть бренд</option>' +
+            brands.map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+}
+
+async function initializeData() {
+    await Promise.all([
+        loadProducts(),
+        loadCategories(),
+        loadSettings(),
+        loadOrders(),
+        loadSlides(),
+        loadMaterials(), // Додаємо завантаження матеріалів
+        loadBrands()     // Додаємо завантаження брендів
+    ]);
+}
+
+// Виклик ініціалізації даних
+initializeData();
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -1751,81 +1941,112 @@ function logout() {
         }
     }
 
-function updateStoreInfo() {
-    const name = document.getElementById('store-name').value;
-    const baseUrl = document.getElementById('base-url').value; // Added
-    const logoUrl = document.getElementById('logo-url').value;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || 150;
+async function updateStoreInfo() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
+    settings.name = document.getElementById('store-name').value;
+    settings.baseUrl = document.getElementById('base-url').value;
+    settings.logo = document.getElementById('logo-url').value;
+    settings.logoWidth = parseInt(document.getElementById('logo-width').value) || 150;
+    settings.favicon = document.getElementById('favicon-url').value;
+
     const logoFile = document.getElementById('logo-file').files[0];
-    const faviconUrl = document.getElementById('favicon-url').value;
     const faviconFile = document.getElementById('favicon-file').files[0];
 
-    if (name) settings.name = name;
-    if (baseUrl) settings.baseUrl = baseUrl; // Added
-    if (logoUrl) settings.logo = logoUrl;
-    if (logoWidth >= 50 && logoWidth <= 500) settings.logoWidth = logoWidth;
-    if (faviconUrl) settings.favicon = faviconUrl;
-
-    if (logoFile || faviconFile) {
-        const reader = new FileReader();
+    try {
         if (logoFile) {
-            reader.onload = (e) => {
-                settings.logo = e.target.result;
-                if (faviconFile) {
-                    const faviconReader = new FileReader();
-                    faviconReader.onload = (fe) => {
-                        settings.favicon = fe.target.result;
-                        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                        renderAdmin();
-                        showNotification('Логотип, favicon та назву збережено!');
-                        unsavedChanges = false;
-                        resetInactivityTimer();
-                    };
-                    faviconReader.readAsDataURL(faviconFile);
-                } else {
-                    localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                    renderAdmin();
-                    showNotification('Логотип та назву збережено!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                }
-            };
-            reader.readAsDataURL(logoFile);
-        } else if (faviconFile) {
-            reader.onload = (e) => {
-                settings.favicon = e.target.result;
-                localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                renderAdmin();
-                showNotification('Favicon збережено!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            };
-            reader.readAsDataURL(faviconFile);
+            const validation = validateFile(logoFile);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', logoFile);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити логотип');
+            const data = await response.json();
+            settings.logo = data.url;
         }
-    } else {
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Логотип, favicon та назву збережено!');
+
+        if (faviconFile) {
+            const validation = validateFile(faviconFile);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', faviconFile);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити favicon');
+            const data = await response.json();
+            settings.favicon = data.url;
+        }
+
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування');
+        showNotification('Інформацію про магазин оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення інформації про магазин:', e);
+        showNotification(e.message);
     }
 }
 
-    function updateContacts() {
-        const phones = document.getElementById('contact-phones').value;
-        const addresses = document.getElementById('contact-addresses').value;
-        const schedule = document.getElementById('contact-schedule').value;
+async function updateContacts() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
 
-        settings.contacts.phones = phones;
-        settings.contacts.addresses = addresses;
-        settings.contacts.schedule = schedule;
+    settings.contacts = {
+        phones: document.getElementById('contact-phones').value,
+        addresses: document.getElementById('contact-addresses').value,
+        schedule: document.getElementById('contact-schedule').value
+    };
 
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Контакти збережено!');
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося оновити контакти');
+        showNotification('Контакти оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення контактів:', e);
+        showNotification(e.message);
     }
+}
 
     function addSocial() {
         const url = document.getElementById('social-url').value;
@@ -1900,21 +2121,34 @@ function updateStoreInfo() {
         resetInactivityTimer();
     }
 
-function updateAbout() {
-    const aboutDelta = aboutEditor.getContents(); // Отримуємо Delta-формат
-    const aboutHTML = aboutEditor.root.innerHTML; // Отримуємо HTML для сумісності
-    settings.about = aboutHTML; // Зберігаємо HTML
-    settings.aboutDelta = aboutDelta; // Зберігаємо Delta (опціонально)
-    try {
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        console.log('settings.about успішно збережено в localStorage:', settings.about);
-    } catch (e) {
-        console.error('Помилка при збереженні settings в localStorage:', e);
+async function updateAbout() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
-    renderAdmin();
-    showNotification('Опис "Про нас" збережено!');
-    unsavedChanges = false;
-    resetInactivityTimer();
+
+    settings.about = document.getElementById('about-edit').value;
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося оновити секцію "Про нас"');
+        showNotification('Секцію "Про нас" оновлено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення секції "Про нас":', e);
+        showNotification(e.message);
+    }
 }
 
 function renderAdmin(activeTab = 'site-editing') {
@@ -2135,6 +2369,75 @@ function renderAdmin(activeTab = 'site-editing') {
     }
 }
 
+function renderCategoriesAdmin() {
+    const catList = document.getElementById('cat-list');
+    if (catList) {
+        catList.innerHTML = categories.map(cat => `
+            <div class="category-item">
+                ${cat.name}
+                <button class="edit-btn" onclick="editCategory('${cat._id}')">Редагувати</button>
+                <button class="delete-btn" onclick="deleteCategory('${cat._id}')">Видалити</button>
+                <div class="subcat-list">
+                    ${(cat.subcategories || []).map(sub => `
+                        <p>
+                            ${sub.name}
+                            <button class="edit-btn" onclick="editSubcategory('${cat._id}', '${sub._id}')">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteSubcategory('${cat._id}', '${sub._id}')">Видалити</button>
+                        </p>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+    const subcatSelect = document.getElementById('subcat-category');
+    if (subcatSelect) {
+        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' + 
+            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    }
+}
+
+function renderSettingsAdmin() {
+    document.getElementById('store-name').value = settings.name || '';
+    document.getElementById('base-url').value = settings.baseUrl || '';
+    document.getElementById('logo-url').value = settings.logo || '';
+    document.getElementById('logo-width').value = settings.logoWidth || '';
+    document.getElementById('favicon-url').value = settings.favicon || '';
+    document.getElementById('contact-phones').value = settings.contacts?.phones || '';
+    document.getElementById('contact-addresses').value = settings.contacts?.addresses || '';
+    document.getElementById('contact-schedule').value = settings.contacts?.schedule || '';
+    document.getElementById('social-toggle').value = settings.showSocials || false;
+    document.getElementById('category-width').value = settings.categoryWidth || '';
+    document.getElementById('category-height').value = settings.categoryHeight || '';
+    document.getElementById('product-width').value = settings.productWidth || '';
+    document.getElementById('product-height').value = settings.productHeight || '';
+    const socialList = document.getElementById('social-list');
+    if (socialList && settings.socials) {
+        socialList.innerHTML = settings.socials.map((s, i) => `
+            <div class="social-item">
+                <span class="social-icon">${s.icon}</span> ${s.url}
+                <button class="delete-btn" onclick="deleteSocial(${i})">Видалити</button>
+            </div>
+        `).join('');
+    }
+}
+
+function renderSlidesAdmin() {
+    const slideList = document.getElementById('slide-list');
+    if (slideList) {
+        slideList.innerHTML = slides.map((slide, index) => `
+            <div>
+                ${slide.title || 'Без назви'} (${slide.order || 0})
+                <button class="edit-btn" onclick="editSlide(${index})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteSlide(${index})">Видалити</button>
+            </div>
+        `).join('');
+    }
+    document.getElementById('slide-toggle').checked = settings.showSlides || false;
+    document.getElementById('slide-width').value = settings.slideWidth || '';
+    document.getElementById('slide-height').value = settings.slideHeight || '';
+    document.getElementById('slide-interval').value = settings.slideInterval || '';
+}
+
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         const totalPages = Math.ceil(totalItems / itemsPerPage);
         const container = document.getElementById(containerId);
@@ -2174,47 +2477,78 @@ function closeModal() {
     resetInactivityTimer();
 }
 
-    function addCategory() {
-        const name = document.getElementById('cat-name').value;
-        const slug = document.getElementById('cat-slug').value;
-        const imgUrl = document.getElementById('cat-img-url').value;
-        const imgFile = document.getElementById('cat-img-file').files[0];
+async function addCategory() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
 
-        if (name && slug) {
-            if (categories.some(c => c.slug === slug)) {
-                alert('Шлях категорії має бути унікальним!');
+    const name = document.getElementById('cat-name').value;
+    const slug = document.getElementById('cat-slug').value;
+    let img = document.getElementById('cat-img-url').value;
+    const file = document.getElementById('cat-img-file').files[0];
+
+    if (!name || !slug) {
+        alert('Введіть назву та шлях категорії!');
+        return;
+    }
+
+    try {
+        const slugCheck = await fetch(`/api/categories?slug=${slug}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!slugCheck.ok) throw new Error('Помилка перевірки унікальності шляху');
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug)) {
+            alert('Шлях категорії має бути унікальним!');
+            return;
+        }
+
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
                 return;
             }
-            const category = { name, slug, subcategories: [] };
-            if (imgUrl) category.img = imgUrl;
-
-            if (imgFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    category.img = e.target.result;
-                    categories.push(category);
-                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                    renderAdmin();
-                    showNotification('Категорію додано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(imgFile);
-            } else {
-                categories.push(category);
-                localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                renderAdmin();
-                showNotification('Категорію додано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            }
-            document.getElementById('cat-name').value = '';
-            document.getElementById('cat-slug').value = '';
-            document.getElementById('cat-img-url').value = '';
-        } else {
-            alert('Введіть назву та шлях категорії!');
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити зображення');
+            const data = await response.json();
+            img = data.url;
         }
+
+        const newCategory = { name, slug, img, subcategories: [] };
+        const response = await fetch('/api/categories', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newCategory)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося додати категорію');
+        const addedCategory = await response.json();
+        categories.push(addedCategory);
+        document.getElementById('cat-name').value = '';
+        document.getElementById('cat-slug').value = '';
+        document.getElementById('cat-img-url').value = '';
+        document.getElementById('cat-img-file').value = '';
+        renderCategoriesAdmin();
+        showNotification('Категорію додано!');
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання категорії:', e);
+        showNotification(e.message);
     }
+}
 
     function editCategory(name) {
         const category = categories.find(c => c.name === name);
@@ -2334,53 +2668,78 @@ function closeModal() {
         }
     }
 
-    function addSubcategory() {
-        const name = document.getElementById('subcat-name').value;
-        const slug = document.getElementById('subcat-slug').value;
-        const imgUrl = document.getElementById('subcat-img-url').value;
-        const imgFile = document.getElementById('subcat-img-file').files[0];
-        const categoryName = document.getElementById('subcat-category').value;
-
-        if (name && slug && categoryName) {
-            const category = categories.find(c => c.name === categoryName);
-            if (category) {
-                if (category.subcategories.some(s => s.slug === slug)) {
-                    alert('Шлях підкатегорії має бути унікальним у межах категорії!');
-                    return;
-                }
-                const subcategory = { name, slug };
-                if (imgUrl) subcategory.img = imgUrl;
-
-                if (imgFile) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        subcategory.img = e.target.result;
-                        category.subcategories.push(subcategory);
-                        localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                        renderAdmin();
-                        showNotification('Підкатегорію додано!');
-                        unsavedChanges = false;
-                        resetInactivityTimer();
-                    };
-                    reader.readAsDataURL(imgFile);
-                } else {
-                    category.subcategories.push(subcategory);
-                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                    renderAdmin();
-                    showNotification('Підкатегорію додано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                }
-                document.getElementById('subcat-name').value = '';
-                document.getElementById('subcat-slug').value = '';
-                document.getElementById('subcat-img-url').value = '';
-            } else {
-                alert('Виберіть категорію!');
-            }
-        } else {
-            alert('Введіть назву, шлях та виберіть категорію!');
-        }
+async function addSubcategory() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
+
+    const name = document.getElementById('subcat-name').value;
+    const slug = document.getElementById('subcat-slug').value;
+    let img = document.getElementById('subcat-img-url').value;
+    const file = document.getElementById('subcat-img-file').files[0];
+    const categoryName = document.getElementById('subcat-category').value;
+
+    if (!name || !slug || !categoryName) {
+        alert('Введіть назву, шлях та виберіть категорію для підкатегорії!');
+        return;
+    }
+
+    const category = categories.find(c => c.name === categoryName);
+    if (!category) {
+        alert('Обрана категорія не знайдена!');
+        return;
+    }
+
+    try {
+        if (category.subcategories.some(s => s.slug === slug)) {
+            alert('Шлях підкатегорії має бути унікальним у межах категорії!');
+            return;
+        }
+
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити зображення');
+            const data = await response.json();
+            img = data.url;
+        }
+
+        category.subcategories.push({ name, slug, img });
+        const response = await fetch(`/api/categories/${category._id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(category)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося додати підкатегорію');
+        document.getElementById('subcat-name').value = '';
+        document.getElementById('subcat-slug').value = '';
+        document.getElementById('subcat-img-url').value = '';
+        document.getElementById('subcat-img-file').value = '';
+        renderCategoriesAdmin();
+        showNotification('Підкатегорію додано!');
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання підкатегорії:', e);
+        showNotification(e.message);
+    }
+}
 
     function editSubcategory(categoryName, subcatName) {
         const category = categories.find(c => c.name === categoryName);
@@ -2512,57 +2871,110 @@ function closeModal() {
         }
     }
 
-    function updateCategorySettings() {
-        const width = parseInt(document.getElementById('category-width').value);
-        const height = parseInt(document.getElementById('category-height').value);
+async function updateCategorySettings() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
 
-        if (width >= 100 && width <= 500) settings.categoryWidth = width;
-        if (height >= 100 && height <= 500) settings.categoryHeight = height;
+    settings.categoryWidth = parseInt(document.getElementById('category-width').value) || 200;
+    settings.categoryHeight = parseInt(document.getElementById('category-height').value) || 150;
 
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Налаштування категорій збережено!');
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування категорій');
+        showNotification('Налаштування категорій оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення налаштувань категорій:', e);
+        showNotification(e.message);
+    }
+}
+
+async function updateProductSettings() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
 
-    function updateProductSettings() {
-        const width = parseInt(document.getElementById('product-width').value);
-        const height = parseInt(document.getElementById('product-height').value);
+    settings.productWidth = parseInt(document.getElementById('product-width').value) || 300;
+    settings.productHeight = parseInt(document.getElementById('product-height').value) || 280;
 
-        if (width >= 200 && width <= 500) settings.productWidth = width;
-        if (height >= 200 && height <= 500) settings.productHeight = height;
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
 
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Налаштування товарів збережено!');
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування товарів');
+        showNotification('Налаштування товарів оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення налаштувань товарів:', e);
+        showNotification(e.message);
+    }
+}
+
+async function addFilter() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
 
-    function addFilter() {
-        const name = document.getElementById('filter-name').value;
-        const label = document.getElementById('filter-label').value;
-        const options = document.getElementById('filter-options').value.split(',').map(o => o.trim()).filter(o => o);
+    const name = document.getElementById('filter-name').value;
+    const label = document.getElementById('filter-label').value;
+    const options = document.getElementById('filter-options').value.split(',').map(o => o.trim());
 
-        if (name && label && options.length > 0) {
-            if (filters.some(f => f.name === name)) {
-                alert('Назва фільтру має бути унікальною!');
-                return;
-            }
-            filters.push({ name, label, type: 'checkbox', options });
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            document.getElementById('filter-name').value = '';
-            document.getElementById('filter-label').value = '';
-            document.getElementById('filter-options').value = '';
-            renderAdmin();
-            showNotification('Фільтр додано!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        } else {
-            alert('Введіть назву, підпис та опції фільтру!');
-        }
+    if (!name || !label || options.length === 0) {
+        alert('Введіть назву, підпис та опції для фільтру!');
+        return;
     }
+
+    const newFilter = { name, label, type: 'checkbox', options };
+
+    try {
+        const response = await fetch('/api/filters', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newFilter)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося додати фільтр');
+        filters.push(newFilter);
+        document.getElementById('filter-name').value = '';
+        document.getElementById('filter-label').value = '';
+        document.getElementById('filter-options').value = '';
+        renderAdmin('filters');
+        showNotification('Фільтр додано!');
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання фільтру:', e);
+        showNotification(e.message);
+    }
+}
 
     function editFilter(name) {
         const filter = filters.find(f => f.name === name);
@@ -2640,32 +3052,50 @@ function closeModal() {
         }
     }
 
-    function addOrderField() {
-        const name = document.getElementById('order-field-name').value;
-        const label = document.getElementById('order-field-label').value;
-        const type = document.getElementById('order-field-type').value;
-        const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
-
-        if (name && label) {
-            if (orderFields.some(f => f.name === name)) {
-                alert('Назва поля має бути унікальною!');
-                return;
-            }
-            const field = { name, label, type };
-            if (type === 'select' && options.length > 0) field.options = options;
-            orderFields.push(field);
-            localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
-            document.getElementById('order-field-name').value = '';
-            document.getElementById('order-field-label').value = '';
-            document.getElementById('order-field-options').value = '';
-            renderAdmin();
-            showNotification('Поле замовлення додано!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        } else {
-            alert('Введіть назву та підпис поля!');
-        }
+async function addOrderField() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
+
+    const name = document.getElementById('order-field-name').value;
+    const label = document.getElementById('order-field-label').value;
+    const type = document.getElementById('order-field-type').value;
+    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim());
+
+    if (!name || !label) {
+        alert('Введіть назву та підпис для поля!');
+        return;
+    }
+
+    const field = { name, label, type };
+    if (type === 'select' && options.length > 0) field.options = options;
+
+    try {
+        const response = await fetch('/api/order-fields', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(field)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося додати поле замовлення');
+        orderFields.push(field);
+        document.getElementById('order-field-name').value = '';
+        document.getElementById('order-field-label').value = '';
+        document.getElementById('order-field-options').value = '';
+        renderAdmin('order-fields');
+        showNotification('Поле замовлення додано!');
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання поля замовлення:', e);
+        showNotification(e.message);
+    }
+}
 
     function editOrderField(name) {
         const field = orderFields.find(f => f.name === name);
@@ -2745,72 +3175,91 @@ function closeModal() {
         }
     }
 
-    function updateSlideshowSettings() {
-        const width = parseInt(document.getElementById('slide-width').value);
-        const height = parseInt(document.getElementById('slide-height').value);
-        const interval = parseInt(document.getElementById('slide-interval').value);
-
-        if (width >= 10 && width <= 100) settings.slideWidth = width;
-        if (height >= 100 && height <= 500) settings.slideHeight = height;
-        if (interval >= 1000) settings.slideInterval = interval;
-
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Налаштування слайдшоу збережено!');
-        unsavedChanges = false;
-        resetInactivityTimer();
+async function updateSlideshowSettings() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
     }
 
-function addSlide() {
-    const imgUrl = document.getElementById('slide-img-url').value;
-    const imgFile = document.getElementById('slide-img-file').files[0];
+    settings.slideWidth = parseInt(document.getElementById('slide-width').value) || 75;
+    settings.slideHeight = parseInt(document.getElementById('slide-height').value) || 200;
+    settings.slideInterval = parseInt(document.getElementById('slide-interval').value) || 3000;
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування слайдшоу');
+        showNotification('Налаштування слайдшоу оновлено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка оновлення налаштувань слайдшоу:', e);
+        showNotification(e.message);
+    }
+}
+
+async function addSlide() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
+    let img = document.getElementById('slide-img-url').value;
+    const file = document.getElementById('slide-img-file').files[0];
     const title = document.getElementById('slide-title').value;
     const text = document.getElementById('slide-text').value;
     const link = document.getElementById('slide-link').value;
     const linkText = document.getElementById('slide-link-text').value;
-    const order = parseInt(document.getElementById('slide-order').value) || (slides.length ? Math.max(...slides.map(s => s.order)) + 1 : 1);
+    const order = parseInt(document.getElementById('slide-order').value) || 0;
 
-    if (slides.some(s => s.order === order)) {
-        alert('Слайд з таким порядковим номером уже існує!');
+    if (!img && !file) {
+        alert('Введіть URL зображення або завантажте файл!');
         return;
     }
 
-    if (!imgUrl && !imgFile) {
-        alert('Введіть URL або завантажте файл зображення!');
-        return;
-    }
+    try {
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити зображення');
+            const data = await response.json();
+            img = data.url;
+        }
 
-    const slide = {
-        url: imgUrl, // URL зображення
-        title: title || 'Без заголовка',
-        text: text || '',
-        link: link || '#',
-        linkText: linkText || 'Дізнатися більше',
-        order
-    };
+        const newSlide = { img, title, text, link, linkText, order };
+        const response = await fetch('/api/slides', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newSlide)
+        });
 
-    if (imgFile) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            slide.url = e.target.result; // Зберігаємо Data URL зображення
-            slides.push(slide);
-            localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-            document.getElementById('slide-img-url').value = '';
-            document.getElementById('slide-img-file').value = '';
-            document.getElementById('slide-title').value = '';
-            document.getElementById('slide-text').value = '';
-            document.getElementById('slide-link').value = '';
-            document.getElementById('slide-link-text').value = '';
-            document.getElementById('slide-order').value = '';
-            renderAdmin();
-            showNotification('Слайд додано!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        };
-        reader.readAsDataURL(imgFile);
-    } else {
-        slides.push(slide);
-        localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
+        if (!response.ok) throw new Error('Не вдалося додати слайд');
+        const addedSlide = await response.json();
+        slides.push(addedSlide);
         document.getElementById('slide-img-url').value = '';
         document.getElementById('slide-img-file').value = '';
         document.getElementById('slide-title').value = '';
@@ -2818,10 +3267,12 @@ function addSlide() {
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-        renderAdmin();
+        renderSlidesAdmin();
         showNotification('Слайд додано!');
-        unsavedChanges = false;
         resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання слайду:', e);
+        showNotification(e.message);
     }
 }
 
@@ -3604,7 +4055,6 @@ async function saveNewProduct() {
         return;
     }
 
-    // Перевірка унікальності slug на сервері
     try {
         const slugCheck = await fetch(`/api/products?slug=${slug}`, {
             headers: {
@@ -3648,12 +4098,48 @@ async function saveNewProduct() {
         return;
     }
 
-    if (brand && !brands.includes(brand)) {
-        brands.push(brand);
-        localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
+if (brand && !brands.includes(brand)) {
+    try {
+        const response = await fetch('/api/brands', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: brand })
+        });
+        if (response.ok) {
+            brands.push(brand); // Додаємо лише після успішного збереження на сервері
+            updateBrandOptions();
+        } else {
+            console.error('Помилка додавання бренду:', response.statusText);
+        }
+    } catch (e) {
+        console.error('Помилка додавання бренду:', e);
+    }
+}
+
+if (material && !materials.includes(material)) {
+        try {
+            const response = await fetch('/api/materials', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: material })
+            });
+            if (response.ok) {
+                materials.push(material);
+                updateMaterialOptions();
+            } else {
+                console.error('Помилка додавання матеріалу:', response.statusText);
+            }
+        } catch (e) {
+            console.error('Помилка додавання матеріалу:', e);
+        }
     }
 
-    // Створюємо об’єкт продукту
     let product = {
         type: newProduct.type,
         name,
@@ -3684,14 +4170,12 @@ async function saveNewProduct() {
         visible: visible
     };
 
-    // Перевірка медіа в описі (зображення та відео з blob: URL)
     const mediaUrls = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(description, 'text/html');
     const images = doc.querySelectorAll('img');
     const videos = doc.querySelectorAll('iframe');
 
-    // Обробка зображень
     for (let img of images) {
         const src = img.getAttribute('src');
         if (src && src.startsWith('blob:')) {
@@ -3721,13 +4205,11 @@ async function saveNewProduct() {
         }
     }
 
-    // Оновлюємо description, замінюючи blob: URL на нові URL
     let updatedDescription = description;
     mediaUrls.forEach(({ oldUrl, newUrl }) => {
         updatedDescription = updatedDescription.replace(oldUrl, newUrl);
     });
 
-    // Оновлюємо descriptionDelta
     let updatedDelta = descriptionDelta;
     if (mediaUrls.length > 0) {
         updatedDelta = { ops: [] };
@@ -3741,11 +4223,9 @@ async function saveNewProduct() {
         });
     }
 
-    // Оновлюємо об’єкт продукту з новими description і descriptionDelta
     product.description = updatedDescription;
     product.descriptionDelta = updatedDelta;
 
-    // Завантажуємо основні фотографії
     const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
     for (let file of photoFiles) {
         const validation = validateFile(file);
@@ -3775,10 +4255,8 @@ async function saveNewProduct() {
         }
     }
 
-    // Додаємо URL фотографій, які вже є
     product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-    // Завантажуємо фотографії кольорів
     for (let i = 0; i < newProduct.colors.length; i++) {
         const color = newProduct.colors[i];
         if (color.photo instanceof File) {
@@ -3812,7 +4290,6 @@ async function saveNewProduct() {
         }
     }
 
-    // Відправляємо запит на сервер
     try {
         const response = await fetch('/api/products', {
             method: 'POST',
@@ -4033,7 +4510,6 @@ async function saveEditedProduct(productId) {
         return;
     }
 
-    // Перевірка унікальності slug на сервері (крім поточного товару)
     try {
         const slugCheck = await fetch(`/api/products?slug=${slug}`, {
             headers: {
@@ -4077,12 +4553,48 @@ async function saveEditedProduct(productId) {
         return;
     }
 
-    if (brand && !brands.includes(brand)) {
-        brands.push(brand);
-        localStorage.setItem('brands', LZString.compressToUTF16(JSON.stringify(brands)));
+if (brand && !brands.includes(brand)) {
+    try {
+        const response = await fetch('/api/brands', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: brand })
+        });
+        if (response.ok) {
+            brands.push(brand); // Додаємо лише після успішного збереження на сервері
+            updateBrandOptions();
+        } else {
+            console.error('Помилка додавання бренду:', response.statusText);
+        }
+    } catch (e) {
+        console.error('Помилка додавання бренду:', e);
+    }
+}
+
+if (material && !materials.includes(material)) {
+        try {
+            const response = await fetch('/api/materials', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: material })
+            });
+            if (response.ok) {
+                materials.push(material);
+                updateMaterialOptions();
+            } else {
+                console.error('Помилка додавання матеріалу:', response.statusText);
+            }
+        } catch (e) {
+            console.error('Помилка додавання матеріалу:', e);
+        }
     }
 
-    // Створюємо об’єкт продукту
     let product = {
         id: productId,
         type: newProduct.type,
@@ -4114,14 +4626,12 @@ async function saveEditedProduct(productId) {
         visible: visible
     };
 
-    // Перевірка медіа в описі (зображення та відео з blob: URL)
     const mediaUrls = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(description, 'text/html');
     const images = doc.querySelectorAll('img');
     const videos = doc.querySelectorAll('iframe');
 
-    // Обробка зображень
     for (let img of images) {
         const src = img.getAttribute('src');
         if (src && src.startsWith('blob:')) {
@@ -4151,13 +4661,11 @@ async function saveEditedProduct(productId) {
         }
     }
 
-    // Оновлюємо description, замінюючи blob: URL на нові URL
     let updatedDescription = description;
     mediaUrls.forEach(({ oldUrl, newUrl }) => {
         updatedDescription = updatedDescription.replace(oldUrl, newUrl);
     });
 
-    // Оновлюємо descriptionDelta
     let updatedDelta = descriptionDelta;
     if (mediaUrls.length > 0) {
         updatedDelta = { ops: [] };
@@ -4171,11 +4679,9 @@ async function saveEditedProduct(productId) {
         });
     }
 
-    // Оновлюємо об’єкт продукту з новими description і descriptionDelta
     product.description = updatedDescription;
     product.descriptionDelta = updatedDelta;
 
-    // Завантажуємо основні фотографії
     const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
     for (let file of photoFiles) {
         const validation = validateFile(file);
@@ -4205,10 +4711,8 @@ async function saveEditedProduct(productId) {
         }
     }
 
-    // Додаємо URL фотографій, які вже є
     product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-    // Завантажуємо фотографії кольорів
     for (let i = 0; i < newProduct.colors.length; i++) {
         const color = newProduct.colors[i];
         if (color.photo instanceof File) {
@@ -4242,7 +4746,6 @@ async function saveEditedProduct(productId) {
         }
     }
 
-    // Відправляємо запит на сервер
     try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
@@ -4423,44 +4926,69 @@ function uploadBulkPrices() {
     const file = document.getElementById('bulk-price-file').files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
-            let updated = 0;
-            lines.forEach(line => {
-                // Розділяємо рядок, враховуючи, що останні два елементи - це розмір (якщо є) і ціна
-                const parts = line.split(',');
-                if (parts.length < 4) return; // Пропускаємо некоректні рядки
+reader.onload = async (e) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
 
-                const id = parseInt(parts[0].trim());
-                const product = products.find(p => p.id === id);
-                if (!product) return; // Пропускаємо, якщо товар не знайдено
-
-                if (product.type === 'simple') {
-                    // Для простих товарів ціна - це останній елемент
-                    const price = parseFloat(parts[parts.length - 1].trim());
-                    if (!isNaN(price) && price >= 0) {
-                        product.price = price;
+    const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
+    let updated = 0;
+    for (const line of lines) {
+        const parts = line.split(',');
+        if (parts.length < 4) continue;
+        const id = parseInt(parts[0].trim());
+        const product = products.find(p => p.id === id);
+        if (!product) continue;
+        if (product.type === 'simple') {
+            const price = parseFloat(parts[parts.length - 1].trim());
+            if (!isNaN(price) && price >= 0) {
+                product.price = price;
+                try {
+                    await fetch(`/api/products/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(product)
+                    });
+                    updated++;
+                } catch (e) {
+                    console.error(`Помилка оновлення товару #${id}:`, e);
+                }
+            }
+        } else if (product.type === 'mattresses') {
+            const sizePart = parts[parts.length - 2].trim();
+            const price = parseFloat(parts[parts.length - 1].trim());
+            if (sizePart.startsWith('Розмір: ')) {
+                const size = sizePart.replace('Розмір: ', '').trim();
+                const sizeObj = product.sizes.find(s => s.name === size);
+                if (sizeObj && !isNaN(price) && price >= 0) {
+                    sizeObj.price = price;
+                    try {
+                        await fetch(`/api/products/${id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(product)
+                        });
                         updated++;
-                    }
-                } else if (product.type === 'mattresses') {
-                    // Для матраців шукаємо "Розмір: розмір" і ціну
-                    const sizePart = parts[parts.length - 2].trim();
-                    const price = parseFloat(parts[parts.length - 1].trim());
-                    if (sizePart.startsWith('Розмір: ')) {
-                        const size = sizePart.replace('Розмір: ', '').trim();
-                        const sizeObj = product.sizes.find(s => s.name === size);
-                        if (sizeObj && !isNaN(price) && price >= 0) {
-                            sizeObj.price = price;
-                            updated++;
-                        }
+                    } catch (e) {
+                        console.error(`Помилка оновлення товару #${id}:`, e);
                     }
                 }
-            });
-            localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
-            renderAdmin('products');
-            showNotification(`Оновлено цін для ${updated} товарів!`);
-            resetInactivityTimer();
-        };
+            }
+        }
+    }
+    renderAdmin('products');
+    showNotification(`Оновлено цін для ${updated} товарів!`);
+    resetInactivityTimer();
+};
         reader.readAsText(file);
     } else {
         alert('Виберіть файл для завантаження!');
@@ -4586,29 +5114,71 @@ function changeOrderStatus(index) {
     }
 }
 
-function saveOrderStatus(index) {
+async function saveOrderStatus(index) {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
     const order = orders[index];
     const newStatus = document.getElementById('new-order-status').value;
+
     if (newStatus) {
         order.status = newStatus;
-        localStorage.setItem('orders', LZString.compressToUTF16(JSON.stringify(orders)));
-        closeModal();
-        renderAdmin('orders');
-        showNotification('Статус замовлення змінено!');
-        resetInactivityTimer();
+        try {
+            const response = await fetch(`/api/orders/${order._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(order)
+            });
+
+            if (!response.ok) throw new Error('Не вдалося оновити статус замовлення');
+            closeModal();
+            renderAdmin('orders');
+            showNotification('Статус замовлення змінено!');
+            resetInactivityTimer();
+        } catch (e) {
+            console.error('Помилка оновлення статусу замовлення:', e);
+            showNotification(e.message);
+        }
     }
 }
 
-    function deleteOrder(index) {
-        if (confirm('Ви впевнені, що хочете видалити це замовлення?')) {
+async function deleteOrder(index) {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
+    if (confirm('Ви впевнені, що хочете видалити це замовлення?')) {
+        const order = orders[index];
+        try {
+            const response = await fetch(`/api/orders/${order._id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Не вдалося видалити замовлення');
             orders.splice(index, 1);
-            localStorage.setItem('orders', LZString.compressToUTF16(JSON.stringify(orders)));
             renderAdmin('orders');
             showNotification('Замовлення видалено!');
             unsavedChanges = false;
             resetInactivityTimer();
+        } catch (e) {
+            console.error('Помилка видалення замовлення:', e);
+            showNotification(e.message);
         }
     }
+}
 
     function sortOrders(criteria) {
         const [key, direction] = criteria.split('-');
@@ -4634,6 +5204,8 @@ function saveOrderStatus(index) {
 
 if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
     showSection('admin-panel');
+    initializeEditors(); // Ініціалізуємо редактори після завантаження даних
+    connectAdminWebSocket();
     resetInactivityTimer();
 } else {
     localStorage.removeItem('adminToken');
@@ -4650,6 +5222,62 @@ if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && loc
         loginBtn.addEventListener('click', login);
     }
 });
+
+function connectAdminWebSocket() {
+    const token = localStorage.getItem('adminToken');
+    const ws = new WebSocket(`wss://mebli.onrender.com?token=${token}`);
+
+    ws.onopen = () => {
+        console.log('Адмін підключено до WebSocket');
+    };
+
+    ws.onmessage = (event) => {
+        console.log('Отримано повідомлення WebSocket:', event.data);
+        const { type, data } = JSON.parse(event.data);
+        if (type === 'products') {
+            products = data;
+            renderAdmin('products');
+        } else if (type === 'categories') {
+            categories = data;
+            renderCategoriesAdmin();
+        } else if (type === 'settings') {
+            settings = data;
+            if (aboutEditor && settings.about) {
+                try {
+                    const delta = aboutEditor.clipboard.convert(settings.about);
+                    aboutEditor.setContents(delta, 'silent');
+                } catch (e) {
+                    console.error('Помилка при оновленні вмісту редактора "Про нас":', e);
+                    aboutEditor.setContents([{ insert: settings.about }], 'silent');
+                }
+                document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+            }
+            renderSettingsAdmin();
+        } else if (type === 'orders') {
+            orders = data;
+            sortOrders('date-desc');
+            renderAdmin('orders');
+        } else if (type === 'slides') {
+            slides = data;
+            renderSlidesAdmin();
+        } else if (type === 'materials') {
+            materials = data;
+            updateMaterialOptions();
+        } else if (type === 'brands') {
+            brands = data;
+            updateBrandOptions();
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket адмінки відключено, спроба перепідключення...');
+        setTimeout(connectAdminWebSocket, 2000);
+    };
+
+    ws.onerror = (error) => {
+        console.error('Помилка WebSocket адмінки:', error);
+    };
+}
   </script>
  </body>
 </html>

@@ -11,6 +11,8 @@ const multer = require('multer');
 const fs = require('fs');
 const Joi = require('joi');
 const WebSocket = require('ws');
+const Material = require('./models/Material');
+const Brand = require('./models/Brand');
 
 dotenv.config();
 
@@ -271,9 +273,7 @@ const settingsSchema = new mongoose.Schema({
     slideWidth: Number,
     slideHeight: Number,
     slideInterval: Number,
-    showSlideshow: Boolean,
-    brands: [String],
-    materials: [String]
+    showSlideshow: Boolean
 });
 
 const Product = mongoose.model('Product', productSchema);
@@ -771,6 +771,66 @@ app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Помилка при видаленні замовлення:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+// Маршрути для роботи з матеріалами
+app.get('/api/materials', authenticateToken, async (req, res) => {
+    try {
+        const materials = await Material.find().distinct('name');
+        res.json(materials);
+    } catch (err) {
+        console.error('Помилка при отриманні матеріалів:', err);
+        res.status(500).json({ error: 'Помилка завантаження матеріалів', details: err.message });
+    }
+});
+
+app.post('/api/materials', authenticateToken, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Назва матеріалу обов’язкова' });
+
+        let material = await Material.findOne({ name });
+        if (!material) {
+            material = new Material({ name });
+            await material.save();
+            const materials = await Material.find().distinct('name');
+            broadcast('materials', materials); // Оновлюємо клієнтів через WebSocket
+        }
+        res.status(201).json(material.name);
+    } catch (err) {
+        console.error('Помилка при додаванні матеріалу:', err);
+        res.status(500).json({ error: 'Помилка додавання матеріалу', details: err.message });
+    }
+});
+
+// Маршрути для роботи з брендами
+app.get('/api/brands', authenticateToken, async (req, res) => {
+    try {
+        const brands = await Brand.find().distinct('name');
+        res.json(brands);
+    } catch (err) {
+        console.error('Помилка при отриманні брендів:', err);
+        res.status(500).json({ error: 'Помилка завантаження брендів', details: err.message });
+    }
+});
+
+app.post('/api/brands', authenticateToken, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Назва бренду обов’язкова' });
+
+        let brand = await Brand.findOne({ name });
+        if (!brand) {
+            brand = new Brand({ name });
+            await brand.save();
+            const brands = await Brand.find().distinct('name');
+            broadcast('brands', brands); // Оновлюємо клієнтів через WebSocket
+        }
+        res.status(201).json(brand.name);
+    } catch (err) {
+        console.error('Помилка при додаванні бренду:', err);
+        res.status(500).json({ error: 'Помилка додавання бренду', details: err.message });
     }
 });
 
