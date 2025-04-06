@@ -99,7 +99,7 @@ async function initializeData() {
     orderFields = loadFromStorage('orderFields', []);
     settings = loadFromStorage('settings', {
         name: 'Меблевий магазин',
-        logo: NO_IMAGE_URL,
+        logo: NO_IMAGE_URL, // Використовуємо семпл для логотипу за замовчуванням
         logoWidth: 150,
         contacts: { phones: '', addresses: '', schedule: '' },
         socials: [],
@@ -110,9 +110,6 @@ async function initializeData() {
         favicon: ''
     });
 
-    // Відновлюємо currentCategory і currentSubcategory
-    currentCategory = loadFromStorage('currentCategory', null);
-    currentSubcategory = loadFromStorage('currentSubcategory', null);
     const oldFavicon = document.querySelector('link[rel="icon"]');
     if (oldFavicon) oldFavicon.remove();
     const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
@@ -139,7 +136,7 @@ function showSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
-        let newPath = '/';
+        let newPath = '/'; // Базовий шлях
         if (sectionId === 'home') {
             currentProduct = null;
             currentCategory = null;
@@ -157,8 +154,9 @@ function showSection(sectionId) {
                 currentSubcategory = null;
                 parentGroupProduct = null;
                 saveToStorage('parentGroupProduct', null);
-                newPath = '/catalog';
-            } else if (currentProduct) {
+            }
+            renderCatalog(currentCategory, currentSubcategory, currentProduct);
+            if (currentProduct) {
                 showSection('product-details');
                 return;
             } else if (currentSubcategory) {
@@ -168,8 +166,9 @@ function showSection(sectionId) {
             } else if (currentCategory) {
                 const catSlug = transliterate(currentCategory.replace('ь', ''));
                 newPath = `/${catSlug}`;
+            } else {
+                newPath = '/catalog';
             }
-            renderCatalog(currentCategory, currentSubcategory, currentProduct);
         } else if (sectionId === 'cart') {
             parentGroupProduct = null;
             saveToStorage('parentGroupProduct', null);
@@ -196,9 +195,6 @@ function showSection(sectionId) {
             const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
             newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
         }
-        // Зберігаємо currentCategory і currentSubcategory
-        saveToStorage('currentCategory', currentCategory);
-        saveToStorage('currentSubcategory', currentSubcategory);
         // Змінюємо URL без #
         history.pushState({ sectionId }, '', newPath);
         renderBreadcrumbs();
@@ -334,60 +330,45 @@ function renderBreadcrumbs() {
             }
         });
 
-function renderCategories() {
-    const catDiv = document.getElementById('categories');
-    if (!catDiv) return;
-    while (catDiv.firstChild) catDiv.removeChild(catDiv.firstChild);
+        function renderCategories() {
+            const catDiv = document.getElementById('categories');
+            if (!catDiv) return;
+            while (catDiv.firstChild) catDiv.removeChild(catDiv.firstChild);
 
-    categories.forEach(cat => {
-        const categoryDiv = document.createElement('div');
-        categoryDiv.className = 'category';
+            categories.forEach(cat => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
 
-        const img = document.createElement('img');
-        img.src = cat.img || NO_IMAGE_URL;
-        img.alt = cat.name;
-        img.loading = 'lazy';
-        img.onclick = () => { 
-            currentCategory = cat.name; 
-            currentSubcategory = null; 
-            currentProduct = null; 
-            showSection('catalog'); 
-        };
-        categoryDiv.appendChild(img);
+                const img = document.createElement('img');
+                img.src = cat.img || NO_IMAGE_URL;
+                img.alt = cat.name;
+                img.loading = 'lazy';
+                img.onclick = () => { currentCategory = cat.name; currentSubcategory = null; showSection('catalog'); };
+                categoryDiv.appendChild(img);
 
-        const p = document.createElement('p');
-        p.textContent = cat.name;
-        p.onclick = () => { 
-            currentCategory = cat.name; 
-            currentSubcategory = null; 
-            currentProduct = null; 
-            showSection('catalog'); 
-        };
-        categoryDiv.appendChild(p);
+                const p = document.createElement('p');
+                p.textContent = cat.name;
+                p.onclick = () => { currentCategory = cat.name; currentSubcategory = null; showSection('catalog'); };
+                categoryDiv.appendChild(p);
 
-        const subcategoriesDiv = document.createElement('div');
-        subcategoriesDiv.className = 'subcategories';
-        (cat.subcategories || []).forEach(sub => {
-            const subP = document.createElement('p');
-            subP.textContent = sub.name;
-            subP.onclick = () => { 
-                currentCategory = cat.name; 
-                currentSubcategory = sub.name; 
-                currentProduct = null; 
-                showSection('catalog'); 
-            };
-            subcategoriesDiv.appendChild(subP);
-        });
-        categoryDiv.appendChild(subcategoriesDiv);
+                const subcategoriesDiv = document.createElement('div');
+                subcategoriesDiv.className = 'subcategories';
+                (cat.subcategories || []).forEach(sub => {
+                    const subP = document.createElement('p');
+                    subP.textContent = sub.name;
+                    subP.onclick = () => { currentCategory = cat.name; currentSubcategory = sub.name; showSection('catalog'); };
+                    subcategoriesDiv.appendChild(subP);
+                });
+                categoryDiv.appendChild(subcategoriesDiv);
 
-        catDiv.appendChild(categoryDiv);
-    });
+                catDiv.appendChild(categoryDiv);
+            });
 
-    renderSlideshow();
-    renderCatalogDropdown();
-}
+            renderSlideshow();
+            renderCatalogDropdown();
+        }
 
-function renderCatalogDropdown() {
+        function renderCatalogDropdown() {
     const dropdown = document.getElementById('catalog-dropdown');
     if (!dropdown || !categories) return;
     while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
@@ -398,12 +379,7 @@ function renderCatalogDropdown() {
 
         const span = document.createElement('span');
         span.textContent = cat.name;
-        span.onclick = () => { 
-            currentProduct = null; 
-            currentCategory = cat.name; 
-            currentSubcategory = null; 
-            showSection('catalog'); 
-        };
+        span.onclick = () => { currentProduct = null; currentCategory = cat.name; currentSubcategory = null; showSection('catalog'); };
         itemDiv.appendChild(span);
 
         const subDropdown = document.createElement('div');
@@ -411,12 +387,7 @@ function renderCatalogDropdown() {
         (cat.subcategories || []).forEach(sub => {
             const p = document.createElement('p');
             p.textContent = sub.name;
-            p.onclick = () => { 
-                currentProduct = null; 
-                currentCategory = cat.name; 
-                currentSubcategory = sub.name; 
-                showSection('catalog'); 
-            };
+            p.onclick = () => { currentProduct = null; currentCategory = cat.name; currentSubcategory = sub.name; showSection('catalog'); };
             subDropdown.appendChild(p);
         });
         itemDiv.appendChild(subDropdown);
@@ -425,147 +396,131 @@ function renderCatalogDropdown() {
     });
 }
 
-function renderCatalog(category = null, subcategory = null, product = null) {
-    currentCategory = category;
-    currentSubcategory = subcategory;
-    if (product) currentProduct = product;
-    const productsDiv = document.getElementById('products');
-    if (!productsDiv) return;
-    while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
+        function renderCatalog(category = null, subcategory = null, product = null) {
+            currentCategory = category;
+            currentSubcategory = subcategory;
+            if (product) currentProduct = product;
+            const productsDiv = document.getElementById('products');
+            if (!productsDiv) return;
+            while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
 
-    if (isSearchActive) {
-        const query = document.getElementById('search').value.toLowerCase().trim();
-        const h2 = document.createElement('h2');
-        h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
-        productsDiv.appendChild(h2);
+            if (isSearchActive) {
+                const query = document.getElementById('search').value.toLowerCase().trim();
+                const h2 = document.createElement('h2');
+                h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
+                productsDiv.appendChild(h2);
 
-        const controlsDiv = document.createElement('div');
-        controlsDiv.className = 'catalog-controls';
-        controlsDiv.appendChild(createSortMenu());
-        controlsDiv.appendChild(createPerPageMenu());
-        const perPageHidden = document.createElement('input');
-        perPageHidden.type = 'hidden';
-        perPageHidden.id = 'per-page-hidden';
-        perPageHidden.value = '20';
-        controlsDiv.appendChild(perPageHidden);
-        productsDiv.appendChild(controlsDiv);
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'catalog-controls';
+                controlsDiv.appendChild(createSortMenu());
+                controlsDiv.appendChild(createPerPageMenu());
+                const perPageHidden = document.createElement('input');
+                perPageHidden.type = 'hidden';
+                perPageHidden.id = 'per-page-hidden';
+                perPageHidden.value = '20';
+                controlsDiv.appendChild(perPageHidden);
+                productsDiv.appendChild(controlsDiv);
 
-        const productList = document.createElement('div');
-        productList.id = 'product-list';
-        productList.className = 'product-grid';
-        productsDiv.appendChild(productList);
+                const productList = document.createElement('div');
+                productList.id = 'product-list';
+                productList.className = 'product-grid';
+                productsDiv.appendChild(productList);
 
-        if (searchResults.length > 0) {
-            filteredProducts = [...searchResults];
-            renderProducts(filteredProducts);
-        } else {
-            const p = document.createElement('p');
-            p.textContent = 'Нічого не знайдено';
-            productList.appendChild(p);
+                if (searchResults.length > 0) {
+                    filteredProducts = [...searchResults];
+                    renderProducts(filteredProducts);
+                } else {
+                    const p = document.createElement('p');
+                    p.textContent = 'Нічого не знайдено';
+                    productList.appendChild(p);
+                }
+            } else if (!category) {
+                const h2 = document.createElement('h2');
+                h2.textContent = 'Виберіть категорію';
+                productsDiv.appendChild(h2);
+
+                const categoryList = document.createElement('div');
+                categoryList.className = 'category-list';
+                categories.forEach(cat => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'category-item';
+
+                    const img = document.createElement('img');
+                    img.src = cat.img || NO_IMAGE_URL;
+                    img.alt = cat.name;
+                    img.loading = 'lazy';
+                    img.onclick = () => renderCatalog(cat.name);
+                    itemDiv.appendChild(img);
+
+                    const p = document.createElement('p');
+                    p.textContent = cat.name;
+                    p.onclick = () => renderCatalog(cat.name);
+                    itemDiv.appendChild(p);
+
+                    categoryList.appendChild(itemDiv);
+                });
+                productsDiv.appendChild(categoryList);
+            } else {
+                const selectedCat = categories.find(c => c.name === category);
+                if (!selectedCat) {
+                    const p = document.createElement('p');
+                    p.textContent = 'Категорія не знайдена';
+                    productsDiv.appendChild(p);
+                    return;
+                }
+
+                if (!currentProduct) {
+                    const h2 = document.createElement('h2');
+                    h2.textContent = category;
+                    productsDiv.appendChild(h2);
+
+                    const subFilterDiv = document.createElement('div');
+                    subFilterDiv.id = 'subcategory-filter';
+                    subFilterDiv.className = 'subcategory-filter';
+                    const subButtonsDiv = document.createElement('div');
+                    subButtonsDiv.className = 'subcategory-buttons';
+
+                    const allBtn = document.createElement('button');
+                    allBtn.textContent = 'Усі';
+                    allBtn.onclick = () => renderCatalog(category, null);
+                    subButtonsDiv.appendChild(allBtn);
+
+                    (selectedCat.subcategories || []).forEach(sub => {
+                        const btn = document.createElement('button');
+                        btn.textContent = sub.name;
+                        btn.onclick = () => renderCatalog(category, sub.name);
+                        subButtonsDiv.appendChild(btn);
+                    });
+                    subFilterDiv.appendChild(subButtonsDiv);
+                    productsDiv.appendChild(subFilterDiv);
+
+                    const controlsDiv = document.createElement('div');
+                    controlsDiv.className = 'catalog-controls';
+                    controlsDiv.appendChild(createSortMenu());
+                    controlsDiv.appendChild(createPerPageMenu());
+                    const perPageHidden = document.createElement('input');
+                    perPageHidden.type = 'hidden';
+                    perPageHidden.id = 'per-page-hidden';
+                    perPageHidden.value = '20';
+                    controlsDiv.appendChild(perPageHidden);
+                    productsDiv.appendChild(controlsDiv);
+                }
+
+                const productList = document.createElement('div');
+                productList.id = 'product-list';
+                productList.className = 'product-grid';
+                productsDiv.appendChild(productList);
+
+                filteredProducts = products.filter(p => 
+                    p.category === category && 
+                    (!subcategory || p.subcategory === subcategory) &&
+                    p.visible
+                );
+                renderProducts(filteredProducts);
+            }
+            renderFilters();
+            renderBreadcrumbs();
         }
-    } else if (!category) {
-        const h2 = document.createElement('h2');
-        h2.textContent = 'Виберіть категорію';
-        productsDiv.appendChild(h2);
-
-        const categoryList = document.createElement('div');
-        categoryList.className = 'category-list';
-        categories.forEach(cat => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'category-item';
-
-            const img = document.createElement('img');
-            img.src = cat.img || NO_IMAGE_URL;
-            img.alt = cat.name;
-            img.loading = 'lazy';
-            img.onclick = () => {
-                currentCategory = cat.name;
-                currentSubcategory = null;
-                currentProduct = null;
-                showSection('catalog'); // Оновлюємо URL
-            };
-            itemDiv.appendChild(img);
-
-            const p = document.createElement('p');
-            p.textContent = cat.name;
-            p.onclick = () => {
-                currentCategory = cat.name;
-                currentSubcategory = null;
-                currentProduct = null;
-                showSection('catalog'); // Оновлюємо URL
-            };
-            itemDiv.appendChild(p);
-
-            categoryList.appendChild(itemDiv);
-        });
-        productsDiv.appendChild(categoryList);
-    } else {
-        const selectedCat = categories.find(c => c.name === category);
-        if (!selectedCat) {
-            const p = document.createElement('p');
-            p.textContent = 'Категорія не знайдена';
-            productsDiv.appendChild(p);
-            return;
-        }
-
-        if (!currentProduct) {
-            const h2 = document.createElement('h2');
-            h2.textContent = category;
-            productsDiv.appendChild(h2);
-
-            const subFilterDiv = document.createElement('div');
-            subFilterDiv.id = 'subcategory-filter';
-            subFilterDiv.className = 'subcategory-filter';
-            const subButtonsDiv = document.createElement('div');
-            subButtonsDiv.className = 'subcategory-buttons';
-
-            const allBtn = document.createElement('button');
-            allBtn.textContent = 'Усі';
-            allBtn.onclick = () => {
-                currentSubcategory = null;
-                showSection('catalog'); // Оновлюємо URL
-            };
-            subButtonsDiv.appendChild(allBtn);
-
-            (selectedCat.subcategories || []).forEach(sub => {
-                const btn = document.createElement('button');
-                btn.textContent = sub.name;
-                btn.onclick = () => {
-                    currentSubcategory = sub.name;
-                    showSection('catalog'); // Оновлюємо URL
-                };
-                subButtonsDiv.appendChild(btn);
-            });
-            subFilterDiv.appendChild(subButtonsDiv);
-            productsDiv.appendChild(subFilterDiv);
-
-            const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'catalog-controls';
-            controlsDiv.appendChild(createSortMenu());
-            controlsDiv.appendChild(createPerPageMenu());
-            const perPageHidden = document.createElement('input');
-            perPageHidden.type = 'hidden';
-            perPageHidden.id = 'per-page-hidden';
-            perPageHidden.value = '20';
-            controlsDiv.appendChild(perPageHidden);
-            productsDiv.appendChild(controlsDiv);
-        }
-
-        const productList = document.createElement('div');
-        productList.id = 'product-list';
-        productList.className = 'product-grid';
-        productsDiv.appendChild(productList);
-
-        filteredProducts = products.filter(p => 
-            p.category === category && 
-            (!subcategory || p.subcategory === subcategory) &&
-            p.visible
-        );
-        renderProducts(filteredProducts);
-    }
-    renderFilters();
-    renderBreadcrumbs();
-}
 
         function createSortMenu() {
             const sortMenu = document.createElement('div');
@@ -1889,9 +1844,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const path = window.location.pathname.slice(1);
+    const path = window.location.pathname.slice(1); // Беремо шлях без початкового "/"
     if (path) {
-        const parts = path.split('/').filter(p => p);
+        const parts = path.split('/').filter(p => p); // Розбиваємо шлях на частини
         if (parts[0] === 'cart') {
             showSection('cart');
         } else if (parts[0] === 'contacts') {
@@ -1905,7 +1860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (cat) {
                 currentCategory = cat.name;
                 if (parts[1]) {
-                    const subCat = cat.subcategories?.find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
+                    const subCat = cat.subcategories.find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
                     if (subCat) currentSubcategory = subCat.name;
                     if (parts[2]) {
                         currentProduct = products.find(p => p.slug === parts[2]);
@@ -1917,9 +1872,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 showSection('catalog');
             } else {
-                // Показуємо 404
                 showSection('home');
-                showNotification('Сторінку не знайдено!', 'error');
             }
         }
     } else {
