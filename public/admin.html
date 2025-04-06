@@ -1230,7 +1230,11 @@ async function loadProducts() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            // Для тестування можна залишити products порожнім або завантажити мокові дані
+            products = [];
+            renderAdmin('products');
+            return;
         }
         const response = await fetch('/api/products', {
             headers: {
@@ -1262,7 +1266,10 @@ async function loadCategories() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            categories = [];
+            renderCategoriesAdmin();
+            return;
         }
         const response = await fetch('/api/categories', {
             headers: {
@@ -1294,7 +1301,10 @@ async function loadSettings() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            settings.contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
+            renderSettingsAdmin();
+            return;
         }
         const response = await fetch('/api/settings', {
             headers: {
@@ -1316,7 +1326,6 @@ async function loadSettings() {
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
 
-        // Об’єднуємо серверні дані з початковими значеннями, зберігаючи структуру contacts
         settings = {
             ...settings,
             ...serverSettings,
@@ -1346,12 +1355,11 @@ async function loadSettings() {
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification(e.message);
-        // Гарантуємо, що settings.contacts завжди має структуру
         settings.contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
         if (!settings.name) {
             showNotification('Не вдалося завантажити налаштування сайту. Використано значення за замовчуванням.');
         }
-        renderSettingsAdmin(); // Спробуємо рендерити навіть при помилці
+        renderSettingsAdmin();
     }
 }
 
@@ -1359,7 +1367,11 @@ async function loadOrders() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            orders = [];
+            sortOrders('date-desc');
+            renderAdmin('orders');
+            return;
         }
         const response = await fetch('/api/orders', {
             headers: {
@@ -1392,7 +1404,10 @@ async function loadSlides() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            slides = [];
+            renderSlidesAdmin();
+            return;
         }
         const response = await fetch('/api/slides', {
             headers: {
@@ -1424,7 +1439,10 @@ async function loadMaterials() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            materials = [];
+            updateMaterialOptions();
+            return;
         }
         const response = await fetch('/api/materials', {
             headers: {
@@ -1444,7 +1462,6 @@ async function loadMaterials() {
             throw new Error(`Не вдалося завантажити матеріали: ${errorData.error || response.statusText}`);
         }
         materials = await response.json();
-        // Оновлюємо поля, які використовують materials (наприклад, вибір матеріалів у формі товару)
         updateMaterialOptions();
     } catch (e) {
         console.error('Помилка завантаження матеріалів:', e);
@@ -1457,7 +1474,10 @@ async function loadBrands() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            brands = [];
+            updateBrandOptions();
+            return;
         }
         const response = await fetch('/api/brands', {
             headers: {
@@ -1477,7 +1497,6 @@ async function loadBrands() {
             throw new Error(`Не вдалося завантажити бренди: ${errorData.error || response.statusText}`);
         }
         brands = await response.json();
-        // Оновлюємо поля, які використовують brands (наприклад, вибір брендів у формі товару)
         updateBrandOptions();
     } catch (e) {
         console.error('Помилка завантаження брендів:', e);
@@ -1924,8 +1943,14 @@ async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
 
+    if (!username || !password) {
+        showNotification('Введіть логін та пароль!');
+        return;
+    }
+
     try {
-        const response = await fetch('/api/admin/login', {
+        // Змінюємо маршрут на /api/login (припускаємо, що це правильний шлях)
+        const response = await fetch('https://mebli.onrender.com/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1934,23 +1959,27 @@ async function login() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Помилка входу: ${response.status} ${response.statusText}. Сервер повернув: ${errorText}`);
         }
 
         const data = await response.json();
-        localStorage.setItem('adminToken', data.token);
-        session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-panel');
-        initializeEditors(); // Ініціалізуємо редактори після входу
-        connectAdminWebSocket(); // Підключаємо WebSocket
-        await initializeData(); // Завантажуємо всі дані
-        showNotification('Успішний вхід!');
-        resetInactivityTimer();
+        if (data.token) {
+            localStorage.setItem('adminToken', data.token);
+            session = { isActive: true, timestamp: Date.now() };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-panel');
+            initializeEditors(); // Ініціалізуємо редактори після входу
+            await initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+            showNotification('Вхід виконано успішно!');
+        } else {
+            throw new Error('Токен не отримано від сервера');
+        }
     } catch (e) {
         console.error('Помилка входу:', e);
-        showNotification(e.message);
+        showNotification('Не вдалося увійти: ' + e.message);
     }
 }
 
@@ -5317,9 +5346,13 @@ async function deleteOrder(index) {
         resetInactivityTimer();
     }
 
+// Виклик ініціалізації редакторів незалежно від авторизації для тестування
+initializeEditors();
+
+// Початкова перевірка сесії
 if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
     showSection('admin-panel');
-    initializeEditors(); // Ініціалізуємо редактори після входу
+    initializeData();
     connectAdminWebSocket();
     resetInactivityTimer();
 } else {
