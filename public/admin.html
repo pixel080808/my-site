@@ -1188,7 +1188,25 @@ let orders = [];
 let slides = [];
 let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
 let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
-let settings = {};
+let settings = {
+    name: '',
+    baseUrl: '', // Додано для базового URL
+    logo: '',
+    logoWidth: '',
+    favicon: '',
+    contacts: { phones: '', addresses: '', schedule: '' },
+    socials: [],
+    showSocials: true,
+    about: '',
+    showSlides: true,
+    slideWidth: '',
+    slideHeight: '',
+    slideInterval: '',
+    categoryWidth: '',
+    categoryHeight: '',
+    productWidth: '',
+    productHeight: ''
+};
 let currentPage = 1;
 const productsPerPage = 20;
 const ordersPerPage = 20;
@@ -1295,7 +1313,18 @@ async function loadSettings() {
             const errorData = await response.json();
             throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
         }
-        settings = await response.json();
+        const serverSettings = await response.json();
+        console.log('Дані з /api/settings:', serverSettings);
+
+        // Об’єднуємо серверні дані з початковими значеннями
+        settings = {
+            ...settings,
+            ...serverSettings,
+            contacts: {
+                ...settings.contacts,
+                ...(serverSettings.contacts || {})
+            }
+        };
         if (aboutEditor && settings.about) {
             try {
                 const delta = aboutEditor.clipboard.convert(settings.about);
@@ -1306,11 +1335,18 @@ async function loadSettings() {
             }
             document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
         }
+        // Перевірка, чи завантажилися дані
+        if (!settings.name) {
+            showNotification('Не вдалося завантажити налаштування сайту. Використано значення за замовчуванням.');
+        }
         renderSettingsAdmin();
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification(e.message);
-        settings = {};
+        // Додаємо повідомлення при помилці завантаження
+        if (!settings.name) {
+            showNotification('Не вдалося завантажити налаштування сайту. Використано значення за замовчуванням.');
+        }
     }
 }
 
@@ -1472,8 +1508,8 @@ async function initializeData() {
         loadSettings(),
         loadOrders(),
         loadSlides(),
-        loadMaterials(), // Додаємо завантаження матеріалів
-        loadBrands()     // Додаємо завантаження брендів
+        loadMaterials(),
+        loadBrands()
     ]);
 }
 
@@ -2162,12 +2198,15 @@ function renderAdmin(activeTab = 'site-editing') {
     if (logoWidth) logoWidth.value = settings.logoWidth || 150;
     const faviconUrl = document.getElementById('favicon-url');
     if (faviconUrl) faviconUrl.value = settings.favicon || '';
+
+    // Захисна перевірка для settings.contacts
+    const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
     const contactPhones = document.getElementById('contact-phones');
-    if (contactPhones) contactPhones.value = settings.contacts.phones || '';
+    if (contactPhones) contactPhones.value = contacts.phones || '';
     const contactAddresses = document.getElementById('contact-addresses');
-    if (contactAddresses) contactAddresses.value = settings.contacts.addresses || '';
+    if (contactAddresses) contactAddresses.value = contacts.addresses || '';
     const contactSchedule = document.getElementById('contact-schedule');
-    if (contactSchedule) contactSchedule.value = settings.contacts.schedule || '';
+    if (contactSchedule) contactSchedule.value = contacts.schedule || '';
 
     // Оновлення редактора "Про нас"
     if (document.getElementById('about-editor')) {
@@ -2175,27 +2214,27 @@ function renderAdmin(activeTab = 'site-editing') {
             initializeEditors();
         }
         // Використовуємо setContents для коректного оновлення вмісту
- if (settings.aboutDelta) {
-    aboutEditor.setContents(settings.aboutDelta, 'silent');
-} else if (settings.about) {
-    try {
-        const delta = aboutEditor.clipboard.convert(settings.about);
-        aboutEditor.setContents(delta, 'silent');
-    } catch (e) {
-        aboutEditor.setContents([{ insert: settings.about }], 'silent');
-    }
-} else {
-    aboutEditor.setContents([], 'silent');
-}
+        if (settings.aboutDelta) {
+            aboutEditor.setContents(settings.aboutDelta, 'silent');
+        } else if (settings.about) {
+            try {
+                const delta = aboutEditor.clipboard.convert(settings.about);
+                aboutEditor.setContents(delta, 'silent');
+            } catch (e) {
+                aboutEditor.setContents([{ insert: settings.about }], 'silent');
+            }
+        } else {
+            aboutEditor.setContents([], 'silent');
+        }
         document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
     } else if (document.getElementById('about-edit')) {
         document.getElementById('about-edit').value = settings.about || '';
     }
 
     const socialToggle = document.getElementById('social-toggle');
-    if (socialToggle) socialToggle.checked = settings.showSocials || false;
+    if (socialToggle) socialToggle.checked = settings.showSocials !== false; // Змінено на !== false для коректної роботи з undefined
     const slideToggle = document.getElementById('slide-toggle');
-    if (slideToggle) slideToggle.checked = settings.showSlides || false;
+    if (slideToggle) slideToggle.checked = settings.showSlides !== false; // Те ж саме
     const slideWidth = document.getElementById('slide-width');
     if (slideWidth) slideWidth.value = settings.slideWidth || 75;
     const slideHeight = document.getElementById('slide-height');
@@ -2316,7 +2355,7 @@ function renderAdmin(activeTab = 'site-editing') {
                             <span>${p.brand || 'Без бренду'}</span>
                             <span>${priceDisplay}</span>
                             <span>${salePriceDisplay}</span>
-                            <div class="status-column" title="${p.visible ? 'Видимість: Так' : 'Видимість: Ні'}">
+                            <div class="status-column" title="${visibilityStatus}">
                                 <div class="buttons">
                                     <button class="edit-btn" onclick="openEditProductModal(${p.id})">Редагувати</button>
                                     <button class="delete-btn" onclick="deleteProduct(${p.id})">Видалити</button>
@@ -2475,6 +2514,19 @@ function closeModal() {
     // Закриваємо модальне вікно зміни розмірів, якщо воно відкрите
     closeResizeModal();
     resetInactivityTimer();
+}
+
+function validateFile(file) {
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, error: 'Дозволені формати: JPEG, PNG, GIF, WebP' };
+    }
+    if (file.size > maxSize) {
+        return { valid: false, error: 'Максимальний розмір файлу: 5 MB' };
+    }
+    return { valid: true };
 }
 
 async function addCategory() {
