@@ -1706,28 +1706,6 @@ function initializeEditors() {
 
     // Встановлюємо розміри для відео за замовчуванням
     setDefaultVideoSizes(aboutEditor, 'about-edit');
-}
-
-    // Функція для додавання обробників кнопок Undo і Redo
-    function addToolbarEventListeners() {
-        const toolbar = document.querySelector('#about-editor').previousElementSibling;
-        if (toolbar && toolbar.classList.contains('ql-toolbar')) {
-            const undoButton = toolbar.querySelector('.ql-undo');
-            const redoButton = toolbar.querySelector('.ql-redo');
-            if (undoButton) {
-                undoButton.addEventListener('click', () => {
-                    aboutEditor.history.undo();
-                });
-            }
-            if (redoButton) {
-                redoButton.addEventListener('click', () => {
-                    aboutEditor.history.redo();
-                });
-            }
-        } else {
-            console.error('Панель інструментів для aboutEditor не знайдена');
-        }
-    }
 
     // Виконуємо негайно, якщо документ уже завантажений, або чекаємо події
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -1736,6 +1714,26 @@ function initializeEditors() {
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(addToolbarEventListeners, 100);
         });
+    }
+}
+
+function addToolbarEventListeners() {
+    const toolbar = document.querySelector('#about-editor').previousElementSibling;
+    if (toolbar && toolbar.classList.contains('ql-toolbar')) {
+        const undoButton = toolbar.querySelector('.ql-undo');
+        const redoButton = toolbar.querySelector('.ql-redo');
+        if (undoButton) {
+            undoButton.addEventListener('click', () => {
+                aboutEditor.history.undo();
+            });
+        }
+        if (redoButton) {
+            redoButton.addEventListener('click', () => {
+                aboutEditor.history.redo();
+            });
+        }
+    } else {
+        console.error('Панель інструментів для aboutEditor не знайдена');
     }
 }
 
