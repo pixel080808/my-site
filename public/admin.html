@@ -1316,15 +1316,19 @@ async function loadSettings() {
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
 
-        // Об’єднуємо серверні дані з початковими значеннями
+        // Об’єднуємо серверні дані з початковими значеннями, зберігаючи структуру contacts
         settings = {
             ...settings,
             ...serverSettings,
             contacts: {
-                ...settings.contacts,
+                phones: '',
+                addresses: '',
+                schedule: '',
                 ...(serverSettings.contacts || {})
             }
         };
+        console.log('Оновлені settings після завантаження:', settings);
+
         if (aboutEditor && settings.about) {
             try {
                 const delta = aboutEditor.clipboard.convert(settings.about);
@@ -1335,7 +1339,6 @@ async function loadSettings() {
             }
             document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
         }
-        // Перевірка, чи завантажилися дані
         if (!settings.name) {
             showNotification('Не вдалося завантажити налаштування сайту. Використано значення за замовчуванням.');
         }
@@ -1343,10 +1346,12 @@ async function loadSettings() {
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification(e.message);
-        // Додаємо повідомлення при помилці завантаження
+        // Гарантуємо, що settings.contacts завжди має структуру
+        settings.contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
         if (!settings.name) {
             showNotification('Не вдалося завантажити налаштування сайту. Використано значення за замовчуванням.');
         }
+        renderSettingsAdmin(); // Спробуємо рендерити навіть при помилці
     }
 }
 
@@ -2213,7 +2218,6 @@ function renderAdmin(activeTab = 'site-editing') {
         if (!aboutEditor) {
             initializeEditors();
         }
-        // Використовуємо setContents для коректного оновлення вмісту
         if (settings.aboutDelta) {
             aboutEditor.setContents(settings.aboutDelta, 'silent');
         } else if (settings.about) {
@@ -2232,9 +2236,9 @@ function renderAdmin(activeTab = 'site-editing') {
     }
 
     const socialToggle = document.getElementById('social-toggle');
-    if (socialToggle) socialToggle.checked = settings.showSocials !== false; // Змінено на !== false для коректної роботи з undefined
+    if (socialToggle) socialToggle.checked = settings.showSocials !== false;
     const slideToggle = document.getElementById('slide-toggle');
-    if (slideToggle) slideToggle.checked = settings.showSlides !== false; // Те ж саме
+    if (slideToggle) slideToggle.checked = settings.showSlides !== false;
     const slideWidth = document.getElementById('slide-width');
     if (slideWidth) slideWidth.value = settings.slideWidth || 75;
     const slideHeight = document.getElementById('slide-height');
@@ -2382,29 +2386,31 @@ function renderAdmin(activeTab = 'site-editing') {
         const end = start + ordersPerPage;
         const paginatedOrders = filteredOrders.slice(start, end);
         const orderList = document.getElementById('order-list');
-        orderList.innerHTML = paginatedOrders.map((o, index) => {
-            const orderDate = new Date(o.date);
-            const formattedDate = orderDate.toLocaleString('uk-UA', {
-                timeZone: settings.timezone || 'Europe/Kyiv',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            return `
-                <div class="order-item">
-                    <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                    <div>
-                        <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                        <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                        <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+        if (orderList) {
+            orderList.innerHTML = paginatedOrders.map((o, index) => {
+                const orderDate = new Date(o.date);
+                const formattedDate = orderDate.toLocaleString('uk-UA', {
+                    timeZone: settings.timezone || 'Europe/Kyiv',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                return `
+                    <div class="order-item">
+                        <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
+                        <div>
+                            <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                            <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                            <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                        </div>
                     </div>
-                </div>
-            `;
-        }).join('');
-        renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
+                `;
+            }).join('');
+            renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
+        }
     }
 }
 
