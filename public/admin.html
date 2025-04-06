@@ -1622,6 +1622,7 @@ function setDefaultVideoSizes(editor, editorId) {
     document.getElementById(editorId).value = editor.root.innerHTML;
     unsavedChanges = true;
 }
+
 function initializeEditors() {
     if (aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
@@ -1638,7 +1639,7 @@ function initializeEditors() {
                     [{ 'header': 2 }, { 'header': 3 }],
                     ['link', 'image', 'video'],
                     [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['undo', 'redo'], // Додаємо undo/redo
+                    ['undo', 'redo'],
                     ['clean']
                 ],
                 handlers: {
@@ -1926,7 +1927,7 @@ async function login() {
     const password = document.getElementById('admin-password').value;
 
     try {
-        const response = await fetch('/api/login', {
+        const response = await fetch('/api/admin/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1935,7 +1936,8 @@ async function login() {
         });
 
         if (!response.ok) {
-            throw new Error('Помилка входу: ' + response.statusText);
+            const errorData = await response.json();
+            throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
         }
 
         const data = await response.json();
@@ -1943,10 +1945,14 @@ async function login() {
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
+        initializeEditors(); // Ініціалізуємо редактори після входу
+        connectAdminWebSocket(); // Підключаємо WebSocket
+        await initializeData(); // Завантажуємо всі дані
+        showNotification('Успішний вхід!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка входу:', err);
-        showNotification('Не вдалося увійти: ' + err.message);
+    } catch (e) {
+        console.error('Помилка входу:', e);
+        showNotification(e.message);
     }
 }
 
@@ -5315,7 +5321,7 @@ async function deleteOrder(index) {
 
 if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
     showSection('admin-panel');
-    initializeEditors(); // Ініціалізуємо редактори після завантаження даних
+    initializeEditors(); // Ініціалізуємо редактори після входу
     connectAdminWebSocket();
     resetInactivityTimer();
 } else {
