@@ -112,47 +112,46 @@ ws.onmessage = (event) => {
         const { type, data } = message;
         console.log('Отримано повідомлення WebSocket:', { type, data });
 
-if (type === 'products') {
-    products = data;
-    saveToStorage('products', products);
-    updateCartPrices();
-    if (document.getElementById('catalog').classList.contains('active')) {
-        renderCatalog(currentCategory, currentSubcategory, currentProduct);
-    } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-        currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
-        renderProductDetails();
-    } else if (document.getElementById('cart').classList.contains('active')) {
-        renderCart(); // Додано
-    }
-}
-            } else if (type === 'categories') {
-                categories = data;
-                saveToStorage('categories', categories);
-                renderCategories();
-                renderCatalogDropdown();
-                if (document.getElementById('catalog').classList.contains('active')) {
-                    renderCatalog(currentCategory, currentSubcategory, currentProduct);
-                }
-            } else if (type === 'settings') {
-                settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
-                saveToStorage('settings', settings);
-                updateHeader(); // Оновлюємо шапку (лого, назву, телефони)
-                renderContacts();
-                renderAbout();
-                if (settings.showSlides && slides.length > 0) {
-                    renderSlideshow();
-                } else {
-                    const slideshow = document.getElementById('slideshow');
-                    if (slideshow) slideshow.style.display = 'none';
-                }
-            } else if (type === 'slides') {
-                slides = data;
-                saveToStorage('slides', slides);
-                if (settings.showSlides && slides.length > 0) {
-                    renderSlideshow();
-                }
+        if (type === 'products') {
+            products = data;
+            saveToStorage('products', products);
+            updateCartPrices();
+            if (document.getElementById('catalog').classList.contains('active')) {
+                renderCatalog(currentCategory, currentSubcategory, currentProduct);
+            } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
+                currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
+                renderProductDetails();
+            } else if (document.getElementById('cart').classList.contains('active')) {
+                renderCart();
             }
-} catch (e) {
+        } else if (type === 'categories') {
+            categories = data;
+            saveToStorage('categories', categories);
+            renderCategories();
+            renderCatalogDropdown();
+            if (document.getElementById('catalog').classList.contains('active')) {
+                renderCatalog(currentCategory, currentSubcategory, currentProduct);
+            }
+        } else if (type === 'settings') {
+            settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
+            saveToStorage('settings', settings);
+            updateHeader();
+            renderContacts();
+            renderAbout();
+            if (settings.showSlides && slides.length > 0) {
+                renderSlideshow();
+            } else {
+                const slideshow = document.getElementById('slideshow');
+                if (slideshow) slideshow.style.display = 'none';
+            }
+        } else if (type === 'slides') {
+            slides = data;
+            saveToStorage('slides', slides);
+            if (settings.showSlides && slides.length > 0) {
+                renderSlideshow();
+            }
+        }
+    } catch (e) {
         console.error('Помилка обробки повідомлення WebSocket:', e);
         showNotification('Помилка синхронізації даних: ' + e.message, 'error');
     }
