@@ -85,6 +85,10 @@ const importUpload = multer({
 app.set('case sensitive routing', false);
 app.use(express.json());
 app.use(cors());
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+    next();
+});
 
 // Перевірка змінних середовища
 if (!process.env.MONGO_URI) {
@@ -245,9 +249,11 @@ const settingsSchema = new mongoose.Schema({
     logo: String,
     logoWidth: Number,
     favicon: String,
-    contactPhones: String,
-    contactAddresses: String,
-    contactSchedule: String,
+    contacts: {
+        phones: String,
+        addresses: String,
+        schedule: String
+    },
     socials: [{
         url: String,
         icon: String
@@ -339,18 +345,67 @@ const orderSchemaValidation = Joi.object({
     status: Joi.string().default('Нове замовлення')
 });
 
+// Схема валідації для налаштувань (другий варіант)
+const settingsSchemaValidation = Joi.object({
+    storeName: Joi.string().allow(''),
+    baseUrl: Joi.string().uri().allow(''),
+    logo: Joi.string().allow(''),
+    logoWidth: Joi.number().min(0).allow(null),
+    favicon: Joi.string().allow(''),
+    contacts: Joi.object({
+        phones: Joi.string().allow(''),
+        addresses: Joi.string().allow(''),
+        schedule: Joi.string().allow('')
+    }).default({ phones: '', addresses: '', schedule: '' }),
+    socials: Joi.array().items(
+        Joi.object({
+            url: Joi.string().uri().required(),
+            icon: Joi.string().required()
+        })
+    ).default([]),
+    showSocials: Joi.boolean().default(true),
+    about: Joi.string().allow(''),
+    categoryWidth: Joi.number().min(0).allow(null),
+    categoryHeight: Joi.number().min(0).allow(null),
+    productWidth: Joi.number().min(0).allow(null),
+    productHeight: Joi.number().min(0).allow(null),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            label: Joi.string().required(),
+            type: Joi.string().required(),
+            options: Joi.array().items(Joi.string()).default([])
+        })
+    ).default([]),
+    orderFields: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            label: Joi.string().required(),
+            type: Joi.string().required(),
+            options: Joi.array().items(Joi.string()).default([])
+        })
+    ).default([]),
+    slideWidth: Joi.number().min(0).allow(null),
+    slideHeight: Joi.number().min(0).allow(null),
+    slideInterval: Joi.number().min(0).allow(null),
+    showSlideshow: Joi.boolean().default(true)
+});
+
 // Middleware для перевірки JWT
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
+        console.log('Токен відсутній у запиті:', req.path);
         return res.status(401).json({ error: 'Доступ заборонено. Токен відсутній.' });
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Токен верифіковано для шляху:', req.path, 'Дані:', decoded);
         req.user = decoded;
         next();
     } catch (err) {
+        console.error('Помилка верифікації токена:', err.message, 'Токен:', token);
         res.status(403).json({ error: 'Недійсний токен', details: err.message });
     }
 };
@@ -363,22 +418,31 @@ wss.on('connection', (ws, req) => {
     const urlParams = new URLSearchParams(req.url.split('?')[1]);
     const token = urlParams.get('token');
     if (!token) {
+        console.log('WebSocket: Токен відсутній');
         ws.close(1008, 'Токен відсутній');
         return;
     }
     try {
-        jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Клієнт підключився до WebSocket');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('WebSocket: Клієнт підключився з токеном:', decoded);
+        ws.subscriptions = new Set(); // Додаємо підписки для клієнта
+        ws.on('message', (message) => {
+            const { type, action } = JSON.parse(message);
+            if (action === 'subscribe') {
+                ws.subscriptions.add(type);
+                console.log(`Клієнт підписався на ${type}`);
+            }
+        });
         ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
     } catch (err) {
+        console.error('WebSocket: Помилка верифікації токена:', err.message);
         ws.close(1008, 'Недійсний токен');
     }
 });
 
-// Функція для надсилання оновлень клієнтам
 function broadcast(type, data) {
     wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
+        if (client.readyState === WebSocket.OPEN && (!client.subscriptions.size || client.subscriptions.has(type))) {
             client.send(JSON.stringify({ type, data }));
         }
     });
@@ -395,19 +459,14 @@ app.post('/api/upload', authenticateToken, (req, res, next) => {
         } else if (err) {
             return res.status(400).json({ error: 'Помилка валідації файлу', details: err.message });
         }
-
         try {
-            if (!req.file) {
-                return res.status(400).json({ error: 'Файл не завантажено' });
-            }
-            // Перевіряємо, чи повернув Cloudinary коректний URL
-            if (!req.file.path) {
-                return res.status(500).json({ error: 'Cloudinary не повернув URL файлу' });
+            if (!req.file || !req.file.path) {
+                return res.status(500).json({ error: 'Помилка завантаження: файл не отримано від Cloudinary' });
             }
             console.log('Файл успішно завантажено до Cloudinary:', req.file.path);
             res.json({ url: req.file.path });
         } catch (cloudinaryErr) {
-            console.error('Помилка при завантаженні файлу до Cloudinary:', cloudinaryErr);
+            console.error('Помилка Cloudinary:', cloudinaryErr);
             res.status(500).json({ error: 'Не вдалося завантажити файл до Cloudinary', details: cloudinaryErr.message });
         }
     });
@@ -487,45 +546,23 @@ app.post('/api/products', authenticateToken, async (req, res) => {
 
 app.put('/api/products/:id', authenticateToken, async (req, res) => {
     try {
-        const productData = req.body;
-
+        let productData = { ...req.body };
         console.log('Отримано дані для оновлення продукту:', productData);
+
+        // Видаляємо системні поля
+        delete productData._id;
+        delete productData.__v;
+        if (productData.colors) {
+            productData.colors = productData.colors.map(color => {
+                const { _id, ...rest } = color;
+                return rest;
+            });
+        }
 
         const { error } = productSchemaValidation.validate(productData);
         if (error) {
             console.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const existingProduct = await Product.findOne({ id: req.params.id });
-        if (!existingProduct) return res.status(404).json({ error: 'Товар не знайдено' });
-
-        // Отримуємо нові фотографії
-        const newPhotos = productData.photos || [];
-        const newColorPhotos = productData.colors.map(color => color.photo).filter(Boolean);
-        const newDescriptionMedia = productData.descriptionMedia || [];
-
-        // Отримуємо старі фотографії
-        const oldPhotos = existingProduct.photos || [];
-        const oldColorPhotos = existingProduct.colors.map(color => color.photo).filter(Boolean);
-        const oldDescriptionMedia = existingProduct.descriptionMedia || [];
-
-        // Знаходимо фотографії, які більше не використовуються
-        const allNewMedia = [...newPhotos, ...newColorPhotos, ...newDescriptionMedia];
-        const allOldMedia = [...oldPhotos, ...oldColorPhotos, ...oldDescriptionMedia];
-        const photosToDelete = allOldMedia.filter(url => !allNewMedia.includes(url));
-
-        // Видаляємо старі фотографії з Cloudinary
-        for (const photoUrl of photosToDelete) {
-            const publicId = getPublicIdFromUrl(photoUrl);
-            if (publicId) {
-                try {
-                    await cloudinary.uploader.destroy(publicId);
-                    console.log(`Успішно видалено файл з Cloudinary: ${publicId}`);
-                } catch (err) {
-                    console.error(`Не вдалося видалити старий файл з Cloudinary: ${publicId}`, err);
-                }
-            }
         }
 
         const product = await Product.findOneAndUpdate({ id: req.params.id }, productData, { new: true });
@@ -693,9 +730,17 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
+        const { error } = settingsSchemaValidation.validate(settingsData);
+        if (error) {
+            console.error('Помилка валідації налаштувань:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
         const updatedSettings = await Settings.findOneAndUpdate({}, settingsData, { new: true, upsert: true });
-        broadcast('settings', updatedSettings);
-        res.json(updatedSettings);
+        const settingsToSend = updatedSettings.toObject();
+        delete settingsToSend._id;
+        delete settingsToSend.__v;
+        broadcast('settings', settingsToSend);
+        res.json(settingsToSend);
     } catch (err) {
         console.error('Помилка при оновленні налаштувань:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1006,11 +1051,10 @@ app.post('/api/import/orders', authenticateToken, importUpload.single('file'), a
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-        // Генеруємо JWT
         const token = jwt.sign(
             { username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
-            { expiresIn: '30m' }
+            { expiresIn: '24h' } // Зміни на більший термін
         );
         res.json({ success: true, token });
     } else {
@@ -1031,9 +1075,7 @@ app.get('*', (req, res) => {
 
 // Обробка 404 для API-запитів
 app.use((req, res, next) => {
-    if (req.path.startsWith('/api')) {
-        return res.status(404).json({ error: 'API маршрут не знайдено' });
-    }
+    console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
 });
 
