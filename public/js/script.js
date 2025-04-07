@@ -1643,15 +1643,18 @@ function renderCart() {
 
     updateCartPrices(); // Оновлюємо ціни перед рендерингом
 
-cart = cart.filter(item => {
-    const product = products.find(p => p.id === item.id);
-    if (!product) {
-        console.warn(`Товар з ID ${item.id} не знайдено, видаляємо з кошика`);
-        return false;
-    }
-    return true;
-});
-saveToStorage('cart', cart);
+    cart = cart.filter(item => {
+        const product = products.find(p => p.id === item.id);
+        if (!product) {
+            console.warn(`Товар з ID ${item.id} не знайдено, видаляємо з кошика`);
+            return false;
+        }
+        return true;
+    });
+    saveToStorage('cart', cart);
+
+    cart.forEach((item, index) => { // Додано {
+        const product = products.find(p => p.id === item.id);
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
 
@@ -1706,7 +1709,7 @@ saveToStorage('cart', cart);
         }
 
         cartItems.appendChild(itemDiv);
-    });
+    }); // Додано }
 
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
