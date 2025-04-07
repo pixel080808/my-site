@@ -1230,7 +1230,10 @@ async function loadProducts() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            products = [];
+            renderAdmin('products');
+            return;
         }
         const response = await fetch('/api/products', {
             headers: {
@@ -1238,25 +1241,29 @@ async function loadProducts() {
             }
         });
         if (!response.ok) {
+            const text = await response.text();
             if (response.status === 401 || response.status === 403) {
-                throw new Error('Немає доступу. Сесія закінчилася.');
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
             }
-            const errorData = await response.json();
-            throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Не вдалося завантажити товари: ${response.status} ${text}`);
+            }
         }
         products = await response.json();
-        console.log('Товари завантажено:', products); // Додаємо логування
+        console.log('Товари завантажено:', products);
         renderAdmin('products');
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification(e.message);
-        if (e.message.includes('Сесія закінчилася')) {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-        }
-        products = []; // Очищаємо лише при помилці, але не переписуємо серверні дані
+        products = [];
     }
 }
 
@@ -1264,7 +1271,10 @@ async function loadCategories() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            categories = [];
+            renderCategoriesAdmin();
+            return;
         }
         const response = await fetch('/api/categories', {
             headers: {
@@ -1272,24 +1282,28 @@ async function loadCategories() {
             }
         });
         if (!response.ok) {
+            const text = await response.text();
             if (response.status === 401 || response.status === 403) {
-                throw new Error('Немає доступу. Сесія закінчилася.');
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
             }
-            const errorData = await response.json();
-            throw new Error(`Не вдалося завантажити категорії: ${errorData.error || response.statusText}`);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Не вдалося завантажити категорії: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Не вдалося завантажити категорії: ${response.status} ${text}`);
+            }
         }
         categories = await response.json();
-        console.log('Категорії завантажено:', categories); // Додаємо логування
+        console.log('Категорії завантажено:', categories);
         renderCategoriesAdmin();
     } catch (e) {
         console.error('Помилка завантаження категорій:', e);
         showNotification(e.message);
-        if (e.message.includes('Сесія закінчилася')) {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-        }
         categories = [];
     }
 }
@@ -1298,7 +1312,9 @@ async function loadSettings() {
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            renderSettingsAdmin();
+            return;
         }
         const response = await fetch('/api/settings', {
             headers: {
@@ -1306,11 +1322,21 @@ async function loadSettings() {
             }
         });
         if (!response.ok) {
+            const text = await response.text();
             if (response.status === 401 || response.status === 403) {
-                throw new Error('Немає доступу. Сесія закінчилася.');
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
             }
-            const errorData = await response.json();
-            throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Не вдалося завантажити налаштування: ${response.status} ${text}`);
+            }
         }
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
@@ -1340,12 +1366,6 @@ async function loadSettings() {
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification(e.message);
-        if (e.message.includes('Сесія закінчилася')) {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-        }
     }
 }
 
@@ -1512,15 +1532,21 @@ function updateBrandOptions() {
 }
 
 async function initializeData() {
-    await Promise.all([
-        loadProducts(),
-        loadCategories(),
-        loadSettings(),
-        loadOrders(),
-        loadSlides(),
-        loadMaterials(),
-        loadBrands()
-    ]);
+    try {
+        await Promise.all([
+            loadProducts(),
+            loadCategories(),
+            loadSettings(),
+            loadOrders(),
+            loadSlides(),
+            loadMaterials(),
+            loadBrands()
+        ]);
+        console.log('Усі дані успішно ініціалізовані');
+    } catch (e) {
+        console.error('Помилка ініціалізації даних:', e);
+        showNotification('Помилка при завантаженні даних: ' + e.message);
+    }
 }
 
 // Виклик ініціалізації даних
@@ -1930,7 +1956,7 @@ async function login() {
     const password = document.getElementById('admin-password').value;
 
     try {
-        const response = await fetch('/api/admin/login', {
+        const response = await fetch('/api/login', {  // Змінено з /api/admin/login на /api/login
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1938,25 +1964,34 @@ async function login() {
             body: JSON.stringify({ username, password })
         });
 
-        const data = await response.json();
+        const text = await response.text();  // Отримуємо текст відповіді для діагностики
+        console.log('Відповідь сервера:', text);  // Логуємо сиру відповідь
+
         if (!response.ok) {
-            throw new Error(data.error || 'Помилка входу: ' + response.statusText);
+            if (response.status === 404) {
+                throw new Error('Маршрут /api/login не знайдено на сервері');
+            }
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || 'Невідома помилка сервера');
+            } catch (e) {
+                throw new Error(`Помилка ${response.status}: ${text}`);
+            }
         }
 
-        const token = data.token;
-        if (!token) {
-            throw new Error('Токен не отримано від сервера');
+        const data = JSON.parse(text);  // Парсимо JSON лише після перевірки
+        if (data.token) {
+            localStorage.setItem('adminToken', data.token);
+            session = { isActive: true, timestamp: Date.now() };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-panel');
+            initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+            showNotification('Успішний вхід!');
+        } else {
+            throw new Error('Токен не отримано у відповіді');
         }
-
-        console.log('Отримано токен:', token); // Додаємо логування для дебагу
-        localStorage.setItem('adminToken', token);
-        session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-panel');
-        initializeData();
-        connectAdminWebSocket();
-        resetInactivityTimer();
-        showNotification('Вхід виконано успішно!');
     } catch (e) {
         console.error('Помилка входу:', e);
         showNotification('Не вдалося увійти: ' + e.message);

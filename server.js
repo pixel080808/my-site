@@ -1054,11 +1054,11 @@ app.post('/api/login', (req, res) => {
         const token = jwt.sign(
             { username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' } // Зміни на більший термін
+            { expiresIn: '24h' }
         );
-        res.json({ success: true, token });
+        res.json({ token }); // Змінено формат відповіді
     } else {
-        res.status(401).json({ success: false, error: 'Невірні дані для входу' });
+        res.status(401).json({ error: 'Невірні дані для входу' }); // Змінено формат помилки
     }
 });
 
