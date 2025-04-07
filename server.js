@@ -254,10 +254,7 @@ const settingsSchema = new mongoose.Schema({
         addresses: String,
         schedule: String
     },
-    socials: [{
-        url: String,
-        icon: String
-    }],
+    socials: [{ url: String, icon: String }],
     showSocials: Boolean,
     about: String,
     categoryWidth: Number,
@@ -425,12 +422,40 @@ wss.on('connection', (ws, req) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         console.log('WebSocket: Клієнт підключився з токеном:', decoded);
-        ws.subscriptions = new Set(); // Додаємо підписки для клієнта
-        ws.on('message', (message) => {
+        ws.subscriptions = new Set();
+
+        ws.on('message', async (message) => {
             const { type, action } = JSON.parse(message);
             if (action === 'subscribe') {
                 ws.subscriptions.add(type);
                 console.log(`Клієнт підписався на ${type}`);
+                // Надсилаємо початкові дані
+                try {
+                    if (type === 'products') {
+                        const products = await Product.find();
+                        ws.send(JSON.stringify({ type: 'products', data: products }));
+                    } else if (type === 'settings') {
+                        const settings = await Settings.findOne();
+                        ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
+                    } else if (type === 'categories') {
+                        const categories = await Category.find();
+                        ws.send(JSON.stringify({ type: 'categories', data: categories }));
+                    } else if (type === 'slides') {
+                        const slides = await Slide.find().sort({ order: 1 });
+                        ws.send(JSON.stringify({ type: 'slides', data: slides }));
+                    } else if (type === 'orders') {
+                        const orders = await Order.find();
+                        ws.send(JSON.stringify({ type: 'orders', data: orders }));
+                    } else if (type === 'materials') {
+                        const materials = await Material.find().distinct('name');
+                        ws.send(JSON.stringify({ type: 'materials', data: materials }));
+                    } else if (type === 'brands') {
+                        const brands = await Brand.find().distinct('name');
+                        ws.send(JSON.stringify({ type: 'brands', data: brands }));
+                    }
+                } catch (err) {
+                    console.error(`Помилка при надсиланні даних для ${type}:`, err);
+                }
             }
         });
         ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
@@ -485,6 +510,36 @@ app.get('/api/public/products', async (req, res) => {
         res.json(products);
     } catch (err) {
         console.error('Помилка при отриманні товарів:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+app.get('/api/public/settings', async (req, res) => {
+    try {
+        const settings = await Settings.findOne();
+        res.json(settings || {});
+    } catch (err) {
+        console.error('Помилка при отриманні публічних налаштувань:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+app.get('/api/public/categories', async (req, res) => {
+    try {
+        const categories = await Category.find();
+        res.json(categories);
+    } catch (err) {
+        console.error('Помилка при отриманні публічних категорій:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+app.get('/api/public/slides', async (req, res) => {
+    try {
+        const slides = await Slide.find().sort({ order: 1 });
+        res.json(slides);
+    } catch (err) {
+        console.error('Помилка при отриманні публічних слайдів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -657,6 +712,33 @@ app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
     }
 });
 
+app.post('/api/categories/:id/subcategories', authenticateToken, async (req, res) => {
+    try {
+        const categoryId = req.params.id;
+        const subcategoryData = req.body;
+        console.log('Отримано дані для підкатегорії:', subcategoryData);
+
+        const category = await Category.findById(categoryId);
+        if (!category) {
+            return res.status(404).json({ error: 'Категорію не знайдено' });
+        }
+
+        if (!category.subcategories) {
+            category.subcategories = [];
+        }
+
+        category.subcategories.push(subcategoryData);
+        await category.save();
+
+        const categories = await Category.find();
+        broadcast('categories', categories);
+        res.status(201).json(subcategoryData);
+    } catch (err) {
+        console.error('Помилка при додаванні підкатегорії:', err);
+        res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
 // Маршрути для роботи зі слайдами
 app.get('/api/slides', authenticateToken, async (req, res) => {
     try {
@@ -730,15 +812,29 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
-        const { error } = settingsSchemaValidation.validate(settingsData);
-        if (error) {
-            console.error('Помилка валідації налаштувань:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        console.log('Отримано дані для оновлення налаштувань:', settingsData);
+
+        let settings = await Settings.findOne();
+        if (!settings) {
+            settings = new Settings({});
         }
-        const updatedSettings = await Settings.findOneAndUpdate({}, settingsData, { new: true, upsert: true });
-        const settingsToSend = updatedSettings.toObject();
+
+        const updatedData = {
+            ...settings.toObject(),
+            ...settingsData,
+            contacts: {
+                ...settings.contacts,
+                ...(settingsData.contacts || {})
+            }
+        };
+
+        Object.assign(settings, updatedData);
+        await settings.save();
+
+        const settingsToSend = settings.toObject();
         delete settingsToSend._id;
         delete settingsToSend.__v;
+
         broadcast('settings', settingsToSend);
         res.json(settingsToSend);
     } catch (err) {
