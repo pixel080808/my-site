@@ -172,7 +172,12 @@ if (type === 'products') {
 
 async function initializeData() {
     cart = loadFromStorage('cart', []);
-    await updateProducts(); // Початкове завантаження продуктів через fetch
+    try {
+        await updateProducts(); // Початкове завантаження продуктів через fetch
+    } catch (error) {
+        console.error('Помилка ініціалізації продуктів:', error);
+        products = loadFromStorage('products', []);
+    }
 
     // Завантажуємо з localStorage початкові дані
     categories = loadFromStorage('categories', []);
@@ -218,12 +223,13 @@ async function initializeData() {
 
     renderCatalogDropdown();
 
-connectPublicWebSocket();
+    connectPublicWebSocket();
     setInterval(() => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             updateProducts();
         }
-    }, 300000);
+    }, 300000); // 5 хвилин
+}
 
 async function updateProducts() {
     try {
