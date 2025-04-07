@@ -1537,12 +1537,13 @@ async function initializeData() {
         await Promise.all([
             loadProducts(),
             loadCategories(),
-            loadSettings(),
+            loadSettings(), // Спочатку завантажуємо settings
             loadOrders(),
             loadSlides(),
             loadMaterials(),
             loadBrands()
         ]);
+        initializeEditors(); // Ініціалізуємо редактори після завантаження всіх даних
         console.log('Усі дані успішно ініціалізовані');
     } catch (e) {
         console.error('Помилка ініціалізації даних:', e);
@@ -1550,8 +1551,18 @@ async function initializeData() {
     }
 }
 
-// Виклик ініціалізації даних
-initializeData();
+// Перевірка сесії
+if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
+    showSection('admin-panel');
+    initializeData(); // Виклик ініціалізації
+    connectAdminWebSocket();
+    resetInactivityTimer();
+} else {
+    localStorage.removeItem('adminToken');
+    session = { isActive: false, timestamp: 0 };
+    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+    showSection('admin-login');
+}
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -2832,46 +2843,24 @@ async function addSubcategory() {
     const name = document.getElementById('subcat-name').value;
     const slug = document.getElementById('subcat-slug').value;
     const imgUrl = document.getElementById('subcat-img-url').value;
-    const imgFile = document.getElementById('subcat-img-file').files[0];
-    const categoryName = document.getElementById('subcat-category').value;
+    const categoryId = document.getElementById('subcat-category').value;
 
-    if (!name || !slug || !categoryName) {
-        showNotification('Заповніть усі поля!');
+    if (!categoryId) {
+        showNotification('Виберіть категорію для підкатегорії!');
         return;
     }
 
     const token = localStorage.getItem('adminToken');
     if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+        showNotification('Токен відсутній.');
         return;
     }
 
-    let finalImgUrl = imgUrl;
+    const subcategory = { name, slug, img: imgUrl };
+    console.log('Надсилаємо підкатегорію:', subcategory);
+
     try {
-        if (imgFile) {
-            const formData = new FormData();
-            formData.append('file', imgFile);
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (!response.ok) throw new Error('Помилка завантаження зображення');
-            const data = await response.json();
-            finalImgUrl = data.url;
-        }
-
-        const category = categories.find(c => c.name === categoryName);
-        if (!category) {
-            showNotification('Категорія не знайдена!');
-            return;
-        }
-
-        const subcategory = { name, slug, img: finalImgUrl };
-        console.log('Надсилаємо підкатегорію:', subcategory);
-
-        const response = await fetch(`/api/categories/${category.id}/subcategories`, {
+        const response = await fetch(`/api/categories/${categoryId}/subcategories`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2881,28 +2870,18 @@ async function addSubcategory() {
         });
 
         if (!response.ok) {
-            const text = await response.text();
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося додати підкатегорію: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${text}`);
-            }
+            const errorData = await response.json();
+            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorData.error || response.statusText}`);
         }
 
-        const newSubcategory = await response.json();
-        if (!category.subcategories) category.subcategories = [];
-        category.subcategories.push(newSubcategory);
+        const updatedCategory = await response.json();
+        const index = categories.findIndex(c => c._id === categoryId);
+        if (index !== -1) categories[index] = updatedCategory;
         renderCategoriesAdmin();
-        document.getElementById('subcat-name').value = '';
-        document.getElementById('subcat-slug').value = '';
-        document.getElementById('subcat-img-url').value = '';
-        document.getElementById('subcat-img-file').value = '';
         showNotification('Підкатегорію додано!');
-        resetInactivityTimer();
     } catch (e) {
         console.error('Помилка додавання підкатегорії:', e);
-        showNotification('Не вдалося додати підкатегорію: ' + e.message);
+        showNotification(e.message);
     }
 }
 
