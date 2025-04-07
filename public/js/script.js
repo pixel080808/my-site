@@ -106,6 +106,7 @@ function connectPublicWebSocket() {
 ws.onmessage = (event) => {
     try {
         const message = JSON.parse(event.data);
+        console.log('Отримано від WebSocket:', message);
         if (!message.type || !('data' in message)) {
             throw new Error('Некоректний формат повідомлення WebSocket');
         }
@@ -182,7 +183,9 @@ async function initializeData() {
     categories = loadFromStorage('categories', []);
     orders = loadFromStorage('orders', []);
     slides = loadFromStorage('slides', []);
-    filters = loadFromStorage('filters', []);
+    filters = loadFromStorage('filters', [
+    { name: 'price', options: ['0-3000', '3000-5000', '5000-10000', '10000+'] }
+]);
     orderFields = loadFromStorage('orderFields', []);
     settings = loadFromStorage('settings', {
         name: 'Меблевий магазин',
@@ -748,24 +751,25 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             return perPageMenu;
         }
 
-        function renderFilters() {
-            const filterList = document.getElementById('filter-list');
-            if (!filterList || currentProduct) return;
-            while (filterList.firstChild) filterList.removeChild(filterList.firstChild);
+function renderFilters() {
+    const filterList = document.getElementById('filter-list');
+    if (!filterList || currentProduct) return;
+    while (filterList.firstChild) filterList.removeChild(filterList.firstChild);
 
-            const relevantProducts = filteredProducts;
-            const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
-            const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
-            const priceRanges = filters.find(f => f.name === 'price').options;
+    const relevantProducts = filteredProducts;
+    const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
+    const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
+    const priceFilter = filters.find(f => f.name === 'price');
+    const priceRanges = priceFilter ? priceFilter.options : ['0-500', '500-1000', '1000-2000', '2000+'];
 
-            if (brands.length > 0) {
-                filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));
-            }
-            if (materials.length > 0) {
-                filterList.appendChild(createFilterBlock('Матеріал', 'material', materials));
-            }
-            filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges));
-        }
+    if (brands.length > 0) {
+        filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));
+    }
+    if (materials.length > 0) {
+        filterList.appendChild(createFilterBlock('Матеріал', 'material', materials));
+    }
+    filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges));
+}
 
         function createFilterBlock(title, name, options) {
             const block = document.createElement('div');
