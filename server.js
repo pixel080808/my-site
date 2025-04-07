@@ -276,7 +276,7 @@ const settingsSchema = new mongoose.Schema({
     slideWidth: Number,
     slideHeight: Number,
     slideInterval: Number,
-    showSlideshow: Boolean
+    showSlides: Boolean
 });
 
 const Product = mongoose.model('Product', productSchema);
@@ -385,7 +385,7 @@ const settingsSchemaValidation = Joi.object({
     slideWidth: Joi.number().min(0).allow(null),
     slideHeight: Joi.number().min(0).allow(null),
     slideInterval: Joi.number().min(0).allow(null),
-    showSlideshow: Joi.boolean().default(true)
+    showSlides: Joi.boolean().default(true)
 });
 
 // Middleware для перевірки JWT
@@ -427,6 +427,7 @@ wss.on('connection', (ws, req) => {
         ws.on('message', async (message) => {
             try {
                 const { type, action } = JSON.parse(message);
+                console.log(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
                 if (action === 'subscribe') {
                     ws.subscriptions.add(type);
                     console.log(`Клієнт підписався на ${type}`);
@@ -468,6 +469,7 @@ wss.on('connection', (ws, req) => {
 });
 
 function broadcast(type, data) {
+    console.log(`Трансляція даних типу ${type}:`, data);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
             client.send(JSON.stringify({ type, data }));
@@ -828,7 +830,27 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
 
         let settings = await Settings.findOne();
         if (!settings) {
-            settings = new Settings({});
+            settings = new Settings({
+                storeName: '',
+                baseUrl: '',
+                logo: '',
+                logoWidth: 150,
+                favicon: '',
+                contacts: { phones: '', addresses: '', schedule: '' },
+                socials: [],
+                showSocials: true,
+                about: '',
+                categoryWidth: null,
+                categoryHeight: null,
+                productWidth: null,
+                productHeight: null,
+                filters: [],
+                orderFields: [],
+                slideWidth: null,
+                slideHeight: null,
+                slideInterval: null,
+                showSlideshow: true
+            });
         }
 
         const updatedData = {
@@ -837,7 +859,10 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
             contacts: {
                 ...settings.contacts,
                 ...(settingsData.contacts || {})
-            }
+            },
+            socials: settingsData.socials || settings.socials,
+            filters: settingsData.filters || settings.filters,
+            orderFields: settingsData.orderFields || settings.orderFields
         };
 
         Object.assign(settings, updatedData);
