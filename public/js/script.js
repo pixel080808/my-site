@@ -176,7 +176,7 @@ async function initializeData() {
         await updateProducts(); // Початкове завантаження продуктів через fetch
     } catch (error) {
         console.error('Помилка ініціалізації продуктів:', error);
-        products = loadFromStorage('products', []);
+        products = loadFromStorage('products', []); // Завантажуємо з локального сховища у разі помилки
     }
 
     // Завантажуємо з localStorage початкові дані
