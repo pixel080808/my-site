@@ -83,7 +83,7 @@ const importUpload = multer({
 });
 
 app.set('case sensitive routing', false);
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Збільшуємо до 10 МБ
 app.use(cors());
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
@@ -425,12 +425,11 @@ wss.on('connection', (ws, req) => {
         ws.subscriptions = new Set();
 
         ws.on('message', async (message) => {
-            const { type, action } = JSON.parse(message);
-            if (action === 'subscribe') {
-                ws.subscriptions.add(type);
-                console.log(`Клієнт підписався на ${type}`);
-                // Надсилаємо початкові дані
-                try {
+            try {
+                const { type, action } = JSON.parse(message);
+                if (action === 'subscribe') {
+                    ws.subscriptions.add(type);
+                    console.log(`Клієнт підписався на ${type}`);
                     if (type === 'products') {
                         const products = await Product.find();
                         ws.send(JSON.stringify({ type: 'products', data: products }));
@@ -453,12 +452,15 @@ wss.on('connection', (ws, req) => {
                         const brands = await Brand.find().distinct('name');
                         ws.send(JSON.stringify({ type: 'brands', data: brands }));
                     }
-                } catch (err) {
-                    console.error(`Помилка при надсиланні даних для ${type}:`, err);
                 }
+            } catch (err) {
+                console.error('Помилка обробки WebSocket-повідомлення:', err);
+                ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки' }));
             }
         });
+
         ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
+        ws.on('error', (err) => console.error('Помилка WebSocket:', err));
     } catch (err) {
         console.error('WebSocket: Помилка верифікації токена:', err.message);
         ws.close(1008, 'Недійсний токен');
@@ -467,7 +469,7 @@ wss.on('connection', (ws, req) => {
 
 function broadcast(type, data) {
     wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN && (!client.subscriptions.size || client.subscriptions.has(type))) {
+        if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
             client.send(JSON.stringify({ type, data }));
         }
     });
@@ -712,19 +714,24 @@ app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/categories/:id/subcategories', authenticateToken, async (req, res) => {
+app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, res) => {
     try {
-        const categoryId = req.params.id;
+        const categorySlug = req.params.slug;
         const subcategoryData = req.body;
         console.log('Отримано дані для підкатегорії:', subcategoryData);
 
-        const category = await Category.findById(categoryId);
+        const category = await Category.findOne({ slug: categorySlug });
         if (!category) {
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
         if (!category.subcategories) {
             category.subcategories = [];
+        }
+
+        // Перевірка унікальності slug підкатегорії
+        if (category.subcategories.some(sub => sub.slug === subcategoryData.slug)) {
+            return res.status(400).json({ error: 'Підкатегорія з таким slug уже існує' });
         }
 
         category.subcategories.push(subcategoryData);
@@ -808,11 +815,16 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
-
 app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
         console.log('Отримано дані для оновлення налаштувань:', settingsData);
+
+        const { error } = settingsSchemaValidation.validate(settingsData, { abortEarly: false });
+        if (error) {
+            console.error('Помилка валідації налаштувань:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
 
         let settings = await Settings.findOne();
         if (!settings) {

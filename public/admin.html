@@ -5460,8 +5460,14 @@ function connectAdminWebSocket() {
     }
 
     const wsUrl = window.location.hostname === 'localhost' 
-        ? `ws://localhost:${process.env.PORT || 3000}?token=${token}` 
+        ? `ws://localhost:3000?token=${token}` // Фіксований порт для локального тестування
         : `wss://mebli.onrender.com?token=${token}`;
+    
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket уже підключено.');
+        return;
+    }
+
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
@@ -5518,12 +5524,12 @@ function connectAdminWebSocket() {
         }
     };
 
-socket.onclose = (event) => {
-    console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });
-    if (event.code !== 1000) { // 1000 — нормальне закриття
-        setTimeout(connectAdminWebSocket, 2000);
-    }
-};
+    socket.onclose = (event) => {
+        console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });
+        if (event.code !== 1000) { // Повторне підключення, якщо не нормальне закриття
+            setTimeout(() => connectAdminWebSocket(), 2000);
+        }
+    };
 
     socket.onerror = (error) => {
         console.error('Помилка WebSocket адмінки:', error);
