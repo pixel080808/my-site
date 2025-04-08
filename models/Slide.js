@@ -1,6 +1,8 @@
 // models/Slide.js
+const mongoose = require('mongoose'); // Додано
+
 const slideSchema = new mongoose.Schema({
-    id: Number, // Додано
+    id: Number,
     name: String,
     url: String,
     title: String,
@@ -9,4 +11,5 @@ const slideSchema = new mongoose.Schema({
     linkText: String,
     order: { type: Number, default: 0 }
 }, { timestamps: true });
+
 module.exports = mongoose.model('Slide', slideSchema);
