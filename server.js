@@ -817,6 +817,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
+
 app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
@@ -849,7 +850,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
                 slideWidth: null,
                 slideHeight: null,
                 slideInterval: null,
-                showSlideshow: true
+                showSlides: true // Виправили showSlideshow на showSlides
             });
         }
 
@@ -862,17 +863,18 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
             },
             socials: settingsData.socials || settings.socials,
             filters: settingsData.filters || settings.filters,
-            orderFields: settingsData.orderFields || settings.orderFields
+            orderFields: settingsData.orderFields || settings.orderFields,
+            showSlides: settingsData.showSlides !== undefined ? settingsData.showSlides : settings.showSlides
         };
 
         Object.assign(settings, updatedData);
         await settings.save();
 
         const settingsToSend = settings.toObject();
-        delete settingsToSend._id;
-        delete settingsToSend.__v;
+        delete settingsToSend._id; // Видаляємо MongoDB-поле
+        delete settingsToSend.__v; // Видаляємо MongoDB-поле
 
-        broadcast('settings', settingsToSend);
+        broadcast('settings', settingsToSend); // Надсилаємо оновлені налаштування всім клієнтам
         res.json(settingsToSend);
     } catch (err) {
         console.error('Помилка при оновленні налаштувань:', err);

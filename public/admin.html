@@ -1537,13 +1537,13 @@ async function initializeData() {
         await Promise.all([
             loadProducts(),
             loadCategories(),
-            loadSettings(), // Спочатку завантажуємо settings
+            loadSettings(), // Завантажуємо налаштування з сервера
             loadOrders(),
             loadSlides(),
             loadMaterials(),
             loadBrands()
         ]);
-        initializeEditors(); // Ініціалізуємо редактори після завантаження всіх даних
+        initializeEditors();
         console.log('Усі дані успішно ініціалізовані');
     } catch (e) {
         console.error('Помилка ініціалізації даних:', e);
@@ -2065,6 +2065,12 @@ function logout() {
     }
 
 async function updateStoreInfo() {
+    const storeName = document.getElementById('store-name').value;
+    const baseUrl = document.getElementById('base-url').value;
+    const logoUrl = document.getElementById('logo-url').value;
+    const logoWidth = parseInt(document.getElementById('logo-width').value) || '';
+    const faviconUrl = document.getElementById('favicon-url').value;
+
     const token = localStorage.getItem('adminToken');
     if (!token) {
         showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
@@ -2072,70 +2078,31 @@ async function updateStoreInfo() {
         return;
     }
 
-    const storeName = document.getElementById('store-name').value;
-    const baseUrl = document.getElementById('base-url').value;
-    const logoUrl = document.getElementById('logo-url').value;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || 150;
-    const faviconUrl = document.getElementById('favicon-url').value;
+    // Оновлюємо локальний об’єкт settings
+    settings.name = storeName;
+    settings.baseUrl = baseUrl;
+    settings.logo = logoUrl;
+    settings.logoWidth = logoWidth;
+    settings.favicon = faviconUrl;
 
-    const settingsToSend = {
-        storeName, // Змінено з 'name' на 'storeName' (перевірте серверну схему)
-        baseUrl,
-        logo: logoUrl,
-        logoWidth,
-        favicon: faviconUrl
-    };
-
-    console.log('Надсилаємо налаштування:', settingsToSend);
+    console.log('Надсилаємо налаштування:', { storeName, baseUrl, logo: logoUrl, logoWidth, favicon: faviconUrl });
 
     try {
-        let logoFile = document.getElementById('logo-file').files[0];
-        if (logoFile) {
-            const formData = new FormData();
-            formData.append('file', logoFile);
-            const uploadResponse = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (!uploadResponse.ok) throw new Error('Помилка завантаження логотипу');
-            const uploadData = await uploadResponse.json();
-            settingsToSend.logo = uploadData.url;
-        }
-
-        let faviconFile = document.getElementById('favicon-file').files[0];
-        if (faviconFile) {
-            const formData = new FormData();
-            formData.append('file', faviconFile);
-            const uploadResponse = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (!uploadResponse.ok) throw new Error('Помилка завантаження favicon');
-            const uploadData = await uploadResponse.json();
-            settingsToSend.favicon = uploadData.url;
-        }
-
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(settingsToSend)
+            body: JSON.stringify(settings)
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Помилка збереження налаштувань: ${response.status} ${errorText}`);
+            throw new Error('Не вдалося оновити налаштування: ' + response.statusText);
         }
 
-        const updatedSettings = await response.json();
-        settings = { ...settings, ...updatedSettings };
-        renderSettingsAdmin();
+        // Очікуємо оновлення через WebSocket, тому не викликаємо renderSettingsAdmin тут
         showNotification('Налаштування збережено!');
-        unsavedChanges = false;
         resetInactivityTimer();
     } catch (e) {
         console.error('Помилка при оновленні налаштувань:', e);
@@ -2144,6 +2111,10 @@ async function updateStoreInfo() {
 }
 
 async function updateContacts() {
+    const phones = document.getElementById('contact-phones').value;
+    const addresses = document.getElementById('contact-addresses').value;
+    const schedule = document.getElementById('contact-schedule').value;
+
     const token = localStorage.getItem('adminToken');
     if (!token) {
         showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
@@ -2151,13 +2122,9 @@ async function updateContacts() {
         return;
     }
 
-    const contacts = {
-        phones: document.getElementById('contact-phones').value,
-        addresses: document.getElementById('contact-addresses').value,
-        schedule: document.getElementById('contact-schedule').value
-    };
+    settings.contacts = { phones, addresses, schedule };
 
-    console.log('Надсилаємо контакти:', contacts);
+    console.log('Надсилаємо контакти:', settings.contacts);
 
     try {
         const response = await fetch('/api/settings', {
@@ -2166,19 +2133,14 @@ async function updateContacts() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ contacts })
+            body: JSON.stringify(settings)
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Помилка збереження контактів: ${response.status} ${errorText}`);
+            throw new Error('Не вдалося оновити контакти: ' + response.statusText);
         }
 
-        const updatedSettings = await response.json();
-        settings.contacts = { ...settings.contacts, ...updatedSettings.contacts };
-        renderSettingsAdmin();
-        showNotification('Контакти збережено!');
-        unsavedChanges = false;
+        showNotification('Контакти оновлено!');
         resetInactivityTimer();
     } catch (e) {
         console.error('Помилка при оновленні контактів:', e);
@@ -2261,6 +2223,7 @@ async function updateContacts() {
 
 async function updateAbout() {
     const aboutContent = document.getElementById('about-edit').value;
+
     const token = localStorage.getItem('adminToken');
     if (!token) {
         showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
@@ -2268,46 +2231,9 @@ async function updateAbout() {
         return;
     }
 
-    // Обробка зображень у контенті
-    const mediaUrls = [];
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(aboutContent, 'text/html');
-    const images = doc.querySelectorAll('img');
+    settings.about = aboutContent;
 
-    for (let img of images) {
-        const src = img.getAttribute('src');
-        if (src && src.startsWith('data:')) { // base64 зображення
-            try {
-                const response = await fetch(src);
-                const blob = await response.blob();
-                const formData = new FormData();
-                formData.append('file', blob, `about-image-${Date.now()}.png`);
-                const uploadResponse = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                const uploadData = await uploadResponse.json();
-                if (uploadData.url) {
-                    mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
-                } else {
-                    throw new Error('Не вдалося завантажити зображення');
-                }
-            } catch (err) {
-                console.error('Помилка завантаження зображення:', err);
-                showNotification('Не вдалося завантажити зображення: ' + err.message);
-                return;
-            }
-        }
-    }
-
-    let updatedContent = aboutContent;
-    mediaUrls.forEach(({ oldUrl, newUrl }) => {
-        updatedContent = updatedContent.replace(oldUrl, newUrl);
-    });
-
-    settings.about = updatedContent;
-    console.log('Надсилаємо "Про нас":', updatedContent);
+    console.log('Надсилаємо "Про нас":', aboutContent);
 
     try {
         const response = await fetch('/api/settings', {
@@ -2316,20 +2242,18 @@ async function updateAbout() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ about: updatedContent })
+            body: JSON.stringify(settings)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка збереження "Про нас": ${response.status} ${JSON.stringify(errorData)}`);
+            throw new Error('Не вдалося оновити "Про нас": ' + response.statusText);
         }
 
-        showNotification('Оновлено "Про нас"!');
-        unsavedChanges = false;
+        showNotification('"Про нас" оновлено!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка при оновленні "Про нас":', err);
-        showNotification(err.message);
+    } catch (e) {
+        console.error('Помилка при оновленні "Про нас":', e);
+        showNotification(e.message);
     }
 }
 
@@ -2582,8 +2506,20 @@ function renderCategoriesAdmin() {
     }
 }
 
+function renderSocialsAdmin() {
+    const socialList = document.getElementById('social-list');
+    if (!socialList) return;
+    socialList.innerHTML = settings.socials.map((social, index) => `
+        <div class="social-item">
+            <span class="social-icon">${social.icon}</span>
+            <span>${social.url}</span>
+            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+        </div>
+    `).join('');
+}
+
 function renderSettingsAdmin() {
-    document.getElementById('store-name').value = settings.storeName || settings.name || '';
+    document.getElementById('store-name').value = settings.name || '';
     document.getElementById('base-url').value = settings.baseUrl || '';
     document.getElementById('logo-url').value = settings.logo || '';
     document.getElementById('logo-width').value = settings.logoWidth || '';
@@ -2592,7 +2528,7 @@ function renderSettingsAdmin() {
     document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
     document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
     document.getElementById('social-toggle').checked = settings.showSocials;
-    document.getElementById('slide-toggle').checked = settings.showSlides;
+    renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
     document.getElementById('category-width').value = settings.categoryWidth || '';
     document.getElementById('category-height').value = settings.categoryHeight || '';
     document.getElementById('product-width').value = settings.productWidth || '';
@@ -2600,10 +2536,7 @@ function renderSettingsAdmin() {
     document.getElementById('slide-width').value = settings.slideWidth || '';
     document.getElementById('slide-height').value = settings.slideHeight || '';
     document.getElementById('slide-interval').value = settings.slideInterval || '';
-
-    renderSocialsAdmin();
-    renderFiltersAdmin();
-    renderOrderFieldsAdmin();
+    document.getElementById('slide-toggle').checked = settings.showSlides;
 }
 
 function renderSlidesAdmin() {
@@ -5468,66 +5401,66 @@ function connectAdminWebSocket() {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log('Отримано повідомлення WebSocket:', { type, data });
-            switch (type) {
-                case 'products':
-                    products = data;
-                    renderAdmin('products');
-                    break;
-                case 'categories':
-                    categories = data;
-                    renderCategoriesAdmin();
-                    break;
-                case 'settings':
-                    settings = {
-                        ...settings,
-                        ...data,
-                        contacts: { ...settings.contacts, ...(data.contacts || {}) },
-                        socials: data.socials || settings.socials,
-                        showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
-                        showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
-                    };
-                    if (aboutEditor && data.about) {
-                        try {
-                            const delta = aboutEditor.clipboard.convert(data.about);
-                            aboutEditor.setContents(delta, 'silent');
-                        } catch (e) {
-                            console.error('Помилка оновлення вмісту "Про нас":', e);
-                            aboutEditor.setText(data.about, 'silent');
-                        }
-                        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log('Отримано повідомлення WebSocket:', { type, data });
+        switch (type) {
+            case 'products':
+                products = data;
+                renderAdmin('products');
+                break;
+            case 'categories':
+                categories = data;
+                renderCategoriesAdmin();
+                break;
+            case 'settings':
+                settings = {
+                    ...settings,
+                    ...data,
+                    contacts: { ...settings.contacts, ...(data.contacts || {}) },
+                    socials: data.socials || settings.socials,
+                    showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
+                    showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
+                };
+                if (aboutEditor && data.about) {
+                    try {
+                        const delta = aboutEditor.clipboard.convert(data.about);
+                        aboutEditor.setContents(delta, 'silent');
+                    } catch (e) {
+                        console.error('Помилка оновлення вмісту "Про нас":', e);
+                        aboutEditor.setText(data.about, 'silent');
                     }
-                    renderSettingsAdmin();
-                    break;
-                case 'orders':
-                    orders = data;
-                    sortOrders('date-desc');
-                    renderAdmin('orders');
-                    break;
-                case 'slides':
-                    slides = data;
-                    renderSlidesAdmin();
-                    break;
-                case 'materials':
-                    materials = data;
-                    updateMaterialOptions();
-                    break;
-                case 'brands':
-                    brands = data;
-                    updateBrandOptions();
-                    break;
-                default:
-                    console.warn('Невідомий тип повідомлення:', type);
-            }
-            resetInactivityTimer();
-        } catch (e) {
-            console.error('Помилка обробки повідомлення WebSocket:', e);
-            showNotification('Помилка WebSocket: ' + e.message);
+                    document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+                }
+                renderSettingsAdmin(); // Оновлюємо UI після отримання даних
+                break;
+            case 'orders':
+                orders = data;
+                sortOrders('date-desc');
+                renderAdmin('orders');
+                break;
+            case 'slides':
+                slides = data;
+                renderSlidesAdmin();
+                break;
+            case 'materials':
+                materials = data;
+                updateMaterialOptions();
+                break;
+            case 'brands':
+                brands = data;
+                updateBrandOptions();
+                break;
+            default:
+                console.warn('Невідомий тип повідомлення:', type);
         }
-    };
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка обробки повідомлення WebSocket:', e);
+        showNotification('Помилка WebSocket: ' + e.message);
+    }
+};
 
     socket.onclose = (event) => {
         console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });

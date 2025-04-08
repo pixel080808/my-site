@@ -13,15 +13,18 @@
     <meta property="og:type" content="website"/>
     <title>Меблевий магазин</title>
     <link href="/css/styles.css" rel="stylesheet"/> <!-- Абсолютний шлях -->
-    <script src="/js/script.js?v=1.0.1" defer></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> <!-- Замініть G-XXXXXXXXXX на ваш ID -->
-    <script>
+    <!-- Основний скрипт із defer -->
+    <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
+    <!-- Google Analytics асинхронно -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script type="text/javascript">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'G-XXXXXXXXXX'); // Замініть G-XXXXXXXXXX на ваш ID Google Analytics
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <!-- LZ-String із defer -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
     <style>
 /* Попередні стилі */
 #about-text img,

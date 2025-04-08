@@ -87,7 +87,6 @@ function connectPublicWebSocket() {
         ? 'ws://localhost:3000' 
         : 'wss://mebli.onrender.com';
     
-    // Перевіряємо, чи WebSocket уже підключений
     if (ws && ws.readyState === WebSocket.OPEN) {
         console.log('Публічний WebSocket уже підключено.');
         return;
@@ -97,70 +96,88 @@ function connectPublicWebSocket() {
 
     ws.onopen = () => {
         console.log('Публічний WebSocket підключено');
-        // Підписуємося на всі типи даних
         ['products', 'categories', 'settings', 'slides'].forEach(type => {
             ws.send(JSON.stringify({ type, action: 'subscribe' }));
         });
     };
 
-ws.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
-        console.log('Отримано від WebSocket:', message);
-        if (!message.type || !('data' in message)) {
-            throw new Error('Некоректний формат повідомлення WebSocket');
-        }
-        const { type, data } = message;
-        console.log('Отримано повідомлення WebSocket:', { type, data });
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            if (!message.type || !('data' in message)) {
+                throw new Error('Некоректний формат повідомлення WebSocket');
+            }
+            const { type, data } = message;
+            console.log('Отримано повідомлення WebSocket:', { type, data });
 
-        if (type === 'products') {
-            products = data;
-            saveToStorage('products', products);
-            updateCartPrices();
-            if (document.getElementById('catalog').classList.contains('active')) {
-                renderCatalog(currentCategory, currentSubcategory, currentProduct);
-            } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-                currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
-                renderProductDetails();
-            } else if (document.getElementById('cart').classList.contains('active')) {
-                renderCart();
+            switch (type) {
+                case 'products':
+                    products = data;
+                    updateCartPrices();
+                    if (document.getElementById('catalog').classList.contains('active')) {
+                        renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                    } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
+                        currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
+                        renderProductDetails();
+                    } else if (document.getElementById('cart').classList.contains('active')) {
+                        renderCart();
+                    }
+                    break;
+                case 'categories':
+                    categories = data;
+                    renderCategories();
+                    renderCatalogDropdown();
+                    if (document.getElementById('catalog').classList.contains('active')) {
+                        renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                    }
+                    break;
+                case 'settings':
+                    settings = {
+                        ...settings,
+                        ...data,
+                        contacts: { ...settings.contacts, ...(data.contacts || {}) },
+                        socials: data.socials || settings.socials,
+                        showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
+                        showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
+                    };
+                    updateHeader();
+                    if (document.getElementById('contacts').classList.contains('active')) {
+                        renderContacts();
+                    }
+                    if (document.getElementById('about').classList.contains('active')) {
+                        renderAbout();
+                    }
+                    if (document.getElementById('home').classList.contains('active')) {
+                        renderSlideshow();
+                    }
+                    // Оновлюємо favicon
+                    const oldFavicon = document.querySelector('link[rel="icon"]');
+                    if (oldFavicon) oldFavicon.remove();
+                    const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
+                    const favicon = document.createElement('link');
+                    favicon.rel = 'icon';
+                    favicon.type = 'image/x-icon';
+                    favicon.href = faviconUrl;
+                    document.head.appendChild(favicon);
+                    break;
+                case 'slides':
+                    slides = data;
+                    if (settings.showSlides && slides.length > 0 && document.getElementById('home').classList.contains('active')) {
+                        renderSlideshow();
+                    }
+                    break;
+                default:
+                    console.warn('Невідомий тип повідомлення:', type);
             }
-        } else if (type === 'categories') {
-            categories = data;
-            saveToStorage('categories', categories);
-            renderCategories();
-            renderCatalogDropdown();
-            if (document.getElementById('catalog').classList.contains('active')) {
-                renderCatalog(currentCategory, currentSubcategory, currentProduct);
-            }
-        } else if (type === 'settings') {
-            settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
-            saveToStorage('settings', settings);
-            updateHeader();
-            renderContacts();
-            renderAbout();
-            if (settings.showSlides && slides.length > 0) {
-                renderSlideshow();
-            } else {
-                const slideshow = document.getElementById('slideshow');
-                if (slideshow) slideshow.style.display = 'none';
-            }
-        } else if (type === 'slides') {
-            slides = data;
-            saveToStorage('slides', slides);
-            if (settings.showSlides && slides.length > 0) {
-                renderSlideshow();
-            }
+        } catch (e) {
+            console.error('Помилка обробки повідомлення WebSocket:', e);
+            showNotification('Помилка синхронізації даних: ' + e.message, 'error');
         }
-    } catch (e) {
-        console.error('Помилка обробки повідомлення WebSocket:', e);
-        showNotification('Помилка синхронізації даних: ' + e.message, 'error');
-    }
-};
+    };
 
     ws.onclose = (event) => {
         console.log('Публічний WebSocket відключено:', { code: event.code, reason: event.reason });
-        if (event.code !== 1000) { // Повторне підключення при ненормальному закритті
+        if (event.code !== 1000) {
             setTimeout(connectPublicWebSocket, 2000);
         }
     };
@@ -171,23 +188,19 @@ ws.onmessage = (event) => {
 }
 
 async function initializeData() {
+    // Завантажуємо лише локальні дані з localStorage
     cart = loadFromStorage('cart', []);
-    try {
-        await updateProducts(); // Початкове завантаження продуктів через fetch
-    } catch (error) {
-        console.error('Помилка ініціалізації продуктів:', error);
-        products = loadFromStorage('products', []); // Завантажуємо з локального сховища у разі помилки
-    }
+    selectedColors = loadFromStorage('selectedColors', {});
+    selectedMattressSizes = loadFromStorage('selectedMattressSizes', {});
+    parentGroupProduct = loadFromStorage('parentGroupProduct', null);
+    currentCategory = loadFromStorage('currentCategory', null);
+    currentSubcategory = loadFromStorage('currentSubcategory', null);
 
-    // Завантажуємо з localStorage початкові дані
-    categories = loadFromStorage('categories', []);
-    orders = loadFromStorage('orders', []);
-    slides = loadFromStorage('slides', []);
-    filters = loadFromStorage('filters', [
-    { name: 'price', options: ['0-3000', '3000-5000', '5000-10000', '10000+'] }
-]);
-    orderFields = loadFromStorage('orderFields', []);
-    settings = loadFromStorage('settings', {
+    // Ініціалізуємо порожні дані, які будуть заповнені через WebSocket
+    products = [];
+    categories = [];
+    slides = [];
+    settings = {
         name: 'Меблевий магазин',
         logo: NO_IMAGE_URL,
         logoWidth: 150,
@@ -198,39 +211,17 @@ async function initializeData() {
         showSlides: true,
         slideInterval: 3000,
         favicon: ''
-    });
+    };
 
-    // Відновлюємо currentCategory і currentSubcategory
-    currentCategory = loadFromStorage('currentCategory', null);
-    currentSubcategory = loadFromStorage('currentSubcategory', null);
-
-    // Налаштовуємо favicon
-    const oldFavicon = document.querySelector('link[rel="icon"]');
-    if (oldFavicon) oldFavicon.remove();
-    const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
-    const favicon = document.createElement('link');
-    favicon.rel = 'icon';
-    favicon.type = 'image/x-icon';
-    favicon.href = faviconUrl;
-    document.head.appendChild(favicon);
-
-    if (orders.length > 5) orders = orders.slice(-5);
-    if (cart.length > 10) cart = cart.slice(-10);
-    saveToStorage('orders', orders);
-    saveToStorage('cart', cart);
-
-    parentGroupProduct = loadFromStorage('parentGroupProduct', null);
-    selectedColors = loadFromStorage('selectedColors', {});
-    selectedMattressSizes = loadFromStorage('selectedMattressSizes', {});
-
-    renderCatalogDropdown();
-
+    // Підключаємо WebSocket для отримання актуальних даних
     connectPublicWebSocket();
-    setInterval(() => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            updateProducts();
-        }
-    }, 300000); // 5 хвилин
+
+    // Очікуємо першого оновлення від WebSocket (опціонально, якщо потрібна гарантія)
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Даємо WebSocket час на підключення
+
+    updateHeader();
+    renderCategories();
+    renderCatalogDropdown();
 }
 
 async function updateProducts() {
@@ -1891,122 +1882,121 @@ function submitOrder() {
 }
 
 function updateHeader() {
+    document.title = settings.name || 'Меблевий магазин';
     const logo = document.getElementById('logo');
     if (logo) {
         logo.style.backgroundImage = `url(${settings.logo || NO_IMAGE_URL})`;
-        logo.style.width = `${settings.logoWidth}px`;
-        logo.style.height = `${settings.logoHeight || 60}px`;
+        logo.style.width = `${settings.logoWidth || 150}px`;
+        logo.style.height = 'auto'; // Залишаємо висоту автоматичною для пропорцій
     }
-
     const logoText = document.getElementById('logo-text');
-    if (logoText) logoText.textContent = settings.name;
-
+    if (logoText) logoText.textContent = settings.name || '';
     const phones = document.getElementById('phones');
     if (phones) phones.textContent = settings.contacts?.phones || '';
 }
 
-        function renderContacts() {
-            const contactInfo = document.getElementById('contact-info');
-            const socials = document.getElementById('socials');
-            if (!contactInfo || !socials) return;
-            while (contactInfo.firstChild) contactInfo.removeChild(contactInfo.firstChild);
-            while (socials.firstChild) socials.removeChild(socials.firstChild);
+function renderContacts() {
+    const contactInfo = document.getElementById('contact-info');
+    const socials = document.getElementById('socials');
+    if (!contactInfo || !socials) return;
+    while (contactInfo.firstChild) contactInfo.removeChild(contactInfo.firstChild);
+    while (socials.firstChild) socials.removeChild(socials.firstChild);
 
-            contactInfo.appendChild(createCharP('Телефони', settings.contacts?.phones || 'Немає даних'));
-            contactInfo.appendChild(createCharP('Адреси', settings.contacts?.addresses || 'Немає даних'));
-            contactInfo.appendChild(createCharP('Графік роботи', settings.contacts?.schedule || 'Немає даних'));
+    contactInfo.appendChild(createCharP('Телефони', settings.contacts?.phones || 'Немає даних'));
+    contactInfo.appendChild(createCharP('Адреси', settings.contacts?.addresses || 'Немає даних'));
+    contactInfo.appendChild(createCharP('Графік роботи', settings.contacts?.schedule || 'Немає даних'));
 
-            if (settings.showSocials && settings.socials.length > 0) {
-                const h3 = document.createElement('h3');
-                h3.textContent = 'Ми в соціальних мережах';
-                socials.appendChild(h3);
-                settings.socials.forEach(s => {
-                    const a = document.createElement('a');
-                    a.href = s.url;
-                    a.target = '_blank';
-                    a.className = 'social-link';
-                    a.textContent = `${s.icon || '🔗'} ${s.name || 'Посилання'}`;
-                    socials.appendChild(a);
-                });
-            }
-            renderBreadcrumbs();
-        }
+    if (settings.showSocials && settings.socials?.length > 0) {
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Ми в соціальних мережах';
+        socials.appendChild(h3);
+        settings.socials.forEach(s => {
+            const a = document.createElement('a');
+            a.href = s.url || '#';
+            a.target = '_blank';
+            a.className = 'social-link';
+            a.textContent = `${s.icon || '🔗'} ${s.name || 'Посилання'}`;
+            socials.appendChild(a);
+        });
+    }
+    renderBreadcrumbs();
+}
 
-        function renderAbout() {
-            const aboutText = document.getElementById('about-text');
-            if (!aboutText) return;
-            while (aboutText.firstChild) aboutText.removeChild(aboutText.firstChild);
+function renderAbout() {
+    const aboutText = document.getElementById('about-text');
+    if (!aboutText) return;
+    while (aboutText.firstChild) aboutText.removeChild(aboutText.firstChild);
 
-            const h2 = document.createElement('h2');
-            h2.textContent = 'Про нас';
-            aboutText.appendChild(h2);
-            const p = document.createElement('p');
-            p.innerHTML = settings.about || 'Інформація про нас відсутня';
-            aboutText.appendChild(p);
-            renderBreadcrumbs();
-        }
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Про нас';
+    aboutText.appendChild(h2);
+    const p = document.createElement('p');
+    p.innerHTML = settings.about || 'Інформація про нас відсутня';
+    aboutText.appendChild(p);
+    renderBreadcrumbs();
+}
 
 function renderSlideshow() {
     const slideshow = document.getElementById('slideshow');
     if (!slideshow || !settings.showSlides || slides.length === 0) {
         if (slideshow) slideshow.style.display = 'none';
-        clearInterval(slideInterval); // Додано
+        clearInterval(slideInterval);
         return;
     }
-            slideshow.style.display = 'block';
-            while (slideshow.firstChild) slideshow.removeChild(slideshow.firstChild);
+    slideshow.style.display = 'block';
+    while (slideshow.firstChild) slideshow.removeChild(slideshow.firstChild);
 
-            slides.forEach((slide, i) => {
-                const slideDiv = document.createElement('div');
-                slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
+    slides.forEach((slide, i) => {
+        const slideDiv = document.createElement('div');
+        slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
-                const img = document.createElement('img');
-                img.src = slide.url || NO_IMAGE_URL;
-                img.alt = slide.name || `Слайд ${i + 1}`;
-                img.loading = 'lazy';
-                slideDiv.appendChild(img);
+        const img = document.createElement('img');
+        img.src = slide.url || NO_IMAGE_URL;
+        img.alt = slide.name || `Слайд ${i + 1}`;
+        img.loading = 'lazy';
+        slideDiv.appendChild(img);
 
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'slide-content';
-                const h2 = document.createElement('h2');
-                h2.textContent = slide.title || '';
-                contentDiv.appendChild(h2);
-                const p = document.createElement('p');
-                p.textContent = slide.text || '';
-                contentDiv.appendChild(p);
-                const a = document.createElement('a');
-                a.href = slide.link || '#';
-                a.textContent = slide.linkText || 'Дізнатися більше';
-                contentDiv.appendChild(a);
-                slideDiv.appendChild(contentDiv);
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'slide-content';
+        const h2 = document.createElement('h2');
+        h2.textContent = slide.title || '';
+        contentDiv.appendChild(h2);
+        const p = document.createElement('p');
+        p.textContent = slide.text || '';
+        contentDiv.appendChild(p);
+        const a = document.createElement('a');
+        a.href = slide.link || '#';
+        a.textContent = slide.linkText || 'Дізнатися більше';
+        contentDiv.appendChild(a);
+        slideDiv.appendChild(contentDiv);
 
-                slideshow.appendChild(slideDiv);
-            });
+        slideshow.appendChild(slideDiv);
+    });
 
-            const navDiv = document.createElement('div');
-            navDiv.className = 'slide-nav';
-            slides.forEach((_, i) => {
-                const btn = document.createElement('button');
-                btn.className = `slide-btn${i === currentSlideIndex ? ' active' : ''}`;
-                btn.onclick = () => { currentSlideIndex = i; renderSlideshow(); startSlideshow(); };
-                navDiv.appendChild(btn);
-            });
-            slideshow.appendChild(navDiv);
+    const navDiv = document.createElement('div');
+    navDiv.className = 'slide-nav';
+    slides.forEach((_, i) => {
+        const btn = document.createElement('button');
+        btn.className = `slide-btn${i === currentSlideIndex ? ' active' : ''}`;
+        btn.onclick = () => { currentSlideIndex = i; renderSlideshow(); startSlideshow(); };
+        navDiv.appendChild(btn);
+    });
+    slideshow.appendChild(navDiv);
 
-            const prevBtn = document.createElement('button');
-            prevBtn.className = 'slide-arrow slide-arrow-prev';
-            prevBtn.textContent = '◄';
-            prevBtn.onclick = () => { currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length; renderSlideshow(); startSlideshow(); };
-            slideshow.appendChild(prevBtn);
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'slide-arrow slide-arrow-prev';
+    prevBtn.textContent = '◄';
+    prevBtn.onclick = () => { currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length; renderSlideshow(); startSlideshow(); };
+    slideshow.appendChild(prevBtn);
 
-            const nextBtn = document.createElement('button');
-            nextBtn.className = 'slide-arrow slide-arrow-next';
-            nextBtn.textContent = '►';
-            nextBtn.onclick = () => { currentSlideIndex = (currentSlideIndex + 1) % slides.length; renderSlideshow(); startSlideshow(); };
-            slideshow.appendChild(nextBtn);
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'slide-arrow slide-arrow-next';
+    nextBtn.textContent = '►';
+    nextBtn.onclick = () => { currentSlideIndex = (currentSlideIndex + 1) % slides.length; renderSlideshow(); startSlideshow(); };
+    slideshow.appendChild(nextBtn);
 
-            startSlideshow();
-        }
+    startSlideshow();
+}
 
         function startSlideshow() {
             if (!settings.showSlides || slides.length <= 1) return;
