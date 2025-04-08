@@ -7,5 +7,6 @@ const slideSchema = new mongoose.Schema({
     text: String,
     link: String,
     linkText: String
+    order: { type: Number, default: 0 } // Додано
 }, { timestamps: true });
 module.exports = mongoose.model('Slide', slideSchema);

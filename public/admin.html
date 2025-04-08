@@ -2065,44 +2065,33 @@ function logout() {
     }
 
 async function updateStoreInfo() {
-    const storeName = document.getElementById('store-name').value;
+    const name = document.getElementById('store-name').value;
     const baseUrl = document.getElementById('base-url').value;
-    const logoUrl = document.getElementById('logo-url').value;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || '';
-    const faviconUrl = document.getElementById('favicon-url').value;
+    const logo = document.getElementById('logo-url').value || settings.logo;
+    const logoWidth = document.getElementById('logo-width').value;
+    const favicon = document.getElementById('favicon-url').value || settings.favicon;
 
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    // Оновлюємо локальний об’єкт settings
-    settings.name = storeName;
+    settings.name = name;
     settings.baseUrl = baseUrl;
-    settings.logo = logoUrl;
+    settings.logo = logo;
     settings.logoWidth = logoWidth;
-    settings.favicon = faviconUrl;
+    settings.favicon = favicon;
 
-    console.log('Надсилаємо налаштування:', { storeName, baseUrl, logo: logoUrl, logoWidth, favicon: faviconUrl });
+    console.log('Надсилаємо налаштування:', settings); // Логування
 
     try {
+        const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(settings)
         });
-
-        if (!response.ok) {
-            throw new Error('Не вдалося оновити налаштування: ' + response.statusText);
-        }
-
-        // Очікуємо оновлення через WebSocket, тому не викликаємо renderSettingsAdmin тут
+        if (!response.ok) throw new Error('Не вдалося оновити налаштування');
         showNotification('Налаштування збережено!');
+        unsavedChanges = false;
         resetInactivityTimer();
     } catch (e) {
         console.error('Помилка при оновленні налаштувань:', e);

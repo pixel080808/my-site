@@ -170,39 +170,29 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Схема для продуктів
 const productSchema = new mongoose.Schema({
-    id: Number,
-    type: String,
-    name: String,
-    slug: String,
-    brand: String,
-    category: String,
-    subcategory: String,
-    material: String,
-    price: Number,
-    salePrice: Number,
-    saleEnd: String,
+    name: { type: String, required: true },
+    category: { type: String, required: true },
+    subcategory: { type: String },
+    price: { type: Number, required: true },
+    salePrice: { type: Number },
+    saleEnd: { type: Date },
+    brand: { type: String },
+    material: { type: String },
+    photos: [String],
+    visible: { type: Boolean, default: true },
+    active: { type: Boolean, default: true }, // Додано
+    slug: { type: String, unique: true },
+    type: { type: String, enum: ['simple', 'mattresses', 'group'] },
+    sizes: [{ name: String, price: Number }],
+    colors: [{ name: String, value: String, photo: String, priceChange: Number }],
+    groupProducts: [{ type: Number }], // Змінено на Number
     description: String,
-    descriptionDelta: Object,
     widthCm: Number,
     depthCm: Number,
     heightCm: Number,
     lengthCm: Number,
-    photos: [String],
-    colors: [{
-        name: String,
-        value: String,
-        priceChange: Number,
-        photo: String
-    }],
-    sizes: [{
-        name: String,
-        price: Number
-    }],
-    groupProducts: [Number],
-    active: Boolean,
-    visible: Boolean,
-    descriptionMedia: [String]
-});
+    popularity: Number
+}, { timestamps: true });
 
 // Схема для замовлень
 const orderSchema = new mongoose.Schema({
@@ -279,11 +269,13 @@ const settingsSchema = new mongoose.Schema({
     showSlides: Boolean
 });
 
-const Product = mongoose.model('Product', productSchema);
-const Order = mongoose.model('Order', orderSchema);
-const Category = mongoose.model('Category', categorySchema);
-const Slide = mongoose.model('Slide', slideSchema);
-const Settings = mongoose.model('Settings', settingsSchema);
+const Product = require('./models/Product');
+const Order = require('./models/Order');
+const Category = require('./models/Category');
+const Slide = require('./models/Slide');
+const Settings = require('./models/Settings');
+const Material = require('./models/Material');
+const Brand = require('./models/Brand');
 
 // Схема валідації для продукту
 const productSchemaValidation = Joi.object({
@@ -414,65 +406,79 @@ const wss = new WebSocket.Server({ server });
 wss.on('connection', (ws, req) => {
     const urlParams = new URLSearchParams(req.url.split('?')[1]);
     const token = urlParams.get('token');
-    if (!token) {
-        console.log('WebSocket: Токен відсутній');
-        ws.close(1008, 'Токен відсутній');
-        return;
-    }
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('WebSocket: Клієнт підключився з токеном:', decoded);
-        ws.subscriptions = new Set();
 
-        ws.on('message', async (message) => {
-            try {
-                const { type, action } = JSON.parse(message);
-                console.log(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
-                if (action === 'subscribe') {
-                    ws.subscriptions.add(type);
-                    console.log(`Клієнт підписався на ${type}`);
-                    if (type === 'products') {
-                        const products = await Product.find();
-                        ws.send(JSON.stringify({ type: 'products', data: products }));
-                    } else if (type === 'settings') {
-                        const settings = await Settings.findOne();
-                        ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                    } else if (type === 'categories') {
-                        const categories = await Category.find();
-                        ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                    } else if (type === 'slides') {
-                        const slides = await Slide.find().sort({ order: 1 });
-                        ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                    } else if (type === 'orders') {
-                        const orders = await Order.find();
-                        ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                    } else if (type === 'materials') {
-                        const materials = await Material.find().distinct('name');
-                        ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                    } else if (type === 'brands') {
-                        const brands = await Brand.find().distinct('name');
-                        ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                    }
-                }
-            } catch (err) {
-                console.error('Помилка обробки WebSocket-повідомлення:', err);
-                ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки' }));
+    ws.isAdmin = false; // За замовчуванням клієнт не адмін
+    ws.subscriptions = new Set();
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            if (decoded.role === 'admin') {
+                ws.isAdmin = true;
+                console.log('WebSocket: Адмін підключився з токеном:', decoded);
             }
-        });
-
-        ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
-        ws.on('error', (err) => console.error('Помилка WebSocket:', err));
-    } catch (err) {
-        console.error('WebSocket: Помилка верифікації токена:', err.message);
-        ws.close(1008, 'Недійсний токен');
+        } catch (err) {
+            console.error('WebSocket: Помилка верифікації токена:', err.message);
+            ws.close(1008, 'Недійсний токен');
+            return;
+        }
+    } else {
+        console.log('WebSocket: Публічний клієнт підключився');
     }
+
+    ws.on('message', async (message) => {
+        try {
+            const { type, action } = JSON.parse(message);
+            console.log(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
+
+            if (action === 'subscribe') {
+                ws.subscriptions.add(type);
+                console.log(`Клієнт підписався на ${type}`);
+
+                if (type === 'products') {
+                    const products = ws.isAdmin
+                        ? await Product.find() // Адмінам усі товари
+                        : await Product.find({ visible: true, active: true }); // Публіці тільки видимі
+                    ws.send(JSON.stringify({ type: 'products', data: products }));
+                } else if (type === 'settings') {
+                    const settings = await Settings.findOne();
+                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
+                } else if (type === 'categories') {
+                    const categories = await Category.find();
+                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
+                } else if (type === 'slides') {
+                    const slides = await Slide.find().sort({ order: 1 });
+                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
+                } else if (type === 'orders' && ws.isAdmin) {
+                    const orders = await Order.find();
+                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
+                } else if (type === 'materials' && ws.isAdmin) {
+                    const materials = await Material.find().distinct('name');
+                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
+                } else if (type === 'brands' && ws.isAdmin) {
+                    const brands = await Brand.find().distinct('name');
+                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
+                }
+            }
+        } catch (err) {
+            console.error('Помилка обробки WebSocket-повідомлення:', err);
+            ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
+        }
+    });
+
+    ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
+    ws.on('error', (err) => console.error('Помилка WebSocket:', err));
 });
 
 function broadcast(type, data) {
-    console.log(`Трансляція даних типу ${type}:`, data);
+    console.log(`Трансляція даних типу ${type}:`);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
-            client.send(JSON.stringify({ type, data }));
+            let filteredData = data;
+            if (type === 'products' && !client.isAdmin) {
+                filteredData = data.filter(p => p.visible && p.active);
+            }
+            client.send(JSON.stringify({ type, data: filteredData }));
         }
     });
 }
@@ -823,6 +829,30 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         const settingsData = req.body;
         console.log('Отримано дані для оновлення налаштувань:', settingsData);
 
+        // Валідація за допомогою Joi (оновлена схема відповідно до Settings.js)
+        const settingsSchemaValidation = Joi.object({
+            name: Joi.string().allow(''),
+            logo: Joi.string().allow(''),
+            logoWidth: Joi.number().min(0).allow(null),
+            favicon: Joi.string().allow(''),
+            contacts: Joi.object({
+                phones: Joi.string().allow(''),
+                addresses: Joi.string().allow(''),
+                schedule: Joi.string().allow('')
+            }).default({ phones: '', addresses: '', schedule: '' }),
+            socials: Joi.array().items(
+                Joi.object({
+                    name: Joi.string().required(),
+                    url: Joi.string().uri().required(),
+                    icon: Joi.string().required()
+                })
+            ).default([]),
+            showSocials: Joi.boolean().default(true),
+            about: Joi.string().allow(''),
+            showSlides: Joi.boolean().default(true),
+            slideInterval: Joi.number().min(0).default(3000)
+        });
+
         const { error } = settingsSchemaValidation.validate(settingsData, { abortEarly: false });
         if (error) {
             console.error('Помилка валідації налаштувань:', error.details);
@@ -832,8 +862,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         let settings = await Settings.findOne();
         if (!settings) {
             settings = new Settings({
-                storeName: '',
-                baseUrl: '',
+                name: '',
                 logo: '',
                 logoWidth: 150,
                 favicon: '',
@@ -841,19 +870,12 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
                 socials: [],
                 showSocials: true,
                 about: '',
-                categoryWidth: null,
-                categoryHeight: null,
-                productWidth: null,
-                productHeight: null,
-                filters: [],
-                orderFields: [],
-                slideWidth: null,
-                slideHeight: null,
-                slideInterval: null,
-                showSlides: true // Виправили showSlideshow на showSlides
+                showSlides: true,
+                slideInterval: 3000
             });
         }
 
+        // Оновлюємо тільки передані поля
         const updatedData = {
             ...settings.toObject(),
             ...settingsData,
@@ -862,19 +884,18 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
                 ...(settingsData.contacts || {})
             },
             socials: settingsData.socials || settings.socials,
-            filters: settingsData.filters || settings.filters,
-            orderFields: settingsData.orderFields || settings.orderFields,
-            showSlides: settingsData.showSlides !== undefined ? settingsData.showSlides : settings.showSlides
+            showSlides: settingsData.showSlides !== undefined ? settingsData.showSlides : settings.showSlides,
+            slideInterval: settingsData.slideInterval !== undefined ? settingsData.slideInterval : settings.slideInterval
         };
 
         Object.assign(settings, updatedData);
         await settings.save();
 
         const settingsToSend = settings.toObject();
-        delete settingsToSend._id; // Видаляємо MongoDB-поле
-        delete settingsToSend.__v; // Видаляємо MongoDB-поле
+        delete settingsToSend._id;
+        delete settingsToSend.__v;
 
-        broadcast('settings', settingsToSend); // Надсилаємо оновлені налаштування всім клієнтам
+        broadcast('settings', settingsToSend);
         res.json(settingsToSend);
     } catch (err) {
         console.error('Помилка при оновленні налаштувань:', err);
