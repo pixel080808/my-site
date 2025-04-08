@@ -1,4 +1,3 @@
-// models/Product.js
 const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -11,6 +10,7 @@ const productSchema = new mongoose.Schema({
     material: { type: String },
     photos: [String],
     visible: { type: Boolean, default: true },
+    active: { type: Boolean, default: true }, // Додано
     slug: { type: String, unique: true },
     type: { type: String, enum: ['simple', 'mattresses', 'group'] },
     sizes: [{ name: String, price: Number }],

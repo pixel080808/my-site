@@ -11,6 +11,13 @@ const multer = require('multer');
 const fs = require('fs');
 const Joi = require('joi');
 const WebSocket = require('ws');
+
+// Імпортуємо моделі з окремих файлів
+const Product = require('./models/Product');
+const Order = require('./models/Order');
+const Category = require('./models/Category');
+const Slide = require('./models/Slide');
+const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 
@@ -18,7 +25,6 @@ dotenv.config();
 
 const app = express();
 
-// Перевірка змінних середовища для Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     console.error('Змінні середовища для Cloudinary (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) не визначені');
     process.exit(1);
@@ -168,135 +174,27 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схема для продуктів
-const productSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    category: { type: String, required: true },
-    subcategory: { type: String },
-    price: { type: Number, required: true },
-    salePrice: { type: Number },
-    saleEnd: { type: Date },
-    brand: { type: String },
-    material: { type: String },
-    photos: [String],
-    visible: { type: Boolean, default: true },
-    active: { type: Boolean, default: true }, // Додано
-    slug: { type: String, unique: true },
-    type: { type: String, enum: ['simple', 'mattresses', 'group'] },
-    sizes: [{ name: String, price: Number }],
-    colors: [{ name: String, value: String, photo: String, priceChange: Number }],
-    groupProducts: [{ type: Number }], // Змінено на Number
-    description: String,
-    widthCm: Number,
-    depthCm: Number,
-    heightCm: Number,
-    lengthCm: Number,
-    popularity: Number
-}, { timestamps: true });
-
-// Схема для замовлень
-const orderSchema = new mongoose.Schema({
-    id: Number,
-    date: { type: Date, default: Date.now },
-    customer: Object,
-    items: [{
-        id: Number,
-        quantity: Number,
-        price: Number,
-        color: String
-    }],
-    total: Number,
-    status: String
-});
-
-// Схема для категорій
-const categorySchema = new mongoose.Schema({
-    name: String,
-    slug: String,
-    image: String,
-    subcategories: [{
-        name: String,
-        slug: String,
-        image: String
-    }]
-});
-
-// Схема для слайдів
-const slideSchema = new mongoose.Schema({
-    id: Number,
-    image: String,
-    title: String,
-    text: String,
-    link: String,
-    linkText: String,
-    order: Number
-});
-
-// Схема для налаштувань
-const settingsSchema = new mongoose.Schema({
-    storeName: String,
-    baseUrl: String,
-    logo: String,
-    logoWidth: Number,
-    favicon: String,
-    contacts: {
-        phones: String,
-        addresses: String,
-        schedule: String
-    },
-    socials: [{ url: String, icon: String }],
-    showSocials: Boolean,
-    about: String,
-    categoryWidth: Number,
-    categoryHeight: Number,
-    productWidth: Number,
-    productHeight: Number,
-    filters: [{
-        name: String,
-        label: String,
-        type: String,
-        options: [String]
-    }],
-    orderFields: [{
-        name: String,
-        label: String,
-        type: String,
-        options: [String]
-    }],
-    slideWidth: Number,
-    slideHeight: Number,
-    slideInterval: Number,
-    showSlides: Boolean
-});
-
-const Product = require('./models/Product');
-const Order = require('./models/Order');
-const Category = require('./models/Category');
-const Slide = require('./models/Slide');
-const Settings = require('./models/Settings');
-const Material = require('./models/Material');
-const Brand = require('./models/Brand');
-
 // Схема валідації для продукту
 const productSchemaValidation = Joi.object({
-    id: Joi.number().optional(),
-    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
     name: Joi.string().min(1).max(255).required(),
-    slug: Joi.string().min(1).max(255).required(),
-    brand: Joi.string().max(100).allow(''),
-    category: Joi.string().max(100).allow(''),
+    category: Joi.string().max(100).required(),
     subcategory: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
-    price: Joi.number().min(0).allow(null),
+    price: Joi.number().min(0).required(),
     salePrice: Joi.number().min(0).allow(null),
-    saleEnd: Joi.string().allow(null),
-    description: Joi.string().allow(''),
-    descriptionDelta: Joi.object().allow(null),
-    widthCm: Joi.number().min(0).allow(null),
-    depthCm: Joi.number().min(0).allow(null),
-    heightCm: Joi.number().min(0).allow(null),
-    lengthCm: Joi.number().min(0).allow(null),
+    saleEnd: Joi.date().allow(null),
+    brand: Joi.string().max(100).allow(''),
+    material: Joi.string().max(100).allow(''),
     photos: Joi.array().items(Joi.string()).default([]),
+    visible: Joi.boolean().default(true),
+    active: Joi.boolean().default(true),
+    slug: Joi.string().min(1).max(255).required(),
+    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
+    sizes: Joi.array().items(
+        Joi.object({
+            name: Joi.string().max(100).required(),
+            price: Joi.number().min(0).required()
+        })
+    ).default([]),
     colors: Joi.array().items(
         Joi.object({
             name: Joi.string().max(100).required(),
@@ -305,16 +203,13 @@ const productSchemaValidation = Joi.object({
             photo: Joi.string().allow(null)
         })
     ).default([]),
-    sizes: Joi.array().items(
-        Joi.object({
-            name: Joi.string().max(100).required(),
-            price: Joi.number().min(0).required()
-        })
-    ).default([]),
-    groupProducts: Joi.array().items(Joi.number()).default([]),
-    active: Joi.boolean().default(true),
-    visible: Joi.boolean().default(true),
-    descriptionMedia: Joi.array().items(Joi.string()).default([])
+    groupProducts: Joi.array().items(Joi.string()).default([]),
+    description: Joi.string().allow(''),
+    widthCm: Joi.number().min(0).allow(null),
+    depthCm: Joi.number().min(0).allow(null),
+    heightCm: Joi.number().min(0).allow(null),
+    lengthCm: Joi.number().min(0).allow(null),
+    popularity: Joi.number().allow(null)
 });
 
 // Схема валідації для замовлення
@@ -336,7 +231,7 @@ const orderSchemaValidation = Joi.object({
 
 // Схема валідації для налаштувань (другий варіант)
 const settingsSchemaValidation = Joi.object({
-    storeName: Joi.string().allow(''),
+    name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
     logo: Joi.string().allow(''),
     logoWidth: Joi.number().min(0).allow(null),
@@ -347,10 +242,11 @@ const settingsSchemaValidation = Joi.object({
         schedule: Joi.string().allow('')
     }).default({ phones: '', addresses: '', schedule: '' }),
     socials: Joi.array().items(
-        Joi.object({
-            url: Joi.string().uri().required(),
-            icon: Joi.string().required()
-        })
+    Joi.object({
+        name: Joi.string().allow(''), // Додано
+        url: Joi.string().uri().required(),
+        icon: Joi.string().required()
+    })
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
@@ -584,7 +480,6 @@ const getPublicIdFromUrl = (url) => {
 app.post('/api/products', authenticateToken, async (req, res) => {
     try {
         const productData = req.body;
-
         console.log('Отримано дані продукту:', productData);
 
         const { error } = productSchemaValidation.validate(productData);
@@ -592,9 +487,6 @@ app.post('/api/products', authenticateToken, async (req, res) => {
             console.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
-
-        const maxIdProduct = await Product.findOne().sort({ id: -1 });
-        productData.id = maxIdProduct ? maxIdProduct.id + 1 : 1;
 
         const product = new Product(productData);
         await product.save();
@@ -614,7 +506,6 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
         let productData = { ...req.body };
         console.log('Отримано дані для оновлення продукту:', productData);
 
-        // Видаляємо системні поля
         delete productData._id;
         delete productData.__v;
         if (productData.colors) {
@@ -630,7 +521,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const product = await Product.findOneAndUpdate({ id: req.params.id }, productData, { new: true });
+        const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
         const products = await Product.find();
@@ -644,11 +535,10 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/products/:id', authenticateToken, async (req, res) => {
     try {
-        const product = await Product.findOneAndDelete({ id: req.params.id });
+        const product = await Product.findByIdAndDelete(req.params.id);
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
-        // Видаляємо пов’язані фотографії з Cloudinary
-        const photosToDelete = [...(product.photos || []), ...(product.colors.map(color => color.photo).filter(Boolean)), ...(product.descriptionMedia || [])];
+        const photosToDelete = [...(product.photos || []), ...(product.colors.map(color => color.photo).filter(Boolean))];
         for (const photoUrl of photosToDelete) {
             const publicId = getPublicIdFromUrl(photoUrl);
             if (publicId) {
@@ -670,6 +560,18 @@ app.delete('/api/products/:id', authenticateToken, async (req, res) => {
     }
 });
 
+const categorySchemaValidation = Joi.object({
+    name: Joi.string().min(1).max(255).required(),
+    slug: Joi.string().min(1).max(255).required(),
+    img: Joi.string().allow(''),
+    subcategories: Joi.array().items(
+        Joi.object({
+            name: Joi.string().min(1).max(255).required(),
+            slug: Joi.string().min(1).max(255).required()
+        })
+    ).default([])
+});
+
 // Маршрути для роботи з категоріями
 app.get('/api/categories', authenticateToken, async (req, res) => {
     try {
@@ -681,9 +583,18 @@ app.get('/api/categories', authenticateToken, async (req, res) => {
     }
 });
 
+// Оновлений POST /api/categories
 app.post('/api/categories', authenticateToken, async (req, res) => {
     try {
         const categoryData = req.body;
+        console.log('Отримано дані категорії:', categoryData);
+
+        const { error } = categorySchemaValidation.validate(categoryData);
+        if (error) {
+            console.error('Помилка валідації категорії:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
         const category = new Category(categoryData);
         await category.save();
         const categories = await Category.find();
@@ -722,11 +633,22 @@ app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
     }
 });
 
+const subcategorySchemaValidation = Joi.object({
+    name: Joi.string().min(1).max(255).required(),
+    slug: Joi.string().min(1).max(255).required()
+});
+
 app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, res) => {
     try {
         const categorySlug = req.params.slug;
         const subcategoryData = req.body;
         console.log('Отримано дані для підкатегорії:', subcategoryData);
+
+        const { error } = subcategorySchemaValidation.validate(subcategoryData);
+        if (error) {
+            console.error('Помилка валідації підкатегорії:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
 
         const category = await Category.findOne({ slug: categorySlug });
         if (!category) {
@@ -737,7 +659,6 @@ app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, r
             category.subcategories = [];
         }
 
-        // Перевірка унікальності slug підкатегорії
         if (category.subcategories.some(sub => sub.slug === subcategoryData.slug)) {
             return res.status(400).json({ error: 'Підкатегорія з таким slug уже існує' });
         }
@@ -829,30 +750,6 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         const settingsData = req.body;
         console.log('Отримано дані для оновлення налаштувань:', settingsData);
 
-        // Валідація за допомогою Joi (оновлена схема відповідно до Settings.js)
-        const settingsSchemaValidation = Joi.object({
-            name: Joi.string().allow(''),
-            logo: Joi.string().allow(''),
-            logoWidth: Joi.number().min(0).allow(null),
-            favicon: Joi.string().allow(''),
-            contacts: Joi.object({
-                phones: Joi.string().allow(''),
-                addresses: Joi.string().allow(''),
-                schedule: Joi.string().allow('')
-            }).default({ phones: '', addresses: '', schedule: '' }),
-            socials: Joi.array().items(
-                Joi.object({
-                    name: Joi.string().required(),
-                    url: Joi.string().uri().required(),
-                    icon: Joi.string().required()
-                })
-            ).default([]),
-            showSocials: Joi.boolean().default(true),
-            about: Joi.string().allow(''),
-            showSlides: Joi.boolean().default(true),
-            slideInterval: Joi.number().min(0).default(3000)
-        });
-
         const { error } = settingsSchemaValidation.validate(settingsData, { abortEarly: false });
         if (error) {
             console.error('Помилка валідації налаштувань:', error.details);
@@ -863,6 +760,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         if (!settings) {
             settings = new Settings({
                 name: '',
+                baseUrl: '',
                 logo: '',
                 logoWidth: 150,
                 favicon: '',
@@ -870,12 +768,19 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
                 socials: [],
                 showSocials: true,
                 about: '',
-                showSlides: true,
-                slideInterval: 3000
+                categoryWidth: 0,
+                categoryHeight: 0,
+                productWidth: 0,
+                productHeight: 0,
+                filters: [],
+                orderFields: [],
+                slideWidth: 0,
+                slideHeight: 0,
+                slideInterval: 3000,
+                showSlides: true
             });
         }
 
-        // Оновлюємо тільки передані поля
         const updatedData = {
             ...settings.toObject(),
             ...settingsData,
@@ -884,6 +789,8 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
                 ...(settingsData.contacts || {})
             },
             socials: settingsData.socials || settings.socials,
+            filters: settingsData.filters || settings.filters,
+            orderFields: settingsData.orderFields || settings.orderFields,
             showSlides: settingsData.showSlides !== undefined ? settingsData.showSlides : settings.showSlides,
             slideInterval: settingsData.slideInterval !== undefined ? settingsData.slideInterval : settings.slideInterval
         };
