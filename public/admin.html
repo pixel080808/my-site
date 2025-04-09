@@ -1669,41 +1669,39 @@ function setDefaultVideoSizes(editor, editorId) {
 function initializeEditors() {
     if (aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
-        return; // Уникаємо повторної ініціалізації
+        return;
     }
 
-    // Ініціалізація Quill для "Про нас"
-aboutEditor = new Quill('#about-editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: {
-            container: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{'undo': 'undo'}, {'redo': 'redo'}], // Змінено формат
-                ['clean']
-            ],
-            handlers: {
-                'undo': function() {
-                    this.quill.history.undo();
-                },
-                'redo': function() {
-                    this.quill.history.redo();
+    aboutEditor = new Quill('#about-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'header': 2 }, { 'header': 3 }],
+                    ['link', 'image', 'video'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['undo', 'redo'], // Залишаємо як окремі кнопки
+                    ['clean']
+                ],
+                handlers: {
+                    'undo': function() {
+                        this.quill.history.undo();
+                    },
+                    'redo': function() {
+                        this.quill.history.redo();
+                    }
                 }
+            },
+            history: {
+                delay: 1000,
+                maxStack: 100,
+                userOnly: true
             }
         },
-        history: {
-            delay: 1000,
-            maxStack: 100,
-            userOnly: true
-        }
-    },
-    placeholder: 'Введіть текст "Про нас"...'
-});
+        placeholder: 'Введіть текст "Про нас"...'
+    });
 
-    // Встановлюємо початковий вміст
     if (settings.about) {
         try {
             const delta = aboutEditor.clipboard.convert(settings.about);
@@ -1719,7 +1717,6 @@ aboutEditor = new Quill('#about-editor', {
     }
     document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
 
-    // Обробник змін
     aboutEditor.on('text-change', () => {
         const newContent = aboutEditor.root.innerHTML;
         document.getElementById('about-edit').value = newContent;
@@ -1727,13 +1724,13 @@ aboutEditor = new Quill('#about-editor', {
         unsavedChanges = true;
     });
 
-    // Обробник кліків для зміни розмірів медіа
     aboutEditor.root.addEventListener('click', (e) => {
         const target = e.target;
         if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
             openResizeModal(target);
         }
     });
+}
 
     // Обробка вставки медіа
     aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
@@ -1780,86 +1777,80 @@ function addToolbarEventListeners() {
     }
 }
 
-function initializeProductEditor(description = '', descriptionDelta = null) {
-    // Ініціалізуємо Quill редактор
-    productEditor = new Quill('#product-description-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'], // Використовуємо вбудовані кнопки undo/redo
-                ['clean']
-            ],
-            history: {
-                delay: 1000,
-                maxStack: 100,
-                userOnly: true
-            }
-        }
-    });
+function initializeProductEditor(description, descriptionDelta) {
+    const editorContainer = document.getElementById('product-description-editor');
+    if (!editorContainer) {
+        console.error('Контейнер редактора опису товару не знайдено!');
+        return;
+    }
 
-    // Встановлюємо вміст редактора
-    if (descriptionDelta) {
-        productEditor.setContents(descriptionDelta, 'silent');
-    } else if (description) {
+    if (productEditor) {
+        console.log('Редактор опису товару уже ініціалізований, очищаємо.');
+        productEditor.setContents([], 'silent');
+    } else {
+        productEditor = new Quill('#product-description-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: {
+                    container: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'header': 2 }, { 'header': 3 }],
+                        ['link', 'image', 'video'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['undo', 'redo'], // Залишаємо як окремі кнопки
+                        ['clean']
+                    ],
+                    handlers: {
+                        'undo': function() {
+                            this.quill.history.undo();
+                        },
+                        'redo': function() {
+                            this.quill.history.redo();
+                        }
+                    }
+                },
+                history: {
+                    delay: 1000,
+                    maxStack: 100,
+                    userOnly: true
+                }
+            },
+            placeholder: 'Введіть опис товару...'
+        });
+    }
+
+    if (description) {
         try {
             const delta = productEditor.clipboard.convert(description);
             productEditor.setContents(delta, 'silent');
+            console.log('Вміст редактора опису товару встановлено:', description);
         } catch (e) {
-            console.error('Помилка при встановленні вмісту редактора товару:', e);
-            productEditor.setContents([{ insert: description }], 'silent');
+            console.error('Помилка при встановленні вмісту редактора опису:', e);
+            productEditor.setText(description, 'silent');
         }
     } else {
-        productEditor.setContents([], 'silent');
+        productEditor.setText('', 'silent');
+        console.log('Опис товару порожній, редактор очищено.');
     }
+
     document.getElementById('product-description').value = productEditor.root.innerHTML;
 
-    // Додаємо обробник для завантаження зображень через панель інструментів
-    const toolbar = productEditor.getModule('toolbar');
-toolbar.addHandler('image', async () => {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp'); // Додано WebP
-    input.click();
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (file) {
-            const validation = validateFile(file); // Використовуємо оновлену функцію
-            if (!validation.valid) {
-                showNotification(validation.error);
-                return;
-            }
-            const token = localStorage.getItem('adminToken');
-            if (!token) {
-                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
+    productEditor.on('text-change', () => {
+        const newContent = productEditor.root.innerHTML;
+        document.getElementById('product-description').value = newContent;
+        console.log('Вміст редактора опису товару змінено:', newContent);
+        unsavedChanges = true;
+    });
 
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
+    productEditor.root.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+            openResizeModal(target);
+        }
+    });
 
-                if (!response.ok) {
-                    throw new Error(`Помилка завантаження: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                if (data.url) {
-                    const range = productEditor.getSelection() || { index: 0 };
-                    productEditor.insertEmbed(range.index, 'image', data.url);
-                    setDefaultVideoSizes(productEditor, 'product-description');
-                }
+    setDefaultVideoSizes(productEditor, 'product-description');
+}
             } catch (err) {
                 showNotification('Не вдалося завантажити зображення: ' + err.message);
             }
@@ -4674,28 +4665,28 @@ async function saveEditedProduct(productId) {
         return;
     }
 
-if (brand && !brands.includes(brand)) {
-    try {
-        const response = await fetch('/api/brands', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name: brand })
-        });
-        if (response.ok) {
-            brands.push(brand); // Додаємо лише після успішного збереження на сервері
-            updateBrandOptions();
-        } else {
-            console.error('Помилка додавання бренду:', response.statusText);
+    if (brand && !brands.includes(brand)) {
+        try {
+            const response = await fetch('/api/brands', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: brand })
+            });
+            if (response.ok) {
+                brands.push(brand);
+                updateBrandOptions();
+            } else {
+                console.error('Помилка додавання бренду:', response.statusText);
+            }
+        } catch (e) {
+            console.error('Помилка додавання бренду:', e);
         }
-    } catch (e) {
-        console.error('Помилка додавання бренду:', e);
     }
-}
 
-if (material && !materials.includes(material)) {
+    if (material && !materials.includes(material)) {
         try {
             const response = await fetch('/api/materials', {
                 method: 'POST',
@@ -4716,8 +4707,7 @@ if (material && !materials.includes(material)) {
         }
     }
 
-let product = {
-        id: productId,
+    let product = {
         type: newProduct.type,
         name,
         slug,
@@ -4728,7 +4718,7 @@ let product = {
         price: newProduct.type === 'simple' ? price : null,
         salePrice: salePrice,
         saleEnd: saleEnd || null,
-        description: description || '', // Залишаємо тільки HTML
+        description: description || '',
         widthCm,
         depthCm,
         heightCm,
@@ -4745,8 +4735,6 @@ let product = {
         active: newProduct.active,
         visible: visible
     };
-
-    delete product.id; // Видаляємо id перед відправкою
 
     const mediaUrls = [];
     const parser = new DOMParser();
@@ -4788,21 +4776,7 @@ let product = {
         updatedDescription = updatedDescription.replace(oldUrl, newUrl);
     });
 
-    let updatedDelta = descriptionDelta;
-    if (mediaUrls.length > 0) {
-        updatedDelta = { ops: [] };
-        descriptionDelta.ops.forEach(op => {
-            if (op.insert && typeof op.insert === 'object' && op.insert.image) {
-                const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
-                updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
-            } else {
-                updatedDelta.ops.push(op);
-            }
-        });
-    }
-
     product.description = updatedDescription;
-    product.descriptionDelta = updatedDelta;
 
     const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
     for (let file of photoFiles) {
@@ -4868,7 +4842,7 @@ let product = {
         }
     }
 
-try {
+    try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
             headers: {
@@ -4956,22 +4930,6 @@ async function toggleProductActive(productId) {
 
     const newActiveStatus = !product.active;
 
-    const cleanProduct = {
-        ...product,
-        active: newActiveStatus,
-        colors: product.colors.map(color => ({
-            name: color.name,
-            value: color.value,
-            priceChange: color.priceChange,
-            photo: color.photo
-        })),
-        sizes: product.sizes,
-        groupProducts: product.groupProducts
-    };
-    delete cleanProduct._id;  // Видаляємо MongoDB _id
-    delete cleanProduct.__v;  // Видаляємо версію
-    delete cleanProduct.id;   // Видаляємо id
-
     try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
@@ -4979,7 +4937,7 @@ async function toggleProductActive(productId) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(cleanProduct)
+            body: JSON.stringify({ active: newActiveStatus }) // Відправляємо лише поле active
         });
 
         if (!response.ok) {
@@ -5361,6 +5319,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+const debouncedRenderAdmin = debounce(renderAdmin, 100);
+
 function connectAdminWebSocket() {
     const token = localStorage.getItem('adminToken');
     if (!token) {
@@ -5381,15 +5353,15 @@ function connectAdminWebSocket() {
 
     socket.onopen = () => {
         console.log('Адмін підключено до WebSocket');
-        setTimeout(() => {
-            ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ type, action: 'subscribe' }));
-                } else {
-                    console.warn(`WebSocket ще не готовий для ${type}`);
-                }
-            });
-        }, 100);
+        // Відправляємо підписки після підключення
+        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type, action: 'subscribe' }));
+                console.log(`Підписка на ${type} надіслана`);
+            } else {
+                console.warn(`WebSocket не готовий для ${type}`);
+            }
+        });
     };
 
     socket.onmessage = (event) => {
@@ -5406,7 +5378,6 @@ function connectAdminWebSocket() {
                     renderCategoriesAdmin();
                     break;
                 case 'settings':
-                    // Оновлюємо settings, але не перезаписуємо редактор, якщо є незбережені зміни
                     settings = {
                         ...settings,
                         ...data,
@@ -5415,7 +5386,7 @@ function connectAdminWebSocket() {
                         showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
                         showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                     };
-                    if (aboutEditor && data.about && !unsavedChanges) { // Перезаписуємо лише якщо немає локальних змін
+                    if (aboutEditor && data.about && !unsavedChanges) {
                         try {
                             const delta = aboutEditor.clipboard.convert(data.about);
                             aboutEditor.setContents(delta, 'silent');
