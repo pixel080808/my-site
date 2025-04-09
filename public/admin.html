@@ -2267,27 +2267,29 @@ function renderAdmin(activeTab = 'site-editing') {
 function renderCategoriesAdmin() {
     const catList = document.getElementById('cat-list');
     if (catList) {
-        catList.innerHTML = categories.map(cat => `
-            <div class="category-item">
-                ${cat.name}
-                <button class="edit-btn" onclick="editCategory('${cat._id || cat.name}')">Редагувати</button>
-                <button class="delete-btn" onclick="deleteCategory('${cat._id || cat.name}')">Видалити</button>
+        catList.innerHTML = categories.map(c => {
+            return `
+                <div class="category-item">
+                    ${c.name}
+                    <button class="edit-btn" onclick="editCategory('${c.id}', '${c.name}')">Редагувати</button>
+                    <button class="delete-btn" onclick="deleteCategory('${c.id}', '${c.name}')">Видалити</button>
+                </div>
                 <div class="subcat-list">
-                    ${(cat.subcategories || []).map(sub => `
+                    ${c.subcategories.map(sub => `
                         <p>
+                            <button class="edit-btn" onclick="editSubcategory('${c.id}', '${sub.id}', '${sub.name}')">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteSubcategory('${c.id}', '${sub.id}', '${sub.name}')">Видалити</button>
                             ${sub.name}
-                            <button class="edit-btn" onclick="editSubcategory('${cat._id || cat.name}', '${sub._id || sub.name}')">Редагувати</button>
-                            <button class="delete-btn" onclick="deleteSubcategory('${cat._id || cat.name}', '${sub._id || sub.name}')">Видалити</button>
                         </p>
                     `).join('')}
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
     const subcatSelect = document.getElementById('subcat-category');
     if (subcatSelect) {
         subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
-            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     }
 }
 
