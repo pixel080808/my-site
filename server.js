@@ -179,7 +179,7 @@ const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
     subcategory: Joi.string().max(100).allow(''),
-    price: Joi.number().min(0).required(),
+    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
     salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
@@ -381,11 +381,8 @@ function broadcast(type, data) {
 
 // Ендпоінт для завантаження файлів
 app.post('/api/upload', authenticateToken, (req, res, next) => {
-    upload.single('file')(req, res, (err) => {
+    upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'Файл занадто великий. Максимальний розмір — 5 МБ.' });
-            }
             return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
         } else if (err) {
             return res.status(400).json({ error: 'Помилка валідації файлу', details: err.message });
@@ -394,10 +391,16 @@ app.post('/api/upload', authenticateToken, (req, res, next) => {
             if (!req.file || !req.file.path) {
                 return res.status(500).json({ error: 'Помилка завантаження: файл не отримано від Cloudinary' });
             }
-            console.log('Файл успішно завантажено до Cloudinary:', req.file.path);
             res.json({ url: req.file.path });
         } catch (cloudinaryErr) {
             console.error('Помилка Cloudinary:', cloudinaryErr);
+            if (req.file && req.file.path) {
+                try {
+                    await cloudinary.uploader.destroy(req.file.filename);
+                } catch (deleteErr) {
+                    console.error('Не вдалося видалити файл після помилки:', deleteErr);
+                }
+            }
             res.status(500).json({ error: 'Не вдалося завантажити файл до Cloudinary', details: cloudinaryErr.message });
         }
     });
@@ -609,11 +612,21 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
 app.put('/api/categories/:slug', authenticateToken, async (req, res) => {
     try {
         const categoryData = req.body;
-        const category = await Category.findOneAndUpdate({ slug: req.params.slug }, categoryData, { new: true });
+        const category = await Category.findOne({ slug: req.params.slug });
         if (!category) return res.status(404).json({ error: 'Категорію не знайдено' });
+
+        if (category.img && categoryData.img !== category.img) {
+            const publicId = getPublicIdFromUrl(category.img);
+            if (publicId) {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`Видалено старе зображення категорії: ${publicId}`);
+            }
+        }
+
+        const updatedCategory = await Category.findOneAndUpdate({ slug: req.params.slug }, categoryData, { new: true });
         const categories = await Category.find();
         broadcast('categories', categories);
-        res.json(category);
+        res.json(updatedCategory);
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -1117,11 +1130,11 @@ app.post('/api/login', (req, res) => {
         const token = jwt.sign(
             { username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '30m' } // Зменшено до 30 хвилин
         );
-        res.json({ token }); // Змінено формат відповіді
+        res.json({ token });
     } else {
-        res.status(401).json({ error: 'Невірні дані для входу' }); // Змінено формат помилки
+        res.status(401).json({ error: 'Невірні дані для входу' });
     }
 });
 

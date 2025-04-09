@@ -3,6 +3,7 @@ const mongoose = require('mongoose'); // Додано
 
 const slideSchema = new mongoose.Schema({
     id: Number,
+    img: String, // Додано
     name: String,
     url: String,
     title: String,
