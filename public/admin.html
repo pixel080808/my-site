@@ -2193,9 +2193,13 @@ async function updateContacts() {
 
 async function updateAbout() {
     const aboutContent = document.getElementById('about-edit').value;
-    const updatedSettings = { about: aboutContent };
-
     const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
     console.log('Надсилаємо "Про нас":', aboutContent);
     try {
         const response = await fetch('/api/settings', {
@@ -2204,18 +2208,21 @@ async function updateAbout() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(updatedSettings)
+            body: JSON.stringify({ about: aboutContent })
         });
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити "Про нас": ${errorData.error}`);
+            const errorData = await response.text();
+            throw new Error(`Не вдалося оновити "Про нас": ${response.status} ${errorData}`);
         }
+
+        // Оновлюємо локальні settings одразу після успішного збереження
         settings.about = aboutContent;
-        showNotification('"Про нас" оновлено!');
-        unsavedChanges = false;
+        unsavedChanges = false; // Скидаємо прапор незбережених змін
+        showNotification('Інформацію "Про нас" оновлено!');
         resetInactivityTimer();
     } catch (e) {
-        console.error('Помилка при оновленні "Про нас":', e);
+        console.error('Помилка оновлення "Про нас":', e);
         showNotification(e.message);
     }
 }
@@ -3293,6 +3300,19 @@ async function updateSlideshowSettings() {
 }
 
 async function addSlide() {
+    const imgUrl = document.getElementById('slide-img-url').value;
+    const imgFile = document.getElementById('slide-img-file').files[0];
+    const title = document.getElementById('slide-title').value;
+    const text = document.getElementById('slide-text').value;
+    const link = document.getElementById('slide-link').value;
+    const linkText = document.getElementById('slide-link-text').value;
+    const order = parseInt(document.getElementById('slide-order').value) || slides.length;
+
+    if (!imgUrl && !imgFile) {
+        alert('Додайте URL зображення або виберіть файл!');
+        return;
+    }
+
     const token = localStorage.getItem('adminToken');
     if (!token) {
         showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
@@ -3300,51 +3320,69 @@ async function addSlide() {
         return;
     }
 
-    let img = document.getElementById('slide-img-url').value;
-    const file = document.getElementById('slide-img-file').files[0];
-    const title = document.getElementById('slide-title').value;
-    const text = document.getElementById('slide-text').value;
-    const link = document.getElementById('slide-link').value;
-    const linkText = document.getElementById('slide-link-text').value;
-    const order = parseInt(document.getElementById('slide-order').value) || 0;
+    let finalImgUrl = imgUrl;
 
-    if (!img && !file) {
-        alert('Введіть URL зображення або завантажте файл!');
-        return;
-    }
-
-    try {
-        if (file) {
-            const validation = validateFile(file);
-            if (!validation.valid) {
-                alert(validation.error);
-                return;
-            }
+    // Завантаження файлу, якщо він є
+    if (imgFile) {
+        const validation = validateFile(imgFile);
+        if (!validation.valid) {
+            alert(validation.error);
+            return;
+        }
+        try {
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', imgFile);
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 body: formData
             });
-            if (!response.ok) throw new Error('Не вдалося завантажити зображення');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Помилка завантаження зображення: ${response.status} ${errorText}`);
+            }
             const data = await response.json();
-            img = data.url;
+            if (!data.url) {
+                throw new Error('Сервер не повернув URL зображення');
+            }
+            finalImgUrl = data.url;
+            console.log('Зображення слайду завантаровано:', finalImgUrl);
+        } catch (err) {
+            console.error('Помилка завантаження зображення слайду:', err);
+            showNotification('Не вдалося завантажити зображення: ' + err.message);
+            return;
         }
+    }
 
-        const newSlide = { img, title, text, link, linkText, order };
+    const slide = {
+        imgUrl: finalImgUrl,
+        title: title || '',
+        text: text || '',
+        link: link || '',
+        linkText: linkText || '',
+        order
+    };
+
+    try {
         const response = await fetch('/api/slides', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(newSlide)
+            body: JSON.stringify(slide)
         });
 
-        if (!response.ok) throw new Error('Не вдалося додати слайд');
-        const addedSlide = await response.json();
-        slides.push(addedSlide);
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Не вдалося додати слайд: ${response.status} ${errorData}`);
+        }
+
+        const newSlide = await response.json();
+        slides.push(newSlide); // Оновлюємо локально лише після успіху
+        renderSlidesAdmin();
         document.getElementById('slide-img-url').value = '';
         document.getElementById('slide-img-file').value = '';
         document.getElementById('slide-title').value = '';
@@ -3352,12 +3390,11 @@ async function addSlide() {
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-        renderSlidesAdmin();
         showNotification('Слайд додано!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка додавання слайду:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка додавання слайду:', err);
+        showNotification(err.message);
     }
 }
 
@@ -4577,7 +4614,6 @@ async function saveEditedProduct(productId) {
     const saleEnd = document.getElementById('product-sale-end').value;
     const visible = document.getElementById('product-visible').value === 'true';
     const description = document.getElementById('product-description').value;
-    const descriptionDelta = productEditor.getContents();
     const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
     const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
     const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
@@ -4692,8 +4728,7 @@ let product = {
         price: newProduct.type === 'simple' ? price : null,
         salePrice: salePrice,
         saleEnd: saleEnd || null,
-        description: description || '',
-        descriptionDelta: descriptionDelta || null,
+        description: description || '', // Залишаємо тільки HTML
         widthCm,
         depthCm,
         heightCm,
@@ -4711,8 +4746,7 @@ let product = {
         visible: visible
     };
 
-// Видаляємо id перед відправкою
-    delete product.id;
+    delete product.id; // Видаляємо id перед відправкою
 
     const mediaUrls = [];
     const parser = new DOMParser();
@@ -4834,7 +4868,7 @@ let product = {
         }
     }
 
-    try {
+try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
             headers: {
@@ -4845,14 +4879,6 @@ let product = {
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
             const errorData = await response.json();
             throw new Error(`Помилка при оновленні товару: ${response.statusText}. Деталі: ${JSON.stringify(errorData)}`);
         }
@@ -5380,6 +5406,7 @@ function connectAdminWebSocket() {
                     renderCategoriesAdmin();
                     break;
                 case 'settings':
+                    // Оновлюємо settings, але не перезаписуємо редактор, якщо є незбережені зміни
                     settings = {
                         ...settings,
                         ...data,
@@ -5388,7 +5415,7 @@ function connectAdminWebSocket() {
                         showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
                         showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                     };
-                    if (aboutEditor && data.about) {
+                    if (aboutEditor && data.about && !unsavedChanges) { // Перезаписуємо лише якщо немає локальних змін
                         try {
                             const delta = aboutEditor.clipboard.convert(data.about);
                             aboutEditor.setContents(delta, 'silent');
