@@ -75,6 +75,8 @@ async function loadCartFromServer() {
         }
         const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('application/json')) {
+            const errorText = await response.text();
+            console.error(`Сервер повернув не JSON: ${contentType}, Тіло: ${errorText}`);
             throw new Error('Сервер повернув не JSON: ' + contentType);
         }
         cart = await response.json() || [];
@@ -93,6 +95,10 @@ async function saveCartToServer() {
             credentials: 'include',
             body: JSON.stringify(cart)
         });
+        if (response.status === 401 || response.status === 403) {
+            console.warn('Користувач не авторизований для збереження кошика');
+            throw new Error('Неавторизований доступ');
+        }
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
@@ -1950,20 +1956,25 @@ async function submitOrder() {
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // Додаємо credentials
             body: JSON.stringify(orderData)
         });
-        if (!response.ok) throw new Error('Не вдалося оформити замовлення');
-        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
+            throw new Error('Не вдалося оформити замовлення');
+        }
+
         // Спочатку оновлюємо кошик на сервері
         cart = [];
         await saveCartToServer();
-        
+
         // Очищаємо локальні дані
         selectedColors = {};
         selectedMattressSizes = {};
         saveToStorage('selectedColors', selectedColors);
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
-        
+
         showNotification('Замовлення оформлено! Дякуємо!', 'success');
         showSection('home');
     } catch (error) {
