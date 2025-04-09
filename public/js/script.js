@@ -65,19 +65,6 @@
             }
         }
 
-async function cleanupOldCarts() {
-    try {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
-        console.log('Старі кошики видалено');
-    } catch (err) {
-        console.error('Помилка при очищенні старих кошиків:', err);
-    }
-}
-
-setInterval(cleanupOldCarts, 24 * 60 * 60 * 1000);
-cleanupOldCarts();
-
 async function loadCartFromServer() {
     try {
         const cartId = localStorage.getItem('cartId');
@@ -104,6 +91,9 @@ async function loadCartFromServer() {
     }
 }
 
+// Викликайте цю функцію за потреби, наприклад, для адміністратора
+// triggerCleanupOldCarts();
+
 async function saveCartToServer() {
     try {
         const cartId = localStorage.getItem('cartId');
@@ -123,6 +113,26 @@ async function saveCartToServer() {
         console.error('Помилка збереження кошика:', e);
         saveToStorage('cart', cart);
         showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'error');
+    }
+}
+
+async function triggerCleanupOldCarts() {
+    try {
+        const response = await fetch(`${BASE_URL}/api/cleanup-carts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Не вдалося очистити старі кошики');
+        }
+        const data = await response.json();
+        console.log(data.message);
+        showNotification(data.message, 'success');
+    } catch (err) {
+        console.error('Помилка при виклику очищення кошиків:', err);
+        showNotification('Не вдалося очистити старі кошики!', 'error');
     }
 }
 

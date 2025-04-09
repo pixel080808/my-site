@@ -304,10 +304,12 @@ const wss = new WebSocket.Server({ server });
 async function cleanupOldCarts() {
     try {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
-        console.log('Старі кошики видалено');
+        const result = await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
+        console.log(`Старі кошики видалено. Кількість: ${result.deletedCount}`);
+        return result.deletedCount; // Повертаємо кількість видалених документів
     } catch (err) {
         console.error('Помилка при очищенні старих кошиків:', err);
+        throw err; // Перекидаємо помилку для обробки в ендпоінті
     }
 }
 
@@ -940,6 +942,23 @@ app.post('/api/cart', async (req, res) => {
     } catch (err) {
         console.error('Помилка при збереженні кошика:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+// Новий ендпоінт для очищення старих кошиків
+app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            console.log('Спроба доступу до /api/cleanup-carts без прав адміністратора:', req.user);
+            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+        }
+
+        const deletedCount = await cleanupOldCarts();
+        console.log(`Адміністратор ${req.user.username} викликав очищення кошиків. Кількість видалених: ${deletedCount}`);
+        res.status(200).json({ message: `Старі кошики видалено. Кількість: ${deletedCount}` });
+    } catch (err) {
+        console.error('Помилка при очищенні кошиків через /api/cleanup-carts:', err);
+        res.status(500).json({ error: 'Помилка при очищенні кошиків', details: err.message });
     }
 });
 
