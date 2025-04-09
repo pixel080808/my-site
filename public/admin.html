@@ -1674,35 +1674,35 @@ function initializeEditors() {
     }
 
     // Ініціалізація Quill для "Про нас"
-aboutEditor = new Quill('#about-editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: {
-            container: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{'undo': 'undo'}, {'redo': 'redo'}], // Змінено формат
-                ['clean']
-            ],
-            handlers: {
-                'undo': function() {
-                    this.quill.history.undo();
-                },
-                'redo': function() {
-                    this.quill.history.redo();
+    aboutEditor = new Quill('#about-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'header': 2 }, { 'header': 3 }],
+                    ['link', 'image', 'video'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{'undo': 'undo'}, {'redo': 'redo'}],
+                    ['clean']
+                ],
+                handlers: {
+                    'undo': function() {
+                        this.quill.history.undo();
+                    },
+                    'redo': function() {
+                        this.quill.history.redo();
+                    }
                 }
+            },
+            history: {
+                delay: 1000,
+                maxStack: 100,
+                userOnly: true
             }
         },
-        history: {
-            delay: 1000,
-            maxStack: 100,
-            userOnly: true
-        }
-    },
-    placeholder: 'Введіть текст "Про нас"...'
-});
+        placeholder: 'Введіть текст "Про нас"...'
+    });
 
     // Встановлюємо початковий вміст
     if (settings.about) {
@@ -1749,16 +1749,11 @@ aboutEditor = new Quill('#about-editor', {
     });
 
     // Встановлюємо розміри для відео за замовчуванням
-    setDefaultVideoSizes(aboutEditor, 'about-edit');
-
-    // Виконуємо негайно, якщо документ уже завантажений, або чекаємо події
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(addToolbarEventListeners, 100);
-    } else {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(addToolbarEventListeners, 100);
-        });
-    }
+    aboutEditor.on('text-change', (delta, oldDelta, source) => {
+        if (source === 'user') {
+            setDefaultVideoSizes(aboutEditor, 'about-edit');
+        }
+    });
 }
 
 function addToolbarEventListeners() {
