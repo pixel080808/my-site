@@ -4661,7 +4661,6 @@ async function saveEditedProduct(productId) {
         console.error('Помилка перевірки унікальності:', err);
         showNotification(err.message);
         return;
-    visuals showNotification('Помилка при додаванні бренду:', err);
     }
 
     if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
