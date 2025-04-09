@@ -835,9 +835,9 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/orders', authenticateToken, async (req, res) => {
+app.post('/api/orders', async (req, res) => {
     try {
-        console.log('Отримано запит на створення замовлення від користувача:', req.user);
+        console.log('Отримано запит на створення замовлення:', req.body);
         const orderData = req.body;
 
         const { error } = orderSchemaValidation.validate(orderData);
@@ -861,13 +861,17 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/cart', authenticateToken, async (req, res) => {
+app.get('/api/cart', async (req, res) => {
     try {
-        const userId = req.user.userId; // Отримуємо userId з JWT-токена
-        let cart = await Cart.findOne({ userId });
+        const cartId = req.query.cartId;
+        console.log('GET /api/cart:', { cartId });
+        if (!cartId) {
+            return res.status(400).json({ error: 'cartId є обов’язковим параметром' });
+        }
+        let cart = await Cart.findOne({ cartId });
         if (!cart) {
-            // Якщо кошик не існує, створюємо новий
-            cart = new Cart({ userId, items: [] });
+            console.log('Кошик не знайдено, створюємо новий:', { cartId });
+            cart = new Cart({ cartId, items: [] });
             await cart.save();
         }
         res.json(cart.items);
@@ -877,12 +881,15 @@ app.get('/api/cart', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/cart', authenticateToken, async (req, res) => {
+app.post('/api/cart', async (req, res) => {
     try {
-        const userId = req.user.userId;
-        const cartItems = req.body; // Отримуємо масив елементів кошика
+        const cartId = req.query.cartId;
+        console.log('POST /api/cart:', { cartId, body: req.body });
+        if (!cartId) {
+            return res.status(400).json({ error: 'cartId є обов’язковим параметром' });
+        }
+        const cartItems = req.body;
 
-        // Валідація даних кошика
         const cartSchemaValidation = Joi.array().items(
             Joi.object({
                 id: Joi.number().required(),
@@ -899,10 +906,10 @@ app.post('/api/cart', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Оновлюємо або створюємо кошик
-        let cart = await Cart.findOne({ userId });
+        let cart = await Cart.findOne({ cartId });
         if (!cart) {
-            cart = new Cart({ userId, items: cartItems });
+            console.log('Кошик не знайдено, створюємо новий:', { cartId });
+            cart = new Cart({ cartId, items: cartItems });
         } else {
             cart.items = cartItems;
             cart.updatedAt = Date.now();

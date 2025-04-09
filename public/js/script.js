@@ -65,18 +65,27 @@
             }
         }
 
+async function cleanupOldCarts() {
+    try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
+        console.log('Старі кошики видалено');
+    } catch (err) {
+        console.error('Помилка при очищенні старих кошиків:', err);
+    }
+}
+
+// Запускаємо очищення раз на день
+setInterval(cleanupOldCarts, 24 * 60 * 60 * 1000);
+cleanupOldCarts(); // Запускаємо при старті сервера
+
 async function loadCartFromServer() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetchWithRetry(`${BASE_URL}/api/cart`, 3, 1000, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (response.status === 401 || response.status === 403) {
-            console.warn('Користувач не авторизований для доступу до кошика');
-            throw new Error('Неавторизований доступ');
+        const cartId = localStorage.getItem('cartId');
+        if (!cartId) {
+            throw new Error('cartId відсутній');
         }
+        const response = await fetchWithRetry(`${BASE_URL}/api/cart?cartId=${cartId}`, 3, 1000);
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Сервер повернув помилку: ${response.status}, Тіло: ${errorText}`);
@@ -98,19 +107,14 @@ async function loadCartFromServer() {
 
 async function saveCartToServer() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${BASE_URL}/api/cart`, {
+        const cartId = localStorage.getItem('cartId');
+        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(cart)
         });
-        if (response.status === 401 || response.status === 403) {
-            console.warn('Користувач не авторизований для збереження кошика');
-            throw new Error('Неавторизований доступ');
-        }
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
@@ -267,6 +271,13 @@ ws.onmessage = (event) => {
 }
 
 async function initializeData() {
+    // Генеруємо cartId, якщо його немає
+    let cartId = localStorage.getItem('cartId');
+    if (!cartId) {
+        cartId = 'cart-' + Math.random().toString(36).substr(2, 9); // Генеруємо унікальний ID
+        localStorage.setItem('cartId', cartId);
+    }
+
     await loadCartFromServer(); // Завантажуємо кошик із сервера
     selectedColors = loadFromStorage('selectedColors', {});
     selectedMattressSizes = loadFromStorage('selectedMattressSizes', {});
@@ -1985,16 +1996,10 @@ async function submitOrder() {
     };
 
     try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            showNotification('Будь ласка, увійдіть у систему для оформлення замовлення!', 'error');
-            return;
-        }
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Додаємо токен
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(orderData)
         });
@@ -2007,6 +2012,9 @@ async function submitOrder() {
         // Спочатку оновлюємо кошик на сервері
         cart = [];
         await saveCartToServer();
+
+        // Скидаємо cartId
+        localStorage.removeItem('cartId');
 
         // Очищаємо локальні дані
         selectedColors = {};

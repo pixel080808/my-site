@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const cartSchema = new mongoose.Schema({
-    userId: { type: String, required: true }, // Ідентифікатор користувача (з JWT)
+    cartId: { type: String, required: true }, // Змінено з userId на cartId
     items: [
         {
-            id: { type: Number, required: true }, // ID продукту
+            id: { type: Number, required: true },
             name: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
