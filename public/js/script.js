@@ -67,12 +67,18 @@
 
 async function loadCartFromServer() {
     try {
-        const response = await fetch(`${BASE_URL}/api/cart`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Не вдалося завантажити кошик');
+        const response = await fetchWithRetry(`${BASE_URL}/api/cart`, 3, 1000, { credentials: 'include' });
+        // Перевіряємо Content-Type відповіді
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Сервер повернув не JSON: ' + contentType);
+        }
         cart = await response.json() || [];
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
-        await loadCartFromServer();
+        // Завантажуємо кошик із локального сховища як резервний варіант
+        cart = loadFromStorage('cart', []);
+        showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
     }
 }
 
@@ -91,10 +97,10 @@ async function saveCartToServer() {
     }
 }
 
-async function fetchWithRetry(url, retries = 3, delay = 1000) {
+async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, options);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return await response.json();
         } catch (error) {
