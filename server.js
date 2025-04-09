@@ -20,6 +20,7 @@ const Slide = require('./models/Slide');
 const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
+const Cart = require('./models/Cart');
 
 dotenv.config();
 
@@ -836,6 +837,7 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
 
 app.post('/api/orders', authenticateToken, async (req, res) => {
     try {
+        console.log('Отримано запит на створення замовлення від користувача:', req.user);
         const orderData = req.body;
 
         const { error } = orderSchemaValidation.validate(orderData);
@@ -856,6 +858,61 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Помилка при додаванні замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
+app.get('/api/cart', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId; // Отримуємо userId з JWT-токена
+        let cart = await Cart.findOne({ userId });
+        if (!cart) {
+            // Якщо кошик не існує, створюємо новий
+            cart = new Cart({ userId, items: [] });
+            await cart.save();
+        }
+        res.json(cart.items);
+    } catch (err) {
+        console.error('Помилка при отриманні кошика:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+app.post('/api/cart', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const cartItems = req.body; // Отримуємо масив елементів кошика
+
+        // Валідація даних кошика
+        const cartSchemaValidation = Joi.array().items(
+            Joi.object({
+                id: Joi.number().required(),
+                name: Joi.string().required(),
+                quantity: Joi.number().min(1).required(),
+                price: Joi.number().min(0).required(),
+                color: Joi.string().allow('')
+            })
+        );
+
+        const { error } = cartSchemaValidation.validate(cartItems);
+        if (error) {
+            console.error('Помилка валідації кошика:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Оновлюємо або створюємо кошик
+        let cart = await Cart.findOne({ userId });
+        if (!cart) {
+            cart = new Cart({ userId, items: cartItems });
+        } else {
+            cart.items = cartItems;
+            cart.updatedAt = Date.now();
+        }
+        await cart.save();
+
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('Помилка при збереженні кошика:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
@@ -1128,9 +1185,9 @@ app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
         const token = jwt.sign(
-            { username: ADMIN_USERNAME, role: 'admin' },
+            { userId: username, username: ADMIN_USERNAME, role: 'admin' }, // Додаємо userId
             process.env.JWT_SECRET,
-            { expiresIn: '30m' } // Зменшено до 30 хвилин
+            { expiresIn: '30m' }
         );
         res.json({ token });
     } else {

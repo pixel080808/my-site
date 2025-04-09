@@ -67,7 +67,16 @@
 
 async function loadCartFromServer() {
     try {
-        const response = await fetchWithRetry(`${BASE_URL}/api/cart`, 3, 1000, { credentials: 'include' });
+        const token = localStorage.getItem('authToken');
+        const response = await fetchWithRetry(`${BASE_URL}/api/cart`, 3, 1000, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (response.status === 401 || response.status === 403) {
+            console.warn('Користувач не авторизований для доступу до кошика');
+            throw new Error('Неавторизований доступ');
+        }
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Сервер повернув помилку: ${response.status}, Тіло: ${errorText}`);
@@ -89,10 +98,13 @@ async function loadCartFromServer() {
 
 async function saveCartToServer() {
     try {
+        const token = localStorage.getItem('authToken');
         const response = await fetch(`${BASE_URL}/api/cart`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(cart)
         });
         if (response.status === 401 || response.status === 403) {
@@ -106,8 +118,28 @@ async function saveCartToServer() {
         }
     } catch (e) {
         console.error('Помилка збереження кошика:', e);
-        saveToStorage('cart', cart); // Fallback на локальне сховище
+        saveToStorage('cart', cart);
         showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'error');
+    }
+}
+
+async function loginUser(email, password) {
+    try {
+        const response = await fetch(`${BASE_URL}/api/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка входу: ${response.status}, ${errorText}`);
+        }
+        const data = await response.json();
+        localStorage.setItem('authToken', data.token);
+        showNotification('Вхід виконано успішно!', 'success');
+    } catch (error) {
+        console.error('Помилка входу:', error);
+        showNotification('Не вдалося увійти. Перевірте дані.', 'error');
     }
 }
 
@@ -1953,10 +1985,17 @@ async function submitOrder() {
     };
 
     try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showNotification('Будь ласка, увійдіть у систему для оформлення замовлення!', 'error');
+            return;
+        }
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Додаємо credentials
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Додаємо токен
+            },
             body: JSON.stringify(orderData)
         });
         if (!response.ok) {
