@@ -1966,48 +1966,35 @@ toolbar.addHandler('image', async () => {
 async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
-
+    if (!username || !password) {
+        showNotification('Введіть логін і пароль!');
+        return;
+    }
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
-
-        const text = await response.text();
-        console.log('Відповідь сервера:', text);
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Маршрут /api/login не знайдено на сервері');
-            }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(errorData.error || 'Невідома помилка сервера');
-            } catch (e) {
-                throw new Error(`Помилка ${response.status}: ${text}`);
-            }
-        }
-
-        const data = JSON.parse(text);
-        if (data.token) {
+        if (response.ok) {
+            const data = await response.json();
             localStorage.setItem('adminToken', data.token);
             session = { isActive: true, timestamp: Date.now() };
             localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
             showSection('admin-panel');
-            console.log('Токен збережено, ініціалізація даних...');
             await initializeData();
             connectAdminWebSocket();
             resetInactivityTimer();
             showNotification('Успішний вхід!');
+            console.log('Вхід успішний, токен збережено:', data.token);
         } else {
-            throw new Error('Токен не отримано у відповіді');
+            const errorData = await response.text();
+            showNotification('Неправильний логін або пароль: ' + errorData);
+            console.error('Помилка входу:', errorData);
         }
     } catch (e) {
         console.error('Помилка входу:', e);
-        showNotification('Не вдалося увійти: ' + e.message);
+        showNotification('Помилка входу: ' + e.message);
     }
 }
 
@@ -5327,12 +5314,24 @@ if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && loc
     showSection('admin-login');
 }
 
-    document.addEventListener('mousemove', resetInactivityTimer);
-    document.addEventListener('keypress', resetInactivityTimer);
-    document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('mousemove', resetInactivityTimer);
+document.addEventListener('keypress', resetInactivityTimer);
+document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
     if (loginBtn) {
         loginBtn.addEventListener('click', login);
+    }
+    // Перевірка сесії при завантаженні
+    if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
+        showSection('admin-panel');
+        initializeData();
+        connectAdminWebSocket();
+        resetInactivityTimer();
+    } else {
+        localStorage.removeItem('adminToken');
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
     }
 });
 
@@ -5439,18 +5438,6 @@ function connectAdminWebSocket() {
     socket.onerror = (error) => {
         console.error('Помилка WebSocket адмінки:', error);
         showNotification('Не вдалося підключитися до WebSocket. Перевірте мережу або сервер.');
-    };
-}
-
-    socket.onclose = (event) => {
-        console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });
-        if (event.code !== 1000) {
-            setTimeout(() => connectAdminWebSocket(), 2000);
-        }
-    };
-
-    socket.onerror = (error) => {
-        console.error('Помилка WebSocket адмінки:', error);
     };
 }
   </script>
