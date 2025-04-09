@@ -1963,8 +1963,7 @@ toolbar.addHandler('image', async () => {
         }
     }
 
-let session = { isActive: false, timestamp: 0 }; // Тимчасова змінна, яка не зберігається локально
-let adminToken = null; // Токен зберігається лише в пам’яті під час сесії
+session = { isActive: false, timestamp: 0 }; // Тимчасова змінна, яка не зберігається локальноlet adminToken = null; // Токен зберігається лише в пам’яті під час сесії
 
 async function login() {
     const username = document.getElementById('admin-username').value;
