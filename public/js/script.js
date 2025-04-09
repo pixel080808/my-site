@@ -25,7 +25,7 @@
         const activeTimers = new Map();
         let parentGroupProduct = null; // Додаємо оголошення
         const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
-        const NO_IMAGE_URL = 'https://via.placeholder.com/300x200.png?text=Фото+відсутнє';
+        const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутнє';
 
         function transliterate(str) {
             const uaToEn = {
@@ -68,7 +68,11 @@
 async function loadCartFromServer() {
     try {
         const response = await fetchWithRetry(`${BASE_URL}/api/cart`, 3, 1000, { credentials: 'include' });
-        // Перевіряємо Content-Type відповіді
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Сервер повернув помилку: ${response.status}, Тіло: ${errorText}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
         const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('application/json')) {
             throw new Error('Сервер повернув не JSON: ' + contentType);
@@ -76,7 +80,6 @@ async function loadCartFromServer() {
         cart = await response.json() || [];
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
-        // Завантажуємо кошик із локального сховища як резервний варіант
         cart = loadFromStorage('cart', []);
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
     }
@@ -90,10 +93,15 @@ async function saveCartToServer() {
             credentials: 'include',
             body: JSON.stringify(cart)
         });
-        if (!response.ok) throw new Error(`Помилка сервера: ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
+            throw new Error(`Помилка сервера: ${response.status}`);
+        }
     } catch (e) {
         console.error('Помилка збереження кошика:', e);
         saveToStorage('cart', cart); // Fallback на локальне сховище
+        showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'error');
     }
 }
 
@@ -102,7 +110,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
         try {
             const response = await fetch(url, options);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            return await response.json();
+            return response; // Повертаємо об’єкт відповіді, а не JSON
         } catch (error) {
             if (i === retries - 1) {
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
