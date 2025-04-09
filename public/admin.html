@@ -1241,7 +1241,6 @@ async function loadProducts() {
                 'Authorization': `Bearer ${token}`
             }
         });
-        console.log('Відповідь від /api/products:', response.status, response.statusText);
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1674,35 +1673,35 @@ function initializeEditors() {
     }
 
     // Ініціалізація Quill для "Про нас"
-    aboutEditor = new Quill('#about-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: {
-                container: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'header': 2 }, { 'header': 3 }],
-                    ['link', 'image', 'video'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    [{'undo': 'undo'}, {'redo': 'redo'}],
-                    ['clean']
-                ],
-                handlers: {
-                    'undo': function() {
-                        this.quill.history.undo();
-                    },
-                    'redo': function() {
-                        this.quill.history.redo();
-                    }
+aboutEditor = new Quill('#about-editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: {
+            container: [
+                ['bold', 'italic', 'underline'],
+                [{ 'header': 2 }, { 'header': 3 }],
+                ['link', 'image', 'video'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{'undo': 'undo'}, {'redo': 'redo'}], // Змінено формат
+                ['clean']
+            ],
+            handlers: {
+                'undo': function() {
+                    this.quill.history.undo();
+                },
+                'redo': function() {
+                    this.quill.history.redo();
                 }
-            },
-            history: {
-                delay: 1000,
-                maxStack: 100,
-                userOnly: true
             }
         },
-        placeholder: 'Введіть текст "Про нас"...'
-    });
+        history: {
+            delay: 1000,
+            maxStack: 100,
+            userOnly: true
+        }
+    },
+    placeholder: 'Введіть текст "Про нас"...'
+});
 
     // Встановлюємо початковий вміст
     if (settings.about) {
@@ -1749,11 +1748,16 @@ function initializeEditors() {
     });
 
     // Встановлюємо розміри для відео за замовчуванням
-    aboutEditor.on('text-change', (delta, oldDelta, source) => {
-        if (source === 'user') {
-            setDefaultVideoSizes(aboutEditor, 'about-edit');
-        }
-    });
+    setDefaultVideoSizes(aboutEditor, 'about-edit');
+
+    // Виконуємо негайно, якщо документ уже завантажений, або чекаємо події
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(addToolbarEventListeners, 100);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(addToolbarEventListeners, 100);
+        });
+    }
 }
 
 function addToolbarEventListeners() {
@@ -1777,11 +1781,7 @@ function addToolbarEventListeners() {
 }
 
 function initializeProductEditor(description = '', descriptionDelta = null) {
-    const editorContainer = document.getElementById('product-description-editor');
-    if (!editorContainer) {
-        console.error('Елемент #product-description-editor не знайдено.');
-        return;
-    }
+    // Ініціалізуємо Quill редактор
     productEditor = new Quill('#product-description-editor', {
         theme: 'snow',
         modules: {
@@ -1790,7 +1790,7 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
                 [{ 'header': 2 }, { 'header': 3 }],
                 ['link', 'image', 'video'],
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'],
+                ['undo', 'redo'], // Використовуємо вбудовані кнопки undo/redo
                 ['clean']
             ],
             history: {
@@ -1800,6 +1800,8 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         }
     });
+
+    // Встановлюємо вміст редактора
     if (descriptionDelta) {
         productEditor.setContents(descriptionDelta, 'silent');
     } else if (description) {
@@ -1807,22 +1809,117 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             const delta = productEditor.clipboard.convert(description);
             productEditor.setContents(delta, 'silent');
         } catch (e) {
-            console.error('Помилка при встановленні вмісту опису товару:', e);
-            productEditor.setText(description, 'silent');
+            console.error('Помилка при встановленні вмісту редактора товару:', e);
+            productEditor.setContents([{ insert: description }], 'silent');
         }
+    } else {
+        productEditor.setContents([], 'silent');
     }
     document.getElementById('product-description').value = productEditor.root.innerHTML;
+
+    // Додаємо обробник для завантаження зображень через панель інструментів
+    const toolbar = productEditor.getModule('toolbar');
+toolbar.addHandler('image', async () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp'); // Додано WebP
+    input.click();
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (file) {
+            const validation = validateFile(file); // Використовуємо оновлену функцію
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Помилка завантаження: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                if (data.url) {
+                    const range = productEditor.getSelection() || { index: 0 };
+                    productEditor.insertEmbed(range.index, 'image', data.url);
+                    setDefaultVideoSizes(productEditor, 'product-description');
+                }
+            } catch (err) {
+                showNotification('Не вдалося завантажити зображення: ' + err.message);
+            }
+        }
+    };
+});
+
+    // Додаємо обробник для вставки відео
+    toolbar.addHandler('video', () => {
+        let url = prompt('Введіть URL відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID):');
+        if (url) {
+            // Перетворюємо URL у формат embed
+            const watchRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=([^\s&]+)/;
+            const embedRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/([^\s]+)/;
+            const shortRegex = /^(https?:\/\/)?youtu\.be\/([^\s]+)/;
+
+            let videoId = null;
+
+            // Перевіряємо формат watch?v=
+            if (watchRegex.test(url)) {
+                const match = url.match(watchRegex);
+                videoId = match[3];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            // Перевіряємо формат embed
+            else if (embedRegex.test(url)) {
+                const match = url.match(embedRegex);
+                videoId = match[3];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            // Перевіряємо формат youtu.be
+            else if (shortRegex.test(url)) {
+                const match = url.match(shortRegex);
+                videoId = match[2];
+                url = `https://www.youtube.com/embed/${videoId}`;
+            }
+            else {
+                showNotification('Введіть коректний URL для YouTube відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID)');
+                return;
+            }
+
+            const range = productEditor.getSelection() || { index: 0 };
+            productEditor.insertEmbed(range.index, 'video', url);
+            setDefaultVideoSizes(productEditor, 'product-description');
+        }
+    });
+
+    // Обробник для оновлення прихованого поля
     productEditor.on('text-change', () => {
         document.getElementById('product-description').value = productEditor.root.innerHTML;
         unsavedChanges = true;
     });
+
+    // Обробник кліків для зображень і відео
     productEditor.root.addEventListener('click', (e) => {
         const target = e.target;
         if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
             openResizeModal(target);
         }
     });
-}
 
     // Обробник вставки зображень через копіювання/вставку
     productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
@@ -2137,12 +2234,142 @@ async function updateAbout() {
 }
 
 function renderAdmin(activeTab = 'site-editing') {
-    console.log('Рендеринг адмін-панелі з activeTab:', activeTab);
-    if (activeTab === 'site-editing') {
-        renderSettingsAdmin();
-        renderCategoriesAdmin();
-        renderSlidesAdmin();
-    } else if (activeTab === 'products') {
+    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings);
+
+    const storeName = document.getElementById('store-name');
+    if (storeName) storeName.value = settings.name || '';
+    const baseUrl = document.getElementById('base-url');
+    if (baseUrl) baseUrl.value = settings.baseUrl || '';
+    const logoUrl = document.getElementById('logo-url');
+    if (logoUrl) logoUrl.value = settings.logo || '';
+    const logoWidth = document.getElementById('logo-width');
+    if (logoWidth) logoWidth.value = settings.logoWidth || 150;
+    const faviconUrl = document.getElementById('favicon-url');
+    if (faviconUrl) faviconUrl.value = settings.favicon || '';
+
+    const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
+    const contactPhones = document.getElementById('contact-phones');
+    if (contactPhones) contactPhones.value = contacts.phones || '';
+    const contactAddresses = document.getElementById('contact-addresses');
+    if (contactAddresses) contactAddresses.value = contacts.addresses || '';
+    const contactSchedule = document.getElementById('contact-schedule');
+    if (contactSchedule) contactSchedule.value = contacts.schedule || '';
+
+    if (document.getElementById('about-editor')) {
+        if (!aboutEditor) {
+            initializeEditors();
+        }
+        if (settings.aboutDelta) {
+            aboutEditor.setContents(settings.aboutDelta, 'silent');
+        } else if (settings.about) {
+            try {
+                const delta = aboutEditor.clipboard.convert(settings.about);
+                aboutEditor.setContents(delta, 'silent');
+            } catch (e) {
+                aboutEditor.setContents([{ insert: settings.about }], 'silent');
+            }
+        } else {
+            aboutEditor.setContents([], 'silent');
+        }
+        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+    } else if (document.getElementById('about-edit')) {
+        document.getElementById('about-edit').value = settings.about || '';
+    }
+
+    const socialToggle = document.getElementById('social-toggle');
+    if (socialToggle) socialToggle.checked = settings.showSocials !== false;
+    const slideToggle = document.getElementById('slide-toggle');
+    if (slideToggle) slideToggle.checked = settings.showSlides !== false;
+    const slideWidth = document.getElementById('slide-width');
+    if (slideWidth) slideWidth.value = settings.slideWidth || 75;
+    const slideHeight = document.getElementById('slide-height');
+    if (slideHeight) slideHeight.value = settings.slideHeight || 200;
+    const slideInterval = document.getElementById('slide-interval');
+    if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
+    const categoryWidth = document.getElementById('category-width');
+    if (categoryWidth) categoryWidth.value = settings.categoryWidth || 200;
+    const categoryHeight = document.getElementById('category-height');
+    if (categoryHeight) categoryHeight.value = settings.categoryHeight || 150;
+    const productWidth = document.getElementById('product-width');
+    if (productWidth) productWidth.value = settings.productWidth || 300;
+    const productHeight = document.getElementById('product-height');
+    if (productHeight) productHeight.value = settings.productHeight || 280;
+
+    const socialList = document.getElementById('social-list');
+    if (socialList) {
+        socialList.innerHTML = settings.socials.map((social, index) => `
+            <div class="social-item">
+                <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
+                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+            </div>
+        `).join('');
+    }
+
+    const catList = document.getElementById('cat-list');
+    if (catList) {
+        catList.innerHTML = categories.map((c, index) => `
+            <div class="category-item">
+                <button class="move-btn" onclick="moveCategoryUp(${index})" ${index === 0 ? 'disabled' : ''}>↑</button>
+                <button class="move-btn" onclick="moveCategoryDown(${index})" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
+                ${c.name} (${c.slug}) 
+                <button class="edit-btn" onclick="editCategory('${c.name}')">Редагувати</button> 
+                <button class="delete-btn" onclick="deleteCategory('${c.name}')">Видалити</button>
+            </div>
+            <div class="subcat-list">
+                ${(c.subcategories || []).map((sub, subIndex) => `
+                    <p>
+                        <button class="move-btn" onclick="moveSubcategoryUp('${c.name}', ${subIndex})" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="move-btn" onclick="moveSubcategoryDown('${c.name}', ${subIndex})" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
+                        ${sub.name} (${sub.slug}) 
+                        <button class="edit-btn" onclick="editSubcategory('${c.name}', '${sub.name}')">Редагувати</button> 
+                        <button class="delete-btn" onclick="deleteSubcategory('${c.name}', '${sub.name}')">Видалити</button>
+                    </p>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    const filterList = document.getElementById('filter-list-admin');
+    if (filterList) {
+        filterList.innerHTML = filters.map((f, index) => `
+            <p>
+                <button class="move-btn" onclick="moveFilterUp(${index})" ${index === 0 ? 'disabled' : ''}>↑</button>
+                <button class="move-btn" onclick="moveFilterDown(${index})" ${index === filters.length - 1 ? 'disabled' : ''}>↓</button>
+                ${f.label} (${f.options.sort().join(', ')}) 
+                <button class="edit-btn" onclick="editFilter('${f.name}')">Редагувати</button> 
+                <button class="delete-btn" onclick="deleteFilter('${f.name}')">Видалити</button>
+            </p>
+        `).join('');
+    }
+
+    const orderFieldList = document.getElementById('order-field-list');
+    if (orderFieldList) {
+        orderFieldList.innerHTML = orderFields.map(f => `
+            <p>${f.label} (${f.type}${f.options ? `: ${f.options.join(', ')}` : ''}) 
+                <button class="edit-btn" onclick="editOrderField('${f.name}')">Редагувати</button> 
+                <button class="delete-btn" onclick="deleteOrderField('${f.name}')">Видалити</button>
+            </p>
+        `).join('');
+    }
+
+    const slideList = document.getElementById('slide-list');
+    if (slideList) {
+        slideList.innerHTML = slides.map(s => `
+            <p>Слайд #${s.order} 
+                <button class="edit-btn" onclick="editSlide(${s.order})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteSlide(${s.order})">Видалити</button>
+            </p>
+        `).join('');
+    }
+
+    const subcatSelect = document.getElementById('subcat-category');
+    if (subcatSelect) {
+        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' + 
+            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    }
+
+    if (activeTab === 'products') {
         const productList = document.getElementById('product-list-admin');
         if (productList) {
             if (Array.isArray(products) && products.length > 0) {
@@ -2188,43 +2415,7 @@ function renderAdmin(activeTab = 'site-editing') {
                 productList.innerHTML = '<p>Немає товарів для відображення.</p>';
             }
         }
-    } else if (activeTab === 'orders') {
-        const statusFilter = document.getElementById('order-status-filter')?.value || '';
-        let filteredOrders = [...orders];
-        if (statusFilter) {
-            filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
-        }
-        const start = (currentPage - 1) * ordersPerPage;
-        const end = start + ordersPerPage;
-        const paginatedOrders = filteredOrders.slice(start, end);
-        const orderList = document.getElementById('order-list');
-        if (orderList) {
-            orderList.innerHTML = paginatedOrders.map((o, index) => {
-                const orderDate = new Date(o.date);
-                const formattedDate = orderDate.toLocaleString('uk-UA', {
-                    timeZone: settings.timezone || 'Europe/Kyiv',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                return `
-                    <div class="order-item">
-                        <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                        <div>
-                            <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                            <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                            <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
-        }
     }
-}
 
     if (activeTab === 'orders') {
         const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -2267,29 +2458,27 @@ function renderAdmin(activeTab = 'site-editing') {
 function renderCategoriesAdmin() {
     const catList = document.getElementById('cat-list');
     if (catList) {
-        catList.innerHTML = categories.map(c => {
-            return `
-                <div class="category-item">
-                    ${c.name}
-                    <button class="edit-btn" onclick="editCategory('${c.id}', '${c.name}')">Редагувати</button>
-                    <button class="delete-btn" onclick="deleteCategory('${c.id}', '${c.name}')">Видалити</button>
-                </div>
+        catList.innerHTML = categories.map(cat => `
+            <div class="category-item">
+                ${cat.name}
+                <button class="edit-btn" onclick="editCategory('${cat._id}')">Редагувати</button>
+                <button class="delete-btn" onclick="deleteCategory('${cat._id}')">Видалити</button>
                 <div class="subcat-list">
-                    ${c.subcategories.map(sub => `
+                    ${(cat.subcategories || []).map(sub => `
                         <p>
-                            <button class="edit-btn" onclick="editSubcategory('${c.id}', '${sub.id}', '${sub.name}')">Редагувати</button>
-                            <button class="delete-btn" onclick="deleteSubcategory('${c.id}', '${sub.id}', '${sub.name}')">Видалити</button>
                             ${sub.name}
+                            <button class="edit-btn" onclick="editSubcategory('${cat._id}', '${sub._id}')">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteSubcategory('${cat._id}', '${sub._id}')">Видалити</button>
                         </p>
                     `).join('')}
                 </div>
-            `;
-        }).join('');
+            </div>
+        `).join('');
     }
     const subcatSelect = document.getElementById('subcat-category');
     if (subcatSelect) {
-        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
-            categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' + 
+            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     }
 }
 
@@ -2315,16 +2504,7 @@ function renderSettingsAdmin() {
     document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
     document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
     document.getElementById('social-toggle').checked = settings.showSocials;
-    const socialList = document.getElementById('social-list');
-    if (socialList) {
-        socialList.innerHTML = settings.socials.map((social, index) => `
-            <div class="social-item">
-                <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
-                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
+    renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
     document.getElementById('category-width').value = settings.categoryWidth || '';
     document.getElementById('category-height').value = settings.categoryHeight || '';
     document.getElementById('product-width').value = settings.productWidth || '';
@@ -2352,35 +2532,34 @@ function renderSlidesAdmin() {
     document.getElementById('slide-interval').value = settings.slideInterval || '';
 }
 
-function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`Контейнер з ID ${containerId} не знайдено.`);
-        return;
+    function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        if (currentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = 'Попередня';
+            prevBtn.onclick = () => { currentPage--; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
+            container.appendChild(prevBtn);
+        }
+
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.className = i === currentPage ? 'active' : '';
+            btn.onclick = () => { currentPage = i; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
+            container.appendChild(btn);
+        }
+
+        if (currentPage < totalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Наступна';
+            nextBtn.onclick = () => { currentPage++; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
+            container.appendChild(nextBtn);
+        }
     }
-    container.innerHTML = '';
-    if (totalPages <= 1) return;
-    if (currentPage > 1) {
-        const prevBtn = document.createElement('button');
-        prevBtn.textContent = 'Попередня';
-        prevBtn.onclick = () => { currentPage--; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-        container.appendChild(prevBtn);
-    }
-    for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        btn.className = i === currentPage ? 'active' : '';
-        btn.onclick = () => { currentPage = i; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-        container.appendChild(btn);
-    }
-    if (currentPage < totalPages) {
-        const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Наступна';
-        nextBtn.onclick = () => { currentPage++; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-        container.appendChild(nextBtn);
-    }
-}
 
 function closeModal() {
     const modal = document.getElementById('modal');
@@ -5251,7 +5430,7 @@ function connectAdminWebSocket() {
 
     socket.onclose = (event) => {
         console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });
-        if (event.code !== 1000) { // 1000 — нормальне закриття
+        if (event.code !== 1000) {
             showNotification('WebSocket відключено. Спроба перепідключення через 2 секунди...');
             setTimeout(() => connectAdminWebSocket(), 2000);
         }
@@ -5259,7 +5438,19 @@ function connectAdminWebSocket() {
 
     socket.onerror = (error) => {
         console.error('Помилка WebSocket адмінки:', error);
-        showNotification('Не вдалося підключитися до WebSocket. Перевірте мережу.');
+        showNotification('Не вдалося підключитися до WebSocket. Перевірте мережу або сервер.');
+    };
+}
+
+    socket.onclose = (event) => {
+        console.log('WebSocket адмінки відключено:', { code: event.code, reason: event.reason });
+        if (event.code !== 1000) {
+            setTimeout(() => connectAdminWebSocket(), 2000);
+        }
+    };
+
+    socket.onerror = (error) => {
+        console.error('Помилка WebSocket адмінки:', error);
     };
 }
   </script>
