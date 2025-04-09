@@ -5,6 +5,7 @@ const orderSchema = new mongoose.Schema({
     customer: Object,
     items: [{
         id: Number,
+        name: String, // Додаємо поле name
         quantity: Number,
         price: Number,
         color: String

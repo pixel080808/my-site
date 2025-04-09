@@ -221,6 +221,7 @@ const orderSchemaValidation = Joi.object({
     items: Joi.array().items(
         Joi.object({
             id: Joi.number().required(),
+            name: Joi.string().required(), // Додаємо поле name
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
             color: Joi.string().allow('')
@@ -299,6 +300,20 @@ const authenticateToken = (req, res, next) => {
 // Налаштування WebSocket
 const server = app.listen(process.env.PORT || 3000, () => console.log(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
+
+async function cleanupOldCarts() {
+    try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
+        console.log('Старі кошики видалено');
+    } catch (err) {
+        console.error('Помилка при очищенні старих кошиків:', err);
+    }
+}
+
+// Запускаємо очищення раз на день
+setInterval(cleanupOldCarts, 24 * 60 * 60 * 1000);
+cleanupOldCarts(); // Запускаємо при старті сервера
 
 wss.on('connection', (ws, req) => {
     const urlParams = new URLSearchParams(req.url.split('?')[1]);
@@ -852,6 +867,7 @@ app.post('/api/orders', async (req, res) => {
         const order = new Order(orderData);
         await order.save();
 
+        console.log('Замовлення успішно створено:', order);
         const orders = await Order.find();
         broadcast('orders', orders);
         res.status(201).json(order);
@@ -874,6 +890,7 @@ app.get('/api/cart', async (req, res) => {
             cart = new Cart({ cartId, items: [] });
             await cart.save();
         }
+        console.log('Повертаємо кошик:', cart.items);
         res.json(cart.items);
     } catch (err) {
         console.error('Помилка при отриманні кошика:', err);
@@ -896,7 +913,8 @@ app.post('/api/cart', async (req, res) => {
                 name: Joi.string().required(),
                 quantity: Joi.number().min(1).required(),
                 price: Joi.number().min(0).required(),
-                color: Joi.string().allow('')
+                color: Joi.string().allow(''),
+                photo: Joi.string().uri().allow('') // Дозволяємо photo як URL
             })
         );
 
@@ -911,11 +929,13 @@ app.post('/api/cart', async (req, res) => {
             console.log('Кошик не знайдено, створюємо новий:', { cartId });
             cart = new Cart({ cartId, items: cartItems });
         } else {
+            console.log('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
             cart.updatedAt = Date.now();
         }
         await cart.save();
 
+        console.log('Кошик успішно збережено:', { cartId });
         res.status(200).json({ success: true });
     } catch (err) {
         console.error('Помилка при збереженні кошика:', err);

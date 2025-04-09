@@ -75,9 +75,8 @@ async function cleanupOldCarts() {
     }
 }
 
-// Запускаємо очищення раз на день
 setInterval(cleanupOldCarts, 24 * 60 * 60 * 1000);
-cleanupOldCarts(); // Запускаємо при старті сервера
+cleanupOldCarts();
 
 async function loadCartFromServer() {
     try {
