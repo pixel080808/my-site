@@ -1970,11 +1970,11 @@ async function login() {
     const password = document.getElementById('admin-password').value;
 
     try {
-        const response = await fetch('/api/admin/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+});
 
         if (!response.ok) throw new Error('Неправильний логін або пароль');
 
