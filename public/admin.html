@@ -1676,24 +1676,24 @@ function initializeEditors() {
 aboutEditor = new Quill('#about-editor', {
     theme: 'snow',
     modules: {
-        toolbar: {
-            container: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{'undo': 'undo'}, {'redo': 'redo'}], // Змінено формат
-                ['clean']
-            ],
-            handlers: {
-                'undo': function() {
-                    this.quill.history.undo();
-                },
-                'redo': function() {
-                    this.quill.history.redo();
-                }
-            }
+toolbar: {
+    container: [
+        ['bold', 'italic', 'underline'],
+        [{ 'header': 2 }, { 'header': 3 }],
+        ['link', 'image', 'video'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['undo', 'redo'], // Виправлено
+        ['clean']
+    ],
+    handlers: {
+        'undo': function() {
+            this.quill.history.undo();
         },
+        'redo': function() {
+            this.quill.history.redo();
+        }
+    }
+},
         history: {
             delay: 1000,
             maxStack: 100,
@@ -2859,52 +2859,52 @@ async function addCategory() {
 async function addSubcategory() {
     const name = document.getElementById('subcat-name').value;
     const slug = document.getElementById('subcat-slug').value;
-    const imgUrl = document.getElementById('subcat-img-url').value;
+    const imageUrl = document.getElementById('subcat-img-url').value;
     const fileInput = document.getElementById('subcat-img-file');
     const categoryName = document.getElementById('subcat-category').value;
-    const token = localStorage.getItem('adminToken');
 
     if (!name || !slug || !categoryName) {
-        alert('Введіть назву, шлях та виберіть категорію для підкатегорії!');
+        showNotification('Введіть назву, шлях і виберіть категорію для підкатегорії!');
         return;
     }
 
-    const category = categories.find(cat => cat.name === categoryName);
-    if (!category) {
-        showNotification('Категорію не знайдено!');
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
         return;
     }
 
-    let subcatImageUrl = imgUrl;
-    if (fileInput.files.length > 0) {
+    let image = imageUrl;
+    if (fileInput.files[0]) {
         const file = fileInput.files[0];
         const validation = validateFile(file);
         if (!validation.valid) {
-            alert(validation.error);
+            showNotification(validation.error);
             return;
         }
+        const formData = new FormData();
+        formData.append('file', file);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
             const data = await response.json();
-            subcatImageUrl = data.url;
-        } catch (err) {
-            console.error('Помилка завантаження зображення підкатегорії:', err);
-            showNotification('Не вдалося завантажити зображення: ' + err.message);
+            image = data.url;
+        } catch (e) {
+            console.error('Помилка завантаження зображення підкатегорії:', e);
+            showNotification('Не вдалося завантажити зображення: ' + e.message);
             return;
         }
     }
 
-    const subcategory = { name, slug, image: subcatImageUrl || '' };
+    const subcategory = { name, slug, image: image || '' };
     console.log('Надсилаємо підкатегорію:', subcategory);
 
     try {
-        const response = await fetch(`/api/categories/${category.slug}/subcategories`, {
+        const response = await fetch(`/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2914,23 +2914,26 @@ async function addSubcategory() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorData.error}`);
+            const errorText = await response.text();
+            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorText}`);
         }
 
-        const newSubcat = await response.json();
-        category.subcategories = category.subcategories || [];
-        category.subcategories.push(newSubcat);
+        const newSubcategory = await response.json();
+        const category = categories.find(c => c.name === categoryName);
+        if (category) {
+            if (!category.subcategories) category.subcategories = [];
+            category.subcategories.push(newSubcategory);
+        }
         renderCategoriesAdmin();
         document.getElementById('subcat-name').value = '';
         document.getElementById('subcat-slug').value = '';
         document.getElementById('subcat-img-url').value = '';
-        fileInput.value = '';
+        document.getElementById('subcat-img-file').value = '';
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання підкатегорії:', err);
-        showNotification(err.message);
+    } catch (e) {
+        console.error('Помилка додавання підкатегорії:', e);
+        showNotification('Не вдалося додати підкатегорію: ' + e.message);
     }
 }
 
@@ -4332,7 +4335,7 @@ async function saveNewProduct() {
                 localStorage.removeItem('adminToken');
                 session = { isActive: false, timestamp: 0 };
                 localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
+                showSection('admin-loginаль');
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
@@ -4364,28 +4367,28 @@ async function saveNewProduct() {
         return;
     }
 
-if (brand && !brands.includes(brand)) {
-    try {
-        const response = await fetch('/api/brands', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name: brand })
-        });
-        if (response.ok) {
-            brands.push(brand); // Додаємо лише після успішного збереження на сервері
-            updateBrandOptions();
-        } else {
-            console.error('Помилка додавання бренду:', response.statusText);
+    if (brand && !brands.includes(brand)) {
+        try {
+            const response = await fetch('/api/brands', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: brand })
+            });
+            if (response.ok) {
+                brands.push(brand);
+                updateBrandOptions();
+            } else {
+                console.error('Помилка додавання бренду:', response.statusText);
+            }
+        } catch (e) {
+            console.error('Помилка додавання бренду:', e);
         }
-    } catch (e) {
-        console.error('Помилка додавання бренду:', e);
     }
-}
 
-if (material && !materials.includes(material)) {
+    if (material && !materials.includes(material)) {
         try {
             const response = await fetch('/api/materials', {
                 method: 'POST',
@@ -4418,7 +4421,6 @@ if (material && !materials.includes(material)) {
         salePrice: salePrice,
         saleEnd: saleEnd || null,
         description: description || '',
-        descriptionDelta: descriptionDelta || null,
         widthCm,
         depthCm,
         heightCm,
@@ -4476,21 +4478,7 @@ if (material && !materials.includes(material)) {
         updatedDescription = updatedDescription.replace(oldUrl, newUrl);
     });
 
-    let updatedDelta = descriptionDelta;
-    if (mediaUrls.length > 0) {
-        updatedDelta = { ops: [] };
-        descriptionDelta.ops.forEach(op => {
-            if (op.insert && typeof op.insert === 'object' && op.insert.image) {
-                const newUrl = mediaUrls.find(m => m.oldUrl === op.insert.image)?.newUrl || op.insert.image;
-                updatedDelta.ops.push({ insert: { image: newUrl }, attributes: op.attributes });
-            } else {
-                updatedDelta.ops.push(op);
-            }
-        });
-    }
-
     product.description = updatedDescription;
-    product.descriptionDelta = updatedDelta;
 
     const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
     for (let file of photoFiles) {
@@ -4768,7 +4756,7 @@ async function saveEditedProduct(productId) {
         return;
     }
 
-    const token = adminToken;
+    const token = localStorage.getItem('adminToken');
     if (!token) {
         showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
         showSection('admin-login');
@@ -5028,21 +5016,33 @@ async function toggleProductActive(productId) {
     const newActiveStatus = !product.active;
 
     const cleanProduct = {
-        ...product,
-        active: newActiveStatus,
+        type: product.type,
+        name: product.name,
+        slug: product.slug,
+        brand: product.brand || '',
+        category: product.category || '',
+        subcategory: product.subcategory || '',
+        material: product.material || '',
+        price: product.price || null,
+        salePrice: product.salePrice || null,
+        saleEnd: product.saleEnd || null,
+        description: product.description || '',
+        widthCm: product.widthCm || null,
+        depthCm: product.depthCm || null,
+        heightCm: product.heightCm || null,
+        lengthCm: product.lengthCm || null,
+        photos: product.photos || [],
         colors: product.colors.map(color => ({
             name: color.name,
             value: color.value,
             priceChange: color.priceChange,
             photo: color.photo
         })),
-        sizes: product.sizes,
-        groupProducts: product.groupProducts
+        sizes: product.sizes || [],
+        groupProducts: product.groupProducts || [],
+        active: newActiveStatus,
+        visible: product.visible
     };
-    delete cleanProduct._id;
-    delete cleanProduct.__v;
-    delete cleanProduct.id;
-    delete cleanProduct.descriptionDelta; // Видаляємо descriptionDelta, якщо сервер його не приймає
 
     try {
         const response = await fetch(`/api/products/${productId}`, {
@@ -5321,7 +5321,13 @@ async function saveOrderStatus(index) {
     const newStatus = document.getElementById('new-order-status').value;
 
     if (newStatus) {
-        order.status = newStatus;
+        const updatedOrder = {
+            status: newStatus,
+            date: order.date,
+            total: order.total,
+            customer: order.customer,
+            items: order.items
+        };
         try {
             const response = await fetch(`/api/orders/${order._id}`, {
                 method: 'PUT',
@@ -5329,10 +5335,14 @@ async function saveOrderStatus(index) {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(order)
+                body: JSON.stringify(updatedOrder)
             });
 
-            if (!response.ok) throw new Error('Не вдалося оновити статус замовлення');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Не вдалося оновити статус замовлення: ${errorData.error}`);
+            }
+            order.status = newStatus;
             closeModal();
             renderAdmin('orders');
             showNotification('Статус замовлення змінено!');
