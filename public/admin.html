@@ -1533,7 +1533,12 @@ function updateBrandOptions() {
 }
 
 async function initializeData() {
-    try {
+    const token = localStorage.getItem('adminToken');
+    if (!token || !(await refreshToken())) {
+        showSection('admin-login');
+        showNotification('Сесія недійсна. Увійдіть знову.');
+        return;
+    }
         await Promise.all([
             loadProducts(),
             loadCategories(),
@@ -2276,37 +2281,19 @@ async function updateContacts() {
     }
 
 async function updateAbout() {
+    const content = document.getElementById('about-edit').value;
+    settings.about = content;
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    const aboutContent = document.getElementById('about-edit').value;
-    settings.about = aboutContent;
-
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ about: aboutContent })
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ about: content })
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити "Про нас": ${errorData.error}`);
-        }
-
-        showNotification('Інформацію "Про нас" оновлено!');
-        unsavedChanges = false;
-        resetInactivityTimer();
+        if (!response.ok) throw new Error(await response.text());
+        showNotification('Інформація "Про нас" збережена!');
     } catch (err) {
-        console.error('Помилка оновлення "Про нас":', err);
-        showNotification(err.message);
+        showNotification('Помилка збереження: ' + err.message);
     }
 }
 
@@ -2913,10 +2900,10 @@ async function addSubcategory() {
             body: JSON.stringify(subcategory)
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorText}`);
-        }
+if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`${response.status}: ${errorData.error || response.statusText}`);
+}
 
         const newSubcategory = await response.json();
         const category = categories.find(c => c.name === categoryName);
@@ -3436,6 +3423,9 @@ function debounce(func, wait) {
 }
 
 async function addSlide() {
+    const slide = {
+        _id: Date.now().toString(), // Тимчасовий унікальний ID
+        img: document.getElementById('slide-img-url').value,
     const width = parseInt(document.getElementById('slide-width').value) || 100;
     const height = parseInt(document.getElementById('slide-height').value) || 300;
     const interval = parseInt(document.getElementById('slide-interval').value) || 5000;
@@ -4582,7 +4572,10 @@ async function saveNewProduct() {
 
 function openEditProductModal(productId) {
     const product = products.find(p => p.id === productId);
-    if (product) {
+    if (!product || !productId) {
+        showNotification('Товар не знайдено або ID відсутній!');
+        return;
+    }
         newProduct = { ...product, colors: [...product.colors], photos: [...product.photos], sizes: [...product.sizes], groupProducts: [...product.groupProducts] };
         // Екрануємо лапки для HTML, замінюючи " на &quot;
         const escapedName = product.name.replace(/"/g, '&quot;');
@@ -5005,13 +4998,24 @@ async function deleteProduct(productId) {
 async function toggleProductActive(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
-
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
+    const newActiveStatus = !product.active;
+    const updatedProduct = { ...product, active: newActiveStatus };
+    
+    try {
+        const response = await fetch(`/api/products/${product._id || productId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedProduct)
+        });
+        if (!response.ok) throw new Error(`Помилка: ${await response.text()}`);
+        product.active = newActiveStatus;
+        renderAdmin('products');
+        showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
+    } catch (err) {
+        showNotification(err.message);
     }
+}
 
     const newActiveStatus = !product.active;
 
@@ -5471,14 +5475,11 @@ socket.onopen = () => {
 };
 
 socket.onmessage = (event) => {
-    try {
-        const { type, data } = JSON.parse(event.data);
-        switch (type) {
-            case 'slides':
-                slides = data.filter((newSlide, index, self) =>
-                    index === self.findIndex(s => s._id === newSlide._id)
-                ); // Уникаємо дублів
-                renderSlidesAdmin();
+    const { type, data } = JSON.parse(event.data);
+    if (type === 'slides') {
+        slides = data.reduce((unique, slide) => 
+            unique.find(s => s._id === slide._id) ? unique : [...unique, slide], []);
+        renderSlidesAdmin();
                 break;
             case 'categories':
                 categories = data;
