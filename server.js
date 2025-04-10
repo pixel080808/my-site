@@ -760,6 +760,23 @@ app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
     }
 });
 
+app.post('/api/refresh-token', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const newToken = jwt.sign(
+            { userId: decoded.userId, username: decoded.username, role: decoded.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '30m' }
+        );
+        res.json({ token: newToken });
+    } catch (e) {
+        res.status(403).json({ error: 'Недійсний токен' });
+    }
+});
+
 // Маршрути для роботи з налаштуваннями
 app.get('/api/settings', authenticateToken, async (req, res) => {
     try {

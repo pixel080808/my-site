@@ -1229,13 +1229,10 @@ try {
 
 async function loadProducts() {
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) return;
+
         const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            products = [];
-            renderAdmin('products');
-            return;
-        }
         const response = await fetch('/api/products', {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -1261,7 +1258,7 @@ async function loadProducts() {
         products = await response.json();
         console.log('Товари завантажено:', products);
         renderAdmin('products');
-    } catch (e) {
+} catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification(e.message);
         products = [];
@@ -1311,17 +1308,16 @@ async function loadCategories() {
 
 async function loadSettings() {
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) return;
+
         const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            renderSettingsAdmin();
-            return;
-        }
         const response = await fetch('/api/settings', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
+
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1339,6 +1335,7 @@ async function loadSettings() {
                 throw new Error(`Не вдалося завантажити налаштування: ${response.status} ${text}`);
             }
         }
+
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
 
@@ -1362,6 +1359,9 @@ async function loadSettings() {
                 aboutEditor.setText(settings.about, 'silent');
             }
             document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+        } else if (aboutEditor) {
+            aboutEditor.setText('', 'silent');
+            console.log('settings.about порожній, редактор очищено.');
         }
         renderSettingsAdmin();
     } catch (e) {
@@ -2021,6 +2021,84 @@ document.addEventListener('DOMContentLoaded', () => {
     showSection('admin-login'); // Завжди починаємо з логіну
 });
 
+async function refreshToken() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return false;
+    }
+
+    try {
+        const response = await fetch('/api/refresh-token', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити токен: ' + response.statusText);
+        }
+
+        const data = await response.json();
+        localStorage.setItem('adminToken', data.token);
+        session.timestamp = Date.now();
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        console.log('Токен оновлено:', data.token);
+        return true;
+    } catch (e) {
+        console.error('Помилка оновлення токена:', e);
+        localStorage.removeItem('adminToken');
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
+        showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+        return false;
+    }
+}
+
+function startTokenRefreshTimer() {
+    setInterval(async () => {
+        if (session.isActive) {
+            await refreshToken();
+        }
+    }, 25 * 60 * 1000); // 25 хвилин
+}
+
+// Викличте цю функцію після успішного входу в `login`:
+async function login() {
+    const username = document.getElementById('admin-username').value;
+    const password = document.getElementById('admin-password').value;
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Невірні дані для входу');
+        }
+
+        const data = await response.json();
+        localStorage.setItem('adminToken', data.token);
+        session = { isActive: true, timestamp: Date.now() };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-panel');
+        initializeData();
+        connectAdminWebSocket();
+        resetInactivityTimer();
+        startTokenRefreshTimer(); // Додаємо таймер оновлення токена
+    } catch (e) {
+        console.error('Помилка входу:', e);
+        showNotification(e.message);
+    }
+}
+
     function showNotification(message) {
         const notification = document.getElementById('notification');
         if (notification) {
@@ -2053,16 +2131,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 async function updateStoreInfo() {
-    const updatedSettings = {
-        name: document.getElementById('store-name').value,
-        baseUrl: document.getElementById('base-url').value,
-        logo: document.getElementById('logo-url').value || settings.logo,
-        logoWidth: document.getElementById('logo-width').value,
-        favicon: document.getElementById('favicon-url').value || settings.favicon
-    };
+    const name = document.getElementById('store-name').value;
+    const baseUrl = document.getElementById('base-url').value;
+    const logo = document.getElementById('logo-url').value || settings.logo;
+    const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
+    const favicon = document.getElementById('favicon-url').value || settings.favicon;
+
+    const tokenRefreshed = await refreshToken();
+    if (!tokenRefreshed) return;
 
     const token = localStorage.getItem('adminToken');
-    console.log('Надсилаємо налаштування:', updatedSettings);
+    const updateData = { name, baseUrl, logo, logoWidth, favicon };
+    console.log('Надсилаємо налаштування:', updateData);
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
@@ -2070,14 +2150,15 @@ async function updateStoreInfo() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(updatedSettings)
+            body: JSON.stringify(updateData)
         });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити налаштування: ${errorData.error}`);
+            throw new Error(`Не вдалося оновити налаштування: ${errorData.error || response.statusText}`);
         }
-        Object.assign(settings, updatedSettings);
-        renderSettingsAdmin();
+
+        Object.assign(settings, updateData);
         showNotification('Налаштування оновлено!');
         resetInactivityTimer();
     } catch (e) {
@@ -2087,16 +2168,16 @@ async function updateStoreInfo() {
 }
 
 async function updateContacts() {
-    const updatedContacts = {
-        contacts: {
-            phones: document.getElementById('contact-phones').value,
-            addresses: document.getElementById('contact-addresses').value,
-            schedule: document.getElementById('contact-schedule').value
-        }
+    const contacts = {
+        phones: document.getElementById('contact-phones').value,
+        addresses: document.getElementById('contact-addresses').value,
+        schedule: document.getElementById('contact-schedule').value
     };
+    const tokenRefreshed = await refreshToken();
+    if (!tokenRefreshed) return;
 
     const token = localStorage.getItem('adminToken');
-    console.log('Надсилаємо контакти:', updatedContacts);
+    console.log('Надсилаємо контакти:', { contacts });
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
@@ -2104,13 +2185,15 @@ async function updateContacts() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(updatedContacts)
+            body: JSON.stringify({ contacts })
         });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити контакти: ${errorData.error}`);
+            throw new Error(`Не вдалося оновити контакти: ${errorData.error || response.statusText}`);
         }
-        settings.contacts = updatedContacts.contacts;
+
+        settings.contacts = contacts;
         showNotification('Контакти оновлено!');
         resetInactivityTimer();
     } catch (e) {
@@ -2193,16 +2276,11 @@ async function updateContacts() {
     }
 
 async function updateAbout() {
+    const about = document.getElementById('about-edit').value;
+    const tokenRefreshed = await refreshToken();
+    if (!tokenRefreshed) return;
+
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    const aboutContent = document.getElementById('about-edit').value;
-    console.log('Надсилаємо "Про нас":', aboutContent);
-
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
@@ -2210,30 +2288,16 @@ async function updateAbout() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ about: aboutContent })
+            body: JSON.stringify({ about })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Помилка при оновленні "Про нас": ${response.statusText}. Деталі: ${JSON.stringify(errorData)}`);
+            throw new Error(`Не вдалося оновити "Про нас": ${errorData.error || response.statusText}`);
         }
 
-        const updatedSettings = await response.json();
-        settings.about = updatedSettings.about;
-
-        // Синхронізуємо редактор із збереженим вмістом
-        if (aboutEditor) {
-            try {
-                const delta = aboutEditor.clipboard.convert(settings.about);
-                aboutEditor.setContents(delta, 'silent');
-            } catch (e) {
-                console.error('Помилка синхронізації вмісту "Про нас":', e);
-                aboutEditor.setText(settings.about, 'silent');
-            }
-            document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
-        }
-
-        showNotification('Інформація "Про нас" оновлена!');
+        settings.about = about;
+        showNotification('Дані "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (e) {
@@ -5318,43 +5382,65 @@ function connectAdminWebSocket() {
 
     socket = new WebSocket(wsUrl);
 
-    socket.onopen = () => {
-        console.log('Адмін підключено до WebSocket');
-        setTimeout(() => {
-            ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ type, action: 'subscribe' }));
-                }
-            });
-        }, 100);
-    };
-
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            switch (type) {
-                case 'products': products = data; renderAdmin('products'); break;
-                case 'categories': categories = data; renderCategoriesAdmin(); break;
-                case 'settings':
-                    settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
-                    if (aboutEditor && data.about && !unsavedChanges) {
-                        const delta = aboutEditor.clipboard.convert(data.about);
-                        aboutEditor.setContents(delta, 'silent');
-                        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
-                    }
-                    renderSettingsAdmin();
-                    break;
-                case 'orders': orders = data; sortOrders('date-desc'); renderAdmin('orders'); break;
-                case 'slides': slides = data; renderSlidesAdmin(); break;
-                case 'materials': materials = data; updateMaterialOptions(); break;
-                case 'brands': brandsnake_case = data; updateBrandOptions(); break;
+socket.onopen = () => {
+    console.log('Адмін підключено до WebSocket');
+    setTimeout(() => {
+        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
+            if (socket.readyState === WebSocket.OPEN) {
+                console.log(`Підписка на ${type}`);
+                socket.send(JSON.stringify({ type, action: 'subscribe' }));
             }
-            resetInactivityTimer();
-        } catch (e) {
-            console.error('Помилка обробки WebSocket:', e);
-            showNotification('Помилка WebSocket: ' + e.message);
+        });
+    }, 100);
+};
+
+socket.onmessage = (event) => {
+    console.log('Отримано повідомлення WebSocket:', event.data);
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`Оновлення для ${type}:`, data);
+        switch (type) {
+            case 'products':
+                products = data;
+                renderAdmin('products');
+                break;
+            case 'categories':
+                categories = data;
+                renderCategoriesAdmin();
+                break;
+            case 'settings':
+                settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
+                if (aboutEditor && data.about) {
+                    const delta = aboutEditor.clipboard.convert(data.about);
+                    aboutEditor.setContents(delta, 'silent');
+                    document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+                }
+                renderSettingsAdmin();
+                break;
+            case 'orders':
+                orders = data;
+                sortOrders('date-desc');
+                renderAdmin('orders');
+                break;
+            case 'slides':
+                slides = data;
+                renderSlidesAdmin();
+                break;
+            case 'materials':
+                materials = data;
+                updateMaterialOptions();
+                break;
+            case 'brands':
+                brands = data;
+                updateBrandOptions();
+                break;
         }
-    };
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка обробки WebSocket:', e);
+        showNotification('Помилка WebSocket: ' + e.message);
+    }
+};
 
     socket.onclose = () => {
         console.log('WebSocket відключено');
