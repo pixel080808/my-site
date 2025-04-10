@@ -2276,11 +2276,16 @@ async function updateContacts() {
     }
 
 async function updateAbout() {
-    const about = document.getElementById('about-edit').value;
-    const tokenRefreshed = await refreshToken();
-    if (!tokenRefreshed) return;
-
     const token = localStorage.getItem('adminToken');
+    if (!token) {
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+    }
+
+    const aboutContent = document.getElementById('about-edit').value;
+    settings.about = aboutContent;
+
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
@@ -2288,21 +2293,20 @@ async function updateAbout() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ about })
+            body: JSON.stringify({ about: aboutContent })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити "Про нас": ${errorData.error || response.statusText}`);
+            throw new Error(`Не вдалося оновити "Про нас": ${errorData.error}`);
         }
 
-        settings.about = about;
-        showNotification('Дані "Про нас" оновлено!');
+        showNotification('Інформацію "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка при оновленні "Про нас":', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка оновлення "Про нас":', err);
+        showNotification(err.message);
     }
 }
 
@@ -2853,43 +2857,54 @@ async function addCategory() {
     }
 
 async function addSubcategory() {
-    const subcatName = document.getElementById('subcat-name').value;
-    const subcatSlug = document.getElementById('subcat-slug').value;
-    const subcatImgUrl = document.getElementById('subcat-img-url').value;
-    const subcatImgFile = document.getElementById('subcat-img-file').files[0];
-    const subcatCategory = document.getElementById('subcat-category').value;
+    const name = document.getElementById('subcat-name').value;
+    const slug = document.getElementById('subcat-slug').value;
+    const imgUrl = document.getElementById('subcat-img-url').value;
+    const fileInput = document.getElementById('subcat-img-file');
+    const categoryName = document.getElementById('subcat-category').value;
+    const token = localStorage.getItem('adminToken');
 
-    if (!subcatName || !subcatSlug || !subcatCategory) {
-        alert('Заповніть усі обов’язкові поля!');
+    if (!name || !slug || !categoryName) {
+        alert('Введіть назву, шлях та виберіть категорію для підкатегорії!');
         return;
     }
 
-    const subcategory = { name: subcatName, slug: subcatSlug };
-    const token = localStorage.getItem('adminToken');
+    const category = categories.find(cat => cat.name === categoryName);
+    if (!category) {
+        showNotification('Категорію не знайдено!');
+        return;
+    }
 
-    if (subcatImgFile) {
-        const formData = new FormData();
-        formData.append('file', subcatImgFile);
+    let subcatImageUrl = imgUrl;
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const validation = validateFile(file);
+        if (!validation.valid) {
+            alert(validation.error);
+            return;
+        }
         try {
-            const uploadResponse = await fetch('/api/upload', {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
-            const uploadData = await uploadResponse.json();
-            subcategory.image = uploadData.url; // Змінено img на image
+            const data = await response.json();
+            subcatImageUrl = data.url;
         } catch (err) {
-            console.error('Помилка завантаження зображення:', err);
-            showNotification('Не вдалося завантажити зображення');
+            console.error('Помилка завантаження зображення підкатегорії:', err);
+            showNotification('Не вдалося завантажити зображення: ' + err.message);
             return;
         }
-    } else if (subcatImgUrl) {
-        subcategory.image = subcatImgUrl; // Змінено img на image
     }
 
+    const subcategory = { name, slug, image: subcatImageUrl || '' };
     console.log('Надсилаємо підкатегорію:', subcategory);
+
     try {
-        const response = await fetch(`/api/categories/${subcatCategory}/subcategories`, {
+        const response = await fetch(`/api/categories/${category.slug}/subcategories`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2897,17 +2912,20 @@ async function addSubcategory() {
             },
             body: JSON.stringify(subcategory)
         });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${JSON.stringify(errorData)}`);
+            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorData.error}`);
         }
+
         const newSubcat = await response.json();
-        const category = categories.find(c => c.name === subcatCategory);
-        if (category) {
-            if (!category.subcategories) category.subcategories = [];
-            category.subcategories.push(newSubcat);
-        }
+        category.subcategories = category.subcategories || [];
+        category.subcategories.push(newSubcat);
         renderCategoriesAdmin();
+        document.getElementById('subcat-name').value = '';
+        document.getElementById('subcat-slug').value = '';
+        document.getElementById('subcat-img-url').value = '';
+        fileInput.value = '';
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
     } catch (err) {
@@ -3047,15 +3065,17 @@ async function addSubcategory() {
     }
 
 async function updateCategorySettings() {
+    const width = parseInt(document.getElementById('category-width').value) || 300;
+    const height = parseInt(document.getElementById('category-height').value) || 200;
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+
+    if (width < 100 || width > 500 || height < 100 || height > 500) {
+        alert('Ширина та висота категорії мають бути в межах 100-500 px!');
         return;
     }
 
-    settings.categoryWidth = parseInt(document.getElementById('category-width').value) || 200;
-    settings.categoryHeight = parseInt(document.getElementById('category-height').value) || 150;
+    settings.categoryWidth = width;
+    settings.categoryHeight = height;
 
     try {
         const response = await fetch('/api/settings', {
@@ -3064,29 +3084,34 @@ async function updateCategorySettings() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(settings)
+            body: JSON.stringify({ categoryWidth: width, categoryHeight: height })
         });
 
-        if (!response.ok) throw new Error('Не вдалося оновити налаштування категорій');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити налаштування категорій: ${errorData.error}`);
+        }
+
         showNotification('Налаштування категорій оновлено!');
-        unsavedChanges = false;
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка оновлення налаштувань категорій:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка оновлення налаштувань категорій:', err);
+        showNotification(err.message);
     }
 }
 
 async function updateProductSettings() {
+    const width = parseInt(document.getElementById('product-width').value) || 300;
+    const height = parseInt(document.getElementById('product-height').value) || 300;
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+
+    if (width < 200 || width > 500 || height < 200 || height > 500) {
+        alert('Ширина та висота товару мають бути в межах 200-500 px!');
         return;
     }
 
-    settings.productWidth = parseInt(document.getElementById('product-width').value) || 300;
-    settings.productHeight = parseInt(document.getElementById('product-height').value) || 280;
+    settings.productWidth = width;
+    settings.productHeight = height;
 
     try {
         const response = await fetch('/api/settings', {
@@ -3095,59 +3120,61 @@ async function updateProductSettings() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(settings)
+            body: JSON.stringify({ productWidth: width, productHeight: height })
         });
 
-        if (!response.ok) throw new Error('Не вдалося оновити налаштування товарів');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити налаштування товарів: ${errorData.error}`);
+        }
+
         showNotification('Налаштування товарів оновлено!');
-        unsavedChanges = false;
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка оновлення налаштувань товарів:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка оновлення налаштувань товарів:', err);
+        showNotification(err.message);
     }
 }
 
 async function addFilter() {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
     const name = document.getElementById('filter-name').value;
     const label = document.getElementById('filter-label').value;
     const options = document.getElementById('filter-options').value.split(',').map(o => o.trim());
+    const token = localStorage.getItem('adminToken');
 
     if (!name || !label || options.length === 0) {
-        alert('Введіть назву, підпис та опції для фільтру!');
+        alert('Введіть назву, підпис та опції фільтру!');
         return;
     }
 
     const newFilter = { name, label, type: 'checkbox', options };
+    filters.push(newFilter);
 
     try {
-        const response = await fetch('/api/filters', {
-            method: 'POST',
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(newFilter)
+            body: JSON.stringify({ filters })
         });
 
-        if (!response.ok) throw new Error('Не вдалося додати фільтр');
-        filters.push(newFilter);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося додати фільтр: ${errorData.error}`);
+        }
+
+        renderFiltersAdmin();
         document.getElementById('filter-name').value = '';
         document.getElementById('filter-label').value = '';
         document.getElementById('filter-options').value = '';
-        renderAdmin('filters');
         showNotification('Фільтр додано!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка додавання фільтру:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка додавання фільтру:', err);
+        showNotification(err.message);
+        filters.pop(); // Видаляємо фільтр, якщо сервер не прийняв
     }
 }
 
@@ -3351,16 +3378,27 @@ async function addOrderField() {
     }
 
 async function updateSlideshowSettings() {
+    const width = parseInt(document.getElementById('slide-width').value) || 100;
+    const height = parseInt(document.getElementById('slide-height').value) || 300;
+    const interval = parseInt(document.getElementById('slide-interval').value) || 5000;
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+
+    if (width < 10 || width > 100) {
+        alert('Ширина слайду має бути в межах 10-100%!');
+        return;
+    }
+    if (height < 100 || height > 500) {
+        alert('Висота слайду має бути в межах 100-500 px!');
+        return;
+    }
+    if (interval < 1000) {
+        alert('Інтервал слайдів має бути не менше 1000 мс!');
         return;
     }
 
-    settings.slideWidth = parseInt(document.getElementById('slide-width').value) || 75;
-    settings.slideHeight = parseInt(document.getElementById('slide-height').value) || 200;
-    settings.slideInterval = parseInt(document.getElementById('slide-interval').value) || 3000;
+    settings.slideWidth = width;
+    settings.slideHeight = height;
+    settings.slideInterval = interval;
 
     try {
         const response = await fetch('/api/settings', {
@@ -3369,16 +3407,19 @@ async function updateSlideshowSettings() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(settings)
+            body: JSON.stringify({ slideWidth: width, slideHeight: height, slideInterval: interval })
         });
 
-        if (!response.ok) throw new Error('Не вдалося оновити налаштування слайдшоу');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити налаштування слайдшоу: ${errorData.error}`);
+        }
+
         showNotification('Налаштування слайдшоу оновлено!');
-        unsavedChanges = false;
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка оновлення налаштувань слайдшоу:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка оновлення налаштувань слайдшоу:', err);
+        showNotification(err.message);
     }
 }
 
@@ -3392,56 +3433,58 @@ function debounce(func, wait) {
 }
 
 async function addSlide() {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
+    const width = parseInt(document.getElementById('slide-width').value) || 100;
+    const height = parseInt(document.getElementById('slide-height').value) || 300;
+    const interval = parseInt(document.getElementById('slide-interval').value) || 5000;
     const imgUrl = document.getElementById('slide-img-url').value;
-    const imgFile = document.getElementById('slide-img-file').files[0];
+    const fileInput = document.getElementById('slide-img-file');
     const title = document.getElementById('slide-title').value;
     const text = document.getElementById('slide-text').value;
     const link = document.getElementById('slide-link').value;
     const linkText = document.getElementById('slide-link-text').value;
     const order = parseInt(document.getElementById('slide-order').value) || 0;
+    const token = localStorage.getItem('adminToken');
 
-    if (!imgUrl && !imgFile) {
-        alert('Додайте URL зображення або виберіть файл!');
+    if (!imgUrl && fileInput.files.length === 0) {
+        alert('Додайте URL або завантажте зображення слайду!');
         return;
     }
 
     let slideImageUrl = imgUrl;
-
-    if (imgFile) {
-        const validation = validateFile(imgFile);
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const validation = validateFile(file);
         if (!validation.valid) {
             alert(validation.error);
             return;
         }
-
         try {
             const formData = new FormData();
-            formData.append('file', imgFile);
+            formData.append('file', file);
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
-
-            if (!response.ok) throw new Error('Помилка завантаження зображення: ' + response.statusText);
             const data = await response.json();
             slideImageUrl = data.url;
             console.log('Зображення слайду завантажено:', slideImageUrl);
-        } catch (e) {
-            console.error('Помилка завантаження зображення слайду:', e);
-            showNotification(e.message);
+        } catch (err) {
+            console.error('Помилка завантаження зображення слайду:', err);
+            showNotification('Не вдалося завантажити зображення: ' + err.message);
             return;
         }
     }
 
-    const slide = { img: slideImageUrl, title, text, link, linkText, order };
+    const newSlide = {
+        image: slideImageUrl,
+        title: title || '',
+        text: text || '',
+        link: link || '',
+        linkText: linkText || 'Дізнатись більше',
+        order,
+        active: true
+    };
 
     try {
         const response = await fetch('/api/slides', {
@@ -3450,28 +3493,47 @@ async function addSlide() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(slide)
+            body: JSON.stringify(newSlide)
         });
 
-        if (!response.ok) throw new Error('Помилка додавання слайду: ' + response.statusText);
-        const newSlide = await response.json();
-        slides.push(newSlide);
-        renderSlidesAdmin();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося додати слайд: ${errorData.error}`);
+        }
 
-        // Очищаємо поля
+        const addedSlide = await response.json();
+        slides.push(addedSlide);
+        slides.sort((a, b) => a.order - b.order);
+        settings.slideWidth = width;
+        settings.slideHeight = height;
+        settings.slideInterval = interval;
+
+        await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                slideWidth: width,
+                slideHeight: height,
+                slideInterval: interval
+            })
+        });
+
+        renderSlidesAdmin();
         document.getElementById('slide-img-url').value = '';
-        document.getElementById('slide-img-file').value = '';
         document.getElementById('slide-title').value = '';
         document.getElementById('slide-text').value = '';
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-
+        fileInput.value = '';
         showNotification('Слайд додано!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка при додаванні слайду:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка додавання слайду:', err);
+        showNotification(err.message);
     }
 }
 
@@ -3779,13 +3841,15 @@ document.getElementById('bulk-price-file').addEventListener('change', function()
 });
 
 function openAddProductModal() {
-    newProduct = {
-        type: 'simple',
-        photos: [],
-        colors: [],
-        sizes: [],
-        groupProducts: []
-    };
+    // Скидаємо поля глобальної змінної newProduct замість створення нової
+    newProduct.type = 'simple';
+    newProduct.photos = [];
+    newProduct.colors = [];
+    newProduct.sizes = [];
+    newProduct.groupProducts = [];
+    newProduct.active = true;
+    newProduct.visible = true;
+
     const modal = document.getElementById('modal');
     modal.innerHTML = `
         <div class="modal-content">
@@ -4975,9 +5039,10 @@ async function toggleProductActive(productId) {
         sizes: product.sizes,
         groupProducts: product.groupProducts
     };
-    delete cleanProduct._id;  // Видаляємо MongoDB _id
-    delete cleanProduct.__v;  // Видаляємо версію
-    delete cleanProduct.id;   // Видаляємо id
+    delete cleanProduct._id;
+    delete cleanProduct.__v;
+    delete cleanProduct.id;
+    delete cleanProduct.descriptionDelta; // Видаляємо descriptionDelta, якщо сервер його не приймає
 
     try {
         const response = await fetch(`/api/products/${productId}`, {
@@ -4991,7 +5056,7 @@ async function toggleProductActive(productId) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Помилка при оновленні статусу товару: ${response.status} ${response.statusText}. Сервер повернув: ${errorText}`);
+            throw new Error(`Помилка при оновленні статусу товару: ${response.status} ${errorText}`);
         }
 
         product.active = newActiveStatus;
@@ -5369,6 +5434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function connectAdminWebSocket() {
+    const adminToken = localStorage.getItem('adminToken');
     if (!adminToken) {
         console.log('Токен відсутній, WebSocket не підключається.');
         return;
@@ -5395,14 +5461,14 @@ socket.onopen = () => {
 };
 
 socket.onmessage = (event) => {
-    console.log('Отримано повідомлення WebSocket:', event.data);
     try {
         const { type, data } = JSON.parse(event.data);
-        console.log(`Оновлення для ${type}:`, data);
         switch (type) {
-            case 'products':
-                products = data;
-                renderAdmin('products');
+            case 'slides':
+                slides = data.filter((newSlide, index, self) =>
+                    index === self.findIndex(s => s._id === newSlide._id)
+                ); // Уникаємо дублів
+                renderSlidesAdmin();
                 break;
             case 'categories':
                 categories = data;
