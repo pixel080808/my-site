@@ -1220,13 +1220,6 @@ let productEditor; // Додаємо глобальну змінну для ре
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
 
-try {
-    session = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem('adminSession')) || '{"isActive":false,"timestamp":0}');
-} catch (e) {
-    console.error('Помилка парсингу session:', e);
-    session = { isActive: false, timestamp: 0 };
-}
-
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -1235,7 +1228,7 @@ async function loadProducts() {
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/products', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1276,7 +1269,7 @@ async function loadCategories() {
         }
         const response = await fetch('/api/categories', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1314,7 +1307,7 @@ async function loadSettings() {
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/settings', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
 
@@ -1382,7 +1375,7 @@ async function loadOrders() {
         }
         const response = await fetch('/api/orders', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1418,7 +1411,7 @@ async function loadSlides() {
         }
         const response = await fetch('/api/slides', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1453,7 +1446,7 @@ async function loadMaterials() {
         }
         const response = await fetch('/api/materials', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1488,7 +1481,7 @@ async function loadBrands() {
         }
         const response = await fetch('/api/brands', {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!response.ok) {
@@ -1533,12 +1526,7 @@ function updateBrandOptions() {
 }
 
 async function initializeData() {
-    const token = localStorage.getItem('adminToken');
-    if (!token || !(await refreshToken())) {
-        showSection('admin-login');
-        showNotification('Сесія недійсна. Увійдіть знову.');
-        return;
-    }
+    try {
         await Promise.all([
             loadProducts(),
             loadCategories(),
@@ -1556,18 +1544,30 @@ async function initializeData() {
     }
 }
 
-// Перевірка сесії
-if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
-    showSection('admin-panel');
-    initializeData(); // Виклик ініціалізації
-    connectAdminWebSocket();
-    resetInactivityTimer();
-} else {
-    localStorage.removeItem('adminToken');
-    session = { isActive: false, timestamp: 0 };
-    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-    showSection('admin-login');
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/auth/check', {
+            credentials: 'include'
+        });
+        if (response.ok) {
+            showSection('admin-panel');
+            initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+        } else {
+            showSection('admin-login');
+            if (response.status === 401 || response.status === 403) {
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            }
+        }
+    } catch (e) {
+        console.error('Помилка перевірки авторизації:', e);
+        showSection('admin-login');
+        showNotification('Не вдалося перевірити авторизацію. Перевірте з’єднання.');
+    }
 }
+
+checkAuth();
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -1677,28 +1677,16 @@ function initializeEditors() {
         return; // Уникаємо повторної ініціалізації
     }
 
-    // Ініціалізація Quill для "Про нас"
 aboutEditor = new Quill('#about-editor', {
     theme: 'snow',
     modules: {
-toolbar: {
-    container: [
-        ['bold', 'italic', 'underline'],
-        [{ 'header': 2 }, { 'header': 3 }],
-        ['link', 'image', 'video'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['undo', 'redo'], // Виправлено
-        ['clean']
-    ],
-    handlers: {
-        'undo': function() {
-            this.quill.history.undo();
-        },
-        'redo': function() {
-            this.quill.history.redo();
-        }
-    }
-},
+        toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'header': 2 }, { 'header': 3 }],
+            ['link', 'image', 'video'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['clean']
+        ],
         history: {
             delay: 1000,
             maxStack: 100,
@@ -1850,7 +1838,7 @@ toolbar.addHandler('image', async () => {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        credentials: 'include'
                     },
                     body: formData
                 });
@@ -2038,7 +2026,7 @@ async function refreshToken() {
         const response = await fetch('/api/refresh-token', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             }
         });
@@ -2076,31 +2064,26 @@ function startTokenRefreshTimer() {
 async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
-
     try {
-        const response = await fetch('/api/login', {
+        const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password }),
+            credentials: 'include' // Додаємо cookies
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Невірні дані для входу');
-        }
-
         const data = await response.json();
-        localStorage.setItem('adminToken', data.token);
-        session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-panel');
-        initializeData();
-        connectAdminWebSocket();
-        resetInactivityTimer();
-        startTokenRefreshTimer(); // Додаємо таймер оновлення токена
+        if (response.ok) {
+            showSection('admin-panel');
+            initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+            showNotification('Успішний вхід!');
+        } else {
+            throw new Error(data.error || 'Помилка входу');
+        }
     } catch (e) {
         console.error('Помилка входу:', e);
-        showNotification(e.message);
+        showNotification('Помилка входу: ' + e.message);
     }
 }
 
@@ -2152,7 +2135,7 @@ async function updateStoreInfo() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(updateData)
@@ -2187,7 +2170,7 @@ async function updateContacts() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ contacts })
@@ -2281,19 +2264,28 @@ async function updateContacts() {
     }
 
 async function updateAbout() {
-    const content = document.getElementById('about-edit').value;
-    settings.about = content;
-    const token = localStorage.getItem('adminToken');
+    const aboutContent = aboutEditor.root.innerHTML;
     try {
         const response = await fetch('/api/settings', {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ about: content })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ about: aboutContent }),
+            credentials: 'include'
         });
-        if (!response.ok) throw new Error(await response.text());
-        showNotification('Інформація "Про нас" збережена!');
-    } catch (err) {
-        showNotification('Помилка збереження: ' + err.message);
+        if (response.ok) {
+            settings.about = aboutContent;
+            document.getElementById('about-edit').value = aboutContent;
+            showNotification('Інформацію "Про нас" оновлено!');
+            unsavedChanges = false;
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Не вдалося оновити "Про нас"');
+        }
+    } catch (e) {
+        console.error('Помилка оновлення "Про нас":', e);
+        showNotification('Помилка: ' + e.message);
     }
 }
 
@@ -2680,7 +2672,7 @@ async function addCategory() {
             formData.append('file', imgFile);
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: { credentials: 'include' },
                 body: formData
             });
 
@@ -2700,7 +2692,7 @@ async function addCategory() {
         const response = await fetch('/api/categories', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(category)
@@ -2875,7 +2867,7 @@ async function addSubcategory() {
         try {
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: { credentials: 'include' },
                 body: formData
             });
             const data = await response.json();
@@ -2894,16 +2886,16 @@ async function addSubcategory() {
         const response = await fetch(`/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(subcategory)
         });
 
-if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`${response.status}: ${errorData.error || response.statusText}`);
-}
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorText}`);
+        }
 
         const newSubcategory = await response.json();
         const category = categories.find(c => c.name === categoryName);
@@ -3071,7 +3063,7 @@ async function updateCategorySettings() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ categoryWidth: width, categoryHeight: height })
@@ -3107,7 +3099,7 @@ async function updateProductSettings() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ productWidth: width, productHeight: height })
@@ -3144,7 +3136,7 @@ async function addFilter() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ filters })
@@ -3269,7 +3261,7 @@ async function addOrderField() {
         const response = await fetch('/api/order-fields', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(field)
@@ -3394,7 +3386,7 @@ async function updateSlideshowSettings() {
         const response = await fetch('/api/settings', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ slideWidth: width, slideHeight: height, slideInterval: interval })
@@ -3423,110 +3415,79 @@ function debounce(func, wait) {
 }
 
 async function addSlide() {
-    const slide = {
-        _id: Date.now().toString(), // Тимчасовий унікальний ID
-        img: document.getElementById('slide-img-url').value,
-    const width = parseInt(document.getElementById('slide-width').value) || 100;
-    const height = parseInt(document.getElementById('slide-height').value) || 300;
-    const interval = parseInt(document.getElementById('slide-interval').value) || 5000;
     const imgUrl = document.getElementById('slide-img-url').value;
     const fileInput = document.getElementById('slide-img-file');
     const title = document.getElementById('slide-title').value;
     const text = document.getElementById('slide-text').value;
     const link = document.getElementById('slide-link').value;
     const linkText = document.getElementById('slide-link-text').value;
-    const order = parseInt(document.getElementById('slide-order').value) || 0;
-    const token = localStorage.getItem('adminToken');
+    const order = parseInt(document.getElementById('slide-order').value) || slides.length + 1;
 
-    if (!imgUrl && fileInput.files.length === 0) {
-        alert('Додайте URL або завантажте зображення слайду!');
-        return;
-    }
-
-    let slideImageUrl = imgUrl;
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const validation = validateFile(file);
+    let img = imgUrl;
+    if (fileInput.files[0]) {
+        const validation = validateFile(fileInput.files[0]);
         if (!validation.valid) {
             alert(validation.error);
             return;
         }
         try {
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', fileInput.files[0]);
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
+            if (!response.ok) {
+                throw new Error('Помилка завантаження зображення');
+            }
             const data = await response.json();
-            slideImageUrl = data.url;
-            console.log('Зображення слайду завантажено:', slideImageUrl);
-        } catch (err) {
-            console.error('Помилка завантаження зображення слайду:', err);
-            showNotification('Не вдалося завантажити зображення: ' + err.message);
+            img = data.url;
+            console.log('Зображення слайду завантажено:', img);
+        } catch (e) {
+            console.error('Помилка завантаження зображення:', e);
+            showNotification('Не вдалося завантажити зображення: ' + e.message);
             return;
         }
     }
 
-    const newSlide = {
-        image: slideImageUrl,
-        title: title || '',
-        text: text || '',
-        link: link || '',
-        linkText: linkText || 'Дізнатись більше',
-        order,
-        active: true
-    };
+    if (!img) {
+        alert('Додайте зображення слайду!');
+        return;
+    }
 
     try {
         const response = await fetch('/api/slides', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(newSlide)
+            credentials: 'include',
+            body: JSON.stringify({ img, title, text, link, linkText, order })
         });
-
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося додати слайд: ${errorData.error}`);
+            throw new Error(errorData.error || 'Не вдалося додати слайд');
         }
-
-        const addedSlide = await response.json();
-        slides.push(addedSlide);
-        slides.sort((a, b) => a.order - b.order);
-        settings.slideWidth = width;
-        settings.slideHeight = height;
-        settings.slideInterval = interval;
-
-        await fetch('/api/settings', {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                slideWidth: width,
-                slideHeight: height,
-                slideInterval: interval
-            })
-        });
-
-        renderSlidesAdmin();
+        const newSlide = await response.json();
+        // Перевіряємо, чи слайд уже є в масиві
+        if (!slides.some(s => s._id === newSlide._id)) {
+            slides.push(newSlide);
+            renderSlidesAdmin();
+            showNotification('Слайд додано!');
+        }
+        // Очищаємо поля
         document.getElementById('slide-img-url').value = '';
+        document.getElementById('slide-img-file').value = '';
         document.getElementById('slide-title').value = '';
         document.getElementById('slide-text').value = '';
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-        fileInput.value = '';
-        showNotification('Слайд додано!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання слайду:', err);
-        showNotification(err.message);
+    } catch (e) {
+        console.error('Помилка додавання слайду:', e);
+        showNotification('Помилка: ' + e.message);
     }
 }
 
@@ -4317,7 +4278,7 @@ async function saveNewProduct() {
     try {
         const slugCheck = await fetch(`/api/products?slug=${slug}`, {
             headers: {
-                'Authorization': `Bearer ${token}`
+                credentials: 'include'
             }
         });
         if (!slugCheck.ok) {
@@ -4362,7 +4323,7 @@ async function saveNewProduct() {
             const response = await fetch('/api/brands', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    credentials: 'include',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ name: brand })
@@ -4383,7 +4344,7 @@ async function saveNewProduct() {
             const response = await fetch('/api/materials', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    credentials: 'include',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ name: material })
@@ -4445,7 +4406,7 @@ async function saveNewProduct() {
                 const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        credentials: 'include'
                     },
                     body: formData
                 });
@@ -4483,7 +4444,7 @@ async function saveNewProduct() {
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    credentials: 'include'
                 },
                 body: formData
             });
@@ -4515,7 +4476,7 @@ async function saveNewProduct() {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        credentials: 'include'
                     },
                     body: formData
                 });
@@ -4538,7 +4499,7 @@ async function saveNewProduct() {
         const response = await fetch('/api/products', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                credentials: 'include',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(product)
@@ -4572,10 +4533,7 @@ async function saveNewProduct() {
 
 function openEditProductModal(productId) {
     const product = products.find(p => p.id === productId);
-    if (!product || !productId) {
-        showNotification('Товар не знайдено або ID відсутній!');
-        return;
-    }
+    if (product) {
         newProduct = { ...product, colors: [...product.colors], photos: [...product.photos], sizes: [...product.sizes], groupProducts: [...product.groupProducts] };
         // Екрануємо лапки для HTML, замінюючи " на &quot;
         const escapedName = product.name.replace(/"/g, '&quot;');
@@ -4733,57 +4691,52 @@ async function saveEditedProduct(productId) {
     let price = null;
     let salePrice = null;
     if (newProduct.type === 'simple') {
-        price = parseFloat(document.getElementById('product-price')?.value);
+        price = parseFloat(document.getElementById('product-price')?.value) || null;
         salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
     }
-    const saleEnd = document.getElementById('product-sale-end').value;
+    const saleEnd = document.getElementById('product-sale-end').value || null;
     const visible = document.getElementById('product-visible').value === 'true';
-    const description = document.getElementById('product-description').value;
+    const description = document.getElementById('product-description').value || '';
     const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
     const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
     const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
     const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
 
     if (!name || !slug) {
-        alert('Введіть назву та шлях товару!');
-        return;
-    }
-
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+        showNotification('Введіть назву та шлях товару!');
         return;
     }
 
     try {
-        const slugCheck = await fetch(`/api/products?slug=${slug}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const slugCheck = await fetch(`/api/products?slug=${encodeURIComponent(slug)}`, {
+            credentials: 'include'
         });
-        if (!slugCheck.ok) throw new Error('Помилка перевірки унікальності шляху');
+        if (!slugCheck.ok) {
+            throw new Error('Помилка перевірки унікальності шляху');
+        }
         const existingProducts = await slugCheck.json();
-        if (existingProducts.some(p => p.slug === slug && p.id !== productId)) {
-            alert('Шлях товару має бути унікальним!');
+        if (existingProducts.some(p => p.slug === slug && p._id !== productId)) {
+            showNotification('Шлях товару має бути унікальним!');
             return;
         }
     } catch (err) {
         console.error('Помилка перевірки унікальності:', err);
-        showNotification(err.message);
+        showNotification('Помилка: ' + err.message);
         return;
     }
 
-    if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
-        alert('Введіть коректну ціну для простого товару!');
+    if (newProduct.type === 'simple' && (price === null || price < 0)) {
+        showNotification('Введіть коректну ціну для простого товару!');
         return;
     }
 
     if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
-        alert('Додайте хоча б один розмір для матрацу!');
+        showNotification('Додайте хоча б один розмір для матрацу!');
         return;
     }
 
     if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
-        alert('Додайте хоча б один товар до групового товару!');
+        showNotification('Додайте хоча б один товар до групового товару!');
         return;
     }
 
@@ -4791,10 +4744,14 @@ async function saveEditedProduct(productId) {
         try {
             const response = await fetch('/api/brands', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ name: brand })
             });
-            if (response.ok) brands.push(brand);
+            if (response.ok) {
+                brands.push(brand);
+                updateBrandOptions();
+            }
         } catch (e) {
             console.error('Помилка додавання бренду:', e);
         }
@@ -4804,10 +4761,14 @@ async function saveEditedProduct(productId) {
         try {
             const response = await fetch('/api/materials', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ name: material })
             });
-            if (response.ok) materials.push(material);
+            if (response.ok) {
+                materials.push(material);
+                updateMaterialOptions();
+            }
         } catch (e) {
             console.error('Помилка додавання матеріалу:', e);
         }
@@ -4822,7 +4783,7 @@ async function saveEditedProduct(productId) {
         subcategory: subcategory || '',
         material: material || '',
         price: newProduct.type === 'simple' ? price : null,
-        salePrice,
+        salePrice: salePrice || null,
         saleEnd: saleEnd || null,
         description,
         widthCm,
@@ -4830,7 +4791,12 @@ async function saveEditedProduct(productId) {
         heightCm,
         lengthCm,
         photos: [],
-        colors: newProduct.colors.map(color => ({ name: color.name, value: color.value, priceChange: color.priceChange, photo: color.photo })),
+        colors: newProduct.colors.map(color => ({
+            name: color.name,
+            value: color.value,
+            priceChange: color.priceChange || 0,
+            photo: color.photo || null
+        })),
         sizes: newProduct.sizes,
         groupProducts: newProduct.groupProducts,
         active: newProduct.active,
@@ -4841,6 +4807,7 @@ async function saveEditedProduct(productId) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(description, 'text/html');
     const images = doc.querySelectorAll('img');
+    const videos = doc.querySelectorAll('iframe');
 
     for (let img of images) {
         const src = img.getAttribute('src');
@@ -4852,28 +4819,35 @@ async function saveEditedProduct(productId) {
                 formData.append('file', blob, `description-image-${Date.now()}.png`);
                 const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include',
                     body: formData
                 });
+                if (!uploadResponse.ok) {
+                    throw new Error('Помилка завантаження зображення');
+                }
                 const uploadData = await uploadResponse.json();
-                if (uploadData.url) mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                if (uploadData.url) {
+                    mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                }
             } catch (err) {
                 console.error('Помилка завантаження зображення:', err);
-                alert('Не вдалося завантажити зображення: ' + err.message);
+                showNotification('Не вдалося завантажити зображення: ' + err.message);
                 return;
             }
         }
     }
 
     let updatedDescription = description;
-    mediaUrls.forEach(({ oldUrl, newUrl }) => updatedDescription = updatedDescription.replace(oldUrl, newUrl));
+    mediaUrls.forEach(({ oldUrl, newUrl }) => {
+        updatedDescription = updatedDescription.replace(oldUrl, newUrl);
+    });
     product.description = updatedDescription;
 
     const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
     for (let file of photoFiles) {
         const validation = validateFile(file);
         if (!validation.valid) {
-            alert(validation.error);
+            showNotification(validation.error);
             return;
         }
         try {
@@ -4881,10 +4855,12 @@ async function saveEditedProduct(productId) {
             formData.append('file', file);
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
-            if (!response.ok) throw new Error(`Помилка завантаження фото: ${response.statusText}`);
+            if (!response.ok) {
+                throw new Error(`Помилка завантаження фото: ${response.statusText}`);
+            }
             const data = await response.json();
             product.photos.push(data.url);
         } catch (err) {
@@ -4901,7 +4877,7 @@ async function saveEditedProduct(productId) {
         if (color.photo instanceof File) {
             const validation = validateFile(color.photo);
             if (!validation.valid) {
-                alert(validation.error);
+                showNotification(validation.error);
                 return;
             }
             try {
@@ -4909,10 +4885,12 @@ async function saveEditedProduct(productId) {
                 formData.append('file', color.photo);
                 const response = await fetch('/api/upload', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include',
                     body: formData
                 });
-                if (!response.ok) throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
+                }
                 const data = await response.json();
                 product.colors[i].photo = data.url;
             } catch (err) {
@@ -4926,18 +4904,25 @@ async function saveEditedProduct(productId) {
     try {
         const response = await fetch(`/api/products/${productId}`, {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
             body: JSON.stringify(product)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Помилка оновлення товару: ${errorData.error}`);
+            throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
         }
 
         const updatedProduct = await response.json();
-        const index = products.findIndex(p => p.id === productId);
-        products[index] = updatedProduct;
+        const index = products.findIndex(p => p._id === productId);
+        if (index !== -1) {
+            products[index] = updatedProduct;
+        } else {
+            products.push(updatedProduct);
+        }
         closeModal();
         renderAdmin('products');
         showNotification('Товар оновлено!');
@@ -4962,7 +4947,7 @@ async function deleteProduct(productId) {
             const response = await fetch(`/api/products/${productId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    credentials: 'include'
                 }
             });
 
@@ -4996,71 +4981,27 @@ async function deleteProduct(productId) {
 }
 
 async function toggleProductActive(productId) {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    const token = localStorage.getItem('adminToken');
-    const newActiveStatus = !product.active;
-    const updatedProduct = { ...product, active: newActiveStatus };
-    
-    try {
-        const response = await fetch(`/api/products/${product._id || productId}`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedProduct)
-        });
-        if (!response.ok) throw new Error(`Помилка: ${await response.text()}`);
-        product.active = newActiveStatus;
-        renderAdmin('products');
-        showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
-    } catch (err) {
-        showNotification(err.message);
+    const product = products.find(p => p._id === productId);
+    if (!product) {
+        showNotification('Товар не знайдено!');
+        return;
     }
-}
 
     const newActiveStatus = !product.active;
-
-    const cleanProduct = {
-        type: product.type,
-        name: product.name,
-        slug: product.slug,
-        brand: product.brand || '',
-        category: product.category || '',
-        subcategory: product.subcategory || '',
-        material: product.material || '',
-        price: product.price || null,
-        salePrice: product.salePrice || null,
-        saleEnd: product.saleEnd || null,
-        description: product.description || '',
-        widthCm: product.widthCm || null,
-        depthCm: product.depthCm || null,
-        heightCm: product.heightCm || null,
-        lengthCm: product.lengthCm || null,
-        photos: product.photos || [],
-        colors: product.colors.map(color => ({
-            name: color.name,
-            value: color.value,
-            priceChange: color.priceChange,
-            photo: color.photo
-        })),
-        sizes: product.sizes || [],
-        groupProducts: product.groupProducts || [],
-        active: newActiveStatus,
-        visible: product.visible
-    };
 
     try {
         const response = await fetch(`/api/products/${productId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(cleanProduct)
+            credentials: 'include',
+            body: JSON.stringify({ active: newActiveStatus })
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Помилка при оновленні статусу товару: ${response.status} ${errorText}`);
+            const errorData = await response.json();
+            throw new Error(`Помилка при оновленні статусу товару: ${errorData.error || response.statusText}`);
         }
 
         product.active = newActiveStatus;
@@ -5149,7 +5090,7 @@ reader.onload = async (e) => {
                     await fetch(`/api/products/${id}`, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${token}`,
+                            credentials: 'include',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(product)
@@ -5171,7 +5112,7 @@ reader.onload = async (e) => {
                         await fetch(`/api/products/${id}`, {
                             method: 'PUT',
                             headers: {
-                                'Authorization': `Bearer ${token}`,
+                                credentials: 'include',
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify(product)
@@ -5336,7 +5277,7 @@ async function saveOrderStatus(index) {
             const response = await fetch(`/api/orders/${order._id}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    credentials: 'include',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(updatedOrder)
@@ -5372,7 +5313,7 @@ async function deleteOrder(index) {
             const response = await fetch(`/api/orders/${order._id}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    credentials: 'include'
                 }
             });
 
@@ -5433,91 +5374,86 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) {
         loginBtn.addEventListener('click', login);
     }
-    // Перевірка сесії при завантаженні
-    if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout && localStorage.getItem('adminToken')) {
-        showSection('admin-panel');
-        initializeData();
-        connectAdminWebSocket();
-        resetInactivityTimer();
-    } else {
-        localStorage.removeItem('adminToken');
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-    }
 });
 
 function connectAdminWebSocket() {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-        console.log('Токен відсутній, WebSocket не підключається.');
-        return;
-    }
-
     const wsUrl = window.location.hostname === 'localhost'
-        ? `ws://localhost:3000?token=${adminToken}`
-        : `wss://mebli.onrender.com?token=${adminToken}`;
+        ? 'ws://localhost:3000'
+        : 'wss://mebli.onrender.com';
 
     if (socket && socket.readyState === WebSocket.OPEN) return;
 
     socket = new WebSocket(wsUrl);
 
-socket.onopen = () => {
-    console.log('Адмін підключено до WebSocket');
-    setTimeout(() => {
-        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
-            if (socket.readyState === WebSocket.OPEN) {
-                console.log(`Підписка на ${type}`);
-                socket.send(JSON.stringify({ type, action: 'subscribe' }));
-            }
-        });
-    }, 100);
-};
-
-socket.onmessage = (event) => {
-    const { type, data } = JSON.parse(event.data);
-    if (type === 'slides') {
-        slides = data.reduce((unique, slide) => 
-            unique.find(s => s._id === slide._id) ? unique : [...unique, slide], []);
-        renderSlidesAdmin();
-                break;
-            case 'categories':
-                categories = data;
-                renderCategoriesAdmin();
-                break;
-            case 'settings':
-                settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
-                if (aboutEditor && data.about) {
-                    const delta = aboutEditor.clipboard.convert(data.about);
-                    aboutEditor.setContents(delta, 'silent');
-                    document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+    socket.onopen = () => {
+        console.log('Адмін підключено до WebSocket');
+        setTimeout(() => {
+            ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    console.log(`Підписка на ${type}`);
+                    socket.send(JSON.stringify({ type, action: 'subscribe' }));
                 }
-                renderSettingsAdmin();
-                break;
-            case 'orders':
-                orders = data;
-                sortOrders('date-desc');
-                renderAdmin('orders');
-                break;
-            case 'slides':
-                slides = data;
-                renderSlidesAdmin();
-                break;
-            case 'materials':
-                materials = data;
-                updateMaterialOptions();
-                break;
-            case 'brands':
-                brands = data;
-                updateBrandOptions();
-                break;
+            });
+        }, 100);
+    };
+
+    socket.onmessage = (event) => {
+        try {
+            const { type, data } = JSON.parse(event.data);
+            switch (type) {
+                case 'products':
+                    products = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i._id === item._id)
+                    );
+                    renderAdmin('products');
+                    break;
+                case 'categories':
+                    categories = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i._id === item._id)
+                    );
+                    renderCategoriesAdmin();
+                    break;
+                case 'settings':
+                    settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
+                    if (aboutEditor && data.about) {
+                        const delta = aboutEditor.clipboard.convert(data.about);
+                        aboutEditor.setContents(delta, 'silent');
+                        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+                    }
+                    renderSettingsAdmin();
+                    break;
+                case 'orders':
+                    orders = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i._id === item._id)
+                    );
+                    sortOrders('date-desc');
+                    renderAdmin('orders');
+                    break;
+                case 'slides':
+                    slides = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i._id === item._id)
+                    );
+                    renderSlidesAdmin();
+                    break;
+                case 'materials':
+                    materials = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i === item)
+                    );
+                    updateMaterialOptions();
+                    break;
+                case 'brands':
+                    brands = data.filter((item, index, self) =>
+                        index === self.findIndex(i => i === item)
+                    );
+                    updateBrandOptions();
+                    break;
+            }
+            resetInactivityTimer();
+        } catch (e) {
+            console.error('Помилка обробки WebSocket:', e);
+            showNotification('Помилка WebSocket: ' + e.message);
         }
-        resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка обробки WebSocket:', e);
-        showNotification('Помилка WebSocket: ' + e.message);
-    }
-};
+    };
 
     socket.onclose = () => {
         console.log('WebSocket відключено');
