@@ -5258,7 +5258,7 @@ function uploadBulkPrices() {
     const file = document.getElementById('bulk-price-file').files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = async (e) => {  // Додаємо async тут
+        reader.onload = async (e) => {  // Додано async тут
             const token = localStorage.getItem('adminToken');
             if (!token) {
                 showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
