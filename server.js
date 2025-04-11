@@ -91,7 +91,12 @@ const importUpload = multer({
 
 app.set('case sensitive routing', false);
 app.use(express.json({ limit: '10mb' })); // Збільшуємо до 10 МБ
-app.use(cors());
+app.use(cors({
+    origin: 'https://mebli.onrender.com', // Ваш фронтенд-домен
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
@@ -278,67 +283,95 @@ const settingsSchemaValidation = Joi.object({
     showSlides: Joi.boolean().default(true)
 });
 
-// Middleware для перевірки JWT
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
-        console.log('Токен відсутній у запиті:', req.path);
+        console.log('Токен відсутній у запиті:', req.path, 'Заголовки:', req.headers);
         return res.status(401).json({ error: 'Доступ заборонено. Токен відсутній.' });
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Токен верифіковано для шляху:', req.path, 'Дані:', decoded);
+        if (decoded.role !== 'admin') {
+            console.log('Недостатньо прав:', req.path, 'Декодовані дані:', decoded);
+            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+        }
+        console.log('Токен верифіковано для шляху:', req.path, 'Декодовані дані:', decoded);
         req.user = decoded;
         next();
     } catch (err) {
-        console.error('Помилка верифікації токена:', err.message, 'Токен:', token);
-        res.status(403).json({ error: 'Недійсний токен', details: err.message });
+        console.error('Помилка верифікації токена:', req.path, 'Токен:', token, 'Помилка:', err.message);
+        return res.status(401).json({ error: 'Недійсний або прострочений токен', details: err.message });
     }
 };
 
-// Налаштування WebSocket
 const server = app.listen(process.env.PORT || 3000, () => console.log(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
 
-async function cleanupOldCarts() {
-    try {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const result = await Cart.deleteMany({ updatedAt: { $lt: thirtyDaysAgo } });
-        console.log(`Старі кошики видалено. Кількість: ${result.deletedCount}`);
-        return result.deletedCount; // Повертаємо кількість видалених документів
-    } catch (err) {
-        console.error('Помилка при очищенні старих кошиків:', err);
-        throw err; // Перекидаємо помилку для обробки в ендпоінті
-    }
+function broadcast(type, data) {
+    console.log(`Трансляція даних типу ${type}:`);
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
+            let filteredData = data;
+            if (type === 'products' && !client.isAdmin) {
+                filteredData = data.filter(p => p.visible && p.active);
+            }
+            client.send(JSON.stringify({ type, data: filteredData }));
+        }
+    });
 }
-
-// Запускаємо очищення раз на день
-setInterval(cleanupOldCarts, 24 * 60 * 60 * 1000);
-cleanupOldCarts(); // Запускаємо при старті сервера
 
 wss.on('connection', (ws, req) => {
     const urlParams = new URLSearchParams(req.url.split('?')[1]);
-    const token = urlParams.get('token');
+    let token = urlParams.get('token');
 
-    ws.isAdmin = false; // За замовчуванням клієнт не адмін
+    ws.isAdmin = false;
     ws.subscriptions = new Set();
 
-    if (token) {
+    const verifyToken = () => {
+        if (!token) {
+            ws.close(1008, 'Токен відсутній');
+            return false;
+        }
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             if (decoded.role === 'admin') {
                 ws.isAdmin = true;
                 console.log('WebSocket: Адмін підключився з токеном:', decoded);
+                return true;
             }
+            return false;
         } catch (err) {
             console.error('WebSocket: Помилка верифікації токена:', err.message);
             ws.close(1008, 'Недійсний токен');
-            return;
+            return false;
         }
-    } else {
-        console.log('WebSocket: Публічний клієнт підключився');
+    };
+
+    if (!verifyToken()) return;
+
+const tokenRefreshInterval = setInterval(async () => {
+    try {
+        const response = await fetch('https://mebli.onrender.com/api/refresh-token', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error(`Помилка ${response.status}: ${await response.text()}`);
+        }
+        const data = await response.json();
+        token = data.token;
+        console.log('WebSocket: Токен оновлено');
+    } catch (err) {
+        console.error('WebSocket: Помилка оновлення токена:', err);
+        ws.close(1008, 'Помилка оновлення токена');
     }
+}, 25 * 60 * 1000);
+
+    ws.on('close', () => {
+        clearInterval(tokenRefreshInterval);
+        console.log('Клієнт від’єднався від WebSocket');
+    });
 
     ws.on('message', async (message) => {
         try {
@@ -351,8 +384,8 @@ wss.on('connection', (ws, req) => {
 
                 if (type === 'products') {
                     const products = ws.isAdmin
-                        ? await Product.find() // Адмінам усі товари
-                        : await Product.find({ visible: true, active: true }); // Публіці тільки видимі
+                        ? await Product.find()
+                        : await Product.find({ visible: true, active: true });
                     ws.send(JSON.stringify({ type: 'products', data: products }));
                 } else if (type === 'settings') {
                     const settings = await Settings.findOne();
@@ -380,7 +413,6 @@ wss.on('connection', (ws, req) => {
         }
     });
 
-    ws.on('close', () => console.log('Клієнт від’єднався від WebSocket'));
     ws.on('error', (err) => console.error('Помилка WebSocket:', err));
 });
 
@@ -813,17 +845,20 @@ app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
 app.post('/api/refresh-token', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Токен відсутній' });
-
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+        }
         const newToken = jwt.sign(
             { userId: decoded.userId, username: decoded.username, role: decoded.role },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
         res.json({ token: newToken });
-    } catch (e) {
-        res.status(403).json({ error: 'Недійсний токен' });
+    } catch (err) {
+        console.error('Помилка оновлення токена:', err.message);
+        res.status(401).json({ error: 'Недійсний або прострочений токен' });
     }
 });
 
