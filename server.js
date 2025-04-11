@@ -330,17 +330,16 @@ wss.on('connection', (ws, req) => {
 
     const verifyToken = () => {
         if (!token) {
-            ws.close(1008, 'Токен відсутній');
-            return false;
+            console.log('WebSocket: Підключення без токена (публічний клієнт)');
+            return true; // Дозволяємо підключення без токена для публічних клієнтів
         }
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             if (decoded.role === 'admin') {
                 ws.isAdmin = true;
                 console.log('WebSocket: Адмін підключився з токеном:', decoded);
-                return true;
             }
-            return false;
+            return true;
         } catch (err) {
             console.error('WebSocket: Помилка верифікації токена:', err.message);
             ws.close(1008, 'Недійсний токен');
@@ -350,26 +349,30 @@ wss.on('connection', (ws, req) => {
 
     if (!verifyToken()) return;
 
-const tokenRefreshInterval = setInterval(async () => {
-    try {
-        const response = await fetch('https://mebli.onrender.com/api/refresh-token', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) {
-            throw new Error(`Помилка ${response.status}: ${await response.text()}`);
-        }
-        const data = await response.json();
-        token = data.token;
-        console.log('WebSocket: Токен оновлено');
-    } catch (err) {
-        console.error('WebSocket: Помилка оновлення токена:', err);
-        ws.close(1008, 'Помилка оновлення токена');
+    // Оновлення токена тільки для адмінів
+    let tokenRefreshInterval;
+    if (ws.isAdmin) {
+        tokenRefreshInterval = setInterval(async () => {
+            try {
+                const response = await fetch('https://mebli.onrender.com/api/refresh-token', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    throw new Error(`Помилка ${response.status}: ${await response.text()}`);
+                }
+                const data = await response.json();
+                token = data.token;
+                console.log('WebSocket: Токен оновлено');
+            } catch (err) {
+                console.error('WebSocket: Помилка оновлення токена:', err);
+                ws.close(1008, 'Помилка оновлення токена');
+            }
+        }, 20 * 60 * 1000); // 20 хвилин
     }
-}, 20 * 60 * 1000); // 20 хвилин
 
     ws.on('close', () => {
-        clearInterval(tokenRefreshInterval);
+        if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
         console.log('Клієнт від’єднався від WebSocket');
     });
 
@@ -405,6 +408,8 @@ const tokenRefreshInterval = setInterval(async () => {
                 } else if (type === 'brands' && ws.isAdmin) {
                     const brands = await Brand.find().distinct('name');
                     ws.send(JSON.stringify({ type: 'brands', data: brands }));
+                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+                    ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
                 }
             }
         } catch (err) {

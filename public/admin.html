@@ -1408,6 +1408,40 @@ async function loadSettings() {
     }
 }
 
+async function fetchWithAuth(url, options = {}) {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        throw new Error('Токен відсутній. Будь ласка, увійдіть знову.');
+    }
+
+    const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-login');
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            throw new Error(`Доступ заборонено: ${text}`);
+        }
+        throw new Error(`Помилка: ${response.status} ${text}`);
+    }
+
+    return response;
+}
+
 async function loadOrders() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -2175,10 +2209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refreshToken() {
     const token = localStorage.getItem('adminToken');
-    if (!token) {
-        console.warn('Токен відсутній у localStorage');
-        return false;
-    }
+    if (!token) return false;
 
     try {
         const response = await fetch('https://mebli.onrender.com/api/refresh-token', {
@@ -2191,27 +2222,14 @@ async function refreshToken() {
         });
 
         if (!response.ok) {
-            const text = await response.text();
-            console.error('Помилка оновлення токена:', text);
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-            }
-            return false;
+            throw new Error('Не вдалося оновити токен');
         }
 
         const data = await response.json();
-        if (!data.token) {
-            console.warn('Новий токен не отримано');
-            return false;
-        }
         localStorage.setItem('adminToken', data.token);
         return true;
-    } catch (e) {
-        console.error('Помилка оновлення токена:', e);
+    } catch (err) {
+        console.error('Помилка оновлення токена:', err);
         localStorage.removeItem('adminToken');
         return false;
     }
@@ -2259,72 +2277,51 @@ function startTokenRefreshTimer() {
 async function updateStoreInfo() {
     const name = document.getElementById('store-name').value;
     const baseUrl = document.getElementById('base-url').value;
-    const logo = document.getElementById('logo-url').value || settings.logo;
-    const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
-    const favicon = document.getElementById('favicon-url').value || settings.favicon;
+    const logo = document.getElementById('logo-url').value;
+    const logoWidth = parseInt(document.getElementById('logo-width').value);
+    const favicon = document.getElementById('favicon-url').value;
 
-    const tokenRefreshed = await refreshToken();
-    if (!tokenRefreshed) return;
+    const data = { ...settings, name, baseUrl, logo, logoWidth, favicon };
+    console.log('Надсилаємо налаштування:', data);
 
-    const token = localStorage.getItem('adminToken');
-    const updateData = { name, baseUrl, logo, logoWidth, favicon };
-    console.log('Надсилаємо налаштування:', updateData);
     try {
-        const response = await fetch('/api/settings', {
+        const response = await fetchWithAuth(`${baseUrl || 'https://mebli.onrender.com'}/api/settings`, {
             method: 'PUT',
-            headers: {
-                credentials: 'include',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updateData)
+            body: JSON.stringify(data)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити налаштування: ${errorData.error || response.statusText}`);
-        }
-
-        Object.assign(settings, updateData);
-        showNotification('Налаштування оновлено!');
+        await response.json();
+        settings = data;
+        renderSettingsAdmin();
+        showNotification('Налаштування збережено!');
+        unsavedChanges = false;
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка при оновленні налаштувань:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка при оновленні налаштувань:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
 async function updateContacts() {
-    const contacts = {
-        phones: document.getElementById('contact-phones').value,
-        addresses: document.getElementById('contact-addresses').value,
-        schedule: document.getElementById('contact-schedule').value
-    };
-    const tokenRefreshed = await refreshToken();
-    if (!tokenRefreshed) return;
+    const phones = document.getElementById('contact-phones').value;
+    const addresses = document.getElementById('contact-addresses').value;
+    const schedule = document.getElementById('contact-schedule').value;
 
-    const token = localStorage.getItem('adminToken');
-    console.log('Надсилаємо контакти:', { contacts });
+    settings.contacts = { phones, addresses, schedule };
+    console.log('Надсилаємо контакти:', settings);
+
     try {
-        const response = await fetch('/api/settings', {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
             method: 'PUT',
-            headers: {
-                credentials: 'include',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ contacts })
+            body: JSON.stringify(settings)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити контакти: ${errorData.error || response.statusText}`);
-        }
-
-        settings.contacts = contacts;
+        await response.json();
+        renderSettingsAdmin();
         showNotification('Контакти оновлено!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка при оновленні контактів:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка при оновленні контактів:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -2976,46 +2973,40 @@ async function addCategory() {
 async function addSubcategory() {
     const name = document.getElementById('subcat-name').value;
     const slug = document.getElementById('subcat-slug').value;
-    const imageUrl = document.getElementById('subcat-img-url').value;
-    const fileInput = document.getElementById('subcat-img-file');
-    const categoryName = document.getElementById('subcat-category').value;
+    const image = document.getElementById('subcat-img-url').value;
+    const category = document.getElementById('subcat-category').value;
 
-    if (!name || !slug || !categoryName) {
-        showNotification('Введіть назву, шлях і виберіть категорію для підкатегорії!');
+    if (!name || !slug || !category) {
+        showNotification('Заповніть усі поля для підкатегорії!');
         return;
     }
 
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
+    const subcat = { name, slug, image };
+    console.log('Надсилаємо підкатегорію:', subcat);
 
-    let image = imageUrl;
-    if (fileInput.files[0]) {
-        const file = fileInput.files[0];
-        const validation = validateFile(file);
-        if (!validation.valid) {
-            showNotification(validation.error);
-            return;
+    try {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetchWithAuth(`${baseUrl}/api/categories/${encodeURIComponent(category)}/subcategories`, {
+            method: 'POST',
+            body: JSON.stringify(subcat)
+        });
+
+        const updatedCategory = await response.json();
+        const catIndex = categories.findIndex(c => c.name === category);
+        if (catIndex !== -1) {
+            categories[catIndex] = updatedCategory;
         }
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { credentials: 'include' },
-                body: formData
-            });
-            const data = await response.json();
-            image = data.url;
-        } catch (e) {
-            console.error('Помилка завантаження зображення підкатегорії:', e);
-            showNotification('Не вдалося завантажити зображення: ' + e.message);
-            return;
-        }
+        renderCategoriesAdmin();
+        document.getElementById('subcat-name').value = '';
+        document.getElementById('subcat-slug').value = '';
+        document.getElementById('subcat-img-url').value = '';
+        showNotification('Підкатегорію додано!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка додавання підкатегорії:', err);
+        showNotification('Помилка: ' + err.message);
     }
+}
 
     const subcategory = { name, slug, image: image || '' };
     console.log('Надсилаємо підкатегорію:', subcategory);

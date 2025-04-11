@@ -174,6 +174,22 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     }
 }
 
+async function fetchPublicData() {
+    try {
+        const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
+        products = await response.json();
+        const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
+        categories = await catResponse.json();
+        const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
+        slides = await slidesResponse.json();
+        const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`);
+        settings = await settingsResponse.json();
+    } catch (e) {
+        console.error('Помилка завантаження даних через HTTP:', e);
+        showNotification('Не вдалося завантажити дані з сервера!', 'error');
+    }
+}
+
 function connectPublicWebSocket() {
     const wsUrl = window.location.hostname === 'localhost' 
         ? 'ws://localhost:3000' 
@@ -186,19 +202,23 @@ function connectPublicWebSocket() {
 
     ws = new WebSocket(wsUrl);
 
+    let reconnectAttempts = 0;
+    const maxAttempts = 5;
+
     ws.onopen = () => {
         console.log('Публічний WebSocket підключено');
+        reconnectAttempts = 0; // Скидаємо лічильник при успішному підключенні
         ['products', 'categories', 'settings', 'slides'].forEach(type => {
             ws.send(JSON.stringify({ type, action: 'subscribe' }));
         });
     };
 
-ws.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
-        if (!message.type || !('data' in message)) {
-            throw new Error('Некоректний формат повідомлення WebSocket');
-        }
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            if (!message.type || !('data' in message)) {
+                throw new Error('Некоректний формат повідомлення WebSocket');
+            }
             const { type, data } = message;
             console.log('Отримано повідомлення WebSocket:', { type, data });
 
@@ -261,16 +281,21 @@ ws.onmessage = (event) => {
                 default:
                     console.warn('Невідомий тип повідомлення:', type);
             }
-} catch (e) {
-        console.error('Помилка обробки WebSocket:', e);
-        showNotification('Помилка синхронізації даних!', 'error');
-    }
-};
+        } catch (e) {
+            console.error('Помилка обробки WebSocket:', e);
+            showNotification('Помилка синхронізації даних!', 'error');
+        }
+    };
 
     ws.onclose = (event) => {
         console.log('Публічний WebSocket відключено:', { code: event.code, reason: event.reason });
-        if (event.code !== 1000) {
+        if (event.code !== 1000 && reconnectAttempts < maxAttempts) {
+            reconnectAttempts++;
+            console.log(`Спроба перепідключення ${reconnectAttempts} з ${maxAttempts}`);
             setTimeout(connectPublicWebSocket, 2000);
+        } else if (reconnectAttempts >= maxAttempts) {
+            console.error('Досягнуто максимальної кількості спроб підключення');
+            showNotification('Не вдалося підключитися до сервера!', 'error');
         }
     };
 
@@ -335,11 +360,98 @@ async function initializeData() {
         favicon: ''
     };
 
-    // Підключаємо WebSocket для отримання актуальних даних
+    // Підключаємо WebSocket і чекаємо першого повідомлення
     connectPublicWebSocket();
+    await new Promise(resolve => {
+        let receivedData = false;
+        ws.onmessage = (event) => {
+            receivedData = true;
+            resolve();
+            // Відновлюємо стандартну обробку після першого повідомлення
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    if (!message.type || !('data' in message)) {
+                        throw new Error('Некоректний формат повідомлення WebSocket');
+                    }
+                    const { type, data } = message;
+                    console.log('Отримано повідомлення WebSocket:', { type, data });
 
-    // Очікуємо першого оновлення від WebSocket
-    await new Promise(resolve => setTimeout(resolve, 1000));
+                    switch (type) {
+                        case 'products':
+                            products = data;
+                            updateCartPrices();
+                            if (document.getElementById('catalog').classList.contains('active')) {
+                                renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                            } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
+                                currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
+                                renderProductDetails();
+                            } else if (document.getElementById('cart').classList.contains('active')) {
+                                renderCart();
+                            }
+                            break;
+                        case 'categories':
+                            categories = data;
+                            renderCategories();
+                            renderCatalogDropdown();
+                            if (document.getElementById('catalog').classList.contains('active')) {
+                                renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                            }
+                            break;
+                        case 'settings':
+                            settings = {
+                                ...settings,
+                                ...data,
+                                contacts: { ...settings.contacts, ...(data.contacts || {}) },
+                                socials: data.socials || settings.socials,
+                                showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
+                                showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
+                            };
+                            updateHeader();
+                            if (document.getElementById('contacts').classList.contains('active')) {
+                                renderContacts();
+                            }
+                            if (document.getElementById('about').classList.contains('active')) {
+                                renderAbout();
+                            }
+                            if (document.getElementById('home').classList.contains('active')) {
+                                renderSlideshow();
+                            }
+                            // Оновлюємо favicon
+                            const oldFavicon = document.querySelector('link[rel="icon"]');
+                            if (oldFavicon) oldFavicon.remove();
+                            const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
+                            const favicon = document.createElement('link');
+                            favicon.rel = 'icon';
+                            favicon.type = 'image/x-icon';
+                            favicon.href = faviconUrl;
+                            document.head.appendChild(favicon);
+                            break;
+                        case 'slides':
+                            slides = data;
+                            if (settings.showSlides && slides.length > 0 && document.getElementById('home').classList.contains('active')) {
+                                renderSlideshow();
+                            }
+                            break;
+                        default:
+                            console.warn('Невідомий тип повідомлення:', type);
+                    }
+                } catch (e) {
+                    console.error('Помилка обробки WebSocket:', e);
+                    showNotification('Помилка синхронізації даних!', 'error');
+                }
+            };
+        };
+        // Тайм-аут на випадок, якщо WebSocket не відповість
+        setTimeout(async () => {
+            if (!receivedData) {
+                console.warn('Дані від WebSocket не отримано, використовуємо HTTP');
+                await fetchPublicData();
+                resolve();
+            }
+        }, 5000); // 5 секунд максимального очікування
+    });
+
     updateHeader();
     renderCategories();
     renderCatalogDropdown();
