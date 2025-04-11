@@ -2006,49 +2006,42 @@ async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
 
-    if (!username || !password) {
-        showNotification('Введіть логін і пароль!');
-        return;
-    }
-
     try {
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetch(`${baseUrl}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ username, password })
-        });
+const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+});
 
-        if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 404) {
-                throw new Error('Сервер не знайшов ендпоінт авторизації. Перевірте налаштування сервера.');
-            }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Помилка входу: Сервер повернув некоректну відповідь (${response.status} ${text})`);
-            }
-        }
+        if (!response.ok) throw new Error('Неправильний логін або пароль');
 
         const data = await response.json();
-        localStorage.setItem('adminToken', data.token);
+        adminToken = data.token; // Зберігаємо токен у пам’яті
         session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+
         showSection('admin-panel');
         initializeData();
         connectAdminWebSocket();
         resetInactivityTimer();
-        showNotification('Вхід виконано успішно!');
+
+        document.getElementById('admin-username').value = '';
+        document.getElementById('admin-password').value = '';
     } catch (e) {
         console.error('Помилка входу:', e);
         showNotification(e.message);
     }
 }
+
+    document.getElementById('admin-password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            login();
+        }
+    });
+    document.getElementById('admin-username').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('admin-password').focus();
+        }
+    });
 
 function logout() {
     adminToken = null;
