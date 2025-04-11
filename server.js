@@ -366,7 +366,7 @@ const tokenRefreshInterval = setInterval(async () => {
         console.error('WebSocket: Помилка оновлення токена:', err);
         ws.close(1008, 'Помилка оновлення токена');
     }
-}, 25 * 60 * 1000);
+}, 20 * 60 * 1000); // 20 хвилин
 
     ws.on('close', () => {
         clearInterval(tokenRefreshInterval);
@@ -1329,11 +1329,15 @@ app.post('/api/import/orders', authenticateToken, importUpload.single('file'), a
     }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Логін і пароль обов’язкові' });
+    }
+
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
         const token = jwt.sign(
-            { userId: username, username: ADMIN_USERNAME, role: 'admin' }, // Додаємо userId
+            { userId: username, username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
