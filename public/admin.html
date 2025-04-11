@@ -1223,14 +1223,21 @@ let socket;
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) return;
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
 
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/products', {
             headers: {
-                credentials: 'include'
-            }
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
         });
+
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1241,20 +1248,17 @@ async function loadProducts() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити товари: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося завантажити товари: ${response.status} ${text}`);
-            }
+            throw new Error(`Не вдалося завантажити товари: ${text}`);
         }
+
         products = await response.json();
         console.log('Товари завантажено:', products);
         renderAdmin('products');
-} catch (e) {
+    } catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification(e.message);
         products = [];
+        renderAdmin('products');
     }
 }
 
@@ -1406,20 +1410,26 @@ async function loadSettings() {
 
 async function loadOrders() {
     try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             orders = [];
             sortOrders('date-desc');
             renderAdmin('orders');
             return;
         }
+
+        const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/orders', {
             headers: {
-                credentials: 'include'
-            }
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
         });
+
         if (!response.ok) {
+            const text = await response.text();
             if (response.status === 401 || response.status === 403) {
                 localStorage.removeItem('adminToken');
                 session = { isActive: false, timestamp: 0 };
@@ -1428,9 +1438,9 @@ async function loadOrders() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            const errorData = await response.json();
-            throw new Error(`Не вдалося завантажити замовлення: ${errorData.error || response.statusText}`);
+            throw new Error(`Не вдалося завантажити замовлення: ${text}`);
         }
+
         orders = await response.json();
         sortOrders('date-desc');
         renderAdmin('orders');
@@ -1438,6 +1448,7 @@ async function loadOrders() {
         console.error('Помилка завантаження замовлень:', e);
         showNotification(e.message);
         orders = [];
+        renderAdmin('orders');
     }
 }
 
@@ -1546,6 +1557,56 @@ async function loadBrands() {
     }
 }
 
+function renderFilters() {
+    const filterList = document.getElementById('filter-list-admin');
+    if (filterList) {
+        filterList.innerHTML = filters.map((f, index) => `
+            <div>
+                ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
+                <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
+            </div>
+        `).join('');
+    }
+    resetInactivityTimer();
+}
+
+async function deleteFilter(index) {
+    if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            filters.splice(index, 1);
+
+            const token = localStorage.getItem('adminToken');
+            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+            const response = await fetch(`${baseUrl}/api/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ ...settings, filters })
+            });
+
+            if (!response.ok) {
+                throw new Error('Не вдалося оновити фільтри');
+            }
+
+            renderFilters();
+            showNotification('Фільтр видалено!');
+        } catch (err) {
+            console.error('Помилка видалення фільтру:', err);
+            showNotification('Помилка: ' + err.message);
+        }
+    }
+}
+
 function updateMaterialOptions() {
     const materialInput = document.getElementById('product-material');
     if (materialInput && materialInput.tagName === 'INPUT') {
@@ -1588,12 +1649,25 @@ async function initializeData() {
 
 async function checkAuth() {
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showSection('admin-login');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/auth/check', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
             credentials: 'include'
         });
+
         if (response.ok) {
             showSection('admin-panel');
-            initializeData();
+            await initializeData();
             connectAdminWebSocket();
             resetInactivityTimer();
         } else {
@@ -2007,28 +2081,31 @@ async function login() {
     const password = document.getElementById('admin-password').value;
 
     try {
-const response = await fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-});
+        const response = await fetch('/api/login', { // Змінено з /api/auth/login на /api/login
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
 
-        if (!response.ok) throw new Error('Неправильний логін або пароль');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Невірний логін або пароль');
+        }
 
         const data = await response.json();
-        adminToken = data.token; // Зберігаємо токен у пам’яті
+        localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
 
         showSection('admin-panel');
-        initializeData();
+        showNotification('Вхід успішний!');
+        await initializeData();
         connectAdminWebSocket();
         resetInactivityTimer();
-
-        document.getElementById('admin-username').value = '';
-        document.getElementById('admin-password').value = '';
-    } catch (e) {
-        console.error('Помилка входу:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка входу:', err);
+        showNotification('Помилка входу: ' + err.message);
     }
 }
 
@@ -2061,13 +2138,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function refreshToken() {
     const token = localStorage.getItem('adminToken');
     if (!token) {
-        console.warn('Токен відсутній.');
+        console.warn('Токен відсутній у localStorage');
         return false;
     }
 
     try {
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetch(`${baseUrl}/api/auth/refresh`, {
+        const response = await fetch('/api/refresh-token', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2092,8 +2168,8 @@ async function refreshToken() {
         session.timestamp = Date.now();
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         return true;
-    } catch (e) {
-        console.error('Помилка оновлення токена:', e);
+    } catch (err) {
+        console.error('Помилка оновлення токена:', err);
         return false;
     }
 }
@@ -3139,14 +3215,16 @@ async function updateProductSettings() {
 
 async function loadFilters() {
     try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
             console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFiltersAdmin();
+            renderFilters(); // Замінено на renderFilters
             return;
         }
 
-        const response = await fetch('/api/filters', {
+        const token = localStorage.getItem('adminToken');
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/filters`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -3164,27 +3242,15 @@ async function loadFilters() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити фільтри: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося завантажити фільтри: ${response.status} ${text}`);
-            }
+            throw new Error(`Не вдалося завантажити фільтри: ${text}`);
         }
 
         filters = await response.json();
-        console.log('Фільтри завантажено:', filters);
-        renderFiltersAdmin();
-    } catch (e) {
-        console.error('Помилка завантаження фільтрів:', e);
-        showNotification('Помилка завантаження фільтрів: ' + e.message);
-        // Використовуємо стандартні фільтри, якщо сервер недоступний
-        filters = [
-            { name: "brand", label: "Виробник", type: "checkbox", options: ["Дубок", "Matroluxe"] },
-            { name: "price", label: "Ціна", type: "checkbox", options: ["0-2000", "2000-5000", "5000+"] },
-            { name: "material", label: "Матеріал", type: "checkbox", options: ["Дерево", "Пружинний блок"] }
-        ];
-        renderFiltersAdmin();
+        renderFilters(); // Замінено на renderFilters
+    } catch (err) {
+        console.error('Помилка завантаження фільтрів:', err);
+        showNotification('Помилка завантаження фільтрів: ' + err.message);
+        renderFilters(); // Рендеримо локальні дані при помилці
     }
 }
 
@@ -5486,62 +5552,70 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            switch (type) {
-                case 'products':
-                    products = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i._id === item._id)
-                    );
-                    renderAdmin('products');
-                    break;
-                case 'categories':
-                    categories = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i._id === item._id)
-                    );
-                    renderCategoriesAdmin();
-                    break;
-                case 'settings':
-                    settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
-                    if (aboutEditor && data.about) {
-                        const delta = aboutEditor.clipboard.convert(data.about);
-                        aboutEditor.setContents(delta, 'silent');
-                        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
-                    }
-                    renderSettingsAdmin();
-                    break;
-                case 'orders':
-                    orders = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i._id === item._id)
-                    );
-                    sortOrders('date-desc');
-                    renderAdmin('orders');
-                    break;
-                case 'slides':
-                    slides = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i._id === item._id)
-                    );
-                    renderSlidesAdmin();
-                    break;
-                case 'materials':
-                    materials = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i === item)
-                    );
-                    updateMaterialOptions();
-                    break;
-                case 'brands':
-                    brands = data.filter((item, index, self) =>
-                        index === self.findIndex(i => i === item)
-                    );
-                    updateBrandOptions();
-                    break;
-            }
-            resetInactivityTimer();
- } catch (e) {
-            console.error('Помилка WebSocket:', e);
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        switch (type) {
+            case 'products':
+                products = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i._id === item._id)
+                );
+                renderAdmin('products');
+                break;
+            case 'categories':
+                categories = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i._id === item._id)
+                );
+                renderCategoriesAdmin();
+                break;
+            case 'settings':
+                settings = { ...settings, ...data, contacts: { ...settings.contacts, ...(data.contacts || {}) } };
+                if (data.filters) {
+                    filters = data.filters; // Оновлюємо фільтри
+                    renderFilters();
+                }
+                if (aboutEditor && data.about) {
+                    const delta = aboutEditor.clipboard.convert(data.about);
+                    aboutEditor.setContents(delta, 'silent');
+                    document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+                }
+                renderSettingsAdmin();
+                break;
+            case 'orders':
+                orders = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i._id === item._id)
+                );
+                sortOrders('date-desc');
+                renderAdmin('orders');
+                break;
+            case 'slides':
+                slides = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i._id === item._id)
+                );
+                renderSlidesAdmin();
+                break;
+            case 'materials':
+                materials = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i === item)
+                );
+                updateMaterialOptions();
+                break;
+            case 'brands':
+                brands = data.filter((item, index, self) =>
+                    index === self.findIndex(i => i === item)
+                );
+                updateBrandOptions();
+                break;
+            case 'filters': // Додано
+                filters = data;
+                renderFilters();
+                break;
         }
-    };
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка WebSocket:', e);
+    }
+};
 
     socket.onclose = () => {
         console.log(`WebSocket відключено, спроба ${attempt}`);
