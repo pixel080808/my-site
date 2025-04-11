@@ -5258,69 +5258,75 @@ function uploadBulkPrices() {
     const file = document.getElementById('bulk-price-file').files[0];
     if (file) {
         const reader = new FileReader();
-reader.onload = async (e) => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
-    let updated = 0;
-    for (const line of lines) {
-        const parts = line.split(',');
-        if (parts.length < 4) continue;
-        const id = parseInt(parts[0].trim());
-        const product = products.find(p => p.id === id);
-        if (!product) continue;
-        if (product.type === 'simple') {
-            const price = parseFloat(parts[parts.length - 1].trim());
-            if (!isNaN(price) && price >= 0) {
-                product.price = price;
-                try {
-                    await fetch(`/api/products/${id}`, {
-                        method: 'PUT',
-                        headers: {
-                            credentials: 'include',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(product)
-                    });
-                    updated++;
-                } catch (e) {
-                    console.error(`Помилка оновлення товару #${id}:`, e);
-                }
+        reader.onload = async (e) => {  // Додаємо async тут
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
             }
-        } else if (product.type === 'mattresses') {
-            const sizePart = parts[parts.length - 2].trim();
-            const price = parseFloat(parts[parts.length - 1].trim());
-            if (sizePart.startsWith('Розмір: ')) {
-                const size = sizePart.replace('Розмір: ', '').trim();
-                const sizeObj = product.sizes.find(s => s.name === size);
-                if (sizeObj && !isNaN(price) && price >= 0) {
-                    sizeObj.price = price;
-                    try {
-                        await fetch(`/api/products/${id}`, {
-                            method: 'PUT',
-                            headers: {
-                                credentials: 'include',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(product)
-                        });
-                        updated++;
-                    } catch (e) {
-                        console.error(`Помилка оновлення товару #${id}:`, e);
+
+            const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
+            let updated = 0;
+            for (const line of lines) {
+                const parts = line.split(',');
+                if (parts.length < 4) continue;
+                const id = parseInt(parts[0].trim());
+                const product = products.find(p => p.id === id);
+                if (!product) continue;
+                if (product.type === 'simple') {
+                    const price = parseFloat(parts[parts.length - 1].trim());
+                    if (!isNaN(price) && price >= 0) {
+                        product.price = price;
+                        try {
+                            const response = await fetch(`/api/products/${id}`, {
+                                method: 'PUT',
+                                headers: {
+                                    credentials: 'include',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(product)
+                            });
+                            if (!response.ok) {
+                                throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                            }
+                            updated++;
+                        } catch (e) {
+                            console.error(`Помилка оновлення товару #${id}:`, e);
+                        }
+                    }
+                } else if (product.type === 'mattresses') {
+                    const sizePart = parts[parts.length - 2].trim();
+                    const price = parseFloat(parts[parts.length - 1].trim());
+                    if (sizePart.startsWith('Розмір: ')) {
+                        const size = sizePart.replace('Розмір: ', '').trim();
+                        const sizeObj = product.sizes.find(s => s.name === size);
+                        if (sizeObj && !isNaN(price) && price >= 0) {
+                            sizeObj.price = price;
+                            try {
+                                const response = await fetch(`/api/products/${id}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        credentials: 'include',
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(product)
+                                });
+                                if (!response.ok) {
+                                    throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                                }
+                                updated++;
+                            } catch (e) {
+                                console.error(`Помилка оновлення товару #${id}:`, e);
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
-    renderAdmin('products');
-    showNotification(`Оновлено цін для ${updated} товарів!`);
-    resetInactivityTimer();
-};
+            renderAdmin('products');
+            showNotification(`Оновлено цін для ${updated} товарів!`);
+            resetInactivityTimer();
+        };
         reader.readAsText(file);
     } else {
         alert('Виберіть файл для завантаження!');
