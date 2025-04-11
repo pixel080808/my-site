@@ -2974,50 +2974,20 @@ async function addSubcategory() {
     const name = document.getElementById('subcat-name').value;
     const slug = document.getElementById('subcat-slug').value;
     const image = document.getElementById('subcat-img-url').value;
-    const category = document.getElementById('subcat-category').value;
+    const categoryName = document.getElementById('subcat-category').value;
 
-    if (!name || !slug || !category) {
+    if (!name || !slug || !categoryName) {
         showNotification('Заповніть усі поля для підкатегорії!');
         return;
     }
-
-    const subcat = { name, slug, image };
-    console.log('Надсилаємо підкатегорію:', subcat);
-
-    try {
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetchWithAuth(`${baseUrl}/api/categories/${encodeURIComponent(category)}/subcategories`, {
-            method: 'POST',
-            body: JSON.stringify(subcat)
-        });
-
-        const updatedCategory = await response.json();
-        const catIndex = categories.findIndex(c => c.name === category);
-        if (catIndex !== -1) {
-            categories[catIndex] = updatedCategory;
-        }
-        renderCategoriesAdmin();
-        document.getElementById('subcat-name').value = '';
-        document.getElementById('subcat-slug').value = '';
-        document.getElementById('subcat-img-url').value = '';
-        showNotification('Підкатегорію додано!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання підкатегорії:', err);
-        showNotification('Помилка: ' + err.message);
-    }
-}
 
     const subcategory = { name, slug, image: image || '' };
     console.log('Надсилаємо підкатегорію:', subcategory);
 
     try {
-        const response = await fetch(`/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetchWithAuth(`${baseUrl}/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
             method: 'POST',
-            headers: {
-                credentials: 'include',
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify(subcategory)
         });
 
@@ -3026,12 +2996,18 @@ async function addSubcategory() {
             throw new Error(`Не вдалося додати підкатегорію: ${response.status} ${errorText}`);
         }
 
-        const newSubcategory = await response.json();
-        const category = categories.find(c => c.name === categoryName);
-        if (category) {
-            if (!category.subcategories) category.subcategories = [];
-            category.subcategories.push(newSubcategory);
+        const updatedCategory = await response.json();
+        const catIndex = categories.findIndex(c => c.name === categoryName);
+        if (catIndex !== -1) {
+            categories[catIndex] = updatedCategory;
+        } else {
+            const category = categories.find(c => c.name === categoryName);
+            if (category) {
+                if (!category.subcategories) category.subcategories = [];
+                category.subcategories.push(updatedCategory);
+            }
         }
+
         renderCategoriesAdmin();
         document.getElementById('subcat-name').value = '';
         document.getElementById('subcat-slug').value = '';
@@ -3039,9 +3015,9 @@ async function addSubcategory() {
         document.getElementById('subcat-img-file').value = '';
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка додавання підкатегорії:', e);
-        showNotification('Не вдалося додати підкатегорію: ' + e.message);
+    } catch (err) {
+        console.error('Помилка додавання підкатегорії:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
