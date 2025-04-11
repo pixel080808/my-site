@@ -424,6 +424,56 @@ app.post('/api/upload', authenticateToken, (req, res, next) => {
     });
 });
 
+// GET /api/filters — повертає лише фільтри з налаштувань
+app.get('/api/filters', authenticateToken, async (req, res) => {
+    try {
+        const settings = await Settings.findOne();
+        const filters = settings ? settings.filters || [] : [];
+        res.json(filters);
+    } catch (err) {
+        console.error('Помилка при отриманні фільтрів:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
+// POST /api/filters — додає новий фільтр до існуючого масиву filters
+app.post('/api/filters', authenticateToken, async (req, res) => {
+    try {
+        const filterData = req.body;
+        const filterSchema = Joi.object({
+            name: Joi.string().required(),
+            label: Joi.string().required(),
+            type: Joi.string().required(),
+            options: Joi.array().items(Joi.string()).default([])
+        });
+
+        const { error } = filterSchema.validate(filterData);
+        if (error) {
+            console.error('Помилка валідації фільтру:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        let settings = await Settings.findOne();
+        if (!settings) {
+            settings = new Settings({ filters: [] });
+        }
+
+        // Перевіряємо, чи фільтр із таким name уже існує
+        if (settings.filters.some(f => f.name === filterData.name)) {
+            return res.status(400).json({ error: 'Фільтр із таким ім’ям уже існує' });
+        }
+
+        settings.filters.push(filterData);
+        await settings.save();
+
+        broadcast('settings', settings); // Оновлюємо всіх клієнтів
+        res.status(201).json(filterData);
+    } catch (err) {
+        console.error('Помилка при додаванні фільтру:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
 // Публічний ендпоінт для перегляду товарів
 app.get('/api/public/products', async (req, res) => {
     try {
