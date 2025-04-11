@@ -1260,18 +1260,22 @@ async function loadProducts() {
 
 async function loadCategories() {
     try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            categories = [];
-            renderCategoriesAdmin();
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
             return;
         }
+
+        const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/categories', {
             headers: {
-                credentials: 'include'
-            }
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
         });
+
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1289,26 +1293,40 @@ async function loadCategories() {
                 throw new Error(`Не вдалося завантажити категорії: ${response.status} ${text}`);
             }
         }
+
         categories = await response.json();
         console.log('Категорії завантажено:', categories);
         renderCategoriesAdmin();
     } catch (e) {
         console.error('Помилка завантаження категорій:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження категорій: ' + e.message);
         categories = [];
+        renderCategoriesAdmin();
     }
 }
 
 async function loadSettings() {
     try {
         const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) return;
+        if (!tokenRefreshed) {
+            showNotification('Не вдалося оновити токен. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
 
         const token = localStorage.getItem('adminToken');
+        if (!token) {
+            console.warn('Токен відсутній. Використовуються локальні налаштування.');
+            renderSettingsAdmin();
+            return;
+        }
+
         const response = await fetch('/api/settings', {
             headers: {
-                credentials: 'include'
-            }
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -1332,34 +1350,57 @@ async function loadSettings() {
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
 
+        // Зберігаємо тільки визначені поля, щоб уникнути перезапису порожніми значеннями
         settings = {
             ...settings,
-            ...serverSettings,
+            name: serverSettings.name || settings.name,
+            baseUrl: serverSettings.baseUrl || settings.baseUrl,
+            logo: serverSettings.logo || settings.logo,
+            logoWidth: serverSettings.logoWidth || settings.logoWidth,
+            favicon: serverSettings.favicon || settings.favicon,
             contacts: {
-                phones: serverSettings.contacts?.phones || '',
-                addresses: serverSettings.contacts?.addresses || '',
-                schedule: serverSettings.contacts?.schedule || ''
-            }
+                phones: serverSettings.contacts?.phones || settings.contacts.phones,
+                addresses: serverSettings.contacts?.addresses || settings.contacts.addresses,
+                schedule: serverSettings.contacts?.schedule || settings.contacts.schedule
+            },
+            socials: serverSettings.socials || settings.socials,
+            showSocials: serverSettings.showSocials !== undefined ? serverSettings.showSocials : settings.showSocials,
+            about: serverSettings.about || settings.about, // Зберігаємо about, якщо є
+            showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
+            slideWidth: serverSettings.slideWidth || settings.slideWidth,
+            slideHeight: serverSettings.slideHeight || settings.slideHeight,
+            slideInterval: serverSettings.slideInterval || settings.slideInterval,
+            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth,
+            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight,
+            productWidth: serverSettings.productWidth || settings.productWidth,
+            productHeight: serverSettings.productHeight || settings.productHeight
         };
+
         console.log('Оновлені settings:', settings);
 
-        if (aboutEditor && settings.about) {
-            try {
-                const delta = aboutEditor.clipboard.convert(settings.about);
-                aboutEditor.setContents(delta, 'silent');
-            } catch (e) {
-                console.error('Помилка при встановленні вмісту "Про нас":', e);
-                aboutEditor.setText(settings.about, 'silent');
+        // Оновлюємо редактор "Про нас"
+        if (aboutEditor) {
+            if (settings.about) {
+                try {
+                    const delta = aboutEditor.clipboard.convert(settings.about);
+                    aboutEditor.setContents(delta, 'silent');
+                    console.log('Встановлено вміст "Про нас":', settings.about);
+                } catch (e) {
+                    console.error('Помилка при встановленні вмісту "Про нас":', e);
+                    aboutEditor.setText(settings.about, 'silent');
+                }
+            } else {
+                console.log('settings.about порожній, редактор не змінюється.');
+                // Не очищаємо редактор, якщо about порожній
             }
             document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
-        } else if (aboutEditor) {
-            aboutEditor.setText('', 'silent');
-            console.log('settings.about порожній, редактор очищено.');
         }
+
         renderSettingsAdmin();
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження налаштувань: ' + e.message);
+        renderSettingsAdmin(); // Рендеримо з локальними даними
     }
 }
 
@@ -1530,11 +1571,12 @@ async function initializeData() {
         await Promise.all([
             loadProducts(),
             loadCategories(),
-            loadSettings(), // Завантажуємо налаштування з сервера
+            loadSettings(),
             loadOrders(),
             loadSlides(),
             loadMaterials(),
-            loadBrands()
+            loadBrands(),
+            loadFilters() // Додаємо завантаження фільтрів
         ]);
         initializeEditors();
         console.log('Усі дані успішно ініціалізовані');
@@ -1568,6 +1610,8 @@ async function checkAuth() {
 }
 
 checkAuth();
+
+
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -1956,48 +2000,55 @@ toolbar.addHandler('image', async () => {
         }
     }
 
-session = { isActive: false, timestamp: 0 }; // Тимчасова змінна, яка не зберігається локальноlet adminToken = null; // Токен зберігається лише в пам’яті під час сесії
+session = { isActive: false, timestamp: 0 };
 
 async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
 
-    try {
-const response = await fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-});
+    if (!username || !password) {
+        showNotification('Введіть логін і пароль!');
+        return;
+    }
 
-        if (!response.ok) throw new Error('Неправильний логін або пароль');
+    try {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            if (response.status === 404) {
+                throw new Error('Сервер не знайшов ендпоінт авторизації. Перевірте налаштування сервера.');
+            }
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Помилка входу: Сервер повернув некоректну відповідь (${response.status} ${text})`);
+            }
+        }
 
         const data = await response.json();
-        adminToken = data.token; // Зберігаємо токен у пам’яті
+        localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
-
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
         initializeData();
         connectAdminWebSocket();
         resetInactivityTimer();
-
-        document.getElementById('admin-username').value = '';
-        document.getElementById('admin-password').value = '';
+        showNotification('Вхід виконано успішно!');
     } catch (e) {
         console.error('Помилка входу:', e);
         showNotification(e.message);
     }
 }
-
-    document.getElementById('admin-password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-    document.getElementById('admin-username').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('admin-password').focus();
-        }
-    });
 
 function logout() {
     adminToken = null;
@@ -2017,37 +2068,39 @@ document.addEventListener('DOMContentLoaded', () => {
 async function refreshToken() {
     const token = localStorage.getItem('adminToken');
     if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
+        console.warn('Токен відсутній.');
         return false;
     }
 
     try {
-        const response = await fetch('/api/refresh-token', {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/auth/refresh`, {
             method: 'POST',
             headers: {
-                credentials: 'include',
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            credentials: 'include'
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити токен: ' + response.statusText);
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            }
+            return false;
         }
 
         const data = await response.json();
         localStorage.setItem('adminToken', data.token);
         session.timestamp = Date.now();
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        console.log('Токен оновлено:', data.token);
         return true;
     } catch (e) {
         console.error('Помилка оновлення токена:', e);
-        localStorage.removeItem('adminToken');
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-        showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         return false;
     }
 }
@@ -2058,33 +2111,6 @@ function startTokenRefreshTimer() {
             await refreshToken();
         }
     }, 25 * 60 * 1000); // 25 хвилин
-}
-
-// Викличте цю функцію після успішного входу в `login`:
-async function login() {
-    const username = document.getElementById('admin-username').value;
-    const password = document.getElementById('admin-password').value;
-    try {
-        const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-            credentials: 'include' // Додаємо cookies
-        });
-        const data = await response.json();
-        if (response.ok) {
-            showSection('admin-panel');
-            initializeData();
-            connectAdminWebSocket();
-            resetInactivityTimer();
-            showNotification('Успішний вхід!');
-        } else {
-            throw new Error(data.error || 'Помилка входу');
-        }
-    } catch (e) {
-        console.error('Помилка входу:', e);
-        showNotification('Помилка входу: ' + e.message);
-    }
 }
 
     function showNotification(message) {
@@ -3118,14 +3144,64 @@ async function updateProductSettings() {
     }
 }
 
+async function loadFilters() {
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            console.warn('Токен відсутній. Використовуються локальні фільтри.');
+            renderFiltersAdmin();
+            return;
+        }
+
+        const response = await fetch('/api/filters', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Не вдалося завантажити фільтри: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Не вдалося завантажити фільтри: ${response.status} ${text}`);
+            }
+        }
+
+        filters = await response.json();
+        console.log('Фільтри завантажено:', filters);
+        renderFiltersAdmin();
+    } catch (e) {
+        console.error('Помилка завантаження фільтрів:', e);
+        showNotification('Помилка завантаження фільтрів: ' + e.message);
+        // Використовуємо стандартні фільтри, якщо сервер недоступний
+        filters = [
+            { name: "brand", label: "Виробник", type: "checkbox", options: ["Дубок", "Matroluxe"] },
+            { name: "price", label: "Ціна", type: "checkbox", options: ["0-2000", "2000-5000", "5000+"] },
+            { name: "material", label: "Матеріал", type: "checkbox", options: ["Дерево", "Пружинний блок"] }
+        ];
+        renderFiltersAdmin();
+    }
+}
+
 async function addFilter() {
-    const name = document.getElementById('filter-name').value;
-    const label = document.getElementById('filter-label').value;
-    const options = document.getElementById('filter-options').value.split(',').map(o => o.trim());
-    const token = localStorage.getItem('adminToken');
+    const name = document.getElementById('filter-name').value.trim();
+    const label = document.getElementById('filter-label').value.trim();
+    const options = document.getElementById('filter-options').value.split(',').map(o => o.trim()).filter(o => o);
 
     if (!name || !label || options.length === 0) {
-        alert('Введіть назву, підпис та опції фільтру!');
+        showNotification('Заповніть усі поля фільтра!');
         return;
     }
 
@@ -3133,30 +3209,48 @@ async function addFilter() {
     filters.push(newFilter);
 
     try {
-        const response = await fetch('/api/settings', {
-            method: 'PUT',
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const response = await fetch('/api/filters', {
+            method: 'POST',
             headers: {
-                credentials: 'include',
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ filters })
+            credentials: 'include',
+            body: JSON.stringify(newFilter)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося додати фільтр: ${errorData.error}`);
+            const text = await response.text();
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            throw new Error(`Не вдалося зберегти фільтр: ${response.statusText}`);
         }
 
         renderFiltersAdmin();
+        showNotification('Фільтр додано!');
         document.getElementById('filter-name').value = '';
         document.getElementById('filter-label').value = '';
         document.getElementById('filter-options').value = '';
-        showNotification('Фільтр додано!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання фільтру:', err);
-        showNotification(err.message);
-        filters.pop(); // Видаляємо фільтр, якщо сервер не прийняв
+    } catch (e) {
+        console.error('Помилка збереження фільтра:', e);
+        showNotification('Не вдалося зберегти фільтр: ' + e.message);
+        // Видаляємо фільтр із локального масиву, якщо сервер не зберіг
+        filters = filters.filter(f => f.name !== name);
+        renderFiltersAdmin();
     }
 }
 
@@ -3405,14 +3499,19 @@ async function updateSlideshowSettings() {
     }
 }
 
-// Допоміжна функція для дебонсінгу
 function debounce(func, wait) {
     let timeout;
-    return function (...args) {
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
+        timeout = setTimeout(later, wait);
     };
 }
+
+const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
 async function addSlide() {
     const imgUrl = document.getElementById('slide-img-url').value;
@@ -5376,7 +5475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function connectAdminWebSocket() {
+function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
         : 'wss://mebli.onrender.com';
@@ -5387,14 +5486,11 @@ function connectAdminWebSocket() {
 
     socket.onopen = () => {
         console.log('Адмін підключено до WebSocket');
-        setTimeout(() => {
-            ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    console.log(`Підписка на ${type}`);
-                    socket.send(JSON.stringify({ type, action: 'subscribe' }));
-                }
-            });
-        }, 100);
+        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type, action: 'subscribe' }));
+            }
+        });
     };
 
     socket.onmessage = (event) => {
@@ -5449,20 +5545,19 @@ function connectAdminWebSocket() {
                     break;
             }
             resetInactivityTimer();
-        } catch (e) {
-            console.error('Помилка обробки WebSocket:', e);
-            showNotification('Помилка WebSocket: ' + e.message);
+ } catch (e) {
+            console.error('Помилка WebSocket:', e);
         }
     };
 
     socket.onclose = () => {
-        console.log('WebSocket відключено');
-        setTimeout(connectAdminWebSocket, 2000);
+        console.log(`WebSocket відключено, спроба ${attempt}`);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+        setTimeout(() => connectAdminWebSocket(attempt + 1), delay);
     };
 
     socket.onerror = (error) => {
         console.error('Помилка WebSocket:', error);
-        showNotification('Не вдалося підключитися до WebSocket.');
     };
 }
   </script>
