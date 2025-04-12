@@ -351,25 +351,26 @@ wss.on('connection', (ws, req) => {
 
     // Оновлення токена тільки для адмінів
     let tokenRefreshInterval;
-    if (ws.isAdmin) {
-        tokenRefreshInterval = setInterval(async () => {
-            try {
-                const response = await fetch('https://mebli.onrender.com/api/refresh-token', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Помилка ${response.status}: ${await response.text()}`);
-                }
-                const data = await response.json();
-                token = data.token;
-                console.log('WebSocket: Токен оновлено');
-            } catch (err) {
-                console.error('WebSocket: Помилка оновлення токена:', err);
-                ws.close(1008, 'Помилка оновлення токена');
+// У wss.on('connection')
+if (ws.isAdmin) {
+    tokenRefreshInterval = setInterval(async () => {
+        try {
+            const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error(`Помилка ${response.status}: ${await response.text()}`);
             }
-        }, 20 * 60 * 1000); // 20 хвилин
-    }
+            const data = await response.json();
+            token = data.token;
+            console.log('WebSocket: Токен оновлено');
+        } catch (err) {
+            console.error('WebSocket: Помилка оновлення токена:', err);
+            ws.close(1008, 'Помилка оновлення токена');
+        }
+    }, 20 * 60 * 1000); // 20 хвилин
+}
 
     ws.on('close', () => {
         if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
@@ -434,16 +435,19 @@ function broadcast(type, data) {
     });
 }
 
-// Ендпоінт для завантаження файлів
 app.post('/api/upload', authenticateToken, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
+            console.error('Multer помилка:', err);
             return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
         } else if (err) {
+            console.error('Помилка валідації файлу:', err);
             return res.status(400).json({ error: 'Помилка валідації файлу', details: err.message });
         }
         try {
+            console.log('Файл отримано:', req.file);
             if (!req.file || !req.file.path) {
+                console.error('Cloudinary не повернув шлях файлу:', req.file);
                 return res.status(500).json({ error: 'Помилка завантаження: файл не отримано від Cloudinary' });
             }
             res.json({ url: req.file.path });
@@ -807,6 +811,7 @@ app.get('/api/slides', authenticateToken, async (req, res) => {
 app.post('/api/slides', authenticateToken, async (req, res) => {
     try {
         const slideData = req.body;
+        console.log('Отримано дані слайду:', slideData);
         const maxIdSlide = await Slide.findOne().sort({ id: -1 });
         slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
         const slide = new Slide(slideData);
@@ -847,7 +852,7 @@ app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/refresh-token', (req, res) => {
+app.post('/api/auth/refresh', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Токен відсутній' });
     try {
@@ -856,7 +861,7 @@ app.post('/api/refresh-token', (req, res) => {
             return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
         }
         const newToken = jwt.sign(
-            { userId: decoded.userId, username: decoded.username, role: decoded.role },
+            { userId: decoded.userId, username: decoded.username, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
@@ -867,14 +872,32 @@ app.post('/api/refresh-token', (req, res) => {
     }
 });
 
-// Маршрути для роботи з налаштуваннями
 app.get('/api/settings', authenticateToken, async (req, res) => {
     try {
-        const settings = await Settings.findOne();
+        let settings = await Settings.findOne();
         if (!settings) {
-            const defaultSettings = new Settings({});
-            await defaultSettings.save();
-            return res.json(defaultSettings);
+            settings = new Settings({
+                name: '',
+                baseUrl: '',
+                logo: '',
+                logoWidth: 150,
+                favicon: '',
+                contacts: { phones: '', addresses: '', schedule: '' },
+                socials: [],
+                showSocials: true,
+                about: '',
+                categoryWidth: 0,
+                categoryHeight: 0,
+                productWidth: 0,
+                productHeight: 0,
+                filters: [],
+                orderFields: [],
+                slideWidth: 0,
+                slideHeight: 0,
+                slideInterval: 3000,
+                showSlides: true
+            });
+            await settings.save();
         }
         res.json(settings);
     } catch (err) {
@@ -886,7 +909,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
-        console.log('Отримано дані для оновлення налаштувань:', settingsData);
+        console.log('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
 
         const { error } = settingsSchemaValidation.validate(settingsData, { abortEarly: false });
         if (error) {
@@ -1079,7 +1102,7 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const order = await Order.findOneAndUpdate({ id: req.params.id }, orderData, { new: true });
+        const order = await Order.findByIdAndUpdate(req.params.id, orderData, { new: true });
         if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
         const orders = await Order.find();

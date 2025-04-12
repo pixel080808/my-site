@@ -5725,30 +5725,41 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-socket.onmessage = (event) => {
-    try {
-        const { type, data } = JSON.parse(event.data);
-        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-        if (type === 'settings') {
-            settings = { ...settings, ...data };
-            renderSettingsAdmin();
-        } else if (type === 'products') {
-            products = data;
-            renderAdmin('products');
-        } else if (type === 'categories') {
-            categories = data;
-            renderCategoriesAdmin();
-        } else if (type === 'orders') {
-            orders = data;
-            renderAdmin('orders');
-        } else if (type === 'slides') {
-            slides = data;
-            renderSlidesAdmin();
+    socket.onmessage = (event) => {
+        try {
+            const { type, data } = JSON.parse(event.data);
+            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+            if (type === 'settings') {
+                settings = { ...settings, ...data };
+                renderSettingsAdmin();
+            } else if (type === 'products') {
+                products = data;
+                renderAdmin('products');
+            } else if (type === 'categories') {
+                categories = data;
+                renderCategoriesAdmin();
+            } else if (type === 'orders') {
+                orders = data;
+                renderAdmin('orders');
+            } else if (type === 'slides') {
+                slides = data;
+                renderSlidesAdmin();
+            }
+        } catch (e) {
+            console.error('Помилка WebSocket:', e);
         }
-    } catch (e) {
-        console.error('Помилка WebSocket:', e);
-    }
-};
+    };
+
+    socket.onclose = () => {
+        console.log('WebSocket закрито, спроба перепідключення...');
+        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000); // Спроба перепідключення через 5 секунд
+    };
+
+    socket.onerror = (error) => {
+        console.error('Помилка WebSocket:', error);
+        showNotification('Помилка підключення до WebSocket. Перевірте з’єднання.');
+    };
+}
   </script>
  </body>
 </html>

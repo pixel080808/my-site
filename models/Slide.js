@@ -1,9 +1,9 @@
 // models/Slide.js
-const mongoose = require('mongoose'); // Додано
+const mongoose = require('mongoose');
 
 const slideSchema = new mongoose.Schema({
     id: Number,
-    img: String, // Додано
+    image: String, // Змінено з img
     name: String,
     url: String,
     title: String,
