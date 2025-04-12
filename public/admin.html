@@ -849,7 +849,7 @@
       <input id="filter-options" placeholder="Опції (через кому)" type="text"/>
       <br/>
       <label for="filter-options">
-       Опції (наприклад, Дубок, Matroluxe)
+       Опції (наприклад, Гербор, Matroluxe)
       </label>
       <button onclick="addFilter()">
        Додати фільтр
@@ -1186,7 +1186,7 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
-let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
+let filters = [];
 let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
 let settings = {
     name: '',
@@ -1354,56 +1354,60 @@ async function loadSettings() {
         const serverSettings = await response.json();
         console.log('Дані з /api/settings:', serverSettings);
 
-        // Зберігаємо тільки визначені поля, щоб уникнути перезапису порожніми значеннями
+        // Об'єднання серверних і локальних налаштувань
         settings = {
             ...settings,
-            name: serverSettings.name || settings.name,
-            baseUrl: serverSettings.baseUrl || settings.baseUrl,
-            logo: serverSettings.logo || settings.logo,
-            logoWidth: serverSettings.logoWidth || settings.logoWidth,
-            favicon: serverSettings.favicon || settings.favicon,
+            name: serverSettings.name || settings.name || '',
+            baseUrl: serverSettings.baseUrl || settings.baseUrl || '',
+            logo: serverSettings.logo || settings.logo || '',
+            logoWidth: serverSettings.logoWidth || settings.logoWidth || '',
+            favicon: serverSettings.favicon || settings.favicon || '',
             contacts: {
-                phones: serverSettings.contacts?.phones || settings.contacts.phones,
-                addresses: serverSettings.contacts?.addresses || settings.contacts.addresses,
-                schedule: serverSettings.contacts?.schedule || settings.contacts.schedule
+                phones: serverSettings.contacts?.phones || settings.contacts.phones || '',
+                addresses: serverSettings.contacts?.addresses || settings.contacts.addresses || '',
+                schedule: serverSettings.contacts?.schedule || settings.contacts.schedule || ''
             },
-            socials: serverSettings.socials || settings.socials,
+            socials: serverSettings.socials || settings.socials || [],
             showSocials: serverSettings.showSocials !== undefined ? serverSettings.showSocials : settings.showSocials,
-            about: serverSettings.about || settings.about, // Зберігаємо about, якщо є
+            about: serverSettings.about || settings.about || '',
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
-            slideWidth: serverSettings.slideWidth || settings.slideWidth,
-            slideHeight: serverSettings.slideHeight || settings.slideHeight,
-            slideInterval: serverSettings.slideInterval || settings.slideInterval,
-            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth,
-            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight,
-            productWidth: serverSettings.productWidth || settings.productWidth,
-            productHeight: serverSettings.productHeight || settings.productHeight
+            slideWidth: serverSettings.slideWidth || settings.slideWidth || '',
+            slideHeight: serverSettings.slideHeight || settings.slideHeight || '',
+            slideInterval: serverSettings.slideInterval || settings.slideInterval || '',
+            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth || '',
+            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight || '',
+            productWidth: serverSettings.productWidth || settings.productWidth || '',
+            productHeight: serverSettings.productHeight || settings.productHeight || ''
         };
+
+        // Завантаження фільтрів, якщо вони є
+        filters = serverSettings.filters || filters || [];
 
         console.log('Оновлені settings:', settings);
 
-// Оновлюємо редактор "Про нас"
-if (aboutEditor) {
-    if (settings.about) {
-        try {
-            aboutEditor.root.innerHTML = settings.about;
-            console.log('Встановлено вміст "Про нас":', settings.about);
-        } catch (e) {
-            console.error('Помилка при встановленні вмісту "Про нас":', e);
-            aboutEditor.setText(settings.about || '', 'silent');
+        // Оновлення редактора "Про нас"
+        if (aboutEditor) {
+            if (settings.about) {
+                try {
+                    aboutEditor.root.innerHTML = settings.about;
+                    console.log('Встановлено вміст "Про нас":', settings.about);
+                } catch (e) {
+                    console.error('Помилка при встановленні вмісту "Про нас":', e);
+                    aboutEditor.setText(settings.about || '', 'silent');
+                }
+            } else {
+                console.log('settings.about порожній, редактор очищено.');
+                aboutEditor.root.innerHTML = '';
+            }
+            document.getElementById('about-edit').value = settings.about || '';
         }
-    } else {
-        console.log('settings.about порожній, редактор залишається без змін.');
-        // Не очищаємо редактор, щоб уникнути втрати локальних змін
-    }
-    document.getElementById('about-edit').value = settings.about || '';
-}
 
         renderSettingsAdmin();
+        renderFilters();
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification('Помилка завантаження налаштувань: ' + e.message);
-        renderSettingsAdmin(); // Рендеримо з локальними даними
+        renderSettingsAdmin();
     }
 }
 
@@ -1882,23 +1886,33 @@ function initializeEditors() {
     // Реєструємо модуль історії для undo/redo
     Quill.register('modules/history', function(quill, options) {
         quill.history = new Quill.modules.History(quill, options);
-        quill.on('text-change', () => {
-            quill.history.stack.undo.length > 0
-                ? document.querySelector('.ql-undo').removeAttribute('disabled')
-                : document.querySelector('.ql-undo').setAttribute('disabled', 'true');
-            quill.history.stack.redo.length > 0
-                ? document.querySelector('.ql-redo').removeAttribute('disabled')
-                : document.querySelector('.ql-redo').setAttribute('disabled', 'true');
-        });
+        const updateButtons = () => {
+            const undoButton = document.querySelector('.ql-undo');
+            const redoButton = document.querySelector('.ql-redo');
+            if (undoButton && redoButton) {
+                quill.history.stack.undo.length > 0
+                    ? undoButton.removeAttribute('disabled')
+                    : undoButton.setAttribute('disabled', 'true');
+                quill.history.stack.redo.length > 0
+                    ? redoButton.removeAttribute('disabled')
+                    : redoButton.setAttribute('disabled', 'true');
+            }
+        };
 
-        document.querySelector('.ql-undo').addEventListener('click', () => {
-            quill.history.undo();
-        });
+        quill.on('text-change', updateButtons);
 
-        document.querySelector('.ql-redo').addEventListener('click', () => {
-            quill.history.redo();
-        });
-    });
+        const undoButton = document.querySelector('.ql-undo');
+        const redoButton = document.querySelector('.ql-redo');
+        if (undoButton) {
+            undoButton.addEventListener('click', () => quill.history.undo());
+        }
+        if (redoButton) {
+            redoButton.addEventListener('click', () => quill.history.redo());
+        }
+
+        // Ініціалізація стану кнопок
+        setTimeout(updateButtons, 100); // Даємо час Quill ініціалізувати DOM
+    }, true);
 
     const aboutToolbarOptions = [
         ['bold', 'italic', 'underline', 'strike'],
@@ -1914,7 +1928,7 @@ function initializeEditors() {
         [{ 'align': [] }],
         ['clean'],
         ['image', 'video'],
-        ['undo', 'redo'] // Додаємо undo і redo
+        ['undo', 'redo']
     ];
 
     aboutEditor = new Quill('#about-editor', {
@@ -1929,6 +1943,7 @@ function initializeEditors() {
         }
     });
 
+    // Єдиний обробник для оновлення вмісту
     aboutEditor.on('text-change', () => {
         const content = aboutEditor.root.innerHTML;
         document.getElementById('about-edit').value = content;
@@ -1948,17 +1963,9 @@ function initializeEditors() {
         }
     } else {
         console.log('settings.about порожній, редактор очищено.');
-        aboutEditor.setText('', 'silent');
+        aboutEditor.root.innerHTML = '';
     }
     document.getElementById('about-edit').value = settings.about || '';
-
-    // Обробник змін
-    aboutEditor.on('text-change', () => {
-        const newContent = aboutEditor.root.innerHTML;
-        document.getElementById('about-edit').value = newContent;
-        console.log('Вміст редактора змінено:', newContent);
-        unsavedChanges = true;
-    });
 
     // Обробник кліків для зміни розмірів медіа
     aboutEditor.root.addEventListener('click', (e) => {
@@ -1980,16 +1987,14 @@ function initializeEditors() {
         return delta;
     });
 
-    // Встановлюємо розміри для відео за замовчуванням
+    // Встановлюємо розміри для відео
     setDefaultVideoSizes(aboutEditor, 'about-edit');
 
-    // Виконуємо негайно, якщо документ уже завантажений, або чекаємо події
+    // Додаємо обробники панелі інструментів
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(addToolbarEventListeners, 100);
+        addToolbarEventListeners();
     } else {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(addToolbarEventListeners, 100);
-        });
+        document.addEventListener('DOMContentLoaded', addToolbarEventListeners);
     }
 }
 
@@ -3771,19 +3776,17 @@ async function updateSlideshowSettings() {
 
 function debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
-const debouncedRenderAdmin = debounce(renderAdmin, 100);
+const debouncedRenderAdmin = debounce(renderAdmin, 300);
 
 async function addSlide() {
+    const button = document.querySelector('button[onclick="addSlide()"]');
+    button.disabled = true;
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -3861,9 +3864,11 @@ async function addSlide() {
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-    } catch (err) {
+} catch (err) {
         console.error('Помилка додавання слайду:', err);
         showNotification('Не вдалося додати слайд: ' + err.message);
+    } finally {
+        button.disabled = false;
     }
 }
 
@@ -4866,8 +4871,8 @@ async function saveNewProduct() {
         showNotification('Товар додано!');
         unsavedChanges = false;
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка при додаванні товару:', err);
+} catch (err) {
+        console.error('Помилка при додаванні товару:', err, err.stack);
         showNotification('Не вдалося додати товар: ' + err.message);
     }
 }
@@ -5598,15 +5603,19 @@ async function saveOrderStatus(index) {
         }
 
         const order = orders[index];
-        const newStatus = document.getElementById('new-order-status').value;
+        if (!order || !order._id) {
+            showNotification('Замовлення не знайдено або недійсне!');
+            return;
+        }
 
+        const newStatus = document.getElementById('new-order-status').value;
         if (!newStatus) {
             showNotification('Виберіть новий статус!');
             return;
         }
 
         // Очищаємо items від системних полів
-        const cleanedItems = order.items.map(item => {
+        const cleanedItems = (order.items || []).map(item => {
             const { _id, ...cleanedItem } = item;
             return cleanedItem;
         });
@@ -5614,8 +5623,8 @@ async function saveOrderStatus(index) {
         const updatedOrder = {
             status: newStatus,
             date: order.date,
-            total: order.total,
-            customer: order.customer,
+            total: order.total || 0,
+            customer: order.customer || {},
             items: cleanedItems
         };
 
@@ -5624,13 +5633,19 @@ async function saveOrderStatus(index) {
             body: JSON.stringify(updatedOrder)
         });
 
-        order.status = newStatus;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення статусу: ${errorData.error || response.statusText}`);
+        }
+
+        // Оновлюємо локальний масив orders
+        orders[index] = { ...order, ...updatedOrder };
         closeModal();
         renderAdmin('orders');
         showNotification('Статус замовлення змінено!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка оновлення статусу замовлення:', err);
+        console.error('Помилка оновлення статусу замовлення:', err, err.stack);
         showNotification('Не вдалося оновити статус замовлення: ' + err.message);
     }
 }

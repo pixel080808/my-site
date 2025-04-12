@@ -12,7 +12,8 @@
     <meta property="og:url" content="https://mebli.onrender.com"/> <!-- Оновлено URL -->
     <meta property="og:type" content="website"/>
     <title>Меблевий магазин</title>
-    <link href="/css/styles.css" rel="stylesheet"/> <!-- Абсолютний шлях -->
+    <link href="/css/styles.css" rel="stylesheet"/>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <!-- Основний скрипт із defer -->
     <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
     <!-- Google Analytics асинхронно -->
@@ -26,6 +27,16 @@
     <!-- LZ-String із defer -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
     <style>
+.logo {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 150px;
+    height: auto; /* Змінено на auto */
+    padding-top: 33.33%; /* Співвідношення сторін 150/50 = 3, тому 33.33% */
+    cursor: pointer;
+    position: relative;
+}
 /* Попередні стилі */
 #about-text img,
 #about-text iframe {
