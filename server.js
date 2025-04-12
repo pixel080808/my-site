@@ -226,10 +226,11 @@ const orderSchemaValidation = Joi.object({
     items: Joi.array().items(
         Joi.object({
             id: Joi.number().required(),
-            name: Joi.string().required(), // Додаємо поле name
+            name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            color: Joi.string().allow('')
+            color: Joi.string().allow(''),
+            _id: Joi.any().optional() // Дозволяємо _id, але робимо його необов’язковим
         })
     ).required(),
     total: Joi.number().min(0).required(),
@@ -249,11 +250,11 @@ const settingsSchemaValidation = Joi.object({
         schedule: Joi.string().allow('')
     }).default({ phones: '', addresses: '', schedule: '' }),
     socials: Joi.array().items(
-    Joi.object({
-        name: Joi.string().allow(''), // Додано
-        url: Joi.string().uri().required(),
-        icon: Joi.string().required()
-    })
+        Joi.object({
+            name: Joi.string().allow(''),
+            url: Joi.string().uri().required(),
+            icon: Joi.string().required()
+        })
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
@@ -280,7 +281,24 @@ const settingsSchemaValidation = Joi.object({
     slideWidth: Joi.number().min(0).allow(null),
     slideHeight: Joi.number().min(0).allow(null),
     slideInterval: Joi.number().min(0).allow(null),
-    showSlides: Joi.boolean().default(true)
+    showSlides: Joi.boolean().default(true),
+    // Дозволяємо системні поля, але робимо їх необов’язковими
+    _id: Joi.any().optional(),
+    __v: Joi.any().optional(),
+    createdAt: Joi.any().optional(),
+    updatedAt: Joi.any().optional()
+}).unknown(false);
+
+const slideSchemaValidation = Joi.object({
+    id: Joi.number().optional(),
+    image: Joi.string().allow(''),
+    name: Joi.string().allow(''),
+    url: Joi.string().allow(''),
+    title: Joi.string().allow(''),
+    text: Joi.string().allow(''),
+    link: Joi.string().allow(''),
+    linkText: Joi.string().allow(''),
+    order: Joi.number().default(0)
 });
 
 const authenticateToken = (req, res, next) => {
@@ -369,7 +387,7 @@ if (ws.isAdmin) {
             console.error('WebSocket: Помилка оновлення токена:', err);
             ws.close(1008, 'Помилка оновлення токена');
         }
-    }, 20 * 60 * 1000); // 20 хвилин
+    }, 25 * 60 * 1000); // 25 хвилин
 }
 
     ws.on('close', () => {
@@ -422,19 +440,6 @@ if (ws.isAdmin) {
     ws.on('error', (err) => console.error('Помилка WebSocket:', err));
 });
 
-function broadcast(type, data) {
-    console.log(`Трансляція даних типу ${type}:`);
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
-            let filteredData = data;
-            if (type === 'products' && !client.isAdmin) {
-                filteredData = data.filter(p => p.visible && p.active);
-            }
-            client.send(JSON.stringify({ type, data: filteredData }));
-        }
-    });
-}
-
 app.post('/api/upload', authenticateToken, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
@@ -473,44 +478,6 @@ app.get('/api/filters', authenticateToken, async (req, res) => {
         res.json(filters);
     } catch (err) {
         console.error('Помилка при отриманні фільтрів:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// POST /api/filters — додає новий фільтр до існуючого масиву filters
-app.post('/api/filters', authenticateToken, async (req, res) => {
-    try {
-        const filterData = req.body;
-        const filterSchema = Joi.object({
-            name: Joi.string().required(),
-            label: Joi.string().required(),
-            type: Joi.string().required(),
-            options: Joi.array().items(Joi.string()).default([])
-        });
-
-        const { error } = filterSchema.validate(filterData);
-        if (error) {
-            console.error('Помилка валідації фільтру:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        let settings = await Settings.findOne();
-        if (!settings) {
-            settings = new Settings({ filters: [] });
-        }
-
-        // Перевіряємо, чи фільтр із таким name уже існує
-        if (settings.filters.some(f => f.name === filterData.name)) {
-            return res.status(400).json({ error: 'Фільтр із таким ім’ям уже існує' });
-        }
-
-        settings.filters.push(filterData);
-        await settings.save();
-
-        broadcast('settings', settings); // Оновлюємо всіх клієнтів
-        res.status(201).json(filterData);
-    } catch (err) {
-        console.error('Помилка при додаванні фільтру:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -566,6 +533,7 @@ app.get('/api/public/slides', async (req, res) => {
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
         const { slug } = req.query;
+        console.log(`GET /api/products: slug=${slug}, user=${req.user.username}`);
         if (slug) {
             const products = await Product.find({ slug });
             return res.json(products);
@@ -680,6 +648,7 @@ const categorySchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
             slug: Joi.string().min(1).max(255).required()
+            image: Joi.string().allow('')
         })
     ).default([])
 });
@@ -705,6 +674,17 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
         if (error) {
             console.error('Помилка валідації категорії:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка унікальності назви та slug
+        const existingCategoryByName = await Category.findOne({ name: categoryData.name });
+        if (existingCategoryByName) {
+            return res.status(400).json({ error: 'Категорія з такою назвою вже існує' });
+        }
+
+        const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug });
+        if (existingCategoryBySlug) {
+            return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
         }
 
         const category = new Category(categoryData);
@@ -757,7 +737,8 @@ app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
 
 const subcategorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
-    slug: Joi.string().min(1).max(255).required()
+    slug: Joi.string().min(1).max(255).required(),
+    image: Joi.string().allow('') // Дозволяємо поле image
 });
 
 app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, res) => {
@@ -812,6 +793,13 @@ app.post('/api/slides', authenticateToken, async (req, res) => {
     try {
         const slideData = req.body;
         console.log('Отримано дані слайду:', slideData);
+
+        const { error } = slideSchemaValidation.validate(slideData);
+        if (error) {
+            console.error('Помилка валідації слайду:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
         const maxIdSlide = await Slide.findOne().sort({ id: -1 });
         slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
         const slide = new Slide(slideData);
@@ -828,6 +816,13 @@ app.post('/api/slides', authenticateToken, async (req, res) => {
 app.put('/api/slides/:id', authenticateToken, async (req, res) => {
     try {
         const slideData = req.body;
+
+        const { error } = slideSchemaValidation.validate(slideData);
+        if (error) {
+            console.error('Помилка валідації слайду:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
         const slide = await Slide.findOneAndUpdate({ id: req.params.id }, slideData, { new: true });
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
         const slides = await Slide.find().sort({ order: 1 });
@@ -865,6 +860,7 @@ app.post('/api/auth/refresh', (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
+        console.log('Токен успішно оновлено для користувача:', decoded.username);
         res.json({ token: newToken });
     } catch (err) {
         console.error('Помилка оновлення токена:', err.message);
@@ -911,7 +907,10 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         const settingsData = req.body;
         console.log('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
 
-        const { error } = settingsSchemaValidation.validate(settingsData, { abortEarly: false });
+        // Видаляємо системні поля
+        const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData;
+
+        const { error } = settingsSchemaValidation.validate(cleanedSettingsData, { abortEarly: false });
         if (error) {
             console.error('Помилка валідації налаштувань:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -944,16 +943,16 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
 
         const updatedData = {
             ...settings.toObject(),
-            ...settingsData,
+            ...cleanedSettingsData,
             contacts: {
                 ...settings.contacts,
-                ...(settingsData.contacts || {})
+                ...(cleanedSettingsData.contacts || {})
             },
-            socials: settingsData.socials || settings.socials,
-            filters: settingsData.filters || settings.filters,
-            orderFields: settingsData.orderFields || settings.orderFields,
-            showSlides: settingsData.showSlides !== undefined ? settingsData.showSlides : settings.showSlides,
-            slideInterval: settingsData.slideInterval !== undefined ? settingsData.slideInterval : settings.slideInterval
+            socials: cleanedSettingsData.socials || settings.socials,
+            filters: cleanedSettingsData.filters || settings.filters,
+            orderFields: cleanedSettingsData.orderFields || settings.orderFields,
+            showSlides: cleanedSettingsData.showSlides !== undefined ? cleanedSettingsData.showSlides : settings.showSlides,
+            slideInterval: cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval
         };
 
         Object.assign(settings, updatedData);
@@ -1075,6 +1074,18 @@ app.post('/api/cart', async (req, res) => {
     }
 });
 
+// Функція для очищення старих кошиків
+const cleanupOldCarts = async () => {
+    try {
+        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 днів тому
+        const result = await Cart.deleteMany({ updatedAt: { $lt: thresholdDate } });
+        return result.deletedCount;
+    } catch (err) {
+        console.error('Помилка при очищенні старих кошиків:', err);
+        throw err;
+    }
+};
+
 // Новий ендпоінт для очищення старих кошиків
 app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
     try {
@@ -1094,7 +1105,15 @@ app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
 
 app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     try {
-        const orderData = req.body;
+        let orderData = req.body;
+
+        // Видаляємо _id із items
+        if (orderData.items) {
+            orderData.items = orderData.items.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+        }
 
         const { error } = orderSchemaValidation.validate(orderData);
         if (error) {
@@ -1145,13 +1164,15 @@ app.post('/api/materials', authenticateToken, async (req, res) => {
         if (!name) return res.status(400).json({ error: 'Назва матеріалу обов’язкова' });
 
         let material = await Material.findOne({ name });
-        if (!material) {
-            material = new Material({ name });
-            await material.save();
-            const materials = await Material.find().distinct('name');
-            broadcast('materials', materials); // Оновлюємо клієнтів через WebSocket
+        if (material) {
+            return res.status(200).json({ message: 'Матеріал уже існує', name: material.name });
         }
-        res.status(201).json(material.name);
+
+        material = new Material({ name });
+        await material.save();
+        const materials = await Material.find().distinct('name');
+        broadcast('materials', materials);
+        res.status(201).json({ message: 'Матеріал створено', name: material.name });
     } catch (err) {
         console.error('Помилка при додаванні матеріалу:', err);
         res.status(500).json({ error: 'Помилка додавання матеріалу', details: err.message });

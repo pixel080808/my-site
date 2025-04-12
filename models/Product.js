@@ -10,7 +10,7 @@ const productSchema = new mongoose.Schema({
     material: { type: String },
     photos: [String],
     visible: { type: Boolean, default: true },
-    active: { type: Boolean, default: true }, // Додано
+    active: { type: Boolean, default: true },
     slug: { type: String, unique: true },
     type: { type: String, enum: ['simple', 'mattresses', 'group'] },
     sizes: [{ name: String, price: Number }],
