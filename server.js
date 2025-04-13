@@ -503,7 +503,7 @@ wss.on('connection', (ws, req) => {
 });
 
 // Маршрут для отримання CSRF-токена (без CSRF-захисту, щоб уникнути рекурсії)
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
+app.get('/api/csrf-token', (req, res) => {
     try {
         const token = req.csrfToken();
         res.json({ csrfToken: token });
@@ -1490,10 +1490,10 @@ const loginLimiter = rateLimit({
 app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
-        return res.status(400).json({ error: 'Логін і пароль обов’язкові' });
+        return res.status(400).json({ error: 'Логін і пароль обов’язкові', message: 'Логін і пароль обов’язкові' });
     }
 
-    if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
+    if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD)) {
         const token = jwt.sign(
             { userId: username, username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
@@ -1502,7 +1502,7 @@ app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
         res.json({ token });
     } else {
         logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`);
-        res.status(401).json({ error: 'Невірні дані для входу' });
+        res.status(401).json({ error: 'Невірні дані для входу', message: 'Невірні дані для входу' });
     }
 });
 

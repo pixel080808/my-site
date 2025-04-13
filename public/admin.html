@@ -2205,14 +2205,15 @@ productEditor.getModule('toolbar').addHandler('image', () => {
     resetInactivityTimer();
 }
 
-    function showSection(sectionId) {
-        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.classList.add('active');
-            if (sectionId === 'admin-panel') renderAdmin();
-        }
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.add('active');
     }
+}
 
 session = { isActive: false, timestamp: 0 };
 
@@ -2355,22 +2356,25 @@ function startTokenRefreshTimer() {
     }, 25 * 60 * 1000); // 25 хвилин
 }
 
-    function showNotification(message) {
-        const notification = document.getElementById('notification');
-        if (notification) {
-            notification.textContent = message;
-            notification.classList.add('active');
-            setTimeout(() => notification.classList.remove('active'), 5000);
-        }
-    }
+function showNotification(message) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.classList.add('active');
+    setTimeout(() => {
+        notification.classList.remove('active');
+    }, 3000);
+}
 
-    function resetInactivityTimer() {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
-            logout();
-            showNotification('Сесію завершено через 30 хвилин бездіяльності');
-        }, sessionTimeout);
-    }
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        localStorage.removeItem('adminToken');
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
+        showNotification('Сесія закінчилася через бездіяльність.');
+    }, sessionTimeout);
+}
 
     function showAdminTab(tabId) {
         document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
