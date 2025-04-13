@@ -159,16 +159,18 @@ async function loginUser(email, password) {
 async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
+            console.log(`Fetching ${url}, attempt ${i + 1}`);
             const response = await fetch(url, options);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            return response; // Повертаємо об’єкт відповіді, а не JSON
+            console.log(`Fetch ${url} successful`);
+            return response;
         } catch (error) {
+            console.error(`Fetch attempt ${i + 1} failed:`, error);
             if (i === retries - 1) {
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
-                console.error('Помилка fetchWithRetry:', error.message, error.stack);
                 throw error;
             }
-            console.warn(`Спроба ${i + 1} не вдалася. Повтор через ${delay}мс...`);
+            console.warn(`Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -2387,7 +2389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSection('cart');
             } else if (parts[0] === 'contacts') {
                 showSection('contacts');
-            } else if (parts(") === 'about') {
+            } else if (parts[0] === 'about') { // Виправлено: parts[0] замість parts(")
                 showSection('about');
             } else if (parts[0] === 'catalog') {
                 showSection('catalog');
@@ -2400,8 +2402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (parts[1]) {
                         const subCat = cat.subcategories?.find(
                             (sc) =>
-                                transliterate(sc.name.replace('ь', '')) ===
-                                parts[1]
+                                transliterate(sc.name.replace('ь', '')) === parts[1]
                         );
                         if (subCat) currentSubcategory = subCat.name;
                         if (parts[2]) {
