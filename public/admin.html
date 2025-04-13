@@ -475,7 +475,7 @@
 }
 
 .import-btn {
-    background: #27ae60; /* Зелений колір для кнопки імпорту */
+    background: #2ecc71;
     padding: 10px 20px;
     color: #fff;
     border: none;
@@ -486,7 +486,7 @@
 }
 
 .import-btn:hover {
-    background: #219653; /* Темніший зелений при наведенні */
+    background: #27ae60;
 }
 
 /* Модальне вікно для зміни розмірів */
@@ -542,15 +542,17 @@
     box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
 }
 
+/* Замінити поточні стилі для undo/redo */
 .ql-toolbar .ql-undo,
 .ql-toolbar .ql-redo {
     background: none;
     border: none;
-    padding: 0 8px;
+    padding: 8px;
     cursor: pointer;
-    color: #000;
+    color: #333;
     font-size: 16px;
     line-height: 1;
+    transition: background 0.3s ease;
 }
 
 .ql-toolbar .ql-undo::before,
@@ -571,7 +573,13 @@
 
 .ql-toolbar .ql-undo:hover,
 .ql-toolbar .ql-redo:hover {
-    background: #f0f0f0;
+    background: #e0e0e0;
+}
+
+.ql-toolbar .ql-undo[disabled],
+.ql-toolbar .ql-redo[disabled] {
+    color: #ccc;
+    cursor: not-allowed;
 }
   </style>
  </head>
@@ -1335,6 +1343,9 @@ async function loadSettings() {
             return;
         }
 
+        // Ініціалізація редакторів перед завантаженням даних
+        initializeEditors();
+
         const token = localStorage.getItem('adminToken');
         if (!token) {
             console.warn('Токен відсутній. Використовуються локальні налаштування.');
@@ -1351,74 +1362,13 @@ async function loadSettings() {
         });
 
         if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося завантажити налаштування: ${response.status} ${text}`);
-            }
+            throw new Error(`Не вдалося завантажити налаштування: ${response.statusText}`);
         }
 
         const serverSettings = await response.json();
-        console.log('Дані з /api/settings:', serverSettings);
+        settings = { ...settings, ...serverSettings, filters: serverSettings.filters || filters || [] };
 
-        // Об'єднання серверних і локальних налаштувань
-        settings = {
-            ...settings,
-            name: serverSettings.name || settings.name || '',
-            baseUrl: serverSettings.baseUrl || settings.baseUrl || '',
-            logo: serverSettings.logo || settings.logo || '',
-            logoWidth: serverSettings.logoWidth || settings.logoWidth || '',
-            favicon: serverSettings.favicon || settings.favicon || '',
-            contacts: {
-                phones: serverSettings.contacts?.phones || settings.contacts.phones || '',
-                addresses: serverSettings.contacts?.addresses || settings.contacts.addresses || '',
-                schedule: serverSettings.contacts?.schedule || settings.contacts.schedule || ''
-            },
-            socials: serverSettings.socials || settings.socials || [],
-            showSocials: serverSettings.showSocials !== undefined ? serverSettings.showSocials : settings.showSocials,
-            about: serverSettings.about || settings.about || '',
-            showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
-            slideWidth: serverSettings.slideWidth || settings.slideWidth || '',
-            slideHeight: serverSettings.slideHeight || settings.slideHeight || '',
-            slideInterval: serverSettings.slideInterval || settings.slideInterval || '',
-            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth || '',
-            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight || '',
-            productWidth: serverSettings.productWidth || settings.productWidth || '',
-            productHeight: serverSettings.productHeight || settings.productHeight || ''
-        };
-
-        // Завантаження фільтрів, якщо вони є
-        filters = serverSettings.filters || filters || [];
-
-        console.log('Оновлені settings:', settings);
-
-        // Оновлення редактора "Про нас"
-        if (aboutEditor) {
-            if (settings.about) {
-                try {
-                    aboutEditor.root.innerHTML = settings.about;
-                    console.log('Встановлено вміст "Про нас":', settings.about);
-                } catch (e) {
-                    console.error('Помилка при встановленні вмісту "Про нас":', e);
-                    aboutEditor.setText(settings.about || '', 'silent');
-                }
-            } else {
-                console.log('settings.about порожній, редактор очищено.');
-                aboutEditor.root.innerHTML = '';
-            }
-            document.getElementById('about-edit').value = settings.about || '';
-        }
-
+        // Завантаження вмісту в редактор (перенесено в initializeEditors)
         renderSettingsAdmin();
         renderFilters();
     } catch (e) {
@@ -1444,7 +1394,7 @@ async function fetchWithAuth(url, options = {}) {
         const headers = {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            'Content-Type': options.body instanceof FormData ? undefined : 'application/json',
             'X-CSRF-Token': csrfToken
         };
 
@@ -1469,7 +1419,7 @@ async function fetchWithAuth(url, options = {}) {
                         headers: {
                             ...options.headers,
                             'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': 'application/json',
+                            'Content-Type': options.body instanceof FormData ? undefined : 'application/json',
                             'X-CSRF-Token': newCsrfToken
                         },
                         credentials: 'include'
@@ -1751,7 +1701,6 @@ async function initializeData() {
 
     isInitializing = true;
     try {
-        // Виконуємо запити паралельно, але обробляємо помилки окремо
         const promises = [
             loadProducts().catch(e => {
                 console.error('Помилка завантаження товарів:', e);
@@ -1792,9 +1741,6 @@ async function initializeData() {
 
         await Promise.all(promises);
         console.log('Усі дані успішно ініціалізовані або оброблені помилки');
-
-        // Ініціалізація редакторів після завантаження налаштувань
-        initializeEditors();
     } catch (e) {
         console.error('Критична помилка ініціалізації даних:', e);
         showNotification('Критична помилка ініціалізації: ' + e.message);
@@ -1948,12 +1894,18 @@ function setDefaultVideoSizes(editor, editorId) {
     unsavedChanges = true;
 }
 
+// Додаємо функцію cleanupEditor
 function cleanupEditor(editor) {
-    if (editor) {
-        editor.off('text-change');
-        editor.off('selection-change');
-        editor.container.innerHTML = '';
-        editor = null;
+    try {
+        if (editor) {
+            editor.off('text-change');
+            editor.off('selection-change');
+            editor.root.removeEventListener('click', null);
+            editor.container.innerHTML = '';
+            editor = null;
+        }
+    } catch (e) {
+        console.error('Помилка очищення редактора:', e);
     }
 }
 
@@ -1968,9 +1920,6 @@ function initializeEditors() {
             cleanupEditor(productEditor);
             productEditor = null;
         }
-
-        // Реєструємо модуль історії
-        Quill.register('modules/history', Quill.import('modules/history'), true);
 
         // Налаштування панелі інструментів
         const toolbarOptions = [
@@ -2182,22 +2131,19 @@ function initializeEditors() {
 }
 
 function addToolbarEventListeners() {
-    const toolbar = document.querySelector('#about-editor').previousElementSibling;
-    if (toolbar && toolbar.classList.contains('ql-toolbar')) {
-        const undoButton = toolbar.querySelector('.ql-undo');
-        const redoButton = toolbar.querySelector('.ql-redo');
-        if (undoButton) {
-            undoButton.addEventListener('click', () => {
-                aboutEditor.history.undo();
+    try {
+        const toolbars = document.querySelectorAll('.ql-toolbar');
+        toolbars.forEach(toolbar => {
+            // Додаємо обробники для кастомних кнопок, якщо потрібно
+            const buttons = toolbar.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    resetInactivityTimer();
+                });
             });
-        }
-        if (redoButton) {
-            redoButton.addEventListener('click', () => {
-                aboutEditor.history.redo();
-            });
-        }
-    } else {
-        console.error('Панель інструментів для aboutEditor не знайдена');
+        });
+    } catch (e) {
+        console.error('Помилка додавання обробників панелі інструментів:', e);
     }
 }
 
@@ -2468,11 +2414,14 @@ async function login() {
     });
 
 function logout() {
-    adminToken = null;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close(1000, 'Користувач вийшов із системи');
+    }
+    localStorage.removeItem('adminToken');
     session = { isActive: false, timestamp: 0 };
-    if (socket) socket.close();
+    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
     showSection('admin-login');
-    showNotification('Ви вийшли з системи');
+    showNotification('Ви вийшли з системи.');
 }
 
 // Оновлюємо ініціалізацію
@@ -2574,24 +2523,19 @@ async function updateStoreInfo() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
-        const name = document.getElementById('store-name').value.trim();
-        const baseUrl = document.getElementById('base-url').value.trim();
+        settings.name = document.getElementById('store-name').value.trim();
+        settings.baseUrl = document.getElementById('base-url').value.trim();
+        settings.logoWidth = document.getElementById('logo-width').value.trim();
         const logoUrl = document.getElementById('logo-url').value.trim();
-        const logoWidth = parseInt(document.getElementById('logo-width').value) || null;
-        const faviconUrl = document.getElementById('favicon-url').value.trim();
-
-        if (!name) {
-            showNotification('Введіть назву магазину!');
-            return;
-        }
-
-        let logoFileUrl = logoUrl;
         const logoFile = document.getElementById('logo-file').files[0];
+        const faviconUrl = document.getElementById('favicon-url').value.trim();
+        const faviconFile = document.getElementById('favicon-file').files[0];
+
         if (logoFile) {
             const validation = validateFile(logoFile);
             if (!validation.valid) {
@@ -2605,11 +2549,11 @@ async function updateStoreInfo() {
                 body: formData
             });
             const data = await response.json();
-            logoFileUrl = data.url;
+            settings.logo = data.url;
+        } else if (logoUrl) {
+            settings.logo = logoUrl;
         }
 
-        let faviconFileUrl = faviconUrl;
-        const faviconFile = document.getElementById('favicon-file').files[0];
         if (faviconFile) {
             const validation = validateFile(faviconFile);
             if (!validation.valid) {
@@ -2623,14 +2567,10 @@ async function updateStoreInfo() {
                 body: formData
             });
             const data = await response.json();
-            faviconFileUrl = data.url;
+            settings.favicon = data.url;
+        } else if (faviconUrl) {
+            settings.favicon = faviconUrl;
         }
-
-        settings.name = name;
-        settings.baseUrl = baseUrl;
-        settings.logo = logoFileUrl || settings.logo;
-        settings.logoWidth = logoWidth;
-        settings.favicon = faviconFileUrl || settings.favicon;
 
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
@@ -2639,32 +2579,20 @@ async function updateStoreInfo() {
                 baseUrl: settings.baseUrl,
                 logo: settings.logo,
                 logoWidth: settings.logoWidth,
-                favicon: settings.favicon,
-                contacts: settings.contacts,
-                socials: settings.socials,
-                showSocials: settings.showSocials,
-                about: settings.about,
-                showSlides: settings.showSlides,
-                slideWidth: settings.slideWidth,
-                slideHeight: settings.slideHeight,
-                slideInterval: settings.slideInterval,
-                categoryWidth: settings.categoryWidth,
-                categoryHeight: settings.categoryHeight,
-                productWidth: settings.productWidth,
-                productHeight: settings.productHeight
+                favicon: settings.favicon
             })
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити налаштування');
+            throw new Error(`Не вдалося оновити інформацію магазину: ${response.statusText}`);
         }
 
-        showNotification('Налаштування оновлено!');
+        showNotification('Інформацію магазину оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка оновлення налаштувань:', err);
-        showNotification('Помилка: ' + err.message);
+        console.error('Помилка оновлення інформації магазину:', err);
+        showNotification('Не вдалося оновити інформацію магазину: ' + err.message);
     }
 }
 
@@ -2783,27 +2711,31 @@ async function updateAbout() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
         let aboutContent = aboutEditor.root.innerHTML;
-        const mediaUrls = [];
+        document.getElementById('about-edit').value = aboutContent;
 
-        // Обробка зображень (blob URLs)
+        // Обробка blob URL для зображень і відео
         const parser = new DOMParser();
         const doc = parser.parseFromString(aboutContent, 'text/html');
-        const images = doc.querySelectorAll('img');
+        const mediaElements = [...doc.querySelectorAll('img'), ...doc.querySelectorAll('iframe')];
+        const mediaUrls = [];
 
-        for (let img of images) {
-            const src = img.getAttribute('src');
+        for (let media of mediaElements) {
+            const src = media.getAttribute('src');
             if (src && src.startsWith('blob:')) {
                 try {
                     const response = await fetch(src);
                     const blob = await response.blob();
                     const formData = new FormData();
-                    formData.append('file', blob, `about-image-${Date.now()}.png`);
+                    const fileName = media.tagName === 'IMG' 
+                        ? `about-image-${Date.now()}.png`
+                        : `about-video-${Date.now()}.mp4`;
+                    formData.append('file', blob, fileName);
                     const uploadResponse = await fetchWithAuth('/api/upload', {
                         method: 'POST',
                         body: formData
@@ -2812,39 +2744,37 @@ async function updateAbout() {
                     if (uploadData.url) {
                         mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
                     } else {
-                        throw new Error('Не вдалося завантажити зображення');
+                        throw new Error('Не вдалося завантажити медіа');
                     }
                 } catch (err) {
-                    console.error('Помилка завантаження зображення:', err);
-                    showNotification('Помилка завантаження зображення: ' + err.message);
+                    console.error('Помилка завантаження медіа:', err);
+                    showNotification('Не вдалося завантажити медіа.');
                     return;
                 }
             }
         }
 
-        // Оновлення URL зображень у контенті
         mediaUrls.forEach(({ oldUrl, newUrl }) => {
             aboutContent = aboutContent.replace(oldUrl, newUrl);
         });
 
         settings.about = aboutContent;
-        document.getElementById('about-edit').value = aboutContent;
 
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            body: JSON.stringify({ ...settings, about: aboutContent })
+            body: JSON.stringify({ about: settings.about })
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити розділ "Про нас"');
+            throw new Error(`Не вдалося оновити "Про нас": ${response.statusText}`);
         }
 
-        showNotification('Розділ "Про нас" оновлено!');
+        showNotification('Інформацію "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення "Про нас":', err);
-        showNotification('Помилка: ' + err.message);
+        showNotification('Не вдалося оновити "Про нас": ' + err.message);
     }
 }
 
@@ -3110,24 +3040,36 @@ function renderSocialsAdmin() {
 }
 
 function renderSettingsAdmin() {
-    document.getElementById('store-name').value = settings.name || '';
-    document.getElementById('base-url').value = settings.baseUrl || '';
-    document.getElementById('logo-url').value = settings.logo || '';
-    document.getElementById('logo-width').value = settings.logoWidth || '';
-    document.getElementById('favicon-url').value = settings.favicon || '';
-    document.getElementById('contact-phones').value = settings.contacts.phones || '';
-    document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
-    document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
-    document.getElementById('social-toggle').checked = settings.showSocials;
-    renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
-    document.getElementById('category-width').value = settings.categoryWidth || '';
-    document.getElementById('category-height').value = settings.categoryHeight || '';
-    document.getElementById('product-width').value = settings.productWidth || '';
-    document.getElementById('product-height').value = settings.productHeight || '';
-    document.getElementById('slide-width').value = settings.slideWidth || '';
-    document.getElementById('slide-height').value = settings.slideHeight || '';
-    document.getElementById('slide-interval').value = settings.slideInterval || '';
-    document.getElementById('slide-toggle').checked = settings.showSlides;
+    try {
+        document.getElementById('store-name').value = settings.name || '';
+        document.getElementById('base-url').value = settings.baseUrl || '';
+        document.getElementById('logo-url').value = settings.logo || '';
+        document.getElementById('logo-width').value = settings.logoWidth || '';
+        document.getElementById('favicon-url').value = settings.favicon || '';
+        document.getElementById('contact-phones').value = settings.contacts?.phones || '';
+        document.getElementById('contact-addresses').value = settings.contacts?.addresses || '';
+        document.getElementById('contact-schedule').value = settings.contacts?.schedule || '';
+        document.getElementById('social-toggle').checked = settings.showSocials ?? true;
+        document.getElementById('slide-toggle').checked = settings.showSlides ?? true;
+        document.getElementById('slide-width').value = settings.slideWidth || '';
+        document.getElementById('slide-height').value = settings.slideHeight || '';
+        document.getElementById('slide-interval').value = settings.slideInterval || '';
+        document.getElementById('category-width').value = settings.categoryWidth || '';
+        document.getElementById('category-height').value = settings.categoryHeight || '';
+        document.getElementById('product-width').value = settings.productWidth || '';
+        document.getElementById('product-height').value = settings.productHeight || '';
+
+        // Рендеринг списків
+        renderSocialsAdmin();
+        renderCategoriesAdmin();
+        renderSlidesAdmin();
+        renderFilters();
+
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка рендерингу налаштувань:', e);
+        showNotification('Помилка відображення налаштувань: ' + e.message);
+    }
 }
 
 function renderSlidesAdmin() {
@@ -3186,18 +3128,6 @@ function closeModal() {
     }
     unsavedChanges = false;
     resetInactivityTimer();
-}
-
-function validateFile(file) {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Дозволені лише зображення JPEG, PNG, GIF, WebP!' };
-    }
-    if (file.size > maxSize) {
-        return { valid: false, error: 'Розмір файлу не повинен перевищувати 5 МБ!' };
-    }
-    return { valid: true };
 }
 
 async function addCategory() {
@@ -3995,13 +3925,17 @@ async function updateSlideshowSettings() {
 
 function debounce(func, wait) {
     let timeout;
-    return function (...args) {
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
+        timeout = setTimeout(later, wait);
     };
 }
 
-const debouncedRenderAdmin = debounce(renderAdmin, 300);
+const debouncedSearchGroupProducts = debounce(searchGroupProducts, 300);
 
 async function addSlide() {
     const button = document.querySelector('button[onclick="addSlide()"]');
@@ -4575,14 +4509,21 @@ function renderPriceFields() {
     }
 }
 
-    function updateSubcategories() {
-        const category = document.getElementById('product-category').value;
-        const subcatSelect = document.getElementById('product-subcategory');
-        const cat = categories.find(c => c.name === category);
-        subcatSelect.innerHTML = '<option value="">Без підкатегорії</option>' + 
-            (cat ? cat.subcategories.map(s => `<option value="${s.name}">${s.name}</option>`).join('') : '');
-        resetInactivityTimer();
+function updateSubcategories() {
+    const categoryName = document.getElementById('product-category').value;
+    const subcatSelect = document.getElementById('product-subcategory');
+    if (subcatSelect) {
+        const category = categories.find(c => c.name === categoryName);
+        subcatSelect.innerHTML = '<option value="">Без підкатегорії</option>';
+        if (category && category.subcategories && category.subcategories.length > 0) {
+            subcatSelect.innerHTML += category.subcategories
+                .map(sub => `<option value="${sub.name}">${sub.name}</option>`)
+                .join('');
+        } else {
+            subcatSelect.innerHTML = '<option value="">Підкатегорії відсутні</option>';
+        }
     }
+}
 
 function addProductPhoto() {
     const url = document.getElementById('product-photo-url').value;
@@ -4776,7 +4717,7 @@ function searchGroupProducts() {
     const results = document.getElementById('group-product-results');
     const filteredProducts = products.filter(p => 
         p.active && 
-        p.type === 'simple' &&  // Змінено з p.type !== 'group' на p.type === 'simple'
+        p.type === 'simple' && 
         (p.name.toLowerCase().includes(query) || p.id.toString().includes(query))
     );
     results.innerHTML = filteredProducts.slice(0, 5).map(p => `
@@ -4841,6 +4782,26 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
+// Додаємо функцію валідації файлів
+function validateFile(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!file) {
+        return { valid: false, error: 'Файл не вибрано!' };
+    }
+
+    if (file.size > maxSize) {
+        return { valid: false, error: 'Розмір файлу перевищує 5MB!' };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, error: 'Недозволений тип файлу! Дозволено: JPEG, PNG, GIF, WebP.' };
+    }
+
+    return { valid: true };
+}
+
 async function saveNewProduct() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -4850,12 +4811,12 @@ async function saveNewProduct() {
             return;
         }
 
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
+        const name = document.getElementById('product-name').value.trim();
+        const slug = document.getElementById('product-slug').value.trim();
+        const brand = document.getElementById('product-brand').value.trim();
         const category = document.getElementById('product-category').value;
         const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
+        const material = document.getElementById('product-material').value.trim();
         let price = null;
         let salePrice = null;
         if (newProduct.type === 'simple') {
@@ -4864,20 +4825,24 @@ async function saveNewProduct() {
         }
         const saleEnd = document.getElementById('product-sale-end').value;
         const visible = document.getElementById('product-visible').value === 'true';
-        const description = document.getElementById('product-description').value;
+        const description = document.getElementById('product-description').value || '';
         const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
         const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
         const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
         const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
 
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
+        // Валідація
+        if (!name || !slug || !category) {
+            showNotification('Заповніть назву, шлях і категорію товару!');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
+        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях товару може містити лише малі латинські літери, цифри та дефіси!');
+            return;
+        }
 
-        // Перевірка унікальності шляху
+        // Перевірка унікальності slug
         try {
             const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
             const existingProducts = await slugCheck.json();
@@ -4886,14 +4851,31 @@ async function saveNewProduct() {
                 return;
             }
         } catch (err) {
-            console.error('Помилка перевірки унікальності шляху:', err);
-            showNotification('Помилка перевірки шляху: ' + err.message);
+            console.error('Помилка перевірки унікальності:', err);
+            showNotification('Помилка перевірки унікальності: ' + err.message);
             return;
         }
 
         if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
             showNotification('Введіть коректну ціну для простого товару!');
             return;
+        }
+
+        if (salePrice !== null && (isNaN(salePrice) || salePrice < 0)) {
+            showNotification('Введіть коректну акційну ціну!');
+            return;
+        }
+
+        if (saleEnd) {
+            const saleEndDate = new Date(saleEnd);
+            if (isNaN(saleEndDate.getTime())) {
+                showNotification('Введіть коректну дату закінчення акції!');
+                return;
+            }
+            if (saleEndDate < new Date()) {
+                showNotification('Дата закінчення акції не може бути в минулому!');
+                return;
+            }
         }
 
         if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
@@ -4903,6 +4885,11 @@ async function saveNewProduct() {
 
         if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
             showNotification('Додайте хоча б один товар до групового товару!');
+            return;
+        }
+
+        if (widthCm !== null && (widthCm <= 0 || isNaN(widthCm))) {
+            showNotification('Ширина товару має бути більше 0!');
             return;
         }
 
@@ -5592,41 +5579,44 @@ function sortOrders(sortType) {
     resetInactivityTimer();
 }
 
-function uploadBulkPrices() {
+async function uploadBulkPrices() {
     const file = document.getElementById('bulk-price-file').files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {  // Додано async тут
-            const token = localStorage.getItem('adminToken');
-            if (!token) {
-                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
+    if (!file) {
+        showNotification('Виберіть файл для завантаження!');
+        return;
+    }
 
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
             const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
             let updated = 0;
+
             for (const line of lines) {
                 const parts = line.split(',');
                 if (parts.length < 4) continue;
                 const id = parseInt(parts[0].trim());
                 const product = products.find(p => p.id === id);
                 if (!product) continue;
+
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         product.price = price;
                         try {
-                            const response = await fetch(`/api/products/${id}`, {
+                            const response = await fetchWithAuth(`/api/products/${id}`, {
                                 method: 'PUT',
-                                headers: {
-                                    credentials: 'include',
-                                    'Content-Type': 'application/json'
-                                },
                                 body: JSON.stringify(product)
                             });
                             if (!response.ok) {
-                                throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                                throw new Error(`Помилка оновлення товару #${id}`);
                             }
                             updated++;
                         } catch (e) {
@@ -5642,16 +5632,12 @@ function uploadBulkPrices() {
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
                             try {
-                                const response = await fetch(`/api/products/${id}`, {
+                                const response = await fetchWithAuth(`/api/products/${id}`, {
                                     method: 'PUT',
-                                    headers: {
-                                        credentials: 'include',
-                                        'Content-Type': 'application/json'
-                                    },
                                     body: JSON.stringify(product)
                                 });
                                 if (!response.ok) {
-                                    throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                                    throw new Error(`Помилка оновлення товару #${id}`);
                                 }
                                 updated++;
                             } catch (e) {
@@ -5661,13 +5647,15 @@ function uploadBulkPrices() {
                     }
                 }
             }
+
             renderAdmin('products');
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
         };
         reader.readAsText(file);
-    } else {
-        alert('Виберіть файл для завантаження!');
+    } catch (e) {
+        console.error('Помилка оновлення цін:', e);
+        showNotification('Помилка оновлення цін: ' + e.message);
     }
 }
 
@@ -5848,24 +5836,29 @@ async function saveOrderStatus(index) {
 }
 
 async function deleteOrder(index) {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
     if (confirm('Ви впевнені, що хочете видалити це замовлення?')) {
-        const order = orders[index];
         try {
-            const response = await fetch(`/api/orders/${order._id}`, {
-                method: 'DELETE',
-                headers: {
-                    credentials: 'include'
-                }
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            const order = orders[index];
+            if (!order || !order._id) {
+                showNotification('Замовлення не знайдено або недійсне!');
+                return;
+            }
+
+            const response = await fetchWithAuth(`/api/orders/${order._id}`, {
+                method: 'DELETE'
             });
 
-            if (!response.ok) throw new Error('Не вдалося видалити замовлення');
+            if (!response.ok) {
+                throw new Error('Не вдалося видалити замовлення');
+            }
+
             orders.splice(index, 1);
             renderAdmin('orders');
             showNotification('Замовлення видалено!');
@@ -5873,7 +5866,7 @@ async function deleteOrder(index) {
             resetInactivityTimer();
         } catch (e) {
             console.error('Помилка видалення замовлення:', e);
-            showNotification(e.message);
+            showNotification('Помилка видалення замовлення: ' + e.message);
         }
     }
 }
@@ -5933,7 +5926,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
-function connectAdminWebSocket(attempt = 1, maxAttempts = 5) {
+function connectAdminWebSocket(attempt = 1, maxAttempts = 10) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
         : 'wss://mebli.onrender.com';
@@ -5961,7 +5954,8 @@ function connectAdminWebSocket(attempt = 1, maxAttempts = 5) {
 
     socket.onopen = () => {
         console.log('Адмін підключено до WebSocket');
-        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
+        const subscriptions = ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'];
+        subscriptions.forEach(type => {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type, action: 'subscribe' }));
             }
@@ -5988,6 +5982,15 @@ function connectAdminWebSocket(attempt = 1, maxAttempts = 5) {
             } else if (type === 'slides') {
                 slides = data;
                 renderSlidesAdmin();
+            } else if (type === 'materials') {
+                materials = data;
+                updateMaterialOptions();
+            } else if (type === 'brands') {
+                brands = data;
+                updateBrandOptions();
+            } else if (type === 'filters') {
+                filters = data;
+                renderFilters();
             }
             resetInactivityTimer();
         } catch (e) {
@@ -5995,11 +5998,19 @@ function connectAdminWebSocket(attempt = 1, maxAttempts = 5) {
         }
     };
 
-    socket.onclose = () => {
-        console.log(`WebSocket закрито, спроба перепідключення ${attempt}/${maxAttempts}...`);
-        // Експоненціальна затримка для перепідключення
-        const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // Максимум 30 секунд
-        setTimeout(() => connectAdminWebSocket(attempt + 1, maxAttempts), delay);
+    socket.onclose = (event) => {
+        console.log(`WebSocket закрито, код: ${event.code}, причина: ${event.reason}`);
+        if (event.code === 4001) { // Код 4001 для помилки авторизації
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-login');
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+        } else {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+            console.log(`Спроба перепідключення ${attempt}/${maxAttempts} через ${delay}мс...`);
+            setTimeout(() => connectAdminWebSocket(attempt + 1, maxAttempts), delay);
+        }
     };
 
     socket.onerror = (error) => {
