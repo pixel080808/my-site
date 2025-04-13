@@ -98,14 +98,21 @@ async function saveCartToServer() {
     try {
         const cartId = localStorage.getItem('cartId');
         const csrfToken = localStorage.getItem('csrfToken');
+        if (!cartId) {
+            throw new Error('cartId відсутній');
+        }
+        // Якщо CSRF-токен відсутній, зберігаємо локально і виходимо
         if (!csrfToken) {
-            throw new Error('CSRF-токен відсутній');
+            console.warn('CSRF-токен відсутній, зберігаємо кошик локально');
+            saveToStorage('cart', cart);
+            showNotification('Кошик збережено локально через відсутність CSRF-токена.', 'warning');
+            return;
         }
         const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовки
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify(cart)
         });
@@ -114,10 +121,11 @@ async function saveCartToServer() {
             console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
             throw new Error(`Помилка сервера: ${response.status}`);
         }
+        console.log('Кошик успішно збережено на сервері');
     } catch (e) {
         console.error('Помилка збереження кошика:', e);
         saveToStorage('cart', cart);
-        showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'error');
+        showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'warning');
     }
 }
 
@@ -234,14 +242,18 @@ async function fetchCsrfToken() {
                 console.log('CSRF-токен отримано:', data.csrfToken);
                 return data.csrfToken;
             } else {
-                throw new Error('CSRF-токен не отримано від сервера');
+                console.warn('CSRF-токен не отримано від сервера');
+                localStorage.removeItem('csrfToken');
+                showNotification('Не вдалося отримати CSRF-токен. Деякі функції будуть збережені локально.', 'warning');
+                return null;
             }
         } else {
-            throw new Error('Не вдалося отримати CSRF-токен');
+            throw new Error('Не вдалося отримати відповідь від сервера');
         }
     } catch (e) {
         console.error('Помилка отримання CSRF-токена:', e);
-        showNotification('Не вдалося отримати CSRF-токен!', 'error');
+        localStorage.removeItem('csrfToken');
+        showNotification('Не вдалося отримати CSRF-токен. Дані будуть збережені локально.', 'warning');
         return null;
     }
 }
@@ -497,7 +509,6 @@ async function initializeData() {
             if (!receivedData) {
                 console.warn('Дані від WebSocket не отримано, використовуємо HTTP');
                 await fetchPublicData();
-                // Викликаємо рендеринг після отримання даних
                 updateHeader();
                 renderCategories();
                 renderCatalogDropdown();
@@ -2213,13 +2224,27 @@ async function submitOrder() {
     try {
         const csrfToken = localStorage.getItem('csrfToken');
         if (!csrfToken) {
-            throw new Error('CSRF-токен відсутній');
+            console.warn('CSRF-токен відсутній, замовлення збережено локально');
+            orders.push(orderData);
+            if (orders.length > 5) orders = orders.slice(-5);
+            saveToStorage('orders', orders);
+            cart = [];
+            saveToStorage('cart', cart);
+            localStorage.removeItem('cartId');
+            selectedColors = {};
+            selectedMattressSizes = {};
+            saveToStorage('selectedColors', selectedColors);
+            saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            updateCartCount();
+            showNotification('Замовлення збережено локально через відсутність CSRF-токена. Зв’яжіться з підтримкою.', 'warning');
+            showSection('home');
+            return;
         }
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовки
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify(orderData)
         });
@@ -2229,27 +2254,22 @@ async function submitOrder() {
             throw new Error('Не вдалося оформити замовлення');
         }
 
-        // Спочатку оновлюємо кошик на сервері
         cart = [];
         await saveCartToServer();
-
-        // Скидаємо cartId
         localStorage.removeItem('cartId');
-
-        // Очищаємо локальні дані
         selectedColors = {};
         selectedMattressSizes = {};
         saveToStorage('selectedColors', selectedColors);
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
-
-        // Оновлюємо кількість товарів у кошику
         updateCartCount();
-
         showNotification('Замовлення оформлено! Дякуємо!', 'success');
         showSection('home');
     } catch (error) {
         console.error('Помилка при оформленні замовлення:', error);
-        showNotification('Не вдалося оформити замовлення!', 'error');
+        orders.push(orderData);
+        if (orders.length > 5) orders = orders.slice(-5);
+        saveToStorage('orders', orders);
+        showNotification('Не вдалося оформити замовлення! Дані збережено локально.', 'warning');
     }
 }
 

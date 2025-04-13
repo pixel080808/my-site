@@ -14,6 +14,7 @@ const Joi = require('joi');
 const WebSocket = require('ws');
 const rateLimit = require('express-rate-limit');
 const csurf = require('csurf');
+const winston = require('winston');
 
 // Імпортуємо моделі з окремих файлів
 const Product = require('./models/Product');
@@ -24,14 +25,15 @@ const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
-const winston = require('winston');
+
+// Налаштування логера
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json()
     ),
-    transports: [
+    transports AICOMMENT: [
         new winston.transports.File({ filename: 'error.log', level: 'error' }),
         new winston.transports.File({ filename: 'combined.log' }),
         new winston.transports.Console()
@@ -42,6 +44,7 @@ dotenv.config();
 
 const app = express();
 
+// Перевірка змінних середовища для Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     logger.error('Змінні середовища для Cloudinary (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) не визначені');
     process.exit(1);
@@ -105,22 +108,29 @@ const importUpload = multer({
     }
 });
 
+// Налаштування Express
 app.set('case sensitive routing', false);
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
-const csrfProtection = csurf({ cookie: true });
-app.use((req, res, next) => {
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-        return next();
+
+// Налаштування CSRF-захисту (зберігання в cookie)
+const csrfProtection = csurf({
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // true для HTTPS у продакшені
+        sameSite: 'strict'
     }
-    csrfProtection(req, res, next);
 });
+
+// Застосовуємо CSRF-захист лише до потрібних маршрутів (пізніше в коді)
 app.use(cors({
     origin: 'https://mebli.onrender.com',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
+
+// Логування всіх запитів
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
@@ -147,6 +157,7 @@ if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
 
 const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 
+// Налаштування статичних файлів
 const publicPath = path.join(__dirname, 'public');
 if (!fs.existsSync(publicPath)) {
     logger.error(`Папка public не знайдена за шляхом: ${publicPath}`);
@@ -165,7 +176,6 @@ if (!fs.existsSync(adminPath)) {
     process.exit(1);
 }
 
-// Налаштування роздачі статичних файлів (CSS, JS, тощо)
 app.use(express.static(publicPath, {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
@@ -179,6 +189,7 @@ app.use(express.static(publicPath, {
     }
 }));
 
+// Маршрут для адмінки
 app.get('/admin', (req, res) => {
     logger.info('Отримано запит на /admin');
     logger.info('Шлях до admin:', adminPath);
@@ -192,11 +203,13 @@ app.get('/admin', (req, res) => {
     });
 });
 
+// Тестовий маршрут
 app.get('/test-admin', (req, res) => {
     logger.info('Отримано запит на /test-admin');
     res.send('Це тестовий маршрут для адміна');
 });
 
+// Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB підключено'))
     .catch(err => {
@@ -208,7 +221,7 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схема валідації для продукту
+// Схеми валідації
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
@@ -246,7 +259,6 @@ const productSchemaValidation = Joi.object({
     popularity: Joi.number().allow(null)
 });
 
-// Схема валідації для замовлення
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     date: Joi.date().default(Date.now),
@@ -258,14 +270,13 @@ const orderSchemaValidation = Joi.object({
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
             color: Joi.string().allow(''),
-            _id: Joi.any().optional() // Дозволяємо _id, але робимо його необов’язковим
+            _id: Joi.any().optional()
         })
     ).required(),
     total: Joi.number().min(0).required(),
     status: Joi.string().default('Нове замовлення')
 });
 
-// Схема валідації для налаштувань (другий варіант)
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
@@ -310,7 +321,6 @@ const settingsSchemaValidation = Joi.object({
     slideHeight: Joi.number().min(0).allow(null),
     slideInterval: Joi.number().min(0).allow(null),
     showSlides: Joi.boolean().default(true),
-    // Дозволяємо системні поля, але робимо їх необов’язковими
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
     createdAt: Joi.any().optional(),
@@ -344,6 +354,7 @@ const slideSchemaValidation = Joi.object({
     order: Joi.number().default(0)
 });
 
+// Мідлвер для аутентифікації
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -366,6 +377,7 @@ const authenticateToken = (req, res, next) => {
     }
 };
 
+// Налаштування WebSocket
 const server = app.listen(process.env.PORT || 3000, () => logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
 
@@ -490,7 +502,19 @@ wss.on('connection', (ws, req) => {
     ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
 });
 
-app.post('/api/upload', authenticateToken, (req, res, next) => {
+// Маршрут для отримання CSRF-токена (без CSRF-захисту, щоб уникнути рекурсії)
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+    try {
+        const token = req.csrfToken();
+        res.json({ csrfToken: token });
+    } catch (err) {
+        logger.error('Помилка генерації CSRF-токена:', err);
+        res.status(500).json({ error: 'Не вдалося згенерувати CSRF-токен' });
+    }
+});
+
+// Маршрути з CSRF-захистом
+app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
             logger.error('Multer помилка:', err);
@@ -520,7 +544,6 @@ app.post('/api/upload', authenticateToken, (req, res, next) => {
     });
 });
 
-// GET /api/filters — повертає лише фільтри з налаштувань
 app.get('/api/filters', authenticateToken, async (req, res) => {
     try {
         const settings = await Settings.findOne();
@@ -612,18 +635,17 @@ app.get('/api/products', authenticateToken, async (req, res) => {
     }
 });
 
-// Функція для витягування publicId із URL Cloudinary
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
     const parts = url.split('/');
     const versionIndex = parts.findIndex(part => part.startsWith('v') && !isNaN(part.substring(1)));
     if (versionIndex === -1) return null;
-    const publicIdWithExtension = parts.slice(versionIndex + 1).join('/'); // Отримуємо "products/<publicId>.jpg"
-    const publicId = publicIdWithExtension.split('.')[0]; // Видаляємо розширення
+    const publicIdWithExtension = parts.slice(versionIndex + 1).join('/');
+    const publicId = publicIdWithExtension.split('.')[0];
     return publicId;
 };
 
-app.post('/api/products', authenticateToken, async (req, res) => {
+app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const productData = req.body;
         logger.info('Отримано дані продукту:', productData);
@@ -647,7 +669,7 @@ app.post('/api/products', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/products/:id', authenticateToken, async (req, res) => {
+app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
@@ -679,7 +701,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id);
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
@@ -719,7 +741,6 @@ const categorySchemaValidation = Joi.object({
     ).default([])
 });
 
-// Маршрути для роботи з категоріями
 app.get('/api/categories', authenticateToken, async (req, res) => {
     try {
         const categories = await Category.find();
@@ -730,7 +751,7 @@ app.get('/api/categories', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/categories', authenticateToken, async (req, res) => {
+app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryData = req.body;
         logger.info('Отримано дані категорії:', categoryData);
@@ -762,7 +783,7 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/categories/:slug', authenticateToken, async (req, res) => {
+app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryData = req.body;
         const category = await Category.findOne({ slug: req.params.slug });
@@ -786,7 +807,7 @@ app.put('/api/categories/:slug', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
+app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const category = await Category.findOneAndDelete({ slug: req.params.slug });
         if (!category) return res.status(404).json({ error: 'Категорію не знайдено' });
@@ -803,10 +824,10 @@ app.delete('/api/categories/:slug', authenticateToken, async (req, res) => {
 const subcategorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    image: Joi.string().allow('') // Дозволяємо поле image
+    image: Joi.string().allow('')
 });
 
-app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, res) => {
+app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categorySlug = req.params.slug;
         const subcategoryData = req.body;
@@ -843,7 +864,6 @@ app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, r
     }
 });
 
-// Маршрути для роботи зі слайдами
 app.get('/api/slides', authenticateToken, async (req, res) => {
     try {
         const slides = await Slide.find().sort({ order: 1 });
@@ -854,7 +874,7 @@ app.get('/api/slides', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/slides', authenticateToken, async (req, res) => {
+app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const slideData = req.body;
         logger.info('Отримано дані слайду:', slideData);
@@ -878,7 +898,7 @@ app.post('/api/slides', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/slides/:id', authenticateToken, async (req, res) => {
+app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const slideData = req.body;
 
@@ -899,7 +919,7 @@ app.put('/api/slides/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
+app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const slide = await Slide.findOneAndDelete({ id: req.params.id });
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
@@ -912,7 +932,7 @@ app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/auth/refresh', (req, res) => {
+app.post('/api/auth/refresh', csrfProtection, (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Токен відсутній' });
     try {
@@ -967,12 +987,11 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/settings', authenticateToken, async (req, res) => {
+app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const settingsData = req.body;
         logger.info('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
 
-        // Видаляємо системні поля
         const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData;
 
         const { error } = settingsSchemaValidation.validate(cleanedSettingsData, { abortEarly: false });
@@ -1035,7 +1054,6 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
     }
 });
 
-// Маршрути для роботи з замовленнями
 app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
         const orders = await Order.find();
@@ -1046,7 +1064,7 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', csrfProtection, async (req, res) => {
     try {
         logger.info('Отримано запит на створення замовлення:', req.body);
         const orderData = req.body;
@@ -1111,7 +1129,7 @@ app.get('/api/cart', async (req, res) => {
     }
 });
 
-app.post('/api/cart', async (req, res) => {
+app.post('/api/cart', csrfProtection, async (req, res) => {
     try {
         const cartId = req.query.cartId;
         logger.info('POST /api/cart:', { cartId, body: req.body });
@@ -1157,10 +1175,9 @@ app.post('/api/cart', async (req, res) => {
     }
 });
 
-// Функція для очищення старих кошиків
 const cleanupOldCarts = async () => {
     try {
-        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 днів тому
+        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const result = await Cart.deleteMany({ updatedAt: { $lt: thresholdDate } });
         return result.deletedCount;
     } catch (err) {
@@ -1169,7 +1186,7 @@ const cleanupOldCarts = async () => {
     }
 };
 
-app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
+app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             logger.info('Спроба доступу до /api/cleanup-carts без прав адміністратора:', req.user);
@@ -1185,11 +1202,10 @@ app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/orders/:id', authenticateToken, async (req, res) => {
+app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let orderData = req.body;
 
-        // Видаляємо _id із items
         if (orderData.items) {
             orderData.items = orderData.items.map(item => {
                 const { _id, ...rest } = item;
@@ -1215,7 +1231,7 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
+app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const order = await Order.findOneAndDelete({ id: req.params.id });
         if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
@@ -1229,7 +1245,6 @@ app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Маршрути для роботи з матеріалами
 app.get('/api/materials', authenticateToken, async (req, res) => {
     try {
         const materials = await Material.find().distinct('name');
@@ -1240,7 +1255,7 @@ app.get('/api/materials', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/materials', authenticateToken, async (req, res) => {
+app.post('/api/materials', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const { error } = materialSchemaValidation.validate(req.body);
         if (error) {
@@ -1264,7 +1279,6 @@ app.post('/api/materials', authenticateToken, async (req, res) => {
     }
 });
 
-// Маршрути для роботи з брендами
 app.get('/api/brands', authenticateToken, async (req, res) => {
     try {
         const brands = await Brand.find().distinct('name');
@@ -1275,7 +1289,7 @@ app.get('/api/brands', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/brands', authenticateToken, async (req, res) => {
+app.post('/api/brands', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const { error } = brandSchemaValidation.validate(req.body);
         if (error) {
@@ -1300,7 +1314,6 @@ app.post('/api/brands', authenticateToken, async (req, res) => {
     }
 });
 
-// Маршрути для експорту даних
 app.get('/api/backup/site', authenticateToken, async (req, res) => {
     try {
         const settings = await Settings.findOne();
@@ -1391,7 +1404,7 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/import/site', authenticateToken, importUpload.single('file'), async (req, res) => {
+app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1428,7 +1441,7 @@ app.post('/api/import/site', authenticateToken, importUpload.single('file'), asy
     }
 });
 
-app.post('/api/import/products', authenticateToken, importUpload.single('file'), async (req, res) => {
+app.post('/api/import/products', authenticateToken, csrfProtection, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1448,7 +1461,7 @@ app.post('/api/import/products', authenticateToken, importUpload.single('file'),
     }
 });
 
-app.post('/api/import/orders', authenticateToken, importUpload.single('file'), async (req, res) => {
+app.post('/api/import/orders', authenticateToken, csrfProtection, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1469,12 +1482,12 @@ app.post('/api/import/orders', authenticateToken, importUpload.single('file'), a
 });
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 5, // Максимум 5 запитів
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
 });
 
-app.post('/api/auth/login', loginLimiter, (req, res) => {
+app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Логін і пароль обов’язкові' });
@@ -1493,17 +1506,6 @@ app.post('/api/auth/login', loginLimiter, (req, res) => {
     }
 });
 
-app.get('/api/csrf-token', (req, res) => {
-    try {
-        const token = req.csrfToken();
-        res.json({ csrfToken: token });
-    } catch (err) {
-        logger.error('Помилка генерації CSRF-токена:', err);
-        res.status(500).json({ error: 'Не вдалося згенерувати CSRF-токен' });
-    }
-});
-
-// Обробка всіх інших маршрутів для SPA
 app.get('*', (req, res) => {
     logger.info(`Отримано запит на ${req.path}, відправляємо index.html`);
     res.sendFile(indexPath, (err) => {
@@ -1514,7 +1516,6 @@ app.get('*', (req, res) => {
     });
 });
 
-// Обробка 404 для API-запитів
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
