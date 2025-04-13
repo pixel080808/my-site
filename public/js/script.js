@@ -459,6 +459,7 @@ async function initializeData() {
             }
         }, 5000);
     });
+}
 
 async function updateProducts() {
     try {
