@@ -2366,11 +2366,10 @@ function changeQuantity(productId, change) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Start DOMContentLoaded');
     await initializeData();
-
-    updateHeader(); // Початкове оновлення шапки
+    updateHeader();
     updateCartCount();
-
     const catalogToggle = document.getElementById('catalog-toggle');
     const catalogDropdown = document.getElementById('catalog-dropdown');
     if (catalogToggle && catalogDropdown) {
@@ -2379,8 +2378,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             catalogDropdown.classList.toggle('active');
         });
     }
-
     const path = window.location.pathname.slice(1);
+    console.log('Path:', path);
     if (path) {
         const parts = path.split('/').filter(p => p);
         if (parts[0] === 'cart') {
@@ -2415,11 +2414,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         showSection('home');
     }
-
     const searchInput = document.getElementById('search');
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchProducts();
         });
     }
+    console.log('End DOMContentLoaded');
 });
