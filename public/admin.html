@@ -1765,38 +1765,41 @@ async function initializeData() {
 }
 
 async function checkAuth() {
+    const token = localStorage.getItem('adminToken');
+    const storedSession = localStorage.getItem('adminSession');
+    console.log('Перевірка авторизації, токен:', token, 'сесія:', storedSession); // Додаємо лог
+
+    if (!token || !storedSession) {
+        console.log('Токен або сесія відсутні, перехід до входу');
+        showSection('admin-login');
+        return;
+    }
+
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
+        session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+        if (!session.isActive || (Date.now() - session.timestamp) >= sessionTimeout) {
+            console.log('Сесія неактивна або закінчилася');
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
             showSection('admin-login');
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/auth/check', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            showSection('admin-panel');
-            await initializeData();
-            connectAdminWebSocket();
-            resetInactivityTimer();
-        } else {
+        const tokenRefreshed = await refreshToken();
+        console.log('Результат оновлення токена:', tokenRefreshed); // Додаємо лог
+        if (!tokenRefreshed) {
             showSection('admin-login');
-            if (response.status === 401 || response.status === 403) {
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-            }
+            return;
         }
+
+        showSection('admin-panel');
+        await initializeData();
+        connectAdminWebSocket();
+        resetInactivityTimer();
     } catch (e) {
         console.error('Помилка перевірки авторизації:', e);
         showSection('admin-login');
-        showNotification('Не вдалося перевірити авторизацію. Перевірте з’єднання.');
     }
 }
 
@@ -2259,7 +2262,6 @@ async function login() {
     }
 
     try {
-        // Отримуємо CSRF-токен
         const csrfToken = await getCsrfToken();
         if (!csrfToken) {
             showNotification('Не вдалося отримати CSRF-токен.');
@@ -2270,7 +2272,7 @@ async function login() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовок
+                'X-CSRF-Token': csrfToken
             },
             credentials: 'include',
             body: JSON.stringify({ username, password })
@@ -2287,7 +2289,9 @@ async function login() {
         }
 
         const data = await response.json();
+        console.log('Отримано дані авторизації:', data); // Додаємо лог
         localStorage.setItem('adminToken', data.token);
+        console.log('Токен збережено:', localStorage.getItem('adminToken')); // Перевіряємо збереження
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
@@ -2329,14 +2333,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refreshToken() {
     const token = localStorage.getItem('adminToken');
+    console.log('Перевірка токена в refreshToken:', token); // Додаємо лог
     if (!token) {
         console.warn('Токен відсутній');
         return false;
     }
 
     try {
-        // Отримуємо CSRF-токен
         const csrfToken = await getCsrfToken();
+        console.log('Отримано CSRF-токен:', csrfToken); // Додаємо лог
         if (!csrfToken) {
             console.warn('Не вдалося отримати CSRF-токен');
             return false;
@@ -2347,11 +2352,12 @@ async function refreshToken() {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
+                'X-CSRF-Token': csrfToken
             },
             credentials: 'include'
         });
 
+        console.log('Відповідь refreshToken:', response.status); // Додаємо лог
         if (!response.ok) {
             localStorage.removeItem('adminToken');
             session = { isActive: false, timestamp: 0 };
@@ -2360,6 +2366,7 @@ async function refreshToken() {
         }
 
         const data = await response.json();
+        console.log('Новий токен:', data.token); // Додаємо лог
         localStorage.setItem('adminToken', data.token);
         session.timestamp = Date.now();
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
