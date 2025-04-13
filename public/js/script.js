@@ -168,7 +168,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
             console.error(`Fetch attempt ${i + 1} failed:`, error);
             if (i === retries - 1) {
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
-                throw error;
+                return null; // Повертаємо null у разі остаточної помилки
             }
             console.warn(`Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -180,23 +180,39 @@ async function fetchPublicData() {
     try {
         console.log('Fetching products...');
         const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-        products = await response.json();
-        console.log('Products fetched:', products.length);
+        if (response) {
+            products = await response.json();
+            console.log('Products fetched:', products.length);
+        } else {
+            throw new Error('Не вдалося отримати продукти');
+        }
 
         console.log('Fetching categories...');
         const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
-        categories = await catResponse.json();
-        console.log('Categories fetched:', categories.length);
+        if (catResponse) {
+            categories = await catResponse.json();
+            console.log('Categories fetched:', categories.length);
+        } else {
+            throw new Error('Не вдалося отримати категорії');
+        }
 
         console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
-        slides = await slidesResponse.json();
-        console.log('Slides fetched:', slides.length);
+        if (slidesResponse) {
+            slides = await slidesResponse.json();
+            console.log('Slides fetched:', slides.length);
+        } else {
+            throw new Error('Не вдалося отримати слайди');
+        }
 
         console.log('Fetching settings...');
         const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`);
-        settings = await settingsResponse.json();
-        console.log('Settings fetched:', settings);
+        if (settingsResponse) {
+            settings = await settingsResponse.json();
+            console.log('Settings fetched:', settings);
+        } else {
+            throw new Error('Не вдалося отримати налаштування');
+        }
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
         showNotification('Не вдалося завантажити дані з сервера!', 'error');
@@ -487,9 +503,6 @@ async function updateProducts() {
 }
 
 function showSection(sectionId) {
-    activeTimers.forEach((id) => clearInterval(id));
-    activeTimers.clear();
-
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
     if (section) {
@@ -555,9 +568,13 @@ function showSection(sectionId) {
         saveToStorage('currentCategory', currentCategory);
         saveToStorage('currentSubcategory', currentSubcategory);
         history.pushState({ sectionId }, '', newPath);
-        updateMetaTags(sectionId === 'product-details' ? currentProduct : null); // Додаємо оновлення метатегів
+        updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
         renderBreadcrumbs();
         window.scrollTo(0, 0);
+
+        // Очищаємо таймери після перемикання секції
+        activeTimers.forEach((id) => clearInterval(id));
+        activeTimers.clear();
     }
 }
 
@@ -1113,6 +1130,7 @@ function renderFilters() {
 function renderProducts(filtered) {
     const productList = document.getElementById('product-list');
     if (!productList) return;
+
     // Очищаємо старі таймери перед рендерингом
     const existingTimers = productList.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
@@ -1120,6 +1138,7 @@ function renderProducts(filtered) {
             clearInterval(parseInt(timer.dataset.intervalId));
         }
     });
+
     while (productList.firstChild) productList.removeChild(productList.firstChild);
     document.querySelector('.filters').style.display = currentProduct ? 'none' : 'block';
 
@@ -1214,7 +1233,6 @@ function renderProducts(filtered) {
         }
         productDiv.appendChild(priceDiv);
 
-        // Додаємо таймер для акційної ціни
         if (isOnSale) {
             const timerDiv = document.createElement('div');
             timerDiv.className = 'sale-timer';
@@ -1586,8 +1604,10 @@ function updateSaleTimer(productId, saleEnd) {
         return;
     }
 
+    // Очищаємо попередній таймер, якщо він існує
     if (activeTimers.has(productId)) {
         clearInterval(activeTimers.get(productId));
+        activeTimers.delete(productId);
     }
 
     const endDate = new Date(saleEnd);
@@ -1596,23 +1616,18 @@ function updateSaleTimer(productId, saleEnd) {
         const timeLeft = endDate - now;
         if (timeLeft <= 0) {
             timerElement.textContent = 'Акція закінчилася';
-            const product = products.find(p => p.id === productId);
-            if (product) {
-                product.salePrice = null;
-                product.saleEnd = null;
-                if (currentProduct && currentProduct.id === productId) {
-                    currentProduct = product;
-                    renderProductDetails();
-                }
-                if (document.getElementById('catalog').classList.contains('active')) {
-                    renderProducts(isSearchActive ? searchResults : filteredProducts);
-                }
-                // Асинхронні операції викликаємо після оновлення
-                updateCartPrices().then(() => {
-                    saveCartToServer();
-                    renderCart();
-                });
+            product.salePrice = null;
+            product.saleEnd = null;
+            if (currentProduct && currentProduct.id === productId) {
+                currentProduct = product;
+                renderProductDetails();
             }
+            if (document.getElementById('catalog').classList.contains('active')) {
+                renderProducts(isSearchActive ? searchResults : filteredProducts);
+            }
+            updateCartPrices();
+            saveCartToServer();
+            renderCart();
             clearInterval(activeTimers.get(productId));
             activeTimers.delete(productId);
             return;
@@ -1624,7 +1639,7 @@ function updateSaleTimer(productId, saleEnd) {
         timerElement.textContent = `До кінця акції: ${days}д ${hours}г ${minutes}хв ${seconds}с`;
     };
     update();
-    const intervalId = setInterval(update, 1000); // Видаляємо async
+    const intervalId = setInterval(update, 1000);
     timerElement.dataset.intervalId = intervalId;
     activeTimers.set(productId, intervalId);
 }
@@ -1819,26 +1834,43 @@ async function addToCartWithColor(productId) {
 
 function openProduct(productId) {
     const product = products.find(p => p.id === productId);
-    if (product) {
-        // Перевіряємо, чи цей товар є частиною групового товару
-        const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(productId));
-        if (groupProduct && currentProduct?.type === 'group') {
-            parentGroupProduct = currentProduct; // Зберігаємо груповий товар
-            saveToStorage('parentGroupProduct', parentGroupProduct); // Зберігаємо в localStorage
-        } else {
-            parentGroupProduct = null; // Скидаємо, якщо це не груповий перехід
-            saveToStorage('parentGroupProduct', null);
-        }
-        currentProduct = product;
-        currentCategory = product.category;
-        currentSubcategory = product.subcategory;
-        isSearchActive = false;
-        searchResults = [];
-        baseSearchResults = [];
-        showSection('product-details');
-    } else {
+    if (!product) {
         showNotification('Товар не знайдено!', 'error');
+        return;
     }
+
+    // Перевіряємо, чи категорія та підкатегорія все ще існують
+    const categoryExists = categories.some(cat => cat.name === product.category);
+    if (!categoryExists) {
+        showNotification('Категорія товару більше не існує!', 'error');
+        showSection('home');
+        return;
+    }
+
+    const subCategoryExists = product.subcategory ? categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : true;
+    if (!subCategoryExists) {
+        showNotification('Підкатегорія товару більше не існує!', 'error');
+        showSection('home');
+        return;
+    }
+
+    // Перевіряємо, чи цей товар є частиною групового товару
+    const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(productId));
+    if (groupProduct && currentProduct?.type === 'group') {
+        parentGroupProduct = currentProduct;
+        saveToStorage('parentGroupProduct', parentGroupProduct);
+    } else {
+        parentGroupProduct = null;
+        saveToStorage('parentGroupProduct', null);
+    }
+
+    currentProduct = product;
+    currentCategory = product.category;
+    currentSubcategory = product.subcategory;
+    isSearchActive = false;
+    searchResults = [];
+    baseSearchResults = [];
+    showSection('product-details');
 }
 
 function searchProducts() {

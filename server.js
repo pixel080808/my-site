@@ -108,11 +108,18 @@ const importUpload = multer({
 app.set('case sensitive routing', false);
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+const csrfProtection = csurf({ cookie: true });
+app.use((req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+        return next();
+    }
+    csrfProtection(req, res, next);
+});
 app.use(cors({
     origin: 'https://mebli.onrender.com',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
@@ -318,7 +325,12 @@ const brandSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required()
 });
 
-const cartIdSchema = Joi.string().uuid().required();
+const cartIdSchema = Joi.string()
+    .pattern(/^cart-[a-z0-9]{9}$/)
+    .required()
+    .messages({
+        'string.pattern.base': 'cartId повинен бути у форматі "cart-" з 9 випадковими символами (a-z, 0-9)'
+    });
 
 const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -478,7 +490,7 @@ wss.on('connection', (ws, req) => {
     ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
 });
 
-app.post('/api/upload', authenticateToken, csurf(), (req, res, next) => {
+app.post('/api/upload', authenticateToken, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
             logger.error('Multer помилка:', err);
@@ -491,7 +503,7 @@ app.post('/api/upload', authenticateToken, csurf(), (req, res, next) => {
             logger.info('Файл отримано:', req.file);
             if (!req.file || !req.file.path) {
                 logger.error('Cloudinary не повернув шлях файлу:', req.file);
-                return res.status(500).json({ error: 'Помилка завантаження: файл не отримано від Cloudinary' });
+                return res.status(500).json({ error: 'Помилка завантаження: файл не отриміано від Cloudinary' });
             }
             res.json({ url: req.file.path });
         } catch (cloudinaryErr) {
@@ -611,7 +623,7 @@ const getPublicIdFromUrl = (url) => {
     return publicId;
 };
 
-app.post('/api/products', authenticateToken, csurf(), async (req, res) => {
+app.post('/api/products', authenticateToken, async (req, res) => {
     try {
         const productData = req.body;
         logger.info('Отримано дані продукту:', productData);
@@ -718,7 +730,7 @@ app.get('/api/categories', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/categories', authenticateToken, csurf(), async (req, res) => {
+app.post('/api/categories', authenticateToken, async (req, res) => {
     try {
         const categoryData = req.body;
         logger.info('Отримано дані категорії:', categoryData);
@@ -794,7 +806,7 @@ const subcategorySchemaValidation = Joi.object({
     image: Joi.string().allow('') // Дозволяємо поле image
 });
 
-app.post('/api/categories/:slug/subcategories', authenticateToken, csurf(), async (req, res) => {
+app.post('/api/categories/:slug/subcategories', authenticateToken, async (req, res) => {
     try {
         const categorySlug = req.params.slug;
         const subcategoryData = req.body;
@@ -842,7 +854,7 @@ app.get('/api/slides', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/slides', authenticateToken, csurf(), async (req, res) => {
+app.post('/api/slides', authenticateToken, async (req, res) => {
     try {
         const slideData = req.body;
         logger.info('Отримано дані слайду:', slideData);
@@ -900,7 +912,7 @@ app.delete('/api/slides/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/auth/refresh', csurf(), (req, res) => {
+app.post('/api/auth/refresh', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Токен відсутній' });
     try {
@@ -955,7 +967,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/settings', authenticateToken, csurf(), async (req, res) => {
+app.put('/api/settings', authenticateToken, async (req, res) => {
     try {
         const settingsData = req.body;
         logger.info('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
@@ -1034,7 +1046,7 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/orders', csurf(), async (req, res) => {
+app.post('/api/orders', async (req, res) => {
     try {
         logger.info('Отримано запит на створення замовлення:', req.body);
         const orderData = req.body;
@@ -1099,7 +1111,7 @@ app.get('/api/cart', async (req, res) => {
     }
 });
 
-app.post('/api/cart', csurf(), async (req, res) => {
+app.post('/api/cart', async (req, res) => {
     try {
         const cartId = req.query.cartId;
         logger.info('POST /api/cart:', { cartId, body: req.body });
@@ -1157,7 +1169,7 @@ const cleanupOldCarts = async () => {
     }
 };
 
-app.post('/api/cleanup-carts', authenticateToken, csurf(), async (req, res) => {
+app.post('/api/cleanup-carts', authenticateToken, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             logger.info('Спроба доступу до /api/cleanup-carts без прав адміністратора:', req.user);
@@ -1379,7 +1391,7 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/import/site', authenticateToken, csurf(), importUpload.single('file'), async (req, res) => {
+app.post('/api/import/site', authenticateToken, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1416,7 +1428,7 @@ app.post('/api/import/site', authenticateToken, csurf(), importUpload.single('fi
     }
 });
 
-app.post('/api/import/products', authenticateToken, csurf(), importUpload.single('file'), async (req, res) => {
+app.post('/api/import/products', authenticateToken, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1436,7 +1448,7 @@ app.post('/api/import/products', authenticateToken, csurf(), importUpload.single
     }
 });
 
-app.post('/api/import/orders', authenticateToken, csurf(), importUpload.single('file'), async (req, res) => {
+app.post('/api/import/orders', authenticateToken, importUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
@@ -1482,7 +1494,13 @@ app.post('/api/auth/login', loginLimiter, (req, res) => {
 });
 
 app.get('/api/csrf-token', (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
+    try {
+        const token = req.csrfToken();
+        res.json({ csrfToken: token });
+    } catch (err) {
+        logger.error('Помилка генерації CSRF-токена:', err);
+        res.status(500).json({ error: 'Не вдалося згенерувати CSRF-токен' });
+    }
 });
 
 // Обробка всіх інших маршрутів для SPA
