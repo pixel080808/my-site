@@ -542,36 +542,35 @@
     box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
 }
 
-/* Стилі для кнопок "Назад" і "Вперед" */
-.ql-undo,
-.ql-redo {
+.ql-toolbar .ql-undo,
+.ql-toolbar .ql-redo {
     background: none;
     border: none;
     padding: 0 8px;
     cursor: pointer;
-    color: #000; /* Чорний колір для видимості */
+    color: #000;
     font-size: 16px;
     line-height: 1;
 }
 
-.ql-undo::before,
-.ql-redo::before {
+.ql-toolbar .ql-undo::before,
+.ql-toolbar .ql-redo::before {
     font-family: 'Arial', sans-serif;
     display: inline-block;
     width: 16px;
     height: 16px;
 }
 
-.ql-undo::before {
-    content: '↶'; /* Символ для "Назад" */
+.ql-toolbar .ql-undo::before {
+    content: '↶';
 }
 
-.ql-redo::before {
-    content: '↷'; /* Символ для "Вперед" */
+.ql-toolbar .ql-redo::before {
+    content: '↷';
 }
 
-.ql-undo:hover,
-.ql-redo:hover {
+.ql-toolbar .ql-undo:hover,
+.ql-toolbar .ql-redo:hover {
     background: #f0f0f0;
 }
   </style>
@@ -1949,19 +1948,32 @@ function setDefaultVideoSizes(editor, editorId) {
     unsavedChanges = true;
 }
 
+function cleanupEditor(editor) {
+    if (editor) {
+        editor.off('text-change');
+        editor.off('selection-change');
+        editor.container.innerHTML = '';
+        editor = null;
+    }
+}
+
 function initializeEditors() {
     try {
-        // Перевіряємо, чи редактори вже ініціалізовані
-        if (aboutEditor || productEditor) {
-            console.log('Редактори вже ініціалізовані, пропускаємо');
-            return;
+        // Очищення попередніх редакторів
+        if (aboutEditor) {
+            cleanupEditor(aboutEditor);
+            aboutEditor = null;
+        }
+        if (productEditor) {
+            cleanupEditor(productEditor);
+            productEditor = null;
         }
 
-        // Реєструємо модуль історії явно для сумісності з Quill 2.0.3
+        // Реєструємо модуль історії
         Quill.register('modules/history', Quill.import('modules/history'), true);
 
-        // Налаштування панелі інструментів для "Про нас"
-        const aboutToolbarOptions = [
+        // Налаштування панелі інструментів
+        const toolbarOptions = [
             ['bold', 'italic', 'underline', 'strike'],
             ['blockquote', 'code-block'],
             [{ 'list': 'ordered' }, { 'list': 'bullet' }],
@@ -1984,7 +1996,7 @@ function initializeEditors() {
             aboutEditor = new Quill(aboutEditorContainer, {
                 theme: 'snow',
                 modules: {
-                    toolbar: aboutToolbarOptions,
+                    toolbar: toolbarOptions,
                     history: {
                         delay: 1000,
                         maxStack: 500,
@@ -2016,25 +2028,26 @@ function initializeEditors() {
                 resetInactivityTimer();
             });
 
-            // Завантажуємо початковий вміст
-            if (settings.about) {
-                try {
-                    aboutEditor.root.innerHTML = settings.about;
-                    console.log('Встановлено вміст "Про нас":', settings.about);
-                } catch (e) {
-                    console.error('Помилка при встановленні вмісту "Про нас":', e);
-                    aboutEditor.setText(settings.about || '', 'silent');
+            // Обробка вибору медіа
+            aboutEditor.on('selection-change', (range) => {
+                if (range && range.length > 0) {
+                    const [leaf] = aboutEditor.getLeaf(range.index);
+                    if (leaf && leaf.domNode && (leaf.domNode.tagName === 'IMG' || leaf.domNode.tagName === 'IFRAME')) {
+                        selectedMedia = leaf.domNode;
+                        document.querySelectorAll('.quill-media-selected').forEach(el => el.classList.remove('quill-media-selected'));
+                        selectedMedia.classList.add('quill-media-selected');
+                    } else {
+                        selectedMedia = null;
+                        document.querySelectorAll('.quill-media-selected').forEach(el => el.classList.remove('quill-media-selected'));
+                    }
                 }
-            } else {
-                console.log('settings.about порожній, редактор очищено.');
-                aboutEditor.root.innerHTML = '';
-            }
-            document.getElementById('about-edit').value = settings.about || '';
+            });
 
-            // Обробник кліків для зміни розмірів медіа
+            // Обробник кліків для зміни розмірів
             aboutEditor.root.addEventListener('click', (e) => {
                 const target = e.target;
                 if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                    selectedMedia = target;
                     openResizeModal(target);
                 }
             });
@@ -2051,20 +2064,42 @@ function initializeEditors() {
                 return delta;
             });
 
-            // Встановлюємо розміри для відео
+            // Завантаження вмісту
+            if (settings.about) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(settings.about, 'text/html');
+                    if (doc.body) {
+                        aboutEditor.root.innerHTML = settings.about;
+                        console.log('Встановлено вміст "Про нас":', settings.about);
+                    } else {
+                        throw new Error('Некоректний HTML');
+                    }
+                } catch (e) {
+                    console.error('Помилка при встановленні вмісту "Про нас":', e);
+                    aboutEditor.setText(settings.about || '', 'silent');
+                    showNotification('Помилка завантаження вмісту "Про нас"');
+                }
+            } else {
+                console.log('settings.about порожній, редактор очищено.');
+                aboutEditor.root.innerHTML = '';
+            }
+            document.getElementById('about-edit').value = settings.about || '';
+
+            // Встановлення розмірів відео
             setDefaultVideoSizes(aboutEditor, 'about-edit');
 
             // Ініціалізація стану кнопок
             setTimeout(updateButtons, 100);
         }
 
-        // Ініціалізація редактора для опису товару
+        // Ініціалізація редактора для товару
         const productEditorContainer = document.getElementById('product-description-editor');
         if (productEditorContainer && !productEditor) {
             productEditor = new Quill(productEditorContainer, {
                 theme: 'snow',
                 modules: {
-                    toolbar: aboutToolbarOptions, // Використовуємо ту саму панель інструментів
+                    toolbar: toolbarOptions,
                     history: {
                         delay: 1000,
                         maxStack: 500,
@@ -2080,15 +2115,28 @@ function initializeEditors() {
                 resetInactivityTimer();
             });
 
-            // Обробник кліків для зміни розмірів медіа в редакторі товару
+            productEditor.on('selection-change', (range) => {
+                if (range && range.length > 0) {
+                    const [leaf] = productEditor.getLeaf(range.index);
+                    if (leaf && leaf.domNode && (leaf.domNode.tagName === 'IMG' || leaf.domNode.tagName === 'IFRAME')) {
+                        selectedMedia = leaf.domNode;
+                        document.querySelectorAll('.quill-media-selected').forEach(el => el.classList.remove('quill-media-selected'));
+                        selectedMedia.classList.add('quill-media-selected');
+                    } else {
+                        selectedMedia = null;
+                        document.querySelectorAll('.quill-media-selected').forEach(el => el.classList.remove('quill-media-selected'));
+                    }
+                }
+            });
+
             productEditor.root.addEventListener('click', (e) => {
                 const target = e.target;
                 if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                    selectedMedia = target;
                     openResizeModal(target);
                 }
             });
 
-            // Обробка вставки медіа
             productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
                 if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
                     const src = node.getAttribute('src');
@@ -2100,11 +2148,10 @@ function initializeEditors() {
                 return delta;
             });
 
-            // Встановлюємо розміри для відео
             setDefaultVideoSizes(productEditor, 'product-description');
         }
 
-        // Додаємо обробники для кастомних кнопок undo/redo
+        // Обробники для кнопок undo/redo
         const undoButtons = document.querySelectorAll('.ql-undo');
         const redoButtons = document.querySelectorAll('.ql-redo');
         undoButtons.forEach(button => {
@@ -2527,24 +2574,24 @@ async function updateStoreInfo() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
-        const name = document.getElementById('store-name').value;
-        const baseUrl = document.getElementById('base-url').value;
-        const logoUrl = document.getElementById('logo-url').value;
+        const name = document.getElementById('store-name').value.trim();
+        const baseUrl = document.getElementById('base-url').value.trim();
+        const logoUrl = document.getElementById('logo-url').value.trim();
+        const logoWidth = parseInt(document.getElementById('logo-width').value) || null;
+        const faviconUrl = document.getElementById('favicon-url').value.trim();
+
+        if (!name) {
+            showNotification('Введіть назву магазину!');
+            return;
+        }
+
+        let logoFileUrl = logoUrl;
         const logoFile = document.getElementById('logo-file').files[0];
-        const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
-        const faviconUrl = document.getElementById('favicon-url').value;
-        const faviconFile = document.getElementById('favicon-file').files[0];
-
-        const token = localStorage.getItem('adminToken');
-        let finalLogoUrl = logoUrl;
-        let finalFaviconUrl = faviconUrl;
-
-        // Завантаження логотипу, якщо вибрано файл
         if (logoFile) {
             const validation = validateFile(logoFile);
             if (!validation.valid) {
@@ -2553,22 +2600,16 @@ async function updateStoreInfo() {
             }
             const formData = new FormData();
             formData.append('file', logoFile);
-            const response = await fetch('/api/upload', {
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
                 body: formData
             });
-            if (!response.ok) {
-                throw new Error(`Помилка завантаження логотипу: ${response.statusText}`);
-            }
             const data = await response.json();
-            finalLogoUrl = data.url;
+            logoFileUrl = data.url;
         }
 
-        // Завантаження фавікону, якщо вибрано файл
+        let faviconFileUrl = faviconUrl;
+        const faviconFile = document.getElementById('favicon-file').files[0];
         if (faviconFile) {
             const validation = validateFile(faviconFile);
             if (!validation.valid) {
@@ -2577,49 +2618,53 @@ async function updateStoreInfo() {
             }
             const formData = new FormData();
             formData.append('file', faviconFile);
-            const response = await fetch('/api/upload', {
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
                 body: formData
             });
-            if (!response.ok) {
-                throw new Error(`Помилка завантаження фавікону: ${response.statusText}`);
-            }
             const data = await response.json();
-            finalFaviconUrl = data.url;
+            faviconFileUrl = data.url;
         }
 
-        const updatedSettings = {
-            name: name || settings.name,
-            baseUrl: baseUrl || settings.baseUrl,
-            logo: finalLogoUrl || settings.logo,
-            logoWidth: logoWidth || settings.logoWidth,
-            favicon: finalFaviconUrl || settings.favicon
-        };
-
-        console.log('Надсилаємо налаштування:', updatedSettings);
+        settings.name = name;
+        settings.baseUrl = baseUrl;
+        settings.logo = logoFileUrl || settings.logo;
+        settings.logoWidth = logoWidth;
+        settings.favicon = faviconFileUrl || settings.favicon;
 
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            body: JSON.stringify(updatedSettings)
+            body: JSON.stringify({
+                name: settings.name,
+                baseUrl: settings.baseUrl,
+                logo: settings.logo,
+                logoWidth: settings.logoWidth,
+                favicon: settings.favicon,
+                contacts: settings.contacts,
+                socials: settings.socials,
+                showSocials: settings.showSocials,
+                about: settings.about,
+                showSlides: settings.showSlides,
+                slideWidth: settings.slideWidth,
+                slideHeight: settings.slideHeight,
+                slideInterval: settings.slideInterval,
+                categoryWidth: settings.categoryWidth,
+                categoryHeight: settings.categoryHeight,
+                productWidth: settings.productWidth,
+                productHeight: settings.productHeight
+            })
         });
 
-        const serverSettings = await response.json();
-        settings = { ...settings, ...serverSettings };
-        renderSettingsAdmin();
-        showNotification('Налаштування магазину оновлено!');
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити налаштування');
+        }
+
+        showNotification('Налаштування оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
-
-        // Очистка полів файлів
-        document.getElementById('logo-file').value = '';
-        document.getElementById('favicon-file').value = '';
     } catch (err) {
-        console.error('Помилка при оновленні налаштувань:', err);
-        showNotification('Помилка оновлення налаштувань: ' + err.message);
+        console.error('Помилка оновлення налаштувань:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -2738,39 +2783,68 @@ async function updateAbout() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
-        const aboutContent = aboutEditor.root.innerHTML;
-        console.log('Надсилаємо "Про нас":', aboutContent);
+        let aboutContent = aboutEditor.root.innerHTML;
+        const mediaUrls = [];
 
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/settings', {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ about: aboutContent })
-        });
+        // Обробка зображень (blob URLs)
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(aboutContent, 'text/html');
+        const images = doc.querySelectorAll('img');
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення "Про нас": ${errorData.error || response.statusText}`);
+        for (let img of images) {
+            const src = img.getAttribute('src');
+            if (src && src.startsWith('blob:')) {
+                try {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const formData = new FormData();
+                    formData.append('file', blob, `about-image-${Date.now()}.png`);
+                    const uploadResponse = await fetchWithAuth('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await uploadResponse.json();
+                    if (uploadData.url) {
+                        mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                    } else {
+                        throw new Error('Не вдалося завантажити зображення');
+                    }
+                } catch (err) {
+                    console.error('Помилка завантаження зображення:', err);
+                    showNotification('Помилка завантаження зображення: ' + err.message);
+                    return;
+                }
+            }
         }
+
+        // Оновлення URL зображень у контенті
+        mediaUrls.forEach(({ oldUrl, newUrl }) => {
+            aboutContent = aboutContent.replace(oldUrl, newUrl);
+        });
 
         settings.about = aboutContent;
         document.getElementById('about-edit').value = aboutContent;
+
+        const response = await fetchWithAuth('/api/settings', {
+            method: 'PUT',
+            body: JSON.stringify({ ...settings, about: aboutContent })
+        });
+
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити розділ "Про нас"');
+        }
+
         showNotification('Розділ "Про нас" оновлено!');
-        renderSettingsAdmin();
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення "Про нас":', err);
-        showNotification('Помилка оновлення "Про нас": ' + err.message);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -3115,14 +3189,13 @@ function closeModal() {
 }
 
 function validateFile(file) {
-    const maxSize = 5 * 1024 * 1024; // 5 MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
     if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Дозволені формати: JPEG, PNG, GIF, WebP' };
+        return { valid: false, error: 'Дозволені лише зображення JPEG, PNG, GIF, WebP!' };
     }
     if (file.size > maxSize) {
-        return { valid: false, error: 'Максимальний розмір файлу: 5 MB' };
+        return { valid: false, error: 'Розмір файлу не повинен перевищувати 5 МБ!' };
     }
     return { valid: true };
 }
@@ -3322,23 +3395,23 @@ async function addSubcategory() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
-        const name = document.getElementById('subcat-name').value;
-        const slug = document.getElementById('subcat-slug').value;
-        const imgUrl = document.getElementById('subcat-img-url').value;
+        const name = document.getElementById('subcat-name').value.trim();
+        const slug = document.getElementById('subcat-slug').value.trim();
+        const imgUrl = document.getElementById('subcat-img-url').value.trim();
+        const category = document.getElementById('subcat-category').value;
         const imgFile = document.getElementById('subcat-img-file').files[0];
-        const categoryName = document.getElementById('subcat-category').value;
 
-        if (!name || !slug || !categoryName) {
-            showNotification('Введіть назву, шлях та виберіть категорію!');
+        if (!name || !slug || !category) {
+            showNotification('Заповніть усі обов’язкові поля!');
             return;
         }
 
-        let imageUrl = imgUrl;
+        let image = imgUrl;
         if (imgFile) {
             const validation = validateFile(imgFile);
             if (!validation.valid) {
@@ -3347,49 +3420,45 @@ async function addSubcategory() {
             }
             const formData = new FormData();
             formData.append('file', imgFile);
-            const token = localStorage.getItem('adminToken');
-            const uploadResponse = await fetch('/api/upload', {
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
                 body: formData
             });
-            const uploadData = await uploadResponse.json();
-            if (uploadData.url) {
-                imageUrl = uploadData.url;
-            } else {
-                throw new Error('Не вдалося завантажити зображення');
-            }
+            const data = await response.json();
+            image = data.url;
         }
 
-        // Формуємо об’єкт підкатегорії без поля image, якщо сервер його не підтримує
-        const subcategory = { name, slug };
-        // Якщо сервер підтримує поле img, можна додати:
-        // subcategory.img = imageUrl;
+        const cat = categories.find(c => c.name === category);
+        if (!cat) {
+            showNotification('Категорію не знайдено!');
+            return;
+        }
 
-        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
-            method: 'POST',
-            body: JSON.stringify(subcategory)
+        const subcat = { name, slug, image: image || null };
+        if (!cat.subcategories) {
+            cat.subcategories = [];
+        }
+        cat.subcategories.push(subcat);
+
+        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(category)}`, {
+            method: 'PUT',
+            body: JSON.stringify(cat)
         });
 
-        const updatedCategory = await response.json();
-        const categoryIndex = categories.findIndex(c => c.name === categoryName);
-        if (categoryIndex !== -1) {
-            categories[categoryIndex] = updatedCategory;
+        if (!response.ok) {
+            throw new Error('Не вдалося додати підкатегорію');
         }
-        renderCategoriesAdmin();
+
         document.getElementById('subcat-name').value = '';
         document.getElementById('subcat-slug').value = '';
         document.getElementById('subcat-img-url').value = '';
         document.getElementById('subcat-img-file').value = '';
-        document.getElementById('subcat-category').value = '';
+        renderCategoriesAdmin();
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання підкатегорії:', err);
-        showNotification('Помилка додавання підкатегорії: ' + err.message);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
