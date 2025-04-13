@@ -183,16 +183,18 @@
             justify-content: center;
             align-items: center;
         }
-        .modal-content {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 500px;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            position: relative;
-        }
+.modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    position: relative;
+    /* Додаємо внутрішній відступ для прокрутки */
+    padding-bottom: 40px;
+}
         .modal-actions {
             margin-top: 20px;
             display: flex;
@@ -581,6 +583,21 @@
     color: #ccc;
     cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+    .product-admin-item, #product-list-header {
+        grid-template-columns: 1fr; /* Переключаємо на одну колонку */
+        text-align: left; /* Вирівнювання тексту зліва для кращої читабельності */
+    }
+    .product-admin-item > span, #product-list-header > span {
+        padding: 5px;
+        text-align: left;
+    }
+    .product-admin-item .status-column {
+        flex-direction: column; /* Кнопки в колонку */
+        align-items: flex-start;
+    }
+}
   </style>
  </head>
  <body>
@@ -593,571 +610,303 @@
     <label for="admin-password">Введіть пароль</label>
     <button id="login-btn">Увійти</button>
 </div>
-   <div class="section" id="admin-panel">
-    <h2>
-     Адмін-панель
-    </h2>
-    <button onclick="logout()" style="position: absolute; top: 20px; right: 20px;">
-     Вийти
-    </button>
+<div class="section" id="admin-panel">
+    <h2>Адмін-панель</h2>
+    <button onclick="logout()" style="position: absolute; top: 20px; right: 20px;">Вийти</button>
     <div class="admin-tabs">
-     <button class="tab-btn active" onclick="showAdminTab('site-editing')">
-      Редагування сайту
-     </button>
-     <button class="tab-btn" onclick="showAdminTab('products')">
-      Товари
-     </button>
-     <button class="tab-btn" onclick="showAdminTab('orders')">
-      Замовлення
-     </button>
+        <button class="tab-btn active" onclick="showAdminTab('site-editing')">Редагування сайту</button>
+        <button class="tab-btn" onclick="showAdminTab('products')">Товари</button>
+        <button class="tab-btn" onclick="showAdminTab('orders')">Замовлення</button>
     </div>
     <div class="admin-tab active" id="site-editing">
-     <div class="admin-section">
-      <h3>
-       Логотип та назва
-      </h3>
-      <input id="store-name" placeholder="Назва магазину" type="text"/>
-      <br/>
-      <label for="store-name">
-       Назва магазину
-      </label>
-      <input id="base-url" placeholder="Базовий URL (наприклад, https://www.yourdomain.com)" type="text"/>
-      <br/>
-      <!-- Added Base URL input -->
-      <label for="base-url">
-       Базовий URL сайту
-      </label>
-      <input class="logo-input" id="logo-url" placeholder="URL логотипу" type="text"/>
-      <br/>
-      <label for="logo-url">
-       URL логотипу
-      </label>
-      <input accept="image/*" id="logo-file" type="file"/>
-      <br/>
-      <label for="logo-file">
-       Завантажте логотип
-      </label>
-      <input id="logo-width" max="500" min="50" placeholder="Ширина логотипу (px)" type="number"/>
-      <br/>
-      <label for="logo-width">
-       Ширина логотипу (px)
-      </label>
-      <input id="favicon-url" placeholder="URL favicon" type="text"/>
-      <br/>
-      <label for="favicon-url">
-       URL favicon
-      </label>
-      <input accept="image/*" id="favicon-file" type="file"/>
-      <br/>
-      <label for="favicon-file">
-       Завантажте favicon
-      </label>
-      <button onclick="updateStoreInfo()">
-       Зберегти
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Контакти
-      </h3>
-      <textarea id="contact-phones" placeholder="Телефони"></textarea>
-      <br/>
-      <label for="contact-phones">
-       Телефони (наприклад, +38 (067) 123-45-67)
-      </label>
-      <textarea id="contact-addresses" placeholder="Адреси"></textarea>
-      <br/>
-      <label for="contact-addresses">
-       Адреси (наприклад, м. Київ, вул. Меблева, 1)
-      </label>
-      <textarea id="contact-schedule" placeholder="Графік роботи"></textarea>
-      <br/>
-      <label for="contact-schedule">
-       Графік роботи (наприклад, Пн-Пт: 9:00-18:00)
-      </label>
-      <button onclick="updateContacts()">
-       Зберегти
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Соціальні мережі
-      </h3>
-      <input id="social-url" placeholder="Посилання" type="text"/>
-      <br/>
-      <label for="social-url">
-       URL соцмережі
-      </label>
-      <select id="social-icon">
-       <option value="🔗">
-        Загальний (🔗)
-       </option>
-       <option value="📘">
-        Facebook (📘)
-       </option>
-       <option value="📸">
-        Instagram (📸)
-       </option>
-       <option value="🐦">
-        Twitter (🐦)
-       </option>
-       <option value=▶️">
-        YouTube (▶️)
-       </option>
-       <option value="✈️">
-        Telegram (✈️)
-       </option>
-      </select>
-      <br/>
-      <label for="social-icon">
-       Іконка соцмережі
-      </label>
-      <button onclick="addSocial()">
-       Додати
-      </button>
-      <br/>
-      <label>
-       <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
-       Показувати соціальні мережі
-      </label>
-      <div id="social-list">
-      </div>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Про нас
-      </h3>
-      <div id="about-editor">
-      </div>
-      <input id="about-edit" type="hidden"/>
-      <label for="about-edit">
-       Опис "Про нас"
-      </label>
-      <button onclick="updateAbout()">
-       Зберегти
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Категорії
-      </h3>
-      <input id="cat-name" placeholder="Назва категорії" type="text"/>
-      <br/>
-      <label for="cat-name">
-       Назва категорії
-      </label>
-      <input id="cat-slug" placeholder="Шлях категорії (наприклад, kuhni)" type="text"/>
-      <br/>
-      <label for="cat-slug">
-       Шлях категорії
-      </label>
-      <input id="cat-img-url" placeholder="URL картинки (300x200)" type="text"/>
-      <br/>
-      <label for="cat-img-url">
-       URL зображення
-      </label>
-      <input accept="image/*" id="cat-img-file" type="file"/>
-      <br/>
-      <label for="cat-img-file">
-       Завантажте зображення
-      </label>
-      <button onclick="addCategory()">
-       Додати категорію
-      </button>
-      <br/>
-      <div id="cat-list">
-      </div>
-      <h4>
-       Підкатегорії
-      </h4>
-      <input id="subcat-name" placeholder="Назва підкатегорії" type="text"/>
-      <br/>
-      <label for="subcat-name">
-       Назва підкатегорії
-      </label>
-      <input id="subcat-slug" placeholder="Шлях підкатегорії (наприклад, kuhni-naborom)" type="text"/>
-      <br/>
-      <label for="subcat-slug">
-       Шлях підкатегорії
-      </label>
-      <input id="subcat-img-url" placeholder="URL картинки (150x150)" type="text"/>
-      <br/>
-      <label for="subcat-img-url">
-       URL зображення
-      </label>
-      <input accept="image/*" id="subcat-img-file" type="file"/>
-      <br/>
-      <label for="subcat-img-file">
-       Завантажте зображення
-      </label>
-      <select id="subcat-category">
-       <option value="">
-        Виберіть категорію
-       </option>
-      </select>
-      <br/>
-      <label for="subcat-category">
-       Категорія для підкатегорії
-      </label>
-      <button onclick="addSubcategory()">
-       Додати підкатегорію
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Налаштування категорій
-      </h3>
-      <input id="category-width" max="500" min="100" placeholder="Ширина категорії (px, 100-500)" type="number"/>
-      <br/>
-      <label for="category-width">
-       Ширина категорії (px)
-      </label>
-      <input id="category-height" max="500" min="100" placeholder="Висота категорії (px, 100-500)" type="number"/>
-      <br/>
-      <label for="category-height">
-       Висота категорії (px)
-      </label>
-      <button onclick="updateCategorySettings()">
-       Зберегти налаштування
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Налаштування товарів
-      </h3>
-      <input id="product-width" max="500" min="200" placeholder="Ширина товару (px, 200-500)" type="number"/>
-      <br/>
-      <label for="product-width">
-       Ширина товару (px)
-      </label>
-      <input id="product-height" max="500" min="200" placeholder="Висота товару (px, 200-500)" type="number"/>
-      <br/>
-      <label for="product-height">
-       Висота товару (px)
-      </label>
-      <button onclick="updateProductSettings()">
-       Зберегти налаштування
-      </button>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Фільтри
-      </h3>
-      <input id="filter-name" placeholder="Назва (англ.)" type="text"/>
-      <br/>
-      <label for="filter-name">
-       Назва фільтру (наприклад, brand)
-      </label>
-      <input id="filter-label" placeholder="Підпис" type="text"/>
-      <br/>
-      <label for="filter-label">
-       Відображувана назва (наприклад, Виробник)
-      </label>
-      <input id="filter-options" placeholder="Опції (через кому)" type="text"/>
-      <br/>
-      <label for="filter-options">
-       Опції (наприклад, Гербор, Matroluxe)
-      </label>
-      <button onclick="addFilter()">
-       Додати фільтр
-      </button>
-      <br/>
-      <div id="filter-list-admin">
-      </div>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Поля замовлення
-      </h3>
-      <input id="order-field-name" placeholder="Назва (англ.)" type="text"/>
-      <br/>
-      <label for="order-field-name">
-       Назва поля (наприклад, name)
-      </label>
-      <input id="order-field-label" placeholder="Підпис" type="text"/>
-      <br/>
-      <label for="order-field-label">
-       Відображувана назва (наприклад, Ім'я)
-      </label>
-      <select id="order-field-type">
-       <option value="text">
-        Текст
-       </option>
-       <option value="email">
-        Email
-       </option>
-       <option value="select">
-        Вибір
-       </option>
-      </select>
-      <br/>
-      <label for="order-field-type">
-       Тип поля
-      </label>
-      <input id="order-field-options" placeholder="Опції (через кому, для select)" type="text"/>
-      <br/>
-      <label for="order-field-options">
-       Опції для вибору (наприклад, Готівкою, Карткою)
-      </label>
-      <button onclick="addOrderField()">
-       Додати поле
-      </button>
-      <br/>
-      <div id="order-field-list">
-      </div>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Слайдшоу
-      </h3>
-      <input id="slide-width" max="100" min="10" placeholder="Ширина слайду (%, 10-100)" type="number"/>
-      <br/>
-      <label for="slide-width">
-       Ширина слайду (%)
-      </label>
-      <input id="slide-height" max="500" min="100" placeholder="Висота слайду (px, 100-500)" type="number"/>
-      <br/>
-      <label for="slide-height">
-       Висота слайду (px)
-      </label>
-      <input id="slide-interval" placeholder="Інтервал (мс)" type="number"/>
-      <br/>
-      <label for="slide-interval">
-       Інтервал слайдів (мс)
-      </label>
-      <button onclick="updateSlideshowSettings()">
-       Зберегти налаштування
-      </button>
-      <br/>
-      <input id="slide-img-url" placeholder="URL картинки" type="text"/>
-      <br/>
-      <label for="slide-img-url">
-       URL зображення слайду
-      </label>
-      <input accept="image/*" id="slide-img-file" type="file"/>
-      <br/>
-      <label for="slide-img-file">
-       Завантажте зображення
-      </label>
-      <input id="slide-title" placeholder="Заголовок слайду" type="text"/>
-      <br/>
-      <label for="slide-title">
-       Заголовок слайду
-      </label>
-      <input id="slide-text" placeholder="Текст слайду" type="text"/>
-      <br/>
-      <label for="slide-text">
-       Текст слайду
-      </label>
-      <input id="slide-link" placeholder="Посилання" type="text"/>
-      <br/>
-      <label for="slide-link">
-       Посилання слайду
-      </label>
-      <input id="slide-link-text" placeholder="Текст посилання" type="text"/>
-      <br/>
-      <label for="slide-link-text">
-       Текст посилання
-      </label>
-      <input id="slide-order" placeholder="Порядковий номер" type="number"/>
-      <br/>
-      <label for="slide-order">
-       Порядок слайду
-      </label>
-      <button onclick="addSlide()">
-       Додати слайд
-      </button>
-      <br/>
-      <label>
-       <input id="slide-toggle" onchange="toggleSlideshow()" type="checkbox"/>
-       Показати слайдшоу
-      </label>
-      <div id="slide-list">
-      </div>
-     </div>
-     <div class="admin-section">
-      <h3>
-       Бекап
-      </h3>
-      <div class="backup-group">
-       <button onclick="exportSiteBackup()">
-        Експортувати (Сайт)
-       </button>
-       <div class="import-group">
-        <input accept=".json" id="import-site-file" style="display: none;" type="file"/>
-        <button class="import-btn" onclick="document.getElementById('import-site-file').click()">
-         Імпортувати файл (Сайт)
-        </button>
-       </div>
-      </div>
-      <div class="backup-group">
-       <button onclick="exportProductsBackup()">
-        Експортувати (Товари)
-       </button>
-       <div class="import-group">
-        <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
-        <button class="import-btn" onclick="document.getElementById('import-products-file').click()">
-         Імпортувати файл (Товари)
-        </button>
-       </div>
-      </div>
-      <div class="backup-group">
-       <button onclick="exportOrdersBackup()">
-        Експортувати (Замовлення)
-       </button>
-       <div class="import-group">
-        <input accept=".json" id="import-orders-file" style="display: none;" type="file"/>
-        <button class="import-btn" onclick="document.getElementById('import-orders-file').click()">
-         Імпортувати файл (Замовлення)
-        </button>
-       </div>
-      </div>
-      <div class="backup-group">
-       <button onclick="downloadSitemap()">
-        Завантажити Sitemap
-       </button>
-      </div>
-     </div>
+        <!-- Логотип та назва -->
+        <div class="admin-section">
+            <h3>Логотип та назва</h3>
+            <form id="store-info-form" onsubmit="event.preventDefault(); updateStoreInfo();">
+                <input id="store-name" placeholder="Назва магазину" type="text"/><br/>
+                <label for="store-name">Назва магазину</label>
+                <input id="base-url" placeholder="Базовий URL (наприклад, https://www.yourdomain.com)" type="text"/><br/>
+                <label for="base-url">Базовий URL сайту</label>
+                <input class="logo-input" id="logo-url" placeholder="URL логотипу" type="text"/><br/>
+                <label for="logo-url">URL логотипу</label>
+                <input accept="image/*" id="logo-file" type="file"/><br/>
+                <label for="logo-file">Завантажте логотип</label>
+                <input id="logo-width" max="500" min="50" placeholder="Ширина логотипу (px)" type="number"/><br/>
+                <label for="logo-width">Ширина логотипу (px)</label>
+                <input id="favicon-url" placeholder="URL favicon" type="text"/><br/>
+                <label for="favicon-url">URL favicon</label>
+                <input accept="image/*" id="favicon-file" type="file"/><br/>
+                <label for="favicon-file">Завантажте favicon</label>
+                <button type="submit">Зберегти</button>
+            </form>
+        </div>
+        <!-- Контакти -->
+        <div class="admin-section">
+            <h3>Контакти</h3>
+            <form id="contacts-form" onsubmit="event.preventDefault(); updateContacts();">
+                <textarea id="contact-phones" placeholder="Телефони"></textarea><br/>
+                <label for="contact-phones">Телефони (наприклад, +38 (067) 123-45-67)</label>
+                <textarea id="contact-addresses" placeholder="Адреси"></textarea><br/>
+                <label for="contact-addresses">Адреси (наприклад, м. Київ, вул. Меблева, 1)</label>
+                <textarea id="contact-schedule" placeholder="Графік роботи"></textarea><br/>
+                <label for="contact-schedule">Графік роботи (наприклад, Пн-Пт: 9:00-18:00)</label>
+                <button type="submit">Зберегти</button>
+            </form>
+        </div>
+        <!-- Соціальні мережі -->
+        <div class="admin-section">
+            <h3>Соціальні мережі</h3>
+            <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
+                <input id="social-url" placeholder="Посилання" type="text"/><br/>
+                <label for="social-url">URL соцмережі</label>
+                <select id="social-icon">
+                    <option value="🔗">Загальний (🔗)</option>
+                    <option value="📘">Facebook (📘)</option>
+                    <option value="📸">Instagram (📸)</option>
+                    <option value="🐦">Twitter (🐦)</option>
+                    <option value="▶️">YouTube (▶️)</option>
+                    <option value="✈️">Telegram (✈️)</option>
+                </select><br/>
+                <label for="social-icon">Іконка соцмережі</label>
+                <button type="submit">Додати</button>
+            </form>
+            <label>
+                <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
+                Показувати соціальні мережі
+            </label>
+            <div id="social-list"></div>
+        </div>
+        <!-- Про нас -->
+        <div class="admin-section">
+            <h3>Про нас</h3>
+            <form id="about-form" onsubmit="event.preventDefault(); updateAbout();">
+                <div id="about-editor"></div>
+                <input id="about-edit" type="hidden"/>
+                <label for="about-edit">Опис "Про нас"</label>
+                <button type="submit">Зберегти</button>
+            </form>
+        </div>
+        <!-- Категорії -->
+        <div class="admin-section">
+            <h3>Категорії</h3>
+            <form id="category-form" onsubmit="event.preventDefault(); addCategory();">
+                <input id="cat-name" placeholder="Назва категорії" type="text"/><br/>
+                <label for="cat-name">Назва категорії</label>
+                <input id="cat-slug" placeholder="Шлях категорії (наприклад, kuhni)" type="text"/><br/>
+                <label for="cat-slug">Шлях категорії</label>
+                <input id="cat-img-url" placeholder="URL картинки (300x200)" type="text"/><br/>
+                <label for="cat-img-url">URL зображення</label>
+                <input accept="image/*" id="cat-img-file" type="file"/><br/>
+                <label for="cat-img-file">Завантажте зображення</label>
+                <button type="submit">Додати категорію</button>
+            </form>
+            <div id="cat-list"></div>
+            <h4>Підкатегорії</h4>
+            <form id="subcategory-form" onsubmit="event.preventDefault(); addSubcategory();">
+                <input id="subcat-name" placeholder="Назва підкатегорії" type="text"/><br/>
+                <label for="subcat-name">Назва підкатегорії</label>
+                <input id="subcat-slug" placeholder="Шлях підкатегорії (наприклад, kuhni-naborom)" type="text"/><br/>
+                <label for="subcat-slug">Шлях підкатегорії</label>
+                <input id="subcat-img-url" placeholder="URL картинки (150x150)" type="text"/><br/>
+                <label for="subcat-img-url">URL зображення</label>
+                <input accept="image/*" id="subcat-img-file" type="file"/><br/>
+                <label for="subcat-img-file">Завантажте зображення</label>
+                <select id="subcat-category">
+                    <option value="">Виберіть категорію</option>
+                </select><br/>
+                <label for="subcat-category">Категорія для підкатегорії</label>
+                <button type="submit">Додати підкатегорію</button>
+            </form>
+        </div>
+        <!-- Налаштування категорій -->
+        <div class="admin-section">
+            <h3>Налаштування категорій</h3>
+            <form id="category-settings-form" onsubmit="event.preventDefault(); updateCategorySettings();">
+                <input id="category-width" max="500" min="100" placeholder="Ширина категорії (px, 100-500)" type="number"/><br/>
+                <label for="category-width">Ширина категорії (px)</label>
+                <input id="category-height" max="500" min="100" placeholder="Висота категорії (px, 100-500)" type="number"/><br/>
+                <label for="category-height">Висота категорії (px)</label>
+                <button type="submit">Зберегти налаштування</button>
+            </form>
+        </div>
+        <!-- Налаштування товарів -->
+        <div class="admin-section">
+            <h3>Налаштування товарів</h3>
+            <form id="product-settings-form" onsubmit="event.preventDefault(); updateProductSettings();">
+                <input id="product-width" max="500" min="200" placeholder="Ширина товару (px, 200-500)" type="number"/><br/>
+                <label for="product-width">Ширина товару (px)</label>
+                <input id="product-height" max="500" min="200" placeholder="Висота товару (px, 200-500)" type="number"/><br/>
+                <label for="product-height">Висота товару (px)</label>
+                <button type="submit">Зберегти налаштування</button>
+            </form>
+        </div>
+        <!-- Фільтри -->
+        <div class="admin-section">
+            <h3>Фільтри</h3>
+            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
+                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
+                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
+                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
+                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
+                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
+                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
+                <button type="submit">Додати фільтр</button>
+            </form>
+            <div id="filter-list-admin"></div>
+        </div>
+        <!-- Поля замовлення -->
+        <div class="admin-section">
+            <h3>Поля замовлення</h3>
+            <form id="order-field-form" onsubmit="event.preventDefault(); addOrderField();">
+                <input id="order-field-name" placeholder="Назва (англ.)" type="text"/><br/>
+                <label for="order-field-name">Назва поля (наприклад, name)</label>
+                <input id="order-field-label" placeholder="Підпис" type="text"/><br/>
+                <label for="order-field-label">Відображувана назва (наприклад, Ім'я)</label>
+                <select id="order-field-type">
+                    <option value="text">Текст</option>
+                    <option value="email">Email</option>
+                    <option value="select">Вибір</option>
+                </select><br/>
+                <label for="order-field-type">Тип поля</label>
+                <input id="order-field-options" placeholder="Опції (через кому, для select)" type="text"/><br/>
+                <label for="order-field-options">Опції для вибору (наприклад, Готівкою, Карткою)</label>
+                <button type="submit">Додати поле</button>
+            </form>
+            <div id="order-field-list"></div>
+        </div>
+        <!-- Слайдшоу -->
+        <div class="admin-section">
+            <h3>Слайдшоу</h3>
+            <form id="slideshow-settings-form" onsubmit="event.preventDefault(); updateSlideshowSettings();">
+                <input id="slide-width" max="100" min="10" placeholder="Ширина слайду (%, 10-100)" type="number"/><br/>
+                <label for="slide-width">Ширина слайду (%)</label>
+                <input id="slide-height" max="500" min="100" placeholder="Висота слайду (px, 100-500)" type="number"/><br/>
+                <label for="slide-height">Висота слайду (px)</label>
+                <input id="slide-interval" placeholder="Інтервал (мс)" type="number"/><br/>
+                <label for="slide-interval">Інтервал слайдів (мс)</label>
+                <button type="submit">Зберегти налаштування</button>
+            </form>
+            <form id="slide-form" onsubmit="event.preventDefault(); addSlide();">
+                <input id="slide-img-url" placeholder="URL картинки" type="text"/><br/>
+                <label for="slide-img-url">URL зображення слайду</label>
+                <input accept="image/*" id="slide-img-file" type="file"/><br/>
+                <label for="slide-img-file">Завантажте зображення</label>
+                <input id="slide-title" placeholder="Заголовок слайду" type="text"/><br/>
+                <label for="slide-title">Заголовок слайду</label>
+                <input id="slide-text" placeholder="Текст слайду" type="text"/><br/>
+                <label for="slide-text">Текст слайду</label>
+                <input id="slide-link" placeholder="Посилання" type="text"/><br/>
+                <label for="slide-link">Посилання слайду</label>
+                <input id="slide-link-text" placeholder="Текст посилання" type="text"/><br/>
+                <label for="slide-link-text">Текст посилання</label>
+                <input id="slide-order" placeholder="Порядковий номер" type="number"/><br/>
+                <label for="slide-order">Порядок слайду</label>
+                <button type="submit">Додати слайд</button>
+            </form>
+            <label>
+                <input id="slide-toggle" onchange="toggleSlideshow()" type="checkbox"/>
+                Показати слайдшоу
+            </label>
+            <div id="slide-list"></div>
+        </div>
+        <!-- Бекап -->
+        <div class="admin-section">
+            <h3>Бекап</h3>
+            <div class="backup-group">
+                <button onclick="exportSiteBackup()">Експортувати (Сайт)</button>
+                <div class="import-group">
+                    <input accept=".json" id="import-site-file" style="display: none;" type="file"/>
+                    <button class="import-btn" onclick="document.getElementById('import-site-file').click()">Імпортувати файл (Сайт)</button>
+                </div>
+            </div>
+            <div class="backup-group">
+                <button onclick="exportProductsBackup()">Експортувати (Товари)</button>
+                <div class="import-group">
+                    <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
+                    <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (Товари)</button>
+                </div>
+            </div>
+            <div class="backup-group">
+                <button onclick="exportOrdersBackup()">Експортувати (Замовлення)</button>
+                <div class="import-group">
+                    <input accept=".json" id="import-orders-file" style="display: none;" type="file"/>
+                    <button class="import-btn" onclick="document.getElementById('import-orders-file').click()">Імпортувати файл (Замовлення)</button>
+                </div>
+            </div>
+            <div class="backup-group">
+                <button onclick="downloadSitemap()">Завантажити Sitemap</button>
+            </div>
+        </div>
     </div>
+    <!-- Товари та Замовлення залишаються без змін -->
     <div class="admin-tab" id="products">
-     <div class="admin-section">
-      <h3>
-       Товари
-      </h3>
-      <div class="product-controls">
-       <button onclick="openAddProductModal()">
-        Додати товар
-       </button>
-       <div class="sort-menu">
-        <button class="sort-btn">
-         Сортування ▼
-        </button>
-        <div class="sort-dropdown">
-         <button onclick="sortAdminProducts('id-asc')">
-          ID (зростання)
-         </button>
-         <button onclick="sortAdminProducts('id-desc')">
-          ID (спадання)
-         </button>
-         <button onclick="sortAdminProducts('name-asc')">
-          Назва (А-Я)
-         </button>
-         <button onclick="sortAdminProducts('name-desc')">
-          Назва (Я-А)
-         </button>
-         <button onclick="sortAdminProducts('brand-asc')">
-          Виробник (А-Я)
-         </button>
-         <button onclick="sortAdminProducts('brand-desc')">
-          Виробник (Я-А)
-         </button>
-         <button onclick="sortAdminProducts('price-asc')">
-          Ціна (зростання)
-         </button>
-         <button onclick="sortAdminProducts('price-desc')">
-          Ціна (спадання)
-         </button>
+        <div class="admin-section">
+            <h3>Товари</h3>
+            <div class="product-controls">
+                <button onclick="openAddProductModal()">Додати товар</button>
+                <div class="sort-menu">
+                    <button class="sort-btn">Сортування ▼</button>
+                    <div class="sort-dropdown">
+                        <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
+                        <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
+                        <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
+                        <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
+                        <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
+                        <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
+                        <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
+                        <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
+                    </div>
+                </div>
+                <div class="backup-group">
+                    <button onclick="exportPrices()">Експортувати ціни</button>
+                    <div class="import-group">
+                        <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
+                        <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
+                    </div>
+                </div>
+            </div>
+            <div class="product-admin-item" id="product-list-header">
+                <span>№</span>
+                <span>Тип</span>
+                <span>Назва</span>
+                <span>Виробник</span>
+                <span>Ціна</span>
+                <span>Акційна ціна</span>
+                <span>Статус</span>
+            </div>
+            <div id="product-list-admin"></div>
+            <div class="pagination" id="pagination"></div>
         </div>
-       </div>
-       <div class="backup-group">
-        <button onclick="exportPrices()">
-         Експортувати ціни
-        </button>
-        <div class="import-group">
-         <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
-         <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">
-          Оновити ціни з файлу
-         </button>
-        </div>
-       </div>
-      </div>
-      <div class="product-admin-item" id="product-list-header">
-       <span>
-        №
-       </span>
-       <span>
-        Тип
-       </span>
-       <span>
-        Назва
-       </span>
-       <span>
-        Виробник
-       </span>
-       <span>
-        Ціна
-       </span>
-       <span>
-        Акційна ціна
-       </span>
-       <span>
-        Статус
-       </span>
-      </div>
-      <div id="product-list-admin">
-      </div>
-      <div class="pagination" id="pagination">
-      </div>
-     </div>
     </div>
     <div class="admin-tab" id="orders">
-     <div class="admin-section orders-section">
-      <h3>
-       Замовлення
-      </h3>
-      <div class="sort-menu">
-       <button class="sort-btn">
-        Сортування ▼
-       </button>
-       <div class="sort-dropdown">
-        <button onclick="sortOrders('date-desc')">
-         Дата (новіші)
-        </button>
-        <button onclick="sortOrders('date-asc')">
-         Дата (старіші)
-        </button>
-        <button onclick="sortOrders('total-desc')">
-         Сума (спадання)
-        </button>
-        <button onclick="sortOrders('total-asc')">
-         Сума (зростання)
-        </button>
-        <button onclick="sortOrders('status-asc')">
-         Статус (А-Я)
-        </button>
-        <button onclick="sortOrders('status-desc')">
-         Статус (Я-А)
-        </button>
-       </div>
-      </div>
-      <div class="filter-options">
-       <label>
-        Фільтр за статусом:
-       </label>
-       <select id="order-status-filter" onchange="filterOrders()">
-        <option value="">
-         Усі статуси
-        </option>
-        <option value="Нове замовлення">
-         Нове замовлення
-        </option>
-        <option value="В обробці">
-         В обробці
-        </option>
-        <option value="Відправлено">
-         Відправлено
-        </option>
-        <option value="Завершено">
-         Завершено
-        </option>
-       </select>
-      </div>
-      <div id="order-list">
-      </div>
-      <div class="pagination" id="order-pagination">
-      </div>
-     </div>
+        <div class="admin-section orders-section">
+            <h3>Замовлення</h3>
+            <div class="sort-menu">
+                <button class="sort-btn">Сортування ▼</button>
+                <div class="sort-dropdown">
+                    <button onclick="sortOrders('date-desc')">Дата (новіші)</button>
+                    <button onclick="sortOrders('date-asc')">Дата (старіші)</button>
+                    <button onclick="sortOrders('total-desc')">Сума (спадання)</button>
+                    <button onclick="sortOrders('total-asc')">Сума (зростання)</button>
+                    <button onclick="sortOrders('status-asc')">Статус (А-Я)</button>
+                    <button onclick="sortOrders('status-desc')">Статус (Я-А)</button>
+                </div>
+            </div>
+            <div class="filter-options">
+                <label>Фільтр за статусом:</label>
+                <select id="order-status-filter" onchange="filterOrders()">
+                    <option value="">Усі статуси</option>
+                    <option value="Нове замовлення">Нове замовлення</option>
+                    <option value="В обробці">В обробці</option>
+                    <option value="Відправлено">Відправлено</option>
+                    <option value="Завершено">Завершено</option>
+                </select>
+            </div>
+            <div id="order-list"></div>
+            <div class="pagination" id="order-pagination"></div>
+        </div>
     </div>
+</div>
    </div>
    <div class="modal" id="modal">
    </div>
@@ -1226,6 +975,21 @@ let aboutEditor; // Глобальна змінна для редактора
 let productEditor; // Додаємо глобальну змінну для редактора товару
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
+
+function validateFile(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, error: 'Дозволені лише формати JPEG, PNG, GIF, WebP!' };
+    }
+
+    if (file.size > maxSize) {
+        return { valid: false, error: 'Розмір файлу не повинен перевищувати 5MB!' };
+    }
+
+    return { valid: true };
+}
 
 async function getCsrfToken() {
     try {
@@ -1391,12 +1155,17 @@ async function fetchWithAuth(url, options = {}) {
             throw new Error('Не вдалося отримати CSRF-токен.');
         }
 
-        const headers = {
+        // Налаштування заголовків
+        const headers = new Headers({
             ...options.headers,
             'Authorization': `Bearer ${token}`,
-            'Content-Type': options.body instanceof FormData ? undefined : 'application/json',
             'X-CSRF-Token': csrfToken
-        };
+        });
+
+        // Якщо це FormData, не встановлюємо Content-Type (браузер зробить це автоматично)
+        if (!(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+        }
 
         const response = await fetch(url, {
             ...options,
@@ -1414,14 +1183,17 @@ async function fetchWithAuth(url, options = {}) {
                     if (!newCsrfToken) {
                         throw new Error('Не вдалося отримати CSRF-токен для повторного запиту.');
                     }
+                    const retryHeaders = new Headers({
+                        ...options.headers,
+                        'Authorization': `Bearer ${newToken}`,
+                        'X-CSRF-Token': newCsrfToken
+                    });
+                    if (!(options.body instanceof FormData)) {
+                        retryHeaders.set('Content-Type', 'application/json');
+                    }
                     const retryResponse = await fetch(url, {
                         ...options,
-                        headers: {
-                            ...options.headers,
-                            'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': options.body instanceof FormData ? undefined : 'application/json',
-                            'X-CSRF-Token': newCsrfToken
-                        },
+                        headers: retryHeaders,
                         credentials: 'include'
                     });
                     if (!retryResponse.ok) {
@@ -1884,28 +1656,50 @@ function saveMediaSize() {
 function setDefaultVideoSizes(editor, editorId) {
     const iframes = editor.root.querySelectorAll('iframe');
     iframes.forEach(iframe => {
-        if (!iframe.style.width && !iframe.style.height) {
-            iframe.style.width = '50%'; // Початкова ширина 50%
-            iframe.style.height = '300px'; // Початкова висота
-            iframe.style.maxWidth = '100%';
+        if (!iframe.style.width || !iframe.style.height) {
+            iframe.style.width = '100%'; // Адаптивна ширина
+            iframe.style.height = '315px'; // Стандартна висота для відео
+            iframe.style.maxWidth = '560px'; // Обмеження ширини
+            iframe.style.display = 'block'; // Для коректного відображення
+            iframe.style.margin = '0 auto'; // Центрування
         }
     });
-    document.getElementById(editorId).value = editor.root.innerHTML;
+    const hiddenInput = document.getElementById(editorId);
+    if (hiddenInput) {
+        hiddenInput.value = editor.root.innerHTML;
+    }
     unsavedChanges = true;
+    resetInactivityTimer();
 }
 
-// Додаємо функцію cleanupEditor
-function cleanupEditor(editor) {
+function cleanupEditor(editorInstance, editorVariableName) {
     try {
-        if (editor) {
-            editor.off('text-change');
-            editor.off('selection-change');
-            editor.root.removeEventListener('click', null);
-            editor.container.innerHTML = '';
-            editor = null;
+        if (editorInstance) {
+            // Видаляємо слухачі подій Quill
+            editorInstance.off('text-change');
+            editorInstance.off('selection-change');
+
+            // Видаляємо слухачі подій для 'click' на editor.root
+            // Оскільки ми не знаємо конкретного обробника, клонуємо елемент, щоб видалити всі слухачі
+            const oldRoot = editorInstance.root;
+            const newRoot = oldRoot.cloneNode(true);
+            oldRoot.parentNode.replaceChild(newRoot, oldRoot);
+            editorInstance.root = newRoot;
+
+            // Очищаємо контейнер редактора
+            if (editorInstance.container) {
+                editorInstance.container.innerHTML = '';
+            }
+
+            // Очищаємо глобальну змінну (aboutEditor або productEditor)
+            if (editorVariableName === 'aboutEditor') {
+                aboutEditor = null;
+            } else if (editorVariableName === 'productEditor') {
+                productEditor = null;
+            }
         }
     } catch (e) {
-        console.error('Помилка очищення редактора:', e);
+        console.error(`Помилка очищення редактора (${editorVariableName}):`, e);
     }
 }
 
@@ -1913,12 +1707,10 @@ function initializeEditors() {
     try {
         // Очищення попередніх редакторів
         if (aboutEditor) {
-            cleanupEditor(aboutEditor);
-            aboutEditor = null;
+            cleanupEditor(aboutEditor, 'aboutEditor');
         }
         if (productEditor) {
-            cleanupEditor(productEditor);
-            productEditor = null;
+            cleanupEditor(productEditor, 'productEditor');
         }
 
         // Налаштування панелі інструментів
@@ -1939,9 +1731,31 @@ function initializeEditors() {
             ['undo', 'redo']
         ];
 
+        // Універсальна функція для оновлення кнопок undo/redo
+        const updateButtons = (editor, container) => {
+            const undoButton = container.querySelector('.ql-undo');
+            const redoButton = container.querySelector('.ql-redo');
+            if (undoButton && redoButton) {
+                editor.history.stack.undo.length > 0
+                    ? undoButton.removeAttribute('disabled')
+                    : undoButton.setAttribute('disabled', 'true');
+                editor.history.stack.redo.length > 0
+                    ? redoButton.removeAttribute('disabled')
+                    : redoButton.setAttribute('disabled', 'true');
+            }
+        };
+
         // Ініціалізація редактора для "Про нас"
         const aboutEditorContainer = document.getElementById('about-editor');
+        if (!aboutEditorContainer) {
+            console.warn('Контейнер для редактора "Про нас" (#about-editor) не знайдено у DOM.');
+            return;
+        }
+
         if (aboutEditorContainer && !aboutEditor) {
+            // Очищаємо контейнер перед ініціалізацією
+            aboutEditorContainer.innerHTML = '';
+            
             aboutEditor = new Quill(aboutEditorContainer, {
                 theme: 'snow',
                 modules: {
@@ -1954,26 +1768,12 @@ function initializeEditors() {
                 }
             });
 
-            // Оновлення стану кнопок undo/redo
-            const updateButtons = () => {
-                const undoButton = document.querySelector('.ql-undo');
-                const redoButton = document.querySelector('.ql-redo');
-                if (undoButton && redoButton) {
-                    aboutEditor.history.stack.undo.length > 0
-                        ? undoButton.removeAttribute('disabled')
-                        : undoButton.setAttribute('disabled', 'true');
-                    aboutEditor.history.stack.redo.length > 0
-                        ? redoButton.removeAttribute('disabled')
-                        : redoButton.setAttribute('disabled', 'true');
-                }
-            };
-
             aboutEditor.on('text-change', () => {
                 const content = aboutEditor.root.innerHTML;
                 document.getElementById('about-edit').value = content;
-                console.log('Вміст редактора змінено:', content);
+                console.log('Вміст редактора "Про нас" змінено:', content);
                 unsavedChanges = true;
-                updateButtons();
+                updateButtons(aboutEditor, aboutEditorContainer);
                 resetInactivityTimer();
             });
 
@@ -2001,7 +1801,7 @@ function initializeEditors() {
                 }
             });
 
-            // Обробка вставки медіа
+            // Обробка вставки медіа через clipboard
             aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
                 if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
                     const src = node.getAttribute('src');
@@ -2039,12 +1839,52 @@ function initializeEditors() {
             setDefaultVideoSizes(aboutEditor, 'about-edit');
 
             // Ініціалізація стану кнопок
-            setTimeout(updateButtons, 100);
+            setTimeout(() => updateButtons(aboutEditor, aboutEditorContainer), 100);
+
+            // Додаємо обробник для вставки зображень
+aboutEditor.getModule('toolbar').addHandler('image', () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const range = aboutEditor.getSelection();
+            const url = URL.createObjectURL(file);
+            aboutEditor.insertEmbed(range ? range.index : 0, 'image', url);
+            // Додаємо alt атрибут після вставки
+            const img = aboutEditor.root.querySelector(`img[src="${url}"]`);
+            if (img) {
+                img.setAttribute('alt', `Зображення ${file.name}`);
+            }
+        }
+    };
+});
+
+            // Додаємо обробник для вставки відео
+            aboutEditor.getModule('toolbar').addHandler('video', () => {
+                const url = prompt('Введіть URL відео (наприклад, YouTube embed URL):');
+                if (url) {
+                    const range = aboutEditor.getSelection();
+                    aboutEditor.insertEmbed(range ? range.index : 0, 'video', url);
+                }
+            });
         }
 
         // Ініціалізація редактора для товару
         const productEditorContainer = document.getElementById('product-description-editor');
-        if (productEditorContainer && !productEditor) {
+        if (!productEditorContainer) {
+            console.log('Контейнер для редактора товару (#product-description-editor) не знайдено у DOM, пропускаємо ініціалізацію.');
+        } else if (productEditorContainer && !productEditor) {
+            // Очищаємо контейнер перед ініціалізацією
+            productEditorContainer.innerHTML = '';
+
             productEditor = new Quill(productEditorContainer, {
                 theme: 'snow',
                 modules: {
@@ -2061,6 +1901,7 @@ function initializeEditors() {
                 const content = productEditor.root.innerHTML;
                 document.getElementById('product-description').value = content;
                 unsavedChanges = true;
+                updateButtons(productEditor, productEditorContainer);
                 resetInactivityTimer();
             });
 
@@ -2098,30 +1939,70 @@ function initializeEditors() {
             });
 
             setDefaultVideoSizes(productEditor, 'product-description');
+
+            setTimeout(() => updateButtons(productEditor, productEditorContainer), 100);
+
+            // Додаємо обробник для вставки зображень
+            productEditor.getModule('toolbar').addHandler('image', () => {
+                const input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', 'image/*');
+                input.click();
+                input.onchange = async () => {
+                    const file = input.files[0];
+                    if (file) {
+                        const validation = validateFile(file);
+                        if (!validation.valid) {
+                            showNotification(validation.error);
+                            return;
+                        }
+                        const range = productEditor.getSelection();
+                        const url = URL.createObjectURL(file);
+                        productEditor.insertEmbed(range ? range.index : 0, 'image', url);
+                    }
+                };
+            });
+
+            // Додаємо обробник для вставки відео
+            productEditor.getModule('toolbar').addHandler('video', () => {
+                const url = prompt('Введіть URL відео (наприклад, YouTube embed URL):');
+                if (url) {
+                    const range = productEditor.getSelection();
+                    productEditor.insertEmbed(range ? range.index : 0, 'video', url);
+                }
+            });
         }
 
         // Обробники для кнопок undo/redo
+        const existingUndoListeners = document.querySelectorAll('.ql-undo[data-listener]');
+        const existingRedoListeners = document.querySelectorAll('.ql-redo[data-listener]');
+        existingUndoListeners.forEach(button => button.removeEventListener('click', button._undoListener));
+        existingRedoListeners.forEach(button => button.removeEventListener('click', button._redoListener));
+
         const undoButtons = document.querySelectorAll('.ql-undo');
         const redoButtons = document.querySelectorAll('.ql-redo');
         undoButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                if (aboutEditor) aboutEditor.history.undo();
-                if (productEditor) productEditor.history.undo();
-            });
+            const listener = () => {
+                if (button.closest('#about-editor') && aboutEditor) aboutEditor.history.undo();
+                if (button.closest('#product-description-editor') && productEditor) productEditor.history.undo();
+                updateButtons(aboutEditor, aboutEditorContainer);
+                updateButtons(productEditor, productEditorContainer);
+            };
+            button.addEventListener('click', listener);
+            button._undoListener = listener;
+            button.setAttribute('data-listener', 'true');
         });
         redoButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                if (aboutEditor) aboutEditor.history.redo();
-                if (productEditor) productEditor.history.redo();
-            });
+            const listener = () => {
+                if (button.closest('#about-editor') && aboutEditor) aboutEditor.history.redo();
+                if (button.closest('#product-description-editor') && productEditor) productEditor.history.redo();
+                updateButtons(aboutEditor, aboutEditorContainer);
+                updateButtons(productEditor, productEditorContainer);
+            };
+            button.addEventListener('click', listener);
+            button._redoListener = listener;
+            button.setAttribute('data-listener', 'true');
         });
-
-        // Додаємо обробники панелі інструментів
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            addToolbarEventListeners();
-        } else {
-            document.addEventListener('DOMContentLoaded', addToolbarEventListeners);
-        }
 
         console.log('Редактори успішно ініціалізовані');
     } catch (e) {
@@ -2134,12 +2015,19 @@ function addToolbarEventListeners() {
     try {
         const toolbars = document.querySelectorAll('.ql-toolbar');
         toolbars.forEach(toolbar => {
-            // Додаємо обробники для кастомних кнопок, якщо потрібно
+            // Обробка кнопок
             const buttons = toolbar.querySelectorAll('button');
             buttons.forEach(button => {
-                button.addEventListener('click', () => {
-                    resetInactivityTimer();
-                });
+                // Видаляємо попередні обробники, щоб уникнути дублювання
+                button.removeEventListener('click', handleToolbarInteraction);
+                button.addEventListener('click', handleToolbarInteraction);
+            });
+
+            // Обробка випадаючих списків
+            const selects = toolbar.querySelectorAll('select');
+            selects.forEach(select => {
+                select.removeEventListener('change', handleToolbarInteraction);
+                select.addEventListener('change', handleToolbarInteraction);
             });
         });
     } catch (e) {
@@ -2147,97 +2035,76 @@ function addToolbarEventListeners() {
     }
 }
 
+function handleToolbarInteraction() {
+    resetInactivityTimer();
+    unsavedChanges = true; // Позначка незбережених змін при взаємодії
+}
+
 function initializeProductEditor(description = '', descriptionDelta = null) {
-    // Ініціалізуємо Quill редактор
-    productEditor = new Quill('#product-description-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'header': 2 }, { 'header': 3 }],
-                ['link', 'image', 'video'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['undo', 'redo'], // Використовуємо вбудовані кнопки undo/redo
-                ['clean']
-            ],
-            history: {
-                delay: 1000,
-                maxStack: 100,
-                userOnly: true
-            }
-        }
-    });
-
-    // Встановлюємо вміст редактора
-    if (descriptionDelta) {
-        productEditor.setContents(descriptionDelta, 'silent');
-    } else if (description) {
-        try {
-            const delta = productEditor.clipboard.convert(description);
-            productEditor.setContents(delta, 'silent');
-        } catch (e) {
-            console.error('Помилка при встановленні вмісту редактора товару:', e);
-            productEditor.setContents([{ insert: description }], 'silent');
-        }
-    } else {
-        productEditor.setContents([], 'silent');
-    }
-    document.getElementById('product-description').value = productEditor.root.innerHTML;
-
-    // Додаємо обробник для завантаження зображень через панель інструментів
-    const toolbar = productEditor.getModule('toolbar');
-    toolbar.addHandler('image', async () => {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp'); // Додано WebP
-        input.click();
-        input.onchange = async () => {
-            const file = input.files[0];
-            if (file) {
-                const validation = validateFile(file); // Використовуємо оновлену функцію
-                if (!validation.valid) {
-                    showNotification(validation.error);
-                    return;
-                }
-
-                try {
-                    // Перевіряємо та оновлюємо токен
-                    const tokenRefreshed = await refreshToken();
-                    if (!tokenRefreshed) {
-                        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-                        showSection('admin-login');
-                        return;
-                    }
-
-                    const token = localStorage.getItem('adminToken');
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    const response = await fetch('/api/upload', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}` // Додаємо заголовок Authorization
-                        },
-                        credentials: 'include',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
-                    }
-
-                    const data = await response.json();
-                    if (data.url) {
-                        const range = productEditor.getSelection() || { index: 0 };
-                        productEditor.insertEmbed(range.index, 'image', data.url);
-                        setDefaultVideoSizes(productEditor, 'product-description'); // Залишаємо ваш виклик
-                    }
-                } catch (err) {
-                    console.error('Помилка завантаження зображення:', err);
-                    showNotification('Не вдалося завантажити зображення: ' + err.message);
+    const productEditorElement = document.getElementById('product-description-editor');
+    if (productEditorElement && !productEditor) {
+        productEditorElement.innerHTML = ''; // Очищаємо перед ініціалізацією
+        productEditor = new Quill('#product-description-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['link', 'image'],
+                    ['undo', 'redo']
+                ],
+                history: {
+                    delay: 1000,
+                    maxStack: 100
                 }
             }
-        };
-    });
+        });
+
+        // Додаємо власні кнопки undo/redo
+        const toolbar = productEditor.getModule('toolbar');
+        toolbar.addHandler('undo', () => productEditor.history.undo());
+        toolbar.addHandler('redo', () => productEditor.history.redo());
+
+        // Завантаження вмісту
+        if (description) {
+            productEditor.root.innerHTML = description;
+        } else if (descriptionDelta) {
+            productEditor.setContents(descriptionDelta);
+        }
+
+        productEditor.on('text-change', () => {
+            const content = productEditor.root.innerHTML;
+            document.getElementById('product-description').value = content;
+            unsavedChanges = true;
+            resetInactivityTimer();
+        });
+
+        // Обробка вставки зображень
+productEditor.getModule('toolbar').addHandler('image', () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const range = productEditor.getSelection();
+            const url = URL.createObjectURL(file);
+            productEditor.insertEmbed(range ? range.index : 0, 'image', url);
+            // Додаємо alt атрибут після вставки
+            const img = productEditor.root.querySelector(`img[src="${url}"]`);
+            if (img) {
+                img.setAttribute('alt', `Зображення ${file.name}`);
+            }
+        }
+    };
+});
 
     // Додаємо обробник для вставки відео
     toolbar.addHandler('video', () => {
@@ -2528,14 +2395,43 @@ async function updateStoreInfo() {
             return;
         }
 
-        settings.name = document.getElementById('store-name').value.trim();
-        settings.baseUrl = document.getElementById('base-url').value.trim();
-        settings.logoWidth = document.getElementById('logo-width').value.trim();
+        // Отримання значень полів
+        const name = document.getElementById('store-name').value.trim();
+        const baseUrl = document.getElementById('base-url').value.trim();
+        const logoWidth = document.getElementById('logo-width').value.trim();
         const logoUrl = document.getElementById('logo-url').value.trim();
         const logoFile = document.getElementById('logo-file').files[0];
         const faviconUrl = document.getElementById('favicon-url').value.trim();
         const faviconFile = document.getElementById('favicon-file').files[0];
 
+        // Валідація обов’язкових полів
+        if (!name) {
+            showNotification('Назва магазину є обов’язковою!');
+            return;
+        }
+
+        // Валідація базового URL
+        if (!baseUrl) {
+            showNotification('Базовий URL є обов’язковим!');
+            return;
+        }
+        const urlPattern = /^(https?:\/\/)([\w-]+(\.[\w-]+)+)(\/[\w-]*)*\/?$/;
+        if (!urlPattern.test(baseUrl)) {
+            showNotification('Введіть коректний базовий URL (наприклад, https://www.yourdomain.com)!');
+            return;
+        }
+
+        // Валідація ширини логотипу
+        let logoWidthNum = null;
+        if (logoWidth) {
+            logoWidthNum = parseInt(logoWidth, 10);
+            if (isNaN(logoWidthNum) || logoWidthNum < 50 || logoWidthNum > 500) {
+                showNotification('Ширина логотипу має бути числом від 50 до 500!');
+                return;
+            }
+        }
+
+        // Валідація логотипу
         if (logoFile) {
             const validation = validateFile(logoFile);
             if (!validation.valid) {
@@ -2551,9 +2447,16 @@ async function updateStoreInfo() {
             const data = await response.json();
             settings.logo = data.url;
         } else if (logoUrl) {
+            if (!urlPattern.test(logoUrl)) {
+                showNotification('Введіть коректний URL логотипу!');
+                return;
+            }
             settings.logo = logoUrl;
+        } else {
+            settings.logo = ''; // Очищаємо, якщо нічого не введено
         }
 
+        // Валідація favicon
         if (faviconFile) {
             const validation = validateFile(faviconFile);
             if (!validation.valid) {
@@ -2569,8 +2472,19 @@ async function updateStoreInfo() {
             const data = await response.json();
             settings.favicon = data.url;
         } else if (faviconUrl) {
+            if (!urlPattern.test(faviconUrl)) {
+                showNotification('Введіть коректний URL favicon!');
+                return;
+            }
             settings.favicon = faviconUrl;
+        } else {
+            settings.favicon = ''; // Очищаємо, якщо нічого не введено
         }
+
+        // Збереження налаштувань
+        settings.name = name;
+        settings.baseUrl = baseUrl;
+        settings.logoWidth = logoWidthNum ? logoWidthNum.toString() : '';
 
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
@@ -2605,32 +2519,46 @@ async function updateContacts() {
             return;
         }
 
-        settings.contacts.phones = document.getElementById('contact-phones').value;
-        settings.contacts.addresses = document.getElementById('contact-addresses').value;
-        settings.contacts.schedule = document.getElementById('contact-schedule').value;
+        const phones = document.getElementById('contact-phones').value.trim();
+        const addresses = document.getElementById('contact-addresses').value.trim();
+        const schedule = document.getElementById('contact-schedule').value.trim();
 
-        // Очищаємо об’єкт settings від системних полів
-        const { _id, __v, updatedAt, createdAt, storeName, ...cleanedSettings } = settings;
-
-        // Перейменовуємо storeName на name, якщо сервер очікує "name"
-        if (storeName) {
-            cleanedSettings.name = storeName;
+        // Валідація
+        if (!phones && !addresses && !schedule) {
+            showNotification('Заповніть хоча б одне поле (телефони, адреси або графік)!');
+            return;
         }
 
-        console.log('Надсилаємо контакти:', cleanedSettings);
+        const phonePattern = /^\+?\d{1,4}[\s-]?(\(\d{1,4}\))?[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,4}$/;
+        if (phones) {
+            const phoneLines = phones.split('\n').map(line => line.trim()).filter(line => line);
+            for (let phone of phoneLines) {
+                if (!phonePattern.test(phone)) {
+                    showNotification('Введіть коректний номер телефону (наприклад, +38 (067) 123-45-67)!');
+                    return;
+                }
+            }
+        }
 
-        const token = localStorage.getItem('adminToken');
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+        settings.contacts.phones = phones;
+        settings.contacts.addresses = addresses;
+        settings.contacts.schedule = schedule;
+
+        const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            body: JSON.stringify(cleanedSettings)
+            body: JSON.stringify({ contacts: settings.contacts })
         });
 
+        if (!response.ok) {
+            throw new Error(`Не вдалося оновити контакти: ${response.statusText}`);
+        }
+
         showNotification('Контакти оновлено!');
+        unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оновленні контактів:', err);
-        showNotification('Помилка при оновленні контактів: ' + err.message);
+        console.error('Помилка оновлення контактів:', err);
+        showNotification('Не вдалося оновити контакти: ' + err.message);
     }
 }
 
@@ -2711,31 +2639,28 @@ async function updateAbout() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
 
-        let aboutContent = aboutEditor.root.innerHTML;
-        document.getElementById('about-edit').value = aboutContent;
+        // Ініціалізація редактора, якщо він ще не ініціалізований
+        initializeEditors();
 
-        // Обробка blob URL для зображень і відео
+        const aboutContent = aboutEditor.root.innerHTML;
+        const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(aboutContent, 'text/html');
-        const mediaElements = [...doc.querySelectorAll('img'), ...doc.querySelectorAll('iframe')];
-        const mediaUrls = [];
+        const images = doc.querySelectorAll('img');
 
-        for (let media of mediaElements) {
-            const src = media.getAttribute('src');
+        for (let img of images) {
+            const src = img.getAttribute('src');
             if (src && src.startsWith('blob:')) {
                 try {
                     const response = await fetch(src);
                     const blob = await response.blob();
                     const formData = new FormData();
-                    const fileName = media.tagName === 'IMG' 
-                        ? `about-image-${Date.now()}.png`
-                        : `about-video-${Date.now()}.mp4`;
-                    formData.append('file', blob, fileName);
+                    formData.append('file', blob, `about-image-${Date.now()}.png`);
                     const uploadResponse = await fetchWithAuth('/api/upload', {
                         method: 'POST',
                         body: formData
@@ -2744,37 +2669,37 @@ async function updateAbout() {
                     if (uploadData.url) {
                         mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
                     } else {
-                        throw new Error('Не вдалося завантажити медіа');
+                        throw new Error('Не вдалося завантажити зображення');
                     }
                 } catch (err) {
-                    console.error('Помилка завантаження медіа:', err);
-                    showNotification('Не вдалося завантажити медіа.');
+                    console.error('Помилка завантаження зображення:', err);
+                    showNotification('Не вдалося завантажити зображення: ' + err.message);
                     return;
                 }
             }
         }
 
+        let updatedContent = aboutContent;
         mediaUrls.forEach(({ oldUrl, newUrl }) => {
-            aboutContent = aboutContent.replace(oldUrl, newUrl);
+            updatedContent = updatedContent.replace(oldUrl, newUrl);
         });
 
-        settings.about = aboutContent;
-
+        settings.about = updatedContent;
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            body: JSON.stringify({ about: settings.about })
+            body: JSON.stringify(settings)
         });
 
         if (!response.ok) {
-            throw new Error(`Не вдалося оновити "Про нас": ${response.statusText}`);
+            throw new Error('Не вдалося оновити розділ "Про нас"');
         }
 
-        showNotification('Інформацію "Про нас" оновлено!');
+        showNotification('Розділ "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення "Про нас":', err);
-        showNotification('Не вдалося оновити "Про нас": ' + err.message);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -3132,16 +3057,9 @@ function closeModal() {
 
 async function addCategory() {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
-        const name = document.getElementById('cat-name').value;
-        const slug = document.getElementById('cat-slug').value;
-        const imgUrl = document.getElementById('cat-img-url').value;
+        const name = document.getElementById('cat-name').value.trim();
+        const slug = document.getElementById('cat-slug').value.trim();
+        const imgUrl = document.getElementById('cat-img-url').value.trim();
         const imgFile = document.getElementById('cat-img-file').files[0];
 
         if (!name || !slug) {
@@ -3149,10 +3067,8 @@ async function addCategory() {
             return;
         }
 
-        // Перевірка унікальності назви
-        const existingCategory = categories.find(cat => cat.name.toLowerCase() === name.toLowerCase());
-        if (existingCategory) {
-            showNotification('Категорія з такою назвою вже існує!');
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії може містити лише малі латинські літери, цифри та дефіси!');
             return;
         }
 
@@ -3165,24 +3081,16 @@ async function addCategory() {
             }
             const formData = new FormData();
             formData.append('file', imgFile);
-            const token = localStorage.getItem('adminToken');
-            const uploadResponse = await fetch('/api/upload', {
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
                 body: formData
             });
-            const uploadData = await uploadResponse.json();
-            if (uploadData.url) {
-                imageUrl = uploadData.url;
-            } else {
-                throw new Error('Не вдалося завантажити зображення');
-            }
+            const data = await response.json();
+            imageUrl = data.url;
         }
 
-        const category = { name, slug, image: imageUrl, subcategories: [] };
+        const category = { name, slug, image: imageUrl || null }; // Змінюємо "img" на "image", якщо схема очікує "image"
+
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
             body: JSON.stringify(category)
@@ -3199,7 +3107,7 @@ async function addCategory() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання категорії:', err);
-        showNotification('Помилка додавання категорії: ' + err.message);
+        showNotification('Не вдалося додати категорію: ' + err.message);
     }
 }
 
@@ -3323,25 +3231,23 @@ async function addCategory() {
 
 async function addSubcategory() {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
         const name = document.getElementById('subcat-name').value.trim();
         const slug = document.getElementById('subcat-slug').value.trim();
         const imgUrl = document.getElementById('subcat-img-url').value.trim();
-        const category = document.getElementById('subcat-category').value;
         const imgFile = document.getElementById('subcat-img-file').files[0];
+        const categoryName = document.getElementById('subcat-category').value;
 
-        if (!name || !slug || !category) {
-            showNotification('Заповніть усі обов’язкові поля!');
+        if (!name || !slug || !categoryName) {
+            showNotification('Введіть назву, шлях та виберіть категорію!');
             return;
         }
 
-        let image = imgUrl;
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях підкатегорії може містити лише малі латинські літери, цифри та дефіси!');
+            return;
+        }
+
+        let imageUrl = imgUrl;
         if (imgFile) {
             const validation = validateFile(imgFile);
             if (!validation.valid) {
@@ -3355,40 +3261,35 @@ async function addSubcategory() {
                 body: formData
             });
             const data = await response.json();
-            image = data.url;
+            imageUrl = data.url;
         }
 
-        const cat = categories.find(c => c.name === category);
-        if (!cat) {
-            showNotification('Категорію не знайдено!');
+        const category = categories.find(c => c.name === categoryName);
+        if (!category) {
+            showNotification('Категорія не знайдена!');
             return;
         }
 
-        const subcat = { name, slug, image: image || null };
-        if (!cat.subcategories) {
-            cat.subcategories = [];
-        }
-        cat.subcategories.push(subcat);
-
-        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(category)}`, {
-            method: 'PUT',
-            body: JSON.stringify(cat)
+        const subcategory = { name, slug, image: imageUrl || null }; // Змінюємо "img" на "image"
+        const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
+            method: 'POST',
+            body: JSON.stringify(subcategory)
         });
 
-        if (!response.ok) {
-            throw new Error('Не вдалося додати підкатегорію');
-        }
-
+        const newSubcategory = await response.json();
+        if (!category.subcategories) category.subcategories = [];
+        category.subcategories.push(newSubcategory);
+        renderCategoriesAdmin();
         document.getElementById('subcat-name').value = '';
         document.getElementById('subcat-slug').value = '';
         document.getElementById('subcat-img-url').value = '';
         document.getElementById('subcat-img-file').value = '';
-        renderCategoriesAdmin();
+        document.getElementById('subcat-category').value = '';
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання підкатегорії:', err);
-        showNotification('Помилка: ' + err.message);
+        showNotification('Не вдалося додати підкатегорію: ' + err.message);
     }
 }
 
@@ -4782,26 +4683,6 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
-// Додаємо функцію валідації файлів
-function validateFile(file) {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-    if (!file) {
-        return { valid: false, error: 'Файл не вибрано!' };
-    }
-
-    if (file.size > maxSize) {
-        return { valid: false, error: 'Розмір файлу перевищує 5MB!' };
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Недозволений тип файлу! Дозволено: JPEG, PNG, GIF, WebP.' };
-    }
-
-    return { valid: true };
-}
-
 async function saveNewProduct() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -4820,8 +4701,10 @@ async function saveNewProduct() {
         let price = null;
         let salePrice = null;
         if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value);
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+            const priceValue = document.getElementById('product-price')?.value.trim();
+            price = priceValue ? parseFloat(priceValue) : null;
+            const salePriceValue = document.getElementById('product-sale-price')?.value.trim();
+            salePrice = salePriceValue ? parseFloat(salePriceValue) : null;
         }
         const saleEnd = document.getElementById('product-sale-end').value;
         const visible = document.getElementById('product-visible').value === 'true';
@@ -4893,6 +4776,21 @@ async function saveNewProduct() {
             return;
         }
 
+        if (depthCm !== null && (depthCm <= 0 || isNaN(depthCm))) {
+            showNotification('Глибина товару має бути більше 0!');
+            return;
+        }
+
+        if (heightCm !== null && (heightCm <= 0 || isNaN(heightCm))) {
+            showNotification('Висота товару має бути більше 0!');
+            return;
+        }
+
+        if (lengthCm !== null && (lengthCm <= 0 || isNaN(lengthCm))) {
+            showNotification('Довжина товару має бути більше 0!');
+            return;
+        }
+
         // Додавання бренду, якщо його немає
         if (brand && !brands.includes(brand)) {
             try {
@@ -4945,10 +4843,13 @@ async function saveNewProduct() {
             colors: newProduct.colors.map(color => ({
                 name: color.name,
                 value: color.value,
-                priceChange: color.priceChange,
+                priceChange: Number(color.priceChange) || 0,
                 photo: null
             })),
-            sizes: newProduct.sizes,
+            sizes: newProduct.sizes.map(size => ({
+                name: size.name,
+                price: Number(size.price) || 0
+            })),
             groupProducts: newProduct.groupProducts,
             active: true,
             visible: visible
@@ -4968,12 +4869,8 @@ async function saveNewProduct() {
                     const blob = await response.blob();
                     const formData = new FormData();
                     formData.append('file', blob, `description-image-${Date.now()}.png`);
-                    const uploadResponse = await fetch('/api/upload', {
+                    const uploadResponse = await fetchWithAuth('/api/upload', {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
-                        credentials: 'include',
                         body: formData
                     });
                     const uploadData = await uploadResponse.json();
@@ -5007,12 +4904,8 @@ async function saveNewProduct() {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                const response = await fetch('/api/upload', {
+                const response = await fetchWithAuth('/api/upload', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    credentials: 'include',
                     body: formData
                 });
                 if (!response.ok) {
@@ -5041,12 +4934,8 @@ async function saveNewProduct() {
                 try {
                     const formData = new FormData();
                     formData.append('file', color.photo);
-                    const response = await fetch('/api/upload', {
+                    const response = await fetchWithAuth('/api/upload', {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
-                        credentials: 'include',
                         body: formData
                     });
                     if (!response.ok) {
@@ -5077,7 +4966,7 @@ async function saveNewProduct() {
         showNotification('Товар додано!');
         unsavedChanges = false;
         resetInactivityTimer();
-} catch (err) {
+    } catch (err) {
         console.error('Помилка при додаванні товару:', err, err.stack);
         showNotification('Не вдалося додати товар: ' + err.message);
     }
@@ -5242,17 +5131,25 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
+        // Перевірка productId
+        if (!productId || isNaN(parseInt(productId))) {
+            showNotification('Некоректний ID товару!');
+            return;
+        }
+
+        const name = document.getElementById('product-name').value.trim();
+        const slug = document.getElementById('product-slug').value.trim();
+        const brand = document.getElementById('product-brand').value.trim();
         const category = document.getElementById('product-category').value;
         const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
+        const material = document.getElementById('product-material').value.trim();
         let price = null;
         let salePrice = null;
         if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value) || null;
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+            const priceValue = document.getElementById('product-price')?.value.trim();
+            price = priceValue ? parseFloat(priceValue) : null;
+            const salePriceValue = document.getElementById('product-sale-price')?.value.trim();
+            salePrice = salePriceValue ? parseFloat(salePriceValue) : null;
         }
         const saleEnd = document.getElementById('product-sale-end').value || null;
         const visible = document.getElementById('product-visible').value === 'true';
@@ -5286,6 +5183,11 @@ async function saveEditedProduct(productId) {
             return;
         }
 
+        if (salePrice !== null && (salePrice < 0 || isNaN(salePrice))) {
+            showNotification('Введіть коректну акційну ціну!');
+            return;
+        }
+
         if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
             showNotification('Додайте хоча б один розмір для матрацу!');
             return;
@@ -5293,6 +5195,26 @@ async function saveEditedProduct(productId) {
 
         if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
             showNotification('Додайте хоча б один товар до групового товару!');
+            return;
+        }
+
+        if (widthCm !== null && (widthCm <= 0 || isNaN(widthCm))) {
+            showNotification('Ширина товару має бути більше 0!');
+            return;
+        }
+
+        if (depthCm !== null && (depthCm <= 0 || isNaN(depthCm))) {
+            showNotification('Глибина товару має бути більше 0!');
+            return;
+        }
+
+        if (heightCm !== null && (heightCm <= 0 || isNaN(heightCm))) {
+            showNotification('Висота товару має бути більше 0!');
+            return;
+        }
+
+        if (lengthCm !== null && (lengthCm <= 0 || isNaN(lengthCm))) {
+            showNotification('Довжина товару має бути більше 0!');
             return;
         }
 
@@ -5346,10 +5268,13 @@ async function saveEditedProduct(productId) {
             colors: newProduct.colors.map(color => ({
                 name: color.name,
                 value: color.value,
-                priceChange: color.priceChange || 0,
+                priceChange: Number(color.priceChange) || 0,
                 photo: color.photo || null
             })),
-            sizes: newProduct.sizes,
+            sizes: newProduct.sizes.map(size => ({
+                name: size.name,
+                price: Number(size.price) || 0
+            })),
             groupProducts: newProduct.groupProducts,
             active: newProduct.active,
             visible
@@ -6018,6 +5943,118 @@ function connectAdminWebSocket(attempt = 1, maxAttempts = 10) {
         showNotification('Помилка підключення до WebSocket. Перевірте з’єднання.');
     };
 }
+
+// Додаємо обробники подій для імпорту файлів
+document.getElementById('import-site-file').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = JSON.parse(e.target.result);
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+                const response = await fetchWithAuth('/api/settings', {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    settings = data;
+                    renderSettingsAdmin();
+                    showNotification('Налаштування сайту імпортовано!');
+                } else {
+                    throw new Error('Помилка імпорту налаштувань сайту');
+                }
+            };
+            reader.readAsText(file);
+        } catch (e) {
+            console.error('Помилка імпорту налаштувань сайту:', e);
+            showNotification('Помилка імпорту налаштувань сайту: ' + e.message);
+        }
+    }
+});
+
+document.getElementById('import-products-file').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = JSON.parse(e.target.result);
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+                const response = await fetchWithAuth('/api/products/bulk', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    products = data;
+                    renderAdmin('products');
+                    showNotification('Товари імпортовано!');
+                } else {
+                    throw new Error('Помилка імпорту товарів');
+                }
+            };
+            reader.readAsText(file);
+        } catch (e) {
+            console.error('Помилка імпорту товарів:', e);
+            showNotification('Помилка імпорту товарів: ' + e.message);
+        }
+    }
+});
+
+document.getElementById('import-orders-file').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = JSON.parse(e.target.result);
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+                const response = await fetchWithAuth('/api/orders/bulk', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    orders = data;
+                    renderAdmin('orders');
+                    showNotification('Замовлення імпортовано!');
+                } else {
+                    throw new Error('Помилка імпорту замовлень');
+                }
+            };
+            reader.readAsText(file);
+        } catch (e) {
+            console.error('Помилка імпорту замовлень:', e);
+            showNotification('Помилка імпорту замовлень: ' + e.message);
+        }
+    }
+});
+
+document.getElementById('bulk-price-file').addEventListener('change', function() {
+    uploadBulkPrices();
+});
+
+window.addEventListener('beforeunload', (e) => {
+    if (unsavedChanges) {
+        const confirmationMessage = 'У вас є незбережені зміни. Ви впевнені, що хочете залишити сторінку?';
+        e.returnValue = confirmationMessage;
+        return confirmationMessage;
+    }
+});
   </script>
  </body>
 </html>
