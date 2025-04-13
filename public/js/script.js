@@ -2366,64 +2366,72 @@ function changeQuantity(productId, change) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await initializeData();
-    updateHeader();
-    updateCartCount();
-    const catalogToggle = document.getElementById('catalog-toggle');
-    const catalogDropdown = document.getElementById('catalog-dropdown');
-    if (catalogToggle && catalogDropdown) {
-        catalogToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            catalogDropdown.classList.toggle('active');
-        });
-    }
-    const path = window.location.pathname.slice(1);
-    if (path) {
-        const parts = path.split('/').filter(p => p);
-        if (parts[0] === 'cart') {
-            showSection('cart');
-        } else if (parts[0] === 'contacts') {
-            showSection('contacts');
-        } else if (parts[0] === 'about') {
-            showSection('about');
-        } else if (parts[0] === 'catalog') {
-            showSection('catalog');
-        } else {
-            const cat = categories.find(
-                (c) => transliterate(c.name.replace('ь', '')) === parts[0]
-            );
-            if (cat) {
-                currentCategory = cat.name;
-                if (parts[1]) {
-                    const subCat = cat.subcategories?.find(
-                        (sc) =>
-                            transliterate(sc.name.replace('ь', '')) ===
-                            parts[1]
-                    );
-                    if (subCat) currentSubcategory = subCat.name;
-                    if (parts[2]) {
-                        currentProduct = products.find(
-                            (p) => p.slug === parts[2]
-                        );
-                        if (currentProduct) {
-                            showSection('product-details');
-                            return;
-                        }
-                    }
-                }
+    try {
+        console.log('Initializing application...');
+        await initializeData();
+        updateHeader();
+        updateCartCount();
+        const catalogToggle = document.getElementById('catalog-toggle');
+        const catalogDropdown = document.getElementById('catalog-dropdown');
+        if (catalogToggle && catalogDropdown) {
+            catalogToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                catalogDropdown.classList.toggle('active');
+            });
+        }
+        const path = window.location.pathname.slice(1);
+        console.log('Processing path:', path);
+        if (path) {
+            const parts = path.split('/').filter(p => p);
+            if (parts[0] === 'cart') {
+                showSection('cart');
+            } else if (parts[0] === 'contacts') {
+                showSection('contacts');
+            } else if (parts(") === 'about') {
+                showSection('about');
+            } else if (parts[0] === 'catalog') {
                 showSection('catalog');
             } else {
-                showSection('home');
-                showNotification('Сторінку не знайдено!', 'error');
+                const cat = categories.find(
+                    (c) => transliterate(c.name.replace('ь', '')) === parts[0]
+                );
+                if (cat) {
+                    currentCategory = cat.name;
+                    if (parts[1]) {
+                        const subCat = cat.subcategories?.find(
+                            (sc) =>
+                                transliterate(sc.name.replace('ь', '')) ===
+                                parts[1]
+                        );
+                        if (subCat) currentSubcategory = subCat.name;
+                        if (parts[2]) {
+                            currentProduct = products.find(
+                                (p) => p.slug === parts[2]
+                            );
+                            if (currentProduct) {
+                                showSection('product-details');
+                                return;
+                            }
+                        }
+                    }
+                    showSection('catalog');
+                } else {
+                    showSection('home');
+                    showNotification('Сторінку не знайдено!', 'error');
+                }
             }
+        } else {
+            showSection('home');
         }
-    } else {
-        showSection('home');
-    }
-    const searchInput = document.getElementById('search');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchProducts();
-        });
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchProducts();
+            });
+        }
+        console.log('Application initialized successfully');
+    } catch (error) {
+        console.error('Error in DOMContentLoaded:', error);
+        showNotification('Помилка ініціалізації сторінки!', 'error');
     }
 });
