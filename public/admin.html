@@ -1220,6 +1220,24 @@ let productEditor; // Додаємо глобальну змінну для ре
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
 
+async function getCsrfToken() {
+    try {
+        const response = await fetch('/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data.csrfToken;
+    } catch (e) {
+        console.error('Помилка отримання CSRF-токена:', e);
+        showNotification('Не вдалося отримати CSRF-токен: ' + e.message);
+        return null;
+    }
+}
+
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -1419,10 +1437,16 @@ async function fetchWithAuth(url, options = {}) {
         }
 
         const token = localStorage.getItem('adminToken');
+        const csrfToken = await getCsrfToken();
+        if (!csrfToken) {
+            throw new Error('Не вдалося отримати CSRF-токен.');
+        }
+
         const headers = {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
         };
 
         const response = await fetch(url, {
@@ -1438,12 +1462,17 @@ async function fetchWithAuth(url, options = {}) {
                 if (refreshed) {
                     // Повторюємо запит із новим токеном
                     const newToken = localStorage.getItem('adminToken');
+                    const newCsrfToken = await getCsrfToken();
+                    if (!newCsrfToken) {
+                        throw new Error('Не вдалося отримати CSRF-токен для повторного запиту.');
+                    }
                     const retryResponse = await fetch(url, {
                         ...options,
                         headers: {
                             ...options.headers,
                             'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': newCsrfToken
                         },
                         credentials: 'include'
                     });
@@ -2224,12 +2253,27 @@ async function login() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
 
+    if (!username || !password) {
+        showNotification('Введіть логін і пароль!');
+        return;
+    }
+
     try {
-        const response = await fetch('https://mebli.onrender.com/api/auth/login', {
+        // Отримуємо CSRF-токен
+        const csrfToken = await getCsrfToken();
+        if (!csrfToken) {
+            showNotification('Не вдалося отримати CSRF-токен.');
+            return;
+        }
+
+        const response = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-            credentials: 'include'
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовок
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
         });
 
         if (!response.ok) {
@@ -2243,17 +2287,13 @@ async function login() {
         }
 
         const data = await response.json();
-        if (!data.token) {
-            throw new Error('Токен не отримано від сервера');
-        }
-
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
         await initializeData();
         connectAdminWebSocket();
-        showNotification('Вхід виконано!');
+        showNotification('Вхід виконано успішно!');
         resetInactivityTimer();
     } catch (e) {
         console.error('Помилка входу:', e);
@@ -2287,51 +2327,48 @@ document.addEventListener('DOMContentLoaded', () => {
     showSection('admin-login'); // Завжди починаємо з логіну
 });
 
-async function refreshToken(attempt = 1) {
-    const maxAttempts = 3;
+async function refreshToken() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        console.warn('Токен відсутній');
+        return false;
+    }
+
     try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній.');
+        // Отримуємо CSRF-токен
+        const csrfToken = await getCsrfToken();
+        if (!csrfToken) {
+            console.warn('Не вдалося отримати CSRF-токен');
             return false;
         }
 
-        const response = await fetch('/api/auth/refresh', { // Змінено
+        const response = await fetch('/api/auth/refresh', {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
             },
             credentials: 'include'
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                if (attempt < maxAttempts) {
-                    console.log(`Спроба ${attempt} оновлення токена не вдалася, повторюємо...`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                    return refreshToken(attempt + 1);
-                }
-                throw new Error('Не вдалося оновити токен: доступ заборонено.');
-            }
-            throw new Error(`Помилка оновлення токена: ${response.statusText}`);
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            return false;
         }
 
         const data = await response.json();
         localStorage.setItem('adminToken', data.token);
-        session = { isActive: true, timestamp: Date.now() };
+        session.timestamp = Date.now();
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        console.log('Токен успішно оновлено.');
         return true;
-    } catch (err) {
-        console.error('Помилка оновлення токена:', err);
-        if (attempt >= maxAttempts) {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-        }
+    } catch (e) {
+        console.error('Помилка оновлення токена:', e);
+        localStorage.removeItem('adminToken');
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         return false;
     }
 }
