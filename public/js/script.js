@@ -97,10 +97,15 @@ async function loadCartFromServer() {
 async function saveCartToServer() {
     try {
         const cartId = localStorage.getItem('cartId');
+        const csrfToken = localStorage.getItem('csrfToken');
+        if (!csrfToken) {
+            throw new Error('CSRF-токен відсутній');
+        }
         const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовки
             },
             body: JSON.stringify(cart)
         });
@@ -216,6 +221,28 @@ async function fetchPublicData() {
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
         showNotification('Не вдалося завантажити дані з сервера!', 'error');
+    }
+}
+
+async function fetchCsrfToken() {
+    try {
+        const response = await fetchWithRetry(`${BASE_URL}/api/csrf-token`, 3, 1000);
+        if (response) {
+            const data = await response.json();
+            if (data.csrfToken) {
+                localStorage.setItem('csrfToken', data.csrfToken);
+                console.log('CSRF-токен отримано:', data.csrfToken);
+                return data.csrfToken;
+            } else {
+                throw new Error('CSRF-токен не отримано від сервера');
+            }
+        } else {
+            throw new Error('Не вдалося отримати CSRF-токен');
+        }
+    } catch (e) {
+        console.error('Помилка отримання CSRF-токена:', e);
+        showNotification('Не вдалося отримати CSRF-токен!', 'error');
+        return null;
     }
 }
 
@@ -339,6 +366,9 @@ async function initializeData() {
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', cartId);
     }
+
+    // Отримуємо CSRF-токен перед завантаженням кошика
+    await fetchCsrfToken();
 
     await loadCartFromServer();
     selectedColors = loadFromStorage('selectedColors', {});
@@ -2181,10 +2211,15 @@ async function submitOrder() {
     };
 
     try {
+        const csrfToken = localStorage.getItem('csrfToken');
+        if (!csrfToken) {
+            throw new Error('CSRF-токен відсутній');
+        }
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовки
             },
             body: JSON.stringify(orderData)
         });
