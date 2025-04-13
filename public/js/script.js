@@ -178,14 +178,25 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
 
 async function fetchPublicData() {
     try {
+        console.log('Fetching products...');
         const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
         products = await response.json();
+        console.log('Products fetched:', products.length);
+
+        console.log('Fetching categories...');
         const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
         categories = await catResponse.json();
+        console.log('Categories fetched:', categories.length);
+
+        console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
         slides = await slidesResponse.json();
+        console.log('Slides fetched:', slides.length);
+
+        console.log('Fetching settings...');
         const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`);
         settings = await settingsResponse.json();
+        console.log('Settings fetched:', settings);
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
         showNotification('Не вдалося завантажити дані з сервера!', 'error');
