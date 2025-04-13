@@ -2366,7 +2366,6 @@ function changeQuantity(productId, change) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Start DOMContentLoaded');
     await initializeData();
     updateHeader();
     updateCartCount();
@@ -2379,7 +2378,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     const path = window.location.pathname.slice(1);
-    console.log('Path:', path);
     if (path) {
         const parts = path.split('/').filter(p => p);
         if (parts[0] === 'cart') {
@@ -2391,14 +2389,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (parts[0] === 'catalog') {
             showSection('catalog');
         } else {
-            const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
+            const cat = categories.find(
+                (c) => transliterate(c.name.replace('ь', '')) === parts[0]
+            );
             if (cat) {
                 currentCategory = cat.name;
                 if (parts[1]) {
-                    const subCat = cat.subcategories?.find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
+                    const subCat = cat.subcategories?.find(
+                        (sc) =>
+                            transliterate(sc.name.replace('ь', '')) ===
+                            parts[1]
+                    );
                     if (subCat) currentSubcategory = subCat.name;
                     if (parts[2]) {
-                        currentProduct = products.find(p => p.slug === parts[2]);
+                        currentProduct = products.find(
+                            (p) => p.slug === parts[2]
+                        );
                         if (currentProduct) {
                             showSection('product-details');
                             return;
@@ -2420,5 +2426,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.key === 'Enter') searchProducts();
         });
     }
-    console.log('End DOMContentLoaded');
 });
