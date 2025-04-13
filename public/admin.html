@@ -1446,7 +1446,7 @@ async function fetchWithAuth(url, options = {}) {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
+            'X-CSRF-Token': csrfToken
         };
 
         const response = await fetch(url, {
@@ -1460,7 +1460,6 @@ async function fetchWithAuth(url, options = {}) {
             if (response.status === 401 || response.status === 403) {
                 const refreshed = await refreshToken();
                 if (refreshed) {
-                    // Повторюємо запит із новим токеном
                     const newToken = localStorage.getItem('adminToken');
                     const newCsrfToken = await getCsrfToken();
                     if (!newCsrfToken) {
@@ -1481,10 +1480,19 @@ async function fetchWithAuth(url, options = {}) {
                     }
                     return retryResponse;
                 } else {
-                    throw new Error('Не вдалося оновити токен.');
+                    localStorage.removeItem('adminToken');
+                    session = { isActive: false, timestamp: 0 };
+                    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                    showSection('admin-login');
+                    throw new Error('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 }
             }
-            throw new Error(`Помилка: ${response.status} ${text}`);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Помилка: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Помилка: ${response.status} ${text}`);
+            }
         }
 
         return response;
@@ -1744,21 +1752,53 @@ async function initializeData() {
 
     isInitializing = true;
     try {
-        await Promise.all([
-            loadProducts(),
-            loadCategories(),
-            loadSettings(),
-            loadOrders(),
-            loadSlides(),
-            loadMaterials(),
-            loadBrands(),
-            loadFilters()
-        ]);
+        // Виконуємо запити паралельно, але обробляємо помилки окремо
+        const promises = [
+            loadProducts().catch(e => {
+                console.error('Помилка завантаження товарів:', e);
+                showNotification('Не вдалося завантажити товари: ' + e.message);
+                return null;
+            }),
+            loadCategories().catch(e => {
+                console.error('Помилка завантаження категорій:', e);
+                showNotification('Не вдалося завантажити категорії: ' + e.message);
+                return null;
+            }),
+            loadSettings().catch(e => {
+                console.error('Помилка завантаження налаштувань:', e);
+                showNotification('Не вдалося завантажити налаштування: ' + e.message);
+                return null;
+            }),
+            loadOrders().catch(e => {
+                console.error('Помилка завантаження замовлень:', e);
+                showNotification('Не вдалося завантажити замовлення: ' + e.message);
+                return null;
+            }),
+            loadSlides().catch(e => {
+                console.error('Помилка завантаження слайдів:', e);
+                showNotification('Не вдалося завантажити слайди: ' + e.message);
+                return null;
+            }),
+            loadMaterials().catch(e => {
+                console.error('Помилка завантаження матеріалів:', e);
+                showNotification('Не вдалося завантажити матеріали: ' + e.message);
+                return null;
+            }),
+            loadBrands().catch(e => {
+                console.error('Помилка завантаження брендів:', e);
+                showNotification('Не вдалося завантажити бренди: ' + e.message);
+                return null;
+            })
+        ];
+
+        await Promise.all(promises);
+        console.log('Усі дані успішно ініціалізовані або оброблені помилки');
+
+        // Ініціалізація редакторів після завантаження налаштувань
         initializeEditors();
-        console.log('Усі дані успішно ініціалізовані');
     } catch (e) {
-        console.error('Помилка ініціалізації даних:', e);
-        showNotification('Помилка при завантаженні даних: ' + e.message);
+        console.error('Критична помилка ініціалізації даних:', e);
+        showNotification('Критична помилка ініціалізації: ' + e.message);
     } finally {
         isInitializing = false;
     }
@@ -1910,123 +1950,187 @@ function setDefaultVideoSizes(editor, editorId) {
 }
 
 function initializeEditors() {
-    if (aboutEditor) {
-        console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
-        return;
-    }
+    try {
+        // Перевіряємо, чи редактори вже ініціалізовані
+        if (aboutEditor || productEditor) {
+            console.log('Редактори вже ініціалізовані, пропускаємо');
+            return;
+        }
 
-    // Реєструємо модуль історії для undo/redo
-    Quill.register('modules/history', function(quill, options) {
-        quill.history = new Quill.modules.History(quill, options);
-        const updateButtons = () => {
-            const undoButton = document.querySelector('.ql-undo');
-            const redoButton = document.querySelector('.ql-redo');
-            if (undoButton && redoButton) {
-                quill.history.stack.undo.length > 0
-                    ? undoButton.removeAttribute('disabled')
-                    : undoButton.setAttribute('disabled', 'true');
-                quill.history.stack.redo.length > 0
-                    ? redoButton.removeAttribute('disabled')
-                    : redoButton.setAttribute('disabled', 'true');
+        // Реєструємо модуль історії явно для сумісності з Quill 2.0.3
+        Quill.register('modules/history', Quill.import('modules/history'), true);
+
+        // Налаштування панелі інструментів для "Про нас"
+        const aboutToolbarOptions = [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'script': 'sub' }, { 'script': 'super' }],
+            [{ 'indent': '-1' }, { 'indent': '+1' }],
+            [{ 'direction': 'rtl' }],
+            [{ 'size': ['small', false, 'large', 'huge'] }],
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'font': [] }],
+            [{ 'align': [] }],
+            ['clean'],
+            ['image', 'video'],
+            ['undo', 'redo']
+        ];
+
+        // Ініціалізація редактора для "Про нас"
+        const aboutEditorContainer = document.getElementById('about-editor');
+        if (aboutEditorContainer && !aboutEditor) {
+            aboutEditor = new Quill(aboutEditorContainer, {
+                theme: 'snow',
+                modules: {
+                    toolbar: aboutToolbarOptions,
+                    history: {
+                        delay: 1000,
+                        maxStack: 500,
+                        userOnly: true
+                    }
+                }
+            });
+
+            // Оновлення стану кнопок undo/redo
+            const updateButtons = () => {
+                const undoButton = document.querySelector('.ql-undo');
+                const redoButton = document.querySelector('.ql-redo');
+                if (undoButton && redoButton) {
+                    aboutEditor.history.stack.undo.length > 0
+                        ? undoButton.removeAttribute('disabled')
+                        : undoButton.setAttribute('disabled', 'true');
+                    aboutEditor.history.stack.redo.length > 0
+                        ? redoButton.removeAttribute('disabled')
+                        : redoButton.setAttribute('disabled', 'true');
+                }
+            };
+
+            aboutEditor.on('text-change', () => {
+                const content = aboutEditor.root.innerHTML;
+                document.getElementById('about-edit').value = content;
+                console.log('Вміст редактора змінено:', content);
+                unsavedChanges = true;
+                updateButtons();
+                resetInactivityTimer();
+            });
+
+            // Завантажуємо початковий вміст
+            if (settings.about) {
+                try {
+                    aboutEditor.root.innerHTML = settings.about;
+                    console.log('Встановлено вміст "Про нас":', settings.about);
+                } catch (e) {
+                    console.error('Помилка при встановленні вмісту "Про нас":', e);
+                    aboutEditor.setText(settings.about || '', 'silent');
+                }
+            } else {
+                console.log('settings.about порожній, редактор очищено.');
+                aboutEditor.root.innerHTML = '';
             }
-        };
+            document.getElementById('about-edit').value = settings.about || '';
 
-        quill.on('text-change', updateButtons);
+            // Обробник кліків для зміни розмірів медіа
+            aboutEditor.root.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                    openResizeModal(target);
+                }
+            });
 
-        const undoButton = document.querySelector('.ql-undo');
-        const redoButton = document.querySelector('.ql-redo');
-        if (undoButton) {
-            undoButton.addEventListener('click', () => quill.history.undo());
+            // Обробка вставки медіа
+            aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+                if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
+                    const src = node.getAttribute('src');
+                    if (src) {
+                        const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
+                        return { ops: [{ insert }] };
+                    }
+                }
+                return delta;
+            });
+
+            // Встановлюємо розміри для відео
+            setDefaultVideoSizes(aboutEditor, 'about-edit');
+
+            // Ініціалізація стану кнопок
+            setTimeout(updateButtons, 100);
         }
-        if (redoButton) {
-            redoButton.addEventListener('click', () => quill.history.redo());
+
+        // Ініціалізація редактора для опису товару
+        const productEditorContainer = document.getElementById('product-description-editor');
+        if (productEditorContainer && !productEditor) {
+            productEditor = new Quill(productEditorContainer, {
+                theme: 'snow',
+                modules: {
+                    toolbar: aboutToolbarOptions, // Використовуємо ту саму панель інструментів
+                    history: {
+                        delay: 1000,
+                        maxStack: 500,
+                        userOnly: true
+                    }
+                }
+            });
+
+            productEditor.on('text-change', () => {
+                const content = productEditor.root.innerHTML;
+                document.getElementById('product-description').value = content;
+                unsavedChanges = true;
+                resetInactivityTimer();
+            });
+
+            // Обробник кліків для зміни розмірів медіа в редакторі товару
+            productEditor.root.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                    openResizeModal(target);
+                }
+            });
+
+            // Обробка вставки медіа
+            productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+                if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
+                    const src = node.getAttribute('src');
+                    if (src) {
+                        const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
+                        return { ops: [{ insert }] };
+                    }
+                }
+                return delta;
+            });
+
+            // Встановлюємо розміри для відео
+            setDefaultVideoSizes(productEditor, 'product-description');
         }
 
-        // Ініціалізація стану кнопок
-        setTimeout(updateButtons, 100); // Даємо час Quill ініціалізувати DOM
-    }, true);
+        // Додаємо обробники для кастомних кнопок undo/redo
+        const undoButtons = document.querySelectorAll('.ql-undo');
+        const redoButtons = document.querySelectorAll('.ql-redo');
+        undoButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (aboutEditor) aboutEditor.history.undo();
+                if (productEditor) productEditor.history.undo();
+            });
+        });
+        redoButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (aboutEditor) aboutEditor.history.redo();
+                if (productEditor) productEditor.history.redo();
+            });
+        });
 
-    const aboutToolbarOptions = [
-        ['bold', 'italic', 'underline', 'strike'],
-        ['blockquote', 'code-block'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'script': 'sub' }, { 'script': 'super' }],
-        [{ 'indent': '-1' }, { 'indent': '+1' }],
-        [{ 'direction': 'rtl' }],
-        [{ 'size': ['small', false, 'large', 'huge'] }],
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'font': [] }],
-        [{ 'align': [] }],
-        ['clean'],
-        ['image', 'video'],
-        ['undo', 'redo']
-    ];
-
-    aboutEditor = new Quill('#about-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: aboutToolbarOptions,
-            history: {
-                delay: 1000,
-                maxStack: 500,
-                userOnly: true
-            }
+        // Додаємо обробники панелі інструментів
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            addToolbarEventListeners();
+        } else {
+            document.addEventListener('DOMContentLoaded', addToolbarEventListeners);
         }
-    });
 
-    // Єдиний обробник для оновлення вмісту
-    aboutEditor.on('text-change', () => {
-        const content = aboutEditor.root.innerHTML;
-        document.getElementById('about-edit').value = content;
-        console.log('Вміст редактора змінено:', content);
-        unsavedChanges = true;
-        resetInactivityTimer();
-    });
-
-    // Завантажуємо початковий вміст
-    if (settings.about) {
-        try {
-            aboutEditor.root.innerHTML = settings.about;
-            console.log('Встановлено вміст "Про нас":', settings.about);
-        } catch (e) {
-            console.error('Помилка при встановленні вмісту "Про нас":', e);
-            aboutEditor.setText(settings.about || '', 'silent');
-        }
-    } else {
-        console.log('settings.about порожній, редактор очищено.');
-        aboutEditor.root.innerHTML = '';
-    }
-    document.getElementById('about-edit').value = settings.about || '';
-
-    // Обробник кліків для зміни розмірів медіа
-    aboutEditor.root.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
-            openResizeModal(target);
-        }
-    });
-
-    // Обробка вставки медіа
-    aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-        if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
-            const src = node.getAttribute('src');
-            if (src) {
-                const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
-                return { ops: [{ insert }] };
-            }
-        }
-        return delta;
-    });
-
-    // Встановлюємо розміри для відео
-    setDefaultVideoSizes(aboutEditor, 'about-edit');
-
-    // Додаємо обробники панелі інструментів
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        addToolbarEventListeners();
-    } else {
-        document.addEventListener('DOMContentLoaded', addToolbarEventListeners);
+        console.log('Редактори успішно ініціалізовані');
+    } catch (e) {
+        console.error('Помилка ініціалізації редакторів:', e);
+        showNotification('Не вдалося ініціалізувати редактори: ' + e.message);
     }
 }
 
@@ -3002,9 +3106,11 @@ function closeModal() {
     const modal = document.getElementById('modal');
     modal.classList.remove('active');
     modal.innerHTML = '';
-
-    // Закриваємо модальне вікно зміни розмірів, якщо воно відкрите
-    closeResizeModal();
+    if (productEditor) {
+        productEditor.root.innerHTML = '';
+        productEditor = null; // Скидаємо редактор
+    }
+    unsavedChanges = false;
     resetInactivityTimer();
 }
 
@@ -5313,30 +5419,12 @@ async function saveEditedProduct(productId) {
 
 async function deleteProduct(productId) {
     if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
         try {
-            const response = await fetch(`/api/products/${productId}`, {
-                method: 'DELETE',
-                headers: {
-                    credentials: 'include'
-                }
+            const response = await fetchWithAuth(`/api/products/${productId}`, {
+                method: 'DELETE'
             });
 
             if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    localStorage.removeItem('adminToken');
-                    session = { isActive: false, timestamp: 0 };
-                    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                    showSection('admin-login');
-                    showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                    return;
-                }
                 throw new Error('Помилка при видаленні товару: ' + response.statusText);
             }
 
@@ -5358,7 +5446,7 @@ async function deleteProduct(productId) {
 }
 
 async function toggleProductActive(productId) {
-    const product = products.find(p => p._id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) {
         showNotification('Товар не знайдено!');
         return;
@@ -5367,12 +5455,8 @@ async function toggleProductActive(productId) {
     const newActiveStatus = !product.active;
 
     try {
-        const response = await fetch(`/api/products/${productId}`, {
+        const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
             body: JSON.stringify({ active: newActiveStatus })
         });
 
@@ -5780,7 +5864,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
-function connectAdminWebSocket(attempt = 1) {
+function connectAdminWebSocket(attempt = 1, maxAttempts = 5) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
         : 'wss://mebli.onrender.com';
@@ -5789,10 +5873,20 @@ function connectAdminWebSocket(attempt = 1) {
     if (!token) {
         console.warn('Токен відсутній, WebSocket не підключено');
         showSection('admin-login');
+        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
         return;
     }
 
-    if (socket && socket.readyState === WebSocket.OPEN) return;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket уже підключено');
+        return;
+    }
+
+    if (attempt > maxAttempts) {
+        console.error('Досягнуто максимальну кількість спроб підключення до WebSocket');
+        showNotification('Не вдалося підключитися до WebSocket після кількох спроб.');
+        return;
+    }
 
     socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 
@@ -5803,6 +5897,7 @@ function connectAdminWebSocket(attempt = 1) {
                 socket.send(JSON.stringify({ type, action: 'subscribe' }));
             }
         });
+        resetInactivityTimer();
     };
 
     socket.onmessage = (event) => {
@@ -5825,14 +5920,17 @@ function connectAdminWebSocket(attempt = 1) {
                 slides = data;
                 renderSlidesAdmin();
             }
+            resetInactivityTimer();
         } catch (e) {
-            console.error('Помилка WebSocket:', e);
+            console.error('Помилка обробки WebSocket повідомлення:', e);
         }
     };
 
     socket.onclose = () => {
-        console.log('WebSocket закрито, спроба перепідключення...');
-        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000); // Спроба перепідключення через 5 секунд
+        console.log(`WebSocket закрито, спроба перепідключення ${attempt}/${maxAttempts}...`);
+        // Експоненціальна затримка для перепідключення
+        const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // Максимум 30 секунд
+        setTimeout(() => connectAdminWebSocket(attempt + 1, maxAttempts), delay);
     };
 
     socket.onerror = (error) => {
