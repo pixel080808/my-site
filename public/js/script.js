@@ -173,7 +173,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
-            const response = await fetch(url, options);
+            const response = await fetch(url, { ...options, credentials: 'include' });
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             console.log(`Fetch ${url} successful`);
             return response;
@@ -181,7 +181,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
             console.error(`Fetch attempt ${i + 1} failed:`, error);
             if (i === retries - 1) {
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
-                return null; // Повертаємо null у разі остаточної помилки
+                return null;
             }
             console.warn(`Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -236,13 +236,17 @@ async function fetchCsrfToken() {
     try {
         const response = await fetchWithRetry(`${BASE_URL}/api/csrf-token`, 3, 1000);
         if (response) {
+            console.log('Відповідь сервера для CSRF-токена:', response.status, response.statusText);
+            const contentType = response.headers.get('Content-Type');
+            console.log('Content-Type:', contentType);
             const data = await response.json();
+            console.log('Дані відповіді:', data);
             if (data.csrfToken) {
                 localStorage.setItem('csrfToken', data.csrfToken);
                 console.log('CSRF-токен отримано:', data.csrfToken);
                 return data.csrfToken;
             } else {
-                console.warn('CSRF-токен не отримано від сервера');
+                console.warn('CSRF-токен не отримано від сервера:', data);
                 localStorage.removeItem('csrfToken');
                 showNotification('Не вдалося отримати CSRF-токен. Деякі функції будуть збережені локально.', 'warning');
                 return null;
