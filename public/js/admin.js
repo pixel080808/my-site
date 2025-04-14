@@ -3,8 +3,7 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
-let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
-let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
+let filters = [];
 let settings = {
     name: '',
     baseUrl: '', // Додано для базового URL
@@ -1037,13 +1036,15 @@ function showSection(sectionId) {
 session = { isActive: false, timestamp: 0 };
 
 async function login() {
-    const username = document.getElementById('admin-username')?.value;
+    const username = document.getElementById('admin-username')?.value?.trim();
     const password = document.getElementById('admin-password')?.value;
 
     if (!username || !password) {
         showNotification('Введіть ім’я користувача та пароль!');
         return;
     }
+
+    console.log('Спроба входу:', { username, passwordLength: password.length });
 
     try {
         // Отримуємо CSRF-токен
@@ -1091,12 +1092,13 @@ async function login() {
         console.log('Відповідь сервера:', responseText);
 
         if (!response.ok) {
-            console.error('Помилка сервера:', responseText);
             try {
                 const errorData = JSON.parse(responseText);
-                throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
+                showNotification(`Помилка входу: ${errorData.error || response.statusText}`);
+                return;
             } catch (jsonError) {
-                throw new Error(`Помилка входу: ${response.status} ${responseText}`);
+                showNotification(`Помилка входу: ${response.status} ${responseText}`);
+                return;
             }
         }
 
@@ -1136,11 +1138,15 @@ function logout() {
     showNotification('Ви вийшли з системи');
 }
 
-// Оновлюємо ініціалізацію
 document.addEventListener('DOMContentLoaded', () => {
     const usernameInput = document.getElementById('admin-username');
     const passwordInput = document.getElementById('admin-password');
     const loginBtn = document.getElementById('login-btn');
+
+    if (!loginBtn) {
+        console.error('Елемент #login-btn не знайдено. Перевірте HTML.');
+        return;
+    }
 
     if (usernameInput) {
         usernameInput.addEventListener('keypress', function(e) {
