@@ -66,7 +66,7 @@ function validateFile(file, type = 'image') {
     return { valid: true };
 }
 
-sync function getCsrfToken() {
+async function getCsrfToken() {
     try {
         const response = await fetch('/api/csrf-token', {
             method: 'GET',
