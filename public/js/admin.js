@@ -68,24 +68,22 @@ function validateFile(file, type = 'image') {
 
 async function getCsrfToken() {
     try {
-        const response = await fetch('/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
+        const response = await fetch(`${BASE_URL}/api/csrf-token`, { credentials: 'include' });
         if (!response.ok) {
-            console.error('Помилка запиту CSRF-токена:', response.status, response.statusText);
-            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
+            throw new Error(`Помилка запиту CSRF-токена: ${response.status}`);
         }
         const data = await response.json();
-        if (!data.csrfToken) {
-            console.error('CSRF-токен не повернуто сервером:', data);
-            throw new Error('CSRF-токен не повернуто сервером');
+        if (data.csrfToken) {
+            localStorage.setItem('csrfToken', data.csrfToken);
+            return data.csrfToken;
+        } else {
+            throw new Error('CSRF-токен не отримано від сервера');
         }
-        console.log('Успішно отримано CSRF-токен:', data.csrfToken);
-        return data.csrfToken;
-    } catch (e) {
-        console.error('Помилка отримання CSRF-токена:', e);
-        showNotification('Не вдалося отримати CSRF-токен: ' + e.message);
+    } catch (error) {
+        console.error('Помилка отримання CSRF-токена:', error);
+        localStorage.removeItem('csrfToken');
+        // Додайте резервну логіку, наприклад, перенаправлення на сторінку входу
+        window.location.href = '/login.html';
         return null;
     }
 }
@@ -3254,30 +3252,6 @@ function debounce(func, wait) {
 }
 
 const debouncedSearchGroupProducts = debounce(searchGroupProducts, 300);
-
-async function getCsrfToken() {
-    try {
-        const response = await fetch('/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            console.error('Помилка запиту CSRF-токена:', response.status, response.statusText);
-            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (!data.csrfToken) {
-            console.error('CSRF-токен не повернуто сервером:', data);
-            throw new Error('CSRF-токен не повернуто сервером');
-        }
-        console.log('Успішно отримано CSRF-токен:', data.csrfToken);
-        return data.csrfToken;
-    } catch (e) {
-        console.error('Помилка отримання CSRF-токена:', e);
-        showNotification('Не вдалося отримати CSRF-токен: ' + e.message);
-        return null;
-    }
-}
 
 async function login() {
     const username = document.getElementById('admin-username').value;
