@@ -927,6 +927,9 @@ async function checkAuth() {
     if (!token || !storedSession) {
         console.log('Токен або сесія відсутні, перехід до входу');
         showSection('admin-login');
+        if (!document.getElementById('admin-login')) {
+            window.location.href = '/login.html';
+        }
         return;
     }
 
@@ -941,6 +944,9 @@ async function checkAuth() {
             session = { isActive: false, timestamp: 0 };
             localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
             showSection('admin-login');
+            if (!document.getElementById('admin-login')) {
+                window.location.href = '/login.html';
+            }
             return;
         }
 
@@ -948,6 +954,9 @@ async function checkAuth() {
         console.log('Результат оновлення токена:', tokenRefreshed);
         if (!tokenRefreshed) {
             showSection('admin-login');
+            if (!document.getElementById('admin-login')) {
+                window.location.href = '/login.html';
+            }
             return;
         }
 
@@ -959,10 +968,18 @@ async function checkAuth() {
         console.error('Помилка перевірки авторизації:', e);
         showSection('admin-login');
         showNotification('Помилка перевірки авторизації: ' + e.message);
+        if (!document.getElementById('admin-login')) {
+            window.location.href = '/login.html';
+        }
     }
 }
 
-checkAuth();
+// Запуск після завантаження DOM
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
+    initializeLoginListener();
+    checkAuth();
+});
 
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
@@ -1556,13 +1573,90 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     }
 }
 
+function initializeLoginListener() {
+    const loginButton = document.getElementById('admin-login-btn');
+    if (loginButton) {
+        loginButton.addEventListener('click', async () => {
+            const username = document.getElementById('admin-username')?.value;
+            const password = document.getElementById('admin-password')?.value;
+
+            if (!username || !password) {
+                showNotification('Введіть ім’я користувача та пароль!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Невірне ім’я користувача або пароль');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('adminToken', data.token);
+                session = { isActive: true, timestamp: Date.now() };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-panel');
+                await initializeData();
+                connectAdminWebSocket();
+                showNotification('Вхід виконано успішно!');
+            } catch (e) {
+                console.error('Помилка входу:', e);
+                showNotification('Помилка входу: ' + e.message);
+            }
+        });
+    }
+}
+
+// Викликаємо після завантаження DOM
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
+    initializeLoginListener();
+});
+
+function initializeAdminPanelListeners() {
+    const addSlideButton = document.getElementById('addSlide');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', () => {
+            openAddSlideModal();
+            resetInactivityTimer();
+        });
+    } else {
+        console.warn("Кнопка 'addSlide' не знайдена в DOM");
+    }
+}
+
+// Оновлена функція showSection
 function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.remove('active');
-    });
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.add('active');
+    try {
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.style.display = 'block';
+        } else {
+            console.error(`Секція з ID ${sectionId} не знайдена в DOM`);
+            window.location.href = '/login.html';
+            return;
+        }
+
+        if (sectionId === 'admin-panel') {
+            initializeData();
+            initializeAdminPanelListeners();
+        }
+    } catch (e) {
+        console.error('Помилка в showSection:', e);
+        showNotification('Помилка відображення секції: ' + e.message);
+        window.location.href = '/login.html';
     }
 }
 
@@ -1639,6 +1733,72 @@ function logout() {
     }
     resetInactivityTimer();
 } // eslint-disable-line no-unused-vars
+
+function initializeEventListeners() {
+    const importSiteFile = document.getElementById('import-site-file');
+    if (importSiteFile) {
+        importSiteFile.addEventListener('change', async function() {
+            const file = this.files[0];
+            if (file) {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const data = JSON.parse(e.target.result);
+                        const tokenRefreshed = await refreshToken();
+                        if (!tokenRefreshed) {
+                            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                            showSection('admin-login');
+                            return;
+                        }
+                        const response = await fetchWithAuth('/api/settings', {
+                            method: 'PUT',
+                            body: JSON.stringify(data)
+                        });
+                        if (response.ok) {
+                            settings = data;
+                            renderSettingsAdmin();
+                            showNotification('Налаштування сайту імпортовано!');
+                            await updateSiteMap();
+                        } else {
+                            throw new Error('Помилка імпорту налаштувань сайту');
+                        }
+                    };
+                    reader.readAsText(file);
+                } catch (e) {
+                    console.error('Помилка імпорту налаштувань сайту:', e);
+                    showNotification('Помилка імпорту налаштувань сайту: ' + e.message);
+                }
+            }
+        });
+    }
+
+    // Аналогічні перевірки для інших елементів
+    const importProductsFile = document.getElementById('import-products-file');
+    if (importProductsFile) {
+        importProductsFile.addEventListener('change', async function() {
+            // Логіка імпорту товарів
+        });
+    }
+
+    const importOrdersFile = document.getElementById('import-orders-file');
+    if (importOrdersFile) {
+        importOrdersFile.addEventListener('change', async function() {
+            // Логіка імпорту замовлень
+        });
+    }
+
+    const bulkPriceFile = document.getElementById('bulk-price-file');
+    if (bulkPriceFile) {
+        bulkPriceFile.addEventListener('change', function() {
+            uploadBulkPrices();
+        });
+    }
+}
+
+// Викликаємо ініціалізацію слухачів після завантаження DOM
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const storedSession = localStorage.getItem('adminSession');
