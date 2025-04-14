@@ -1046,48 +1046,37 @@ async function login() {
     }
 
     try {
-        // Отримуємо CSRF-токен
-        console.log('Отримуємо CSRF-токен...');
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/auth/csrf', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        if (!csrfResponse.ok) {
-            const text = await csrfResponse.text();
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${text}`);
-        }
-
-        const csrfData = await csrfResponse.json();
-        const csrfToken = csrfData.csrfToken;
-        console.log('Отримано CSRF-токен:', csrfToken);
-
-        // Відправляємо запит на логін
         console.log('Відправляємо запит на логін:', { username });
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовок
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ username, password }),
             credentials: 'include'
         });
 
         console.log('Статус відповіді:', response.status);
+        const responseText = await response.text();
+        console.log('Відповідь сервера:', responseText);
 
         if (!response.ok) {
-            const text = await response.text();
-            console.error('Помилка сервера:', text);
+            console.error('Помилка сервера:', responseText);
             try {
-                const errorData = JSON.parse(text);
+                const errorData = JSON.parse(responseText);
                 throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Помилка входу: ${response.status} ${text}`);
+            } catch (jsonError) {
+                throw new Error(`Помилка входу: ${response.status} ${responseText}`);
             }
         }
 
-        const data = await response.json();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (jsonError) {
+            throw new Error('Некоректна відповідь сервера: не вдалося розпарсити JSON');
+        }
+
         console.log('Отримано дані:', data);
 
         if (!data.token) {
@@ -4555,6 +4544,38 @@ async function deleteOrder(index) {
 // Виклик ініціалізації редакторів незалежно від авторизації для тестування
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Ініціалізація елементів форми логіну
+    const usernameInput = document.getElementById('admin-username');
+    const passwordInput = document.getElementById('admin-password');
+    const loginBtn = document.getElementById('login-btn');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && passwordInput) {
+                passwordInput.focus();
+            }
+        });
+    } else {
+        console.warn('Елемент #admin-username не знайдено');
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    } else {
+        console.warn('Елемент #admin-password не знайдено');
+    }
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    } else {
+        console.warn('Елемент #login-btn не знайдено');
+    }
+
+    // Перевірка сесії
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
 
@@ -4582,7 +4603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів для тестування
+    // Ініціалізація редакторів, якщо елемент існує
     if (document.getElementById('about-editor')) {
         initializeEditors();
     }
