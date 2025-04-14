@@ -30,6 +30,13 @@ const sessionTimeout = 30 * 60 * 1000;
 let inactivityTimer;
 let materials = [];
 let brands = [];
+const orderFields = [
+    { name: 'name', label: 'Ім’я' },
+    { name: 'phone', label: 'Телефон' },
+    { name: 'email', label: 'Email' },
+    { name: 'address', label: 'Адреса' },
+    { name: 'comment', label: 'Коментар' }
+];
 let unsavedChanges = false;
 let aboutEditor; // Глобальна змінна для редактора
 let productEditor; // Додаємо глобальну змінну для редактора товару
@@ -711,14 +718,32 @@ function initializeEditors() {
         [{ 'align': [] }],
         ['clean'],
         ['image', 'video'],
-        ['undo', 'redo']
+        [{ 'undo': 'undo' }, { 'redo': 'redo' }] // Змінено формат
     ];
 
     try {
+        // Реєструємо кастомні кнопки undo/redo
+        Quill.register('modules/undo', function(quill) {
+            return {
+                undo: () => quill.history.undo()
+            };
+        }, true);
+        Quill.register('modules/redo', function(quill) {
+            return {
+                redo: () => quill.history.redo()
+            };
+        }, true);
+
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
-                toolbar: aboutToolbarOptions,
+                toolbar: {
+                    container: aboutToolbarOptions,
+                    handlers: {
+                        undo: function() { this.quill.history.undo(); },
+                        redo: function() { this.quill.history.redo(); }
+                    }
+                },
                 history: {
                     delay: 1000,
                     maxStack: 500,
@@ -746,20 +771,6 @@ function initializeEditors() {
                     : redoButton.setAttribute('disabled', 'true');
             }
         });
-
-        // Додаємо обробники для кнопок undo/redo
-        const undoButton = document.querySelector('.ql-undo');
-        const redoButton = document.querySelector('.ql-redo');
-        if (undoButton) {
-            undoButton.addEventListener('click', () => {
-                aboutEditor.history.undo();
-            });
-        }
-        if (redoButton) {
-            redoButton.addEventListener('click', () => {
-                aboutEditor.history.redo();
-            });
-        }
 
         // Завантажуємо початковий вміст
         if (settings.about) {
@@ -835,14 +846,20 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         productEditor = new Quill('#product-description-editor', {
             theme: 'snow',
             modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'header': 2 }, { 'header': 3 }],
-                    ['link', 'image', 'video'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['undo', 'redo'],
-                    ['clean']
-                ],
+                toolbar: {
+                    container: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'header': 2 }, { 'header': 3 }],
+                        ['link', 'image', 'video'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'undo': 'undo' }, { 'redo': 'redo' }],
+                        ['clean']
+                    ],
+                    handlers: {
+                        undo: function() { this.quill.history.undo(); },
+                        redo: function() { this.quill.history.redo(); }
+                    }
+                },
                 history: {
                     delay: 1000,
                     maxStack: 100,
@@ -987,27 +1004,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
             return delta;
         });
-
-        // Додаємо обробники для кнопок undo/redo
-        setTimeout(() => {
-            const toolbar = document.querySelector('#product-description-editor').previousElementSibling;
-            if (toolbar && toolbar.classList.contains('ql-toolbar')) {
-                const undoButton = toolbar.querySelector('.ql-undo');
-                const redoButton = toolbar.querySelector('.ql-redo');
-                if (undoButton) {
-                    undoButton.addEventListener('click', () => {
-                        productEditor.history.undo();
-                    });
-                }
-                if (redoButton) {
-                    redoButton.addEventListener('click', () => {
-                        productEditor.history.redo();
-                    });
-                }
-            } else {
-                console.error('Панель інструментів для productEditor не знайдена');
-            }
-        }, 100);
 
         resetInactivityTimer();
     } catch (e) {
@@ -1180,11 +1176,28 @@ async function refreshToken(attempt = 1) {
             return false;
         }
 
-        const response = await fetch('/api/auth/refresh', { // Змінено
+        // Отримуємо CSRF-токен перед оновленням
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!csrfResponse.ok) {
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
+        }
+
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.csrfToken;
+        if (!csrfToken) {
+            throw new Error('CSRF-токен не отримано');
+        }
+
+        const response = await fetch('/api/auth/refresh', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'X-CSRF-Token': csrfToken
             },
             credentials: 'include'
         });
@@ -3379,18 +3392,15 @@ function addProductColor() {
 
 function renderColorsList() {
     const colorList = document.getElementById('product-color-list');
+    if (!colorList) {
+        console.warn('Елемент #product-color-list не знайдено, пропускаємо рендеринг кольорів.');
+        return;
+    }
     colorList.innerHTML = newProduct.colors.map((color, index) => {
-        let photoSrc = '';
-        if (color.photo) {
-            if (typeof color.photo === 'string') {
-                photoSrc = color.photo;
-            } else if (color.photo instanceof File) {
-                photoSrc = URL.createObjectURL(color.photo);
-            }
-        }
+        const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
         return `
-            <div class="color-item">
-                <span class="color-preview" style="background-color: ${color.value};"></span>
+            <div class="color-item" style="border: 1px solid #ddd; padding: 5px; margin: 5px 0;">
+                <span style="background-color: ${color.value};"></span>
                 ${color.name} (Зміна ціни: ${color.priceChange} грн)
                 ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px;">` : ''}
                 <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
