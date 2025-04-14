@@ -1,3 +1,10 @@
+let newProduct = {
+    type: 'simple',
+    photos: [],
+    colors: [],
+    sizes: [],
+    groupProducts: []
+};
 let session;
 let products = [];
 let categories = [];
@@ -237,11 +244,26 @@ async function fetchWithAuth(url, options = {}) {
             throw new Error('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
         }
 
+        // Отримуємо CSRF-токен
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!csrfResponse.ok) {
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
+        }
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.csrfToken;
+        if (!csrfToken) {
+            throw new Error('CSRF-токен не отримано');
+        }
+
         const token = localStorage.getItem('adminToken');
         const headers = {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
         };
 
         const response = await fetch(url, {
@@ -257,12 +279,21 @@ async function fetchWithAuth(url, options = {}) {
                 if (refreshed) {
                     // Повторюємо запит із новим токеном
                     const newToken = localStorage.getItem('adminToken');
+                    // Отримуємо новий CSRF-токен
+                    const newCsrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    const newCsrfData = await newCsrfResponse.json();
+                    const newCsrfToken = newCsrfData.csrfToken;
+
                     const retryResponse = await fetch(url, {
                         ...options,
                         headers: {
                             ...options.headers,
                             'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': newCsrfToken
                         },
                         credentials: 'include'
                     });
@@ -1293,7 +1324,15 @@ async function updateStoreInfo() {
         let finalLogoUrl = logoUrl;
         let finalFaviconUrl = faviconUrl;
 
-        // Завантаження логотипу, якщо вибрано файл
+        // Отримуємо CSRF-токен
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.csrfToken;
+
+        // Завантаження логотипу
         if (logoFile) {
             const validation = validateFile(logoFile);
             if (!validation.valid) {
@@ -1305,7 +1344,8 @@ async function updateStoreInfo() {
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-Token': csrfToken
                 },
                 credentials: 'include',
                 body: formData
@@ -1317,7 +1357,7 @@ async function updateStoreInfo() {
             finalLogoUrl = data.url;
         }
 
-        // Завантаження фавікону, якщо вибрано файл
+        // Завантаження фавікону
         if (faviconFile) {
             const validation = validateFile(faviconFile);
             if (!validation.valid) {
@@ -1329,7 +1369,8 @@ async function updateStoreInfo() {
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-Token': csrfToken
                 },
                 credentials: 'include',
                 body: formData
@@ -1492,29 +1533,19 @@ async function updateAbout() {
             return;
         }
 
-        const aboutContent = aboutEditor.root.innerHTML;
-        console.log('Надсилаємо "Про нас":', aboutContent);
+        settings.about = document.getElementById('about-edit').value;
 
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/settings', {
+        console.log('Надсилаємо "Про нас":', settings.about);
+
+        const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ about: aboutContent })
+            body: JSON.stringify({ about: settings.about })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення "Про нас": ${errorData.error || response.statusText}`);
-        }
-
-        settings.about = aboutContent;
-        document.getElementById('about-edit').value = aboutContent;
-        showNotification('Розділ "Про нас" оновлено!');
+        const serverSettings = await response.json();
+        settings = { ...settings, ...serverSettings };
         renderSettingsAdmin();
+        showNotification('Інформацію "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
@@ -4163,30 +4194,12 @@ async function saveEditedProduct(productId) {
 
 async function deleteProduct(productId) {
     if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
         try {
-            const response = await fetch(`/api/products/${productId}`, {
-                method: 'DELETE',
-                headers: {
-                    credentials: 'include'
-                }
+            const response = await fetchWithAuth(`/api/products/${productId}`, {
+                method: 'DELETE'
             });
 
             if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    localStorage.removeItem('adminToken');
-                    session = { isActive: false, timestamp: 0 };
-                    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                    showSection('admin-login');
-                    showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                    return;
-                }
                 throw new Error('Помилка при видаленні товару: ' + response.statusText);
             }
 
