@@ -1626,17 +1626,6 @@ async function login() {
     }
 }
 
-    document.getElementById('admin-password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-    document.getElementById('admin-username').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('admin-password').focus();
-        }
-    });
-
 function logout() {
     localStorage.removeItem('adminToken');
     session = { isActive: false, timestamp: 0 };
@@ -1679,6 +1668,34 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.addEventListener('click', login);
     } else {
         console.warn("Елемент 'login-btn' не знайдено в DOM. Переконайтеся, що кнопка входу присутня в HTML.");
+    }
+
+    // Додаємо слухачі подій для полів введення
+    const usernameInput = document.getElementById('admin-username');
+    const passwordInput = document.getElementById('admin-password');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (passwordInput) {
+                    passwordInput.focus();
+                } else {
+                    login();
+                }
+            }
+        });
+    } else {
+        console.warn("Елемент 'admin-username' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    } else {
+        console.warn("Елемент 'admin-password' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
     }
 });
 
