@@ -1021,22 +1021,31 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     resetInactivityTimer();
 }
 
-    function showSection(sectionId) {
-        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.classList.add('active');
-            if (sectionId === 'admin-panel') renderAdmin();
-        }
+function showSection(sectionId) {
+    console.log('Показуємо секцію:', sectionId);
+    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.add('active');
+        if (sectionId === 'admin-panel') renderAdmin();
+    } else {
+        console.error('Секція не знайдена:', sectionId);
     }
+}
 
 session = { isActive: false, timestamp: 0 };
 
 async function login() {
-    const username = document.getElementById('admin-username').value;
-    const password = document.getElementById('admin-password').value;
+    const username = document.getElementById('admin-username')?.value;
+    const password = document.getElementById('admin-password')?.value;
+
+    if (!username || !password) {
+        showNotification('Введіть ім’я користувача та пароль!');
+        return;
+    }
 
     try {
+        console.log('Відправляємо запит на логін:', { username });
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1044,8 +1053,11 @@ async function login() {
             credentials: 'include'
         });
 
+        console.log('Статус відповіді:', response.status);
+
         if (!response.ok) {
             const text = await response.text();
+            console.error('Помилка сервера:', text);
             try {
                 const errorData = JSON.parse(text);
                 throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
@@ -1055,6 +1067,8 @@ async function login() {
         }
 
         const data = await response.json();
+        console.log('Отримано дані:', data);
+
         if (!data.token) {
             throw new Error('Токен не отримано від сервера');
         }
