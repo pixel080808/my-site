@@ -3,7 +3,7 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
-let filters = [];
+let filters = [{"name":"brand","label":"Виробник","type":"checkbox","options":["Дубок","Matroluxe"]},{"name":"price","label":"Ціна","type":"checkbox","options":["0-2000","2000-5000","5000+"]},{"name":"material","label":"Матеріал","type":"checkbox","options":["Дерево","Пружинний блок"]}];
 let orderFields = [{"name":"name","label":"Ім'я","type":"text"},{"name":"surname","label":"Прізвище","type":"text"},{"name":"phone","label":"Телефон","type":"text"},{"name":"email","label":"Email","type":"email"},{"name":"address","label":"Адреса доставки","type":"text"},{"name":"payment","label":"Оплата","type":"select","options":["Готівкою","Безготівковий розрахунок"]}];
 let settings = {
     name: '',
@@ -2588,17 +2588,19 @@ async function updateSlideshowSettings() {
 
 function debounce(func, wait) {
     let timeout;
-    return function (...args) {
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
+        timeout = setTimeout(later, wait);
     };
 }
 
-const debouncedRenderAdmin = debounce(renderAdmin, 300);
+const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
 async function addSlide() {
-    const button = document.querySelector('button[onclick="addSlide()"]');
-    button.disabled = true;
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2676,11 +2678,9 @@ async function addSlide() {
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-} catch (err) {
+    } catch (err) {
         console.error('Помилка додавання слайду:', err);
         showNotification('Не вдалося додати слайд: ' + err.message);
-    } finally {
-        button.disabled = false;
     }
 }
 
@@ -3683,10 +3683,10 @@ async function saveNewProduct() {
         showNotification('Товар додано!');
         unsavedChanges = false;
         resetInactivityTimer();
-catch (err) {
-    console.error('Помилка при додаванні товару:', err, err.stack);
-    showNotification('Не вдалося додати товар: ' + err.message);
-}
+    } catch (err) {
+        console.error('Помилка при додаванні товару:', err);
+        showNotification('Не вдалося додати товар: ' + err.message);
+    }
 }
 
 function openEditProductModal(productId) {
@@ -4446,10 +4446,10 @@ async function saveOrderStatus(index) {
         renderAdmin('orders');
         showNotification('Статус замовлення змінено!');
         resetInactivityTimer();
-catch (err) {
-    console.error('Помилка оновлення статусу замовлення:', err, err.stack);
-    showNotification('Не вдалося оновити статус замовлення: ' + err.message);
-}
+    } catch (err) {
+        console.error('Помилка оновлення статусу замовлення:', err);
+        showNotification('Не вдалося оновити статус замовлення: ' + err.message);
+    }
 }
 
 async function deleteOrder(index) {
