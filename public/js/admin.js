@@ -1,3 +1,5 @@
+/* global LZString, Quill */
+
 let session = { isActive: false, timestamp: 0 };
 let products = [];
 let categories = [];
@@ -833,7 +835,7 @@ async function deleteFilter(index) {
             showNotification('Помилка: ' + err.message);
         }
     }
-}
+} // eslint-disable-line no-unused-vars
 
 function updateMaterialOptions() {
     const materialInput = document.getElementById('product-material');
@@ -1047,7 +1049,7 @@ function saveMediaSize() {
     closeResizeModal();
     unsavedChanges = true;
     resetInactivityTimer();
-}
+} // eslint-disable-line no-unused-vars
 
 function setDefaultVideoSizes(editor, editorId) {
     const iframes = editor.root.querySelectorAll('iframe');
@@ -1349,6 +1351,7 @@ function initializeEditors() {
             button.setAttribute('data-listener', 'true');
         });
 
+        addToolbarEventListeners();
         console.log('Редактори успішно ініціалізовані');
     } catch (e) {
         console.error('Помилка ініціалізації редакторів:', e);
@@ -1628,15 +1631,16 @@ async function login() {
     });
 
 function logout() {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close(1000, 'Користувач вийшов із системи');
-    }
     localStorage.removeItem('adminToken');
     session = { isActive: false, timestamp: 0 };
     localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
     showSection('admin-login');
     showNotification('Ви вийшли з системи.');
-}
+    if (socket) {
+        socket.close();
+    }
+    resetInactivityTimer();
+} // eslint-disable-line no-unused-vars
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
@@ -4070,33 +4074,33 @@ function renderGroupProducts(newProduct) {
     }
 }
 
-    function dragGroupProduct(event, index) {
-        event.dataTransfer.setData('text/plain', index);
-        event.target.classList.add('dragging');
-    }
+function dragGroupProduct(event, index) {
+    event.dataTransfer.setData('text/plain', index);
+    event.target.classList.add('dragging');
+} // eslint-disable-line no-unused-vars
 
-    function allowDropGroupProduct(event) {
-        event.preventDefault();
-    }
+function allowDropGroupProduct(event) {
+    event.preventDefault();
+} // eslint-disable-line no-unused-vars
 
-    function dropGroupProduct(event, targetIndex) {
-        event.preventDefault();
-        const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
-        if (sourceIndex !== targetIndex) {
-            const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
-            newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
-            renderGroupProducts();
-            unsavedChanges = true;
-            resetInactivityTimer();
-        }
-        document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
+function dropGroupProduct(event, targetIndex) {
+    event.preventDefault();
+    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
+    if (sourceIndex !== targetIndex) {
+        const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
+        newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
+        renderGroupProducts();
+        unsavedChanges = true;
+        resetInactivityTimer();
     }
+    document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
+} // eslint-disable-line no-unused-vars
 
 function deleteGroupProduct(productId, newProduct) {
     newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
     renderGroupProducts(newProduct);
     resetInactivityTimer();
-}
+} // eslint-disable-line no-unused-vars
 
 async function saveNewProduct() {
     const newProduct = {
@@ -4410,7 +4414,7 @@ function openEditProductModal(productId) {
             resetInactivityTimer();
         };
 
-        window.addProductColor = function() {
+         window.addProductColor = function() {
             const name = document.getElementById('product-color-name').value;
             const value = document.getElementById('product-color-value').value;
             const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
@@ -4458,13 +4462,13 @@ function openEditProductModal(productId) {
             } else {
                 alert('Введіть назву та виберіть колір!');
             }
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.deleteProductColor = function(index) {
             newProduct.colors.splice(index, 1);
             renderColorsList(newProduct);
             resetInactivityTimer();
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.addMattressSize = function() {
             const name = document.getElementById('mattress-size-name').value;
@@ -4479,13 +4483,13 @@ function openEditProductModal(productId) {
             } else {
                 alert('Введіть розмір та ціну!');
             }
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.deleteMattressSize = function(index) {
             newProduct.sizes.splice(index, 1);
             renderMattressSizes(newProduct);
             resetInactivityTimer();
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.addProductPhoto = function() {
             const url = document.getElementById('product-photo-url').value;
@@ -4512,13 +4516,13 @@ function openEditProductModal(productId) {
                 renderPhotoList(newProduct);
                 resetInactivityTimer();
             }
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.deleteProductPhoto = function(index) {
             newProduct.photos.splice(index, 1);
             renderPhotoList(newProduct);
             resetInactivityTimer();
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.addGroupProduct = function(productId) {
             if (!newProduct.groupProducts.includes(productId)) {
@@ -4528,7 +4532,7 @@ function openEditProductModal(productId) {
                 document.getElementById('group-product-results').innerHTML = '';
                 resetInactivityTimer();
             }
-        };
+        }; // eslint-disable-line no-unused-vars
 
         window.dragGroupProduct = function(event, index) {
             event.dataTransfer.setData('text/plain', index);
@@ -5104,22 +5108,6 @@ async function deleteOrder(index) {
         }
     }
 }
-
-    function sortOrders(criteria) {
-        const [key, direction] = criteria.split('-');
-        orders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
-            if (direction === 'asc') {
-                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-            } else {
-                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
-            }
-        });
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
 
     function filterOrders() {
         currentPage = 1;
