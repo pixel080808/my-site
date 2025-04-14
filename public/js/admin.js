@@ -1603,16 +1603,23 @@ async function login() {
         }
 
         const data = await response.json();
-        console.log('Отримано дані авторизації:', data); // Додаємо лог
-        localStorage.setItem('adminToken', data.token);
-        console.log('Токен збережено:', localStorage.getItem('adminToken')); // Перевіряємо збереження
+        console.log('Отримано дані авторизації:', data); // Логування для дебагу
+        const token = data.token;
+
+        if (!token) {
+            throw new Error('Токен не отримано від сервера');
+        }
+
+        localStorage.setItem('adminToken', token);
+        console.log('Токен збережено:', localStorage.getItem('adminToken')); // Логування для дебагу
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+
         showSection('admin-panel');
         await initializeData();
         connectAdminWebSocket();
-        showNotification('Вхід виконано успішно!');
         resetInactivityTimer();
+        showNotification('Вхід виконано успішно!');
     } catch (e) {
         console.error('Помилка входу:', e);
         showNotification('Помилка входу: ' + e.message);
@@ -1643,31 +1650,18 @@ function logout() {
 } // eslint-disable-line no-unused-vars
 
 document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('login-btn');
-    if (!loginBtn) {
-        console.error('Елемент #login-btn не знайдено в DOM');
-    } else {
-        loginBtn.addEventListener('click', login);
-    }
-
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
+
+    // Перевірка авторизації
     if (storedSession && token) {
-        try {
-            session = JSON.parse(LZString.decompressFromUTF16(storedSession));
-            if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-                showSection('admin-panel');
-                initializeData();
-                connectAdminWebSocket();
-                resetInactivityTimer();
-            } else {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-            }
-        } catch (e) {
-            console.error('Помилка обробки сесії:', e);
+        session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+        if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+            showSection('admin-panel');
+            initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+        } else {
             localStorage.removeItem('adminToken');
             session = { isActive: false, timestamp: 0 };
             localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
@@ -1677,6 +1671,14 @@ document.addEventListener('DOMContentLoaded', () => {
         session = { isActive: false, timestamp: 0 };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-login');
+    }
+
+    // Додаємо обробник для кнопки логіну
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    } else {
+        console.warn("Елемент 'login-btn' не знайдено в DOM. Переконайтеся, що кнопка входу присутня в HTML.");
     }
 });
 
@@ -5114,39 +5116,6 @@ async function deleteOrder(index) {
         renderAdmin('orders');
         resetInactivityTimer();
     }
-
-// Виклик ініціалізації редакторів незалежно від авторизації для тестування
-
-document.addEventListener('DOMContentLoaded', () => {
-    const storedSession = localStorage.getItem('adminSession');
-    const token = localStorage.getItem('adminToken');
-    if (storedSession && token) {
-        session = JSON.parse(LZString.decompressFromUTF16(storedSession));
-        if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-            showSection('admin-panel');
-            initializeData();
-            connectAdminWebSocket();
-            resetInactivityTimer();
-        } else {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-        }
-    } else {
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-    }
-
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', login);
-    }
-});
-
-document.addEventListener('mousemove', resetInactivityTimer);
-document.addEventListener('keypress', resetInactivityTimer);
 
 function connectAdminWebSocket(attempt = 1, maxAttempts = 10) {
     const wsUrl = window.location.hostname === 'localhost'
