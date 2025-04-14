@@ -1,9 +1,11 @@
 let newProduct = {
-    type: 'simple',
+    type: 'simple', 
     photos: [],
     colors: [],
     sizes: [],
-    groupProducts: []
+    groupProducts: [],
+    active: true,
+    visible: true
 };
 let session;
 let products = [];
@@ -3075,16 +3077,6 @@ document.getElementById('slide-img-file').parentElement.querySelector('button[on
         showNotification('Sitemap завантажено!');
         resetInactivityTimer();
     }
-
-    let newProduct = {
-        type: 'simple',
-        colors: [],
-        photos: [],
-        sizes: [],
-        groupProducts: [],
-        active: true,
-        visible: true
-    };
 
 // Додаємо обробники подій для автоматичного імпорту після вибору файлу
 document.getElementById('import-site-file').addEventListener('change', function() {
