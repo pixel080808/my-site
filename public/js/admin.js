@@ -584,10 +584,6 @@ async function checkAuth() {
     }
 }
 
-checkAuth();
-
-
-
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
         // Знітаємо виділення з попереднього елемента
@@ -1023,13 +1019,18 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
 
 function showSection(sectionId) {
     console.log('Показуємо секцію:', sectionId);
-    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(el => el.classList.remove('active'));
+    
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
-        if (sectionId === 'admin-panel') renderAdmin();
+        if (sectionId === 'admin-panel') {
+            renderAdmin();
+        }
     } else {
         console.error('Секція не знайдена:', sectionId);
+        console.log('Доступні секції:', Array.from(sections).map(el => el.id));
     }
 }
 
@@ -1045,10 +1046,30 @@ async function login() {
     }
 
     try {
+        // Отримуємо CSRF-токен
+        console.log('Отримуємо CSRF-токен...');
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/auth/csrf', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!csrfResponse.ok) {
+            const text = await csrfResponse.text();
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${text}`);
+        }
+
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.csrfToken;
+        console.log('Отримано CSRF-токен:', csrfToken);
+
+        // Відправляємо запит на логін
         console.log('Відправляємо запит на логін:', { username });
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен у заголовок
+            },
             body: JSON.stringify({ username, password }),
             credentials: 'include'
         });
@@ -1087,20 +1108,10 @@ async function login() {
     }
 }
 
-    document.getElementById('admin-password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-    document.getElementById('admin-username').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('admin-password').focus();
-        }
-    });
-
 function logout() {
-    adminToken = null;
+    localStorage.removeItem('adminToken');
     session = { isActive: false, timestamp: 0 };
+    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
     if (socket) socket.close();
     showSection('admin-login');
     showNotification('Ви вийшли з системи');
@@ -1108,8 +1119,30 @@ function logout() {
 
 // Оновлюємо ініціалізацію
 document.addEventListener('DOMContentLoaded', () => {
+    const usernameInput = document.getElementById('admin-username');
+    const passwordInput = document.getElementById('admin-password');
     const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', login);
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && passwordInput) {
+                passwordInput.focus();
+            }
+        });
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    }
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    }
+
     showSection('admin-login'); // Завжди починаємо з логіну
 });
 
@@ -4524,14 +4557,20 @@ async function deleteOrder(index) {
 document.addEventListener('DOMContentLoaded', () => {
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
+
     if (storedSession && token) {
-        session = JSON.parse(LZString.decompressFromUTF16(storedSession));
-        if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-            showSection('admin-panel');
-            initializeData();
-            connectAdminWebSocket();
-            resetInactivityTimer();
-        } else {
+        try {
+            session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+            if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+                checkAuth();
+            } else {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+            }
+        } catch (e) {
+            console.error('Помилка розшифровки сесії:', e);
             localStorage.removeItem('adminToken');
             session = { isActive: false, timestamp: 0 };
             localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
@@ -4543,9 +4582,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', login);
+    // Ініціалізація редакторів для тестування
+    if (document.getElementById('about-editor')) {
+        initializeEditors();
     }
 });
 
