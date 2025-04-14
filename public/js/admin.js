@@ -1899,14 +1899,13 @@ function closeModal() {
 }
 
 function validateFile(file) {
-    const maxSize = 5 * 1024 * 1024; // 5 MB
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
+    const maxSize = 5 * 1024 * 1024; // 5 МБ
     if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Дозволені формати: JPEG, PNG, GIF, WebP' };
+        return { valid: false, error: 'Дозволені лише файли JPEG, PNG, GIF або WebP' };
     }
     if (file.size > maxSize) {
-        return { valid: false, error: 'Максимальний розмір файлу: 5 MB' };
+        return { valid: false, error: 'Файл занадто великий. Максимум 5 МБ.' };
     }
     return { valid: true };
 }
@@ -1930,7 +1929,7 @@ async function addCategory() {
             return;
         }
 
-        // Перевірка унікальності назви
+        // Перевірка унікальності назви (локально)
         const existingCategory = categories.find(cat => cat.name.toLowerCase() === name.toLowerCase());
         if (existingCategory) {
             showNotification('Категорія з такою назвою вже існує!');
@@ -1946,7 +1945,6 @@ async function addCategory() {
             }
             const formData = new FormData();
             formData.append('file', imgFile);
-            // Використовуємо fetchWithAuth для безпеки
             const uploadResponse = await fetchWithAuth('/api/upload', {
                 method: 'POST',
                 body: formData
@@ -1959,7 +1957,7 @@ async function addCategory() {
             }
         }
 
-        const category = { name, slug, image: imageUrl || '', subcategories: [] };
+        const category = { name, slug, img: imageUrl || '', subcategories: [] }; // Змінено image на img
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
             body: JSON.stringify(category)
@@ -1969,7 +1967,6 @@ async function addCategory() {
         categories.push(newCategory);
         renderCategoriesAdmin();
         showNotification('Категорію додано!');
-        // Очищаємо поля
         document.getElementById('cat-name').value = '';
         document.getElementById('cat-slug').value = '';
         document.getElementById('cat-img-url').value = '';
