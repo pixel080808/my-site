@@ -1082,128 +1082,129 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         });
 
         // Обробка вставки зображень
-productEditor.getModule('toolbar').addHandler('image', () => {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
-    input.click();
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (file) {
-            const validation = validateFile(file);
-            if (!validation.valid) {
-                showNotification(validation.error);
-                return;
+        productEditor.getModule('toolbar').addHandler('image', () => {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (file) {
+                    const validation = validateFile(file);
+                    if (!validation.valid) {
+                        showNotification(validation.error);
+                        return;
+                    }
+                    const range = productEditor.getSelection();
+                    const url = URL.createObjectURL(file);
+                    productEditor.insertEmbed(range ? range.index : 0, 'image', url);
+                    // Додаємо alt атрибут після вставки
+                    const img = productEditor.root.querySelector(`img[src="${url}"]`);
+                    if (img) {
+                        img.setAttribute('alt', `Зображення ${file.name}`);
+                    }
+                }
+            };
+        });
+
+        // Додаємо обробник для вставки відео
+        toolbar.addHandler('video', () => {
+            let url = prompt('Введіть URL відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID):');
+            if (url) {
+                // Перетворюємо URL у формат embed
+                const watchRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=([^\s&]+)/;
+                const embedRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/([^\s]+)/;
+                const shortRegex = /^(https?:\/\/)?youtu\.be\/([^\s]+)/;
+
+                let videoId = null;
+
+                // Перевіряємо формат watch?v=
+                if (watchRegex.test(url)) {
+                    const match = url.match(watchRegex);
+                    videoId = match[3];
+                    url = `https://www.youtube.com/embed/${videoId}`;
+                }
+                // Перевіряємо формат embed
+                else if (embedRegex.test(url)) {
+                    const match = url.match(embedRegex);
+                    videoId = match[3];
+                    url = `https://www.youtube.com/embed/${videoId}`;
+                }
+                // Перевіряємо формат youtu.be
+                else if (shortRegex.test(url)) {
+                    const match = url.match(shortRegex);
+                    videoId = match[2];
+                    url = `https://www.youtube.com/embed/${videoId}`;
+                }
+                else {
+                    showNotification('Введіть коректний URL для YouTube відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID)');
+                    return;
+                }
+
+                const range = productEditor.getSelection() || { index: 0 };
+                productEditor.insertEmbed(range.index, 'video', url);
+                setDefaultVideoSizes(productEditor, 'product-description');
             }
-            const range = productEditor.getSelection();
-            const url = URL.createObjectURL(file);
-            productEditor.insertEmbed(range ? range.index : 0, 'image', url);
-            // Додаємо alt атрибут після вставки
-            const img = productEditor.root.querySelector(`img[src="${url}"]`);
-            if (img) {
-                img.setAttribute('alt', `Зображення ${file.name}`);
+        });
+
+        // Обробник для оновлення прихованого поля
+        productEditor.on('text-change', () => {
+            document.getElementById('product-description').value = productEditor.root.innerHTML;
+            unsavedChanges = true;
+        });
+
+        // Додаємо обробник вибору медіа (з запропонованого виправлення)
+        productEditor.on('selection-change', (range) => {
+            if (range && range.length > 0) {
+                const [embed] = productEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
+                selectedMedia = embed ? { type: embed.insert.image ? 'image' : 'video', url: embed.insert.image || embed.insert.video } : null;
+            } else {
+                selectedMedia = null;
             }
-        }
-    };
-});
+        });
 
-    // Додаємо обробник для вставки відео
-    toolbar.addHandler('video', () => {
-        let url = prompt('Введіть URL відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID):');
-        if (url) {
-            // Перетворюємо URL у формат embed
-            const watchRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=([^\s&]+)/;
-            const embedRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/([^\s]+)/;
-            const shortRegex = /^(https?:\/\/)?youtu\.be\/([^\s]+)/;
-
-            let videoId = null;
-
-            // Перевіряємо формат watch?v=
-            if (watchRegex.test(url)) {
-                const match = url.match(watchRegex);
-                videoId = match[3];
-                url = `https://www.youtube.com/embed/${videoId}`;
+        // Обробник кліків для зображень і відео
+        productEditor.root.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                openResizeModal(target);
             }
-            // Перевіряємо формат embed
-            else if (embedRegex.test(url)) {
-                const match = url.match(embedRegex);
-                videoId = match[3];
-                url = `https://www.youtube.com/embed/${videoId}`;
+        });
+
+        // Обробник вставки зображень через копіювання/вставку
+        productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+            if (node.tagName === 'IMG') {
+                const src = node.getAttribute('src');
+                if (src) {
+                    return { ops: [{ insert: { image: src } }] };
+                }
             }
-            // Перевіряємо формат youtu.be
-            else if (shortRegex.test(url)) {
-                const match = url.match(shortRegex);
-                videoId = match[2];
-                url = `https://www.youtube.com/embed/${videoId}`;
+            return delta;
+        });
+
+        // Додаємо обробники для кнопок "Undo" і "Redo"
+        setTimeout(() => {
+            const toolbar = document.querySelector('#product-description-editor').previousElementSibling;
+            if (toolbar && toolbar.classList.contains('ql-toolbar')) {
+                const undoButton = toolbar.querySelector('.ql-undo');
+                const redoButton = toolbar.querySelector('.ql-redo');
+                if (undoButton) {
+                    undoButton.addEventListener('click', () => {
+                        productEditor.history.undo();
+                    });
+                }
+                if (redoButton) {
+                    redoButton.addEventListener('click', () => {
+                        productEditor.history.redo();
+                    });
+                }
+            } else {
+                console.error('Панель інструментів для productEditor не знайдена');
             }
-            else {
-                showNotification('Введіть коректний URL для YouTube відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID або https://www.youtube.com/embed/VIDEO_ID)');
-                return;
-            }
+        }, 100);
 
-            const range = productEditor.getSelection() || { index: 0 };
-            productEditor.insertEmbed(range.index, 'video', url);
-            setDefaultVideoSizes(productEditor, 'product-description');
-        }
-    });
-
-    // Обробник для оновлення прихованого поля
-    productEditor.on('text-change', () => {
-        document.getElementById('product-description').value = productEditor.root.innerHTML;
-        unsavedChanges = true;
-    });
-
-    // Додаємо обробник вибору медіа (з запропонованого виправлення)
-    productEditor.on('selection-change', (range) => {
-        if (range && range.length > 0) {
-            const [embed] = productEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
-            selectedMedia = embed ? { type: embed.insert.image ? 'image' : 'video', url: embed.insert.image || embed.insert.video } : null;
-        } else {
-            selectedMedia = null;
-        }
-    });
-
-    // Обробник кліків для зображень і відео
-    productEditor.root.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
-            openResizeModal(target);
-        }
-    });
-
-    // Обробник вставки зображень через копіювання/вставку
-    productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-        if (node.tagName === 'IMG') {
-            const src = node.getAttribute('src');
-            if (src) {
-                return { ops: [{ insert: { image: src } }] };
-            }
-        }
-        return delta;
-    });
-
-    // Додаємо обробники для кнопок "Undo" і "Redo"
-    setTimeout(() => {
-        const toolbar = document.querySelector('#product-description-editor').previousElementSibling;
-        if (toolbar && toolbar.classList.contains('ql-toolbar')) {
-            const undoButton = toolbar.querySelector('.ql-undo');
-            const redoButton = toolbar.querySelector('.ql-redo');
-            if (undoButton) {
-                undoButton.addEventListener('click', () => {
-                    productEditor.history.undo();
-                });
-            }
-            if (redoButton) {
-                redoButton.addEventListener('click', () => {
-                    productEditor.history.redo();
-                });
-            }
-        } else {
-            console.error('Панель інструментів для productEditor не знайдена');
-        }
-    }, 100);
-
-    resetInactivityTimer();
+        resetInactivityTimer();
+    }
 }
 
 function showSection(sectionId) {
