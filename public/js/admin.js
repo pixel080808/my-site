@@ -1046,11 +1046,41 @@ async function login() {
     }
 
     try {
+        // Отримуємо CSRF-токен
+        console.log('Отримуємо CSRF-токен...');
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        console.log('Статус CSRF-запиту:', csrfResponse.status);
+        const csrfText = await csrfResponse.text();
+        console.log('Відповідь CSRF-запиту:', csrfText);
+
+        if (!csrfResponse.ok) {
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfText}`);
+        }
+
+        let csrfData;
+        try {
+            csrfData = JSON.parse(csrfText);
+        } catch (jsonError) {
+            throw new Error('Некоректна відповідь CSRF-запиту: не вдалося розпарсити JSON');
+        }
+
+        const csrfToken = csrfData.csrfToken;
+        if (!csrfToken) {
+            throw new Error('CSRF-токен не отримано від сервера');
+        }
+        console.log('Отримано CSRF-токен:', csrfToken);
+
+        // Відправляємо запит на логін
         console.log('Відправляємо запит на логін:', { username });
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({ username, password }),
             credentials: 'include'
@@ -4544,7 +4574,7 @@ async function deleteOrder(index) {
 // Виклик ініціалізації редакторів незалежно від авторизації для тестування
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Ініціалізація елементів форми логіну
+    // Ініціалізація елементів форми
     const usernameInput = document.getElementById('admin-username');
     const passwordInput = document.getElementById('admin-password');
     const loginBtn = document.getElementById('login-btn');
@@ -4603,7 +4633,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів, якщо елемент існує
+    // Ініціалізація редакторів
     if (document.getElementById('about-editor')) {
         initializeEditors();
     }

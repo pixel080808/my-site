@@ -122,9 +122,15 @@ const csrfProtection = csurf({
     }
 });
 
-// Застосовуємо CSRF-захист лише до потрібних маршрутів (пізніше в коді)
 app.use(cors({
-    origin: 'https://mebli.onrender.com',
+    origin: (origin, callback) => {
+        const allowedOrigins = ['https://mebli.onrender.com', 'http://localhost:3000'];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
@@ -502,14 +508,14 @@ wss.on('connection', (ws, req) => {
     ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
 });
 
-// Маршрут для отримання CSRF-токена (без CSRF-захисту, щоб уникнути рекурсії)
-app.get('/api/csrf-token', (req, res) => {
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
     try {
         const token = req.csrfToken();
+        logger.info('Згенеровано CSRF-токен:', token);
         res.json({ csrfToken: token });
     } catch (err) {
         logger.error('Помилка генерації CSRF-токена:', err);
-        res.status(500).json({ error: 'Не вдалося згенерувати CSRF-токен' });
+        res.status(500).json({ error: 'Не вдалося згенерувати CSRF-токен', details: err.message });
     }
 });
 
@@ -1481,6 +1487,21 @@ app.post('/api/import/orders', authenticateToken, csrfProtection, importUpload.s
     }
 });
 
+app.get('*', (req, res) => {
+    logger.info(`Отримано запит на ${req.path}, відправляємо index.html`);
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            logger.error('Помилка при відправці index.html:', err);
+            res.status(500).send('Помилка при відображенні index.html');
+        }
+    });
+});
+
+app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+    next();
+});
+
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
@@ -1504,21 +1525,6 @@ app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
         logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`);
         res.status(401).json({ error: 'Невірні дані для входу', message: 'Невірні дані для входу' });
     }
-});
-
-app.get('*', (req, res) => {
-    logger.info(`Отримано запит на ${req.path}, відправляємо index.html`);
-    res.sendFile(indexPath, (err) => {
-        if (err) {
-            logger.error('Помилка при відправці index.html:', err);
-            res.status(500).send('Помилка при відображенні index.html');
-        }
-    });
-});
-
-app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
-    next();
 });
 
 app.use((err, req, res, next) => {
