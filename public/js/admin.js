@@ -246,7 +246,6 @@ async function fetchWithAuth(url, options = {}) {
             throw new Error('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
         }
 
-        // Отримуємо CSRF-токен
         const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
@@ -276,12 +275,11 @@ async function fetchWithAuth(url, options = {}) {
 
         if (!response.ok) {
             const text = await response.text();
+            console.error(`Помилка запиту до ${url}: ${response.status} ${text}`);
             if (response.status === 401 || response.status === 403) {
                 const refreshed = await refreshToken();
                 if (refreshed) {
-                    // Повторюємо запит із новим токеном
                     const newToken = localStorage.getItem('adminToken');
-                    // Отримуємо новий CSRF-токен
                     const newCsrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
                         method: 'GET',
                         credentials: 'include'
@@ -944,12 +942,8 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
                         const token = localStorage.getItem('adminToken');
                         const formData = new FormData();
                         formData.append('file', file);
-                        const response = await fetch('/api/upload', {
+                        const response = await fetchWithAuth('/api/upload', {
                             method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            },
-                            credentials: 'include',
                             body: formData
                         });
 
@@ -2099,77 +2093,42 @@ async function addCategory() {
     }
 
 async function addSubcategory() {
-    try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
-        const name = document.getElementById('subcat-name').value;
-        const slug = document.getElementById('subcat-slug').value;
-        const imgUrl = document.getElementById('subcat-img-url').value;
-        const imgFile = document.getElementById('subcat-img-file').files[0];
-        const categoryName = document.getElementById('subcat-category').value;
-
-        if (!name || !slug || !categoryName) {
-            showNotification('Введіть назву, шлях та виберіть категорію!');
-            return;
-        }
-
-        let imageUrl = imgUrl;
-        if (imgFile) {
-            const validation = validateFile(imgFile);
-            if (!validation.valid) {
-                showNotification(validation.error);
+    const categoryName = document.getElementById('category-name').value;
+    const subcategoryName = document.getElementById('subcategory-name').value.trim();
+    if (categoryName && subcategoryName) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
                 return;
             }
-            const formData = new FormData();
-            formData.append('file', imgFile);
-            const token = localStorage.getItem('adminToken');
-            const uploadResponse = await fetch('/api/upload', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
-                body: formData
-            });
-            const uploadData = await uploadResponse.json();
-            if (uploadData.url) {
-                imageUrl = uploadData.url;
-            } else {
-                throw new Error('Не вдалося завантажити зображення');
+            const category = categories.find(c => c.name === categoryName);
+            if (!category || !category._id) {
+                showNotification('Категорію не знайдено або відсутній ID!');
+                return;
             }
+            const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
+                method: 'POST',
+                body: JSON.stringify({ name: subcategoryName })
+            });
+            const updatedCategory = await response.json();
+            const existingCategory = categories.find(c => c._id === category._id);
+            if (existingCategory) {
+                existingCategory.subcategories = updatedCategory.subcategories;
+            } else {
+                categories.push(updatedCategory);
+            }
+            document.getElementById('subcategory-name').value = '';
+            renderCategoriesAdmin();
+            showNotification('Підкатегорію додано!');
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка додавання підкатегорії:', err);
+            showNotification('Помилка додавання підкатегорії: ' + err.message);
         }
-
-        // Формуємо об’єкт підкатегорії без поля image, якщо сервер його не підтримує
-        const subcategory = { name, slug };
-        // Якщо сервер підтримує поле img, можна додати:
-        // subcategory.img = imageUrl;
-
-        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(categoryName)}/subcategories`, {
-            method: 'POST',
-            body: JSON.stringify(subcategory)
-        });
-
-        const updatedCategory = await response.json();
-        const categoryIndex = categories.findIndex(c => c.name === categoryName);
-        if (categoryIndex !== -1) {
-            categories[categoryIndex] = updatedCategory;
-        }
-        renderCategoriesAdmin();
-        document.getElementById('subcat-name').value = '';
-        document.getElementById('subcat-slug').value = '';
-        document.getElementById('subcat-img-url').value = '';
-        document.getElementById('subcat-img-file').value = '';
-        document.getElementById('subcat-category').value = '';
-        showNotification('Підкатегорію додано!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання підкатегорії:', err);
-        showNotification('Помилка додавання підкатегорії: ' + err.message);
+    } else {
+        alert('Виберіть категорію та введіть назву підкатегорії!');
     }
 }
 
@@ -2752,14 +2711,10 @@ async function addSlide() {
             }
             const formData = new FormData();
             formData.append('file', imgFile);
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
-                body: formData
-            });
+	        const response = await fetchWithAuth('/api/upload', {
+    	        method: 'POST',
+    	    body: formData
+	    });
             if (!response.ok) {
                 throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
             }
@@ -3575,17 +3530,10 @@ async function saveNewProduct() {
 
         const token = localStorage.getItem('adminToken');
 
-        // Перевірка унікальності шляху
-        try {
-            const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-            const existingProducts = await slugCheck.json();
-            if (existingProducts.some(p => p.slug === slug)) {
-                showNotification('Шлях товару має бути унікальним!');
-                return;
-            }
-        } catch (err) {
-            console.error('Помилка перевірки унікальності шляху:', err);
-            showNotification('Помилка перевірки шляху: ' + err.message);
+        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+        const existingProducts = await slugCheck.json();
+        if (existingProducts.some(p => p.slug === slug)) {
+            showNotification('Шлях товару має бути унікальним!');
             return;
         }
 
@@ -3604,7 +3552,6 @@ async function saveNewProduct() {
             return;
         }
 
-        // Додавання бренду, якщо його немає
         if (brand && !brands.includes(brand)) {
             try {
                 const response = await fetchWithAuth('/api/brands', {
@@ -3620,7 +3567,6 @@ async function saveNewProduct() {
             }
         }
 
-        // Додавання матеріалу, якщо його немає
         if (material && !materials.includes(material)) {
             try {
                 const response = await fetchWithAuth('/api/materials', {
@@ -3665,7 +3611,6 @@ async function saveNewProduct() {
             visible: visible
         };
 
-        // Обробка зображень у описі
         const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(description, 'text/html');
@@ -3679,12 +3624,8 @@ async function saveNewProduct() {
                     const blob = await response.blob();
                     const formData = new FormData();
                     formData.append('file', blob, `description-image-${Date.now()}.png`);
-                    const uploadResponse = await fetch('/api/upload', {
+                    const uploadResponse = await fetchWithAuth('/api/upload', {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
-                        credentials: 'include',
                         body: formData
                     });
                     const uploadData = await uploadResponse.json();
@@ -3707,7 +3648,6 @@ async function saveNewProduct() {
         });
         product.description = updatedDescription;
 
-        // Завантаження основних фото
         const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
         for (let file of photoFiles) {
             const validation = validateFile(file);
@@ -3718,17 +3658,10 @@ async function saveNewProduct() {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                const response = await fetch('/api/upload', {
+                const response = await fetchWithAuth('/api/upload', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    credentials: 'include',
                     body: formData
                 });
-                if (!response.ok) {
-                    throw new Error(`Помилка завантаження фото: ${response.statusText}`);
-                }
                 const data = await response.json();
                 product.photos.push(data.url);
             } catch (err) {
@@ -3740,7 +3673,6 @@ async function saveNewProduct() {
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        // Завантаження фото кольорів
         for (let i = 0; i < newProduct.colors.length; i++) {
             const color = newProduct.colors[i];
             if (color.photo instanceof File) {
@@ -3752,17 +3684,10 @@ async function saveNewProduct() {
                 try {
                     const formData = new FormData();
                     formData.append('file', color.photo);
-                    const response = await fetch('/api/upload', {
+                    const response = await fetchWithAuth('/api/upload', {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
-                        credentials: 'include',
                         body: formData
                     });
-                    if (!response.ok) {
-                        throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
-                    }
                     const data = await response.json();
                     product.colors[i].photo = data.url;
                 } catch (err) {
@@ -3775,7 +3700,6 @@ async function saveNewProduct() {
             }
         }
 
-        // Збереження товару (без поля id, нехай сервер генерує)
         const response = await fetchWithAuth('/api/products', {
             method: 'POST',
             body: JSON.stringify(product)
@@ -3794,16 +3718,15 @@ async function saveNewProduct() {
     }
 }
 
-function openEditProductModal(productId) {
-    const product = products.find(p => p.id === productId);
+async function openEditProductModal(productId) {
+    const product = products.find(p => p._id === productId);
     if (product) {
         newProduct = { ...product, colors: [...product.colors], photos: [...product.photos], sizes: [...product.sizes], groupProducts: [...product.groupProducts] };
-        // Екрануємо лапки для HTML, замінюючи " на &quot;
         const escapedName = product.name.replace(/"/g, '&quot;');
         const modal = document.getElementById('modal');
         modal.innerHTML = `
             <div class="modal-content">
-                <h3>Редагувати товар #${product.id}</h3>
+                <h3>Редагувати товар #${product.id || product._id}</h3>
                 <select id="product-type" onchange="updateProductType()">
                     <option value="simple" ${product.type === 'simple' ? 'selected' : ''}>Простий товар</option>
                     <option value="mattresses" ${product.type === 'mattresses' ? 'selected' : ''}>Матраци</option>
@@ -3885,14 +3808,13 @@ function openEditProductModal(productId) {
                     <div id="group-product-list"></div>
                 </div>
                 <div class="modal-actions">
-                    <button onclick="saveEditedProduct(${product.id})">Зберегти</button>
+                    <button onclick="saveEditedProduct('${product._id}')">Зберегти</button>
                     <button onclick="closeModal()">Скасувати</button>
                 </div>
             </div>
         `;
         modal.classList.add('active');
         updateProductType();
-        // Передаємо description і descriptionDelta для редагування товару
         initializeProductEditor(product.description || '', product.descriptionDelta || null);
         document.getElementById('product-category').addEventListener('change', updateSubcategories);
         updateSubcategories();
@@ -3905,7 +3827,6 @@ function openEditProductModal(productId) {
         renderMattressSizes();
         renderGroupProducts();
 
-        // Обробник для відображення прев’ю основних фото
         const photoInput = document.getElementById('product-photo-file');
         photoInput.addEventListener('change', () => {
             const files = photoInput.files;
@@ -3918,7 +3839,6 @@ function openEditProductModal(productId) {
             resetInactivityTimer();
         });
 
-        // Обробник для відображення прев’ю фото кольорів
         const colorPhotoInput = document.getElementById('product-color-photo-file');
         colorPhotoInput.addEventListener('change', () => {
             const file = colorPhotoInput.files[0];
@@ -3978,17 +3898,16 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Перевірка унікальності шляху
-        try {
-            const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-            const existingProducts = await slugCheck.json();
-            if (existingProducts.some(p => p.slug === slug && p.id !== productId)) {
-                showNotification('Шлях товару має бути унікальним!');
-                return;
-            }
-        } catch (err) {
-            console.error('Помилка перевірки унікальності:', err);
-            showNotification('Помилка перевірки унікальності: ' + err.message);
+        const productObj = products.find(p => p._id === productId);
+        if (!productObj || !productObj._id) {
+            showNotification('Товар не знайдено або відсутній ID!');
+            return;
+        }
+
+        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+        const existingProducts = await slugCheck.json();
+        if (existingProducts.some(p => p.slug === slug && p._id !== productId)) {
+            showNotification('Шлях товару має бути унікальним!');
             return;
         }
 
@@ -4119,9 +4038,6 @@ async function saveEditedProduct(productId) {
                     method: 'POST',
                     body: formData
                 });
-                if (!response.ok) {
-                    throw new Error(`Помилка завантаження фото: ${response.statusText}`);
-                }
                 const data = await response.json();
                 product.photos.push(data.url);
             } catch (err) {
@@ -4148,9 +4064,6 @@ async function saveEditedProduct(productId) {
                         method: 'POST',
                         body: formData
                     });
-                    if (!response.ok) {
-                        throw new Error(`Помилка завантаження фото кольору: ${response.statusText}`);
-                    }
                     const data = await response.json();
                     product.colors[i].photo = data.url;
                 } catch (err) {
@@ -4167,7 +4080,7 @@ async function saveEditedProduct(productId) {
         });
 
         const updatedProduct = await response.json();
-        const index = products.findIndex(p => p.id === productId);
+        const index = products.findIndex(p => p._id === productId);
         if (index !== -1) {
             products[index] = updatedProduct;
         } else {
