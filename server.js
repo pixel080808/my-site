@@ -1514,7 +1514,7 @@ app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
         return res.status(400).json({ error: 'Логін і пароль обов’язкові', message: 'Логін і пароль обов’язкові' });
     }
 
-    if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD)) {
+    if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
         const token = jwt.sign(
             { userId: username, username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
