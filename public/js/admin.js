@@ -66,16 +66,22 @@ function validateFile(file, type = 'image') {
     return { valid: true };
 }
 
-async function getCsrfToken() {
+sync function getCsrfToken() {
     try {
         const response = await fetch('/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
         if (!response.ok) {
+            console.error('Помилка запиту CSRF-токена:', response.status, response.statusText);
             throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
         }
         const data = await response.json();
+        if (!data.csrfToken) {
+            console.error('CSRF-токен не повернуто сервером:', data);
+            throw new Error('CSRF-токен не повернуто сервером');
+        }
+        console.log('Успішно отримано CSRF-токен:', data.csrfToken);
         return data.csrfToken;
     } catch (e) {
         console.error('Помилка отримання CSRF-токена:', e);
@@ -960,8 +966,6 @@ async function checkAuth() {
 
 checkAuth();
 
-
-
     // Функції для роботи з модальним вікном зміни розмірів
     function openResizeModal(media) {
         // Знітаємо виділення з попереднього елемента
@@ -1603,7 +1607,7 @@ async function login() {
         }
 
         const data = await response.json();
-        console.log('Отримано дані авторизації:', data); // Логування для дебагу
+        console.log('Отримано дані авторизації:', data);
         const token = data.token;
 
         if (!token) {
@@ -1611,7 +1615,7 @@ async function login() {
         }
 
         localStorage.setItem('adminToken', token);
-        console.log('Токен збережено:', localStorage.getItem('adminToken')); // Логування для дебагу
+        console.log('Токен збережено:', localStorage.getItem('adminToken'));
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
 
@@ -1696,6 +1700,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.warn("Елемент 'admin-password' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
+    }
+
+    // Додаємо обробник для кнопки addSlide з дебонсінгом
+    const slideImgFile = document.getElementById('slide-img-file');
+    if (slideImgFile) {
+        const addSlideButton = slideImgFile.parentElement?.querySelector('button[onclick="addSlide()"]');
+        if (addSlideButton) {
+            addSlideButton.onclick = debounce(addSlide, 300);
+        } else {
+            console.warn("Кнопка 'addSlide' не знайдена в DOM. Переконайтеся, що кнопка присутня в HTML.");
+        }
+    } else {
+        console.warn("Елемент 'slide-img-file' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
     }
 });
 
@@ -3238,8 +3255,96 @@ function debounce(func, wait) {
 
 const debouncedSearchGroupProducts = debounce(searchGroupProducts, 300);
 
+async function getCsrfToken() {
+    try {
+        const response = await fetch('/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            console.error('Помилка запиту CSRF-токена:', response.status, response.statusText);
+            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (!data.csrfToken) {
+            console.error('CSRF-токен не повернуто сервером:', data);
+            throw new Error('CSRF-токен не повернуто сервером');
+        }
+        console.log('Успішно отримано CSRF-токен:', data.csrfToken);
+        return data.csrfToken;
+    } catch (e) {
+        console.error('Помилка отримання CSRF-токена:', e);
+        showNotification('Не вдалося отримати CSRF-токен: ' + e.message);
+        return null;
+    }
+}
+
+async function login() {
+    const username = document.getElementById('admin-username').value;
+    const password = document.getElementById('admin-password').value;
+
+    if (!username || !password) {
+        showNotification('Введіть логін і пароль!');
+        return;
+    }
+
+    try {
+        const csrfToken = await getCsrfToken();
+        if (!csrfToken) {
+            showNotification('Не вдалося отримати CSRF-токен.');
+            return;
+        }
+
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Помилка входу: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Помилка входу: ${response.status} ${text}`);
+            }
+        }
+
+        const data = await response.json();
+        console.log('Отримано дані авторизації:', data);
+        const token = data.token;
+
+        if (!token) {
+            throw new Error('Токен не отримано від сервера');
+        }
+
+        localStorage.setItem('adminToken', token);
+        console.log('Токен збережено:', localStorage.getItem('adminToken'));
+        session = { isActive: true, timestamp: Date.now() };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+
+        showSection('admin-panel');
+        await initializeData();
+        connectAdminWebSocket();
+        resetInactivityTimer();
+        showNotification('Вхід виконано успішно!');
+    } catch (e) {
+        console.error('Помилка входу:', e);
+        showNotification('Помилка входу: ' + e.message);
+    }
+}
+
 async function addSlide() {
     const button = document.querySelector('button[onclick="addSlide()"]');
+    if (!button) {
+        showNotification('Кнопка додавання слайду не знайдена!');
+        return;
+    }
     button.disabled = true;
     try {
         const tokenRefreshed = await refreshToken();
@@ -3265,7 +3370,6 @@ async function addSlide() {
         const token = localStorage.getItem('adminToken');
         let imageUrl = imgUrl;
 
-        // Завантаження зображення, якщо вибрано файл
         if (imgFile) {
             const validation = validateFile(imgFile);
             if (!validation.valid) {
@@ -3290,7 +3394,7 @@ async function addSlide() {
         }
 
         const slide = {
-            img: imageUrl, // Змінено з image
+            img: imageUrl,
             title: title || '',
             text: text || '',
             link: link || '',
@@ -3310,7 +3414,6 @@ async function addSlide() {
         unsavedChanges = false;
         resetInactivityTimer();
 
-        // Очистка полів
         document.getElementById('slide-img-url').value = '';
         document.getElementById('slide-img-file').value = '';
         document.getElementById('slide-title').value = '';
@@ -3318,7 +3421,7 @@ async function addSlide() {
         document.getElementById('slide-link').value = '';
         document.getElementById('slide-link-text').value = '';
         document.getElementById('slide-order').value = '';
-} catch (err) {
+    } catch (err) {
         console.error('Помилка додавання слайду:', err);
         showNotification('Не вдалося додати слайд: ' + err.message);
     } finally {
@@ -3326,8 +3429,75 @@ async function addSlide() {
     }
 }
 
-// Додаємо обробник з дебонсінгом до кнопки
-document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
+document.addEventListener('DOMContentLoaded', () => {
+    const storedSession = localStorage.getItem('adminSession');
+    const token = localStorage.getItem('adminToken');
+
+    if (storedSession && token) {
+        session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+        if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+            showSection('admin-panel');
+            initializeData();
+            connectAdminWebSocket();
+            resetInactivityTimer();
+        } else {
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-login');
+        }
+    } else {
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
+    }
+
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    } else {
+        console.warn("Елемент 'login-btn' не знайдено в DOM. Переконайтеся, що кнопка входу присутня в HTML.");
+    }
+
+    const usernameInput = document.getElementById('admin-username');
+    const passwordInput = document.getElementById('admin-password');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (passwordInput) {
+                    passwordInput.focus();
+                } else {
+                    login();
+                }
+            }
+        });
+    } else {
+        console.warn("Елемент 'admin-username' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    } else {
+        console.warn("Елемент 'admin-password' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
+    }
+
+    const slideImgFile = document.getElementById('slide-img-file');
+    if (slideImgFile) {
+        const addSlideButton = slideImgFile.parentElement?.querySelector('button[onclick="addSlide()"]');
+        if (addSlideButton) {
+            addSlideButton.onclick = debounce(addSlide, 300);
+        } else {
+            console.warn("Кнопка 'addSlide' не знайдена в DOM. Переконайтеся, що кнопка присутня в HTML.");
+        }
+    } else {
+        console.warn("Елемент 'slide-img-file' не знайдено в DOM. Переконайтеся, що поле введення присутнє в HTML.");
+    }
+});
 
     function editSlide(order) {
         const slide = slides.find(s => s.order === order);
