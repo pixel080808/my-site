@@ -263,9 +263,13 @@ async function fetchWithAuth(url, options = {}) {
         const headers = {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken
         };
+
+        // Не додаємо Content-Type для multipart/form-data
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
 
         const response = await fetch(url, {
             ...options,
@@ -287,14 +291,18 @@ async function fetchWithAuth(url, options = {}) {
                     const newCsrfData = await newCsrfResponse.json();
                     const newCsrfToken = newCsrfData.csrfToken;
 
+                    const retryHeaders = {
+                        ...options.headers,
+                        'Authorization': `Bearer ${newToken}`,
+                        'X-CSRF-Token': newCsrfToken
+                    };
+                    if (!(options.body instanceof FormData)) {
+                        retryHeaders['Content-Type'] = 'application/json';
+                    }
+
                     const retryResponse = await fetch(url, {
                         ...options,
-                        headers: {
-                            ...options.headers,
-                            'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': newCsrfToken
-                        },
+                        headers: retryHeaders,
                         credentials: 'include'
                     });
                     if (!retryResponse.ok) {
@@ -1422,13 +1430,15 @@ async function updateContacts() {
         settings.contacts.addresses = document.getElementById('contact-addresses').value;
         settings.contacts.schedule = document.getElementById('contact-schedule').value;
 
-        // Очищаємо об’єкт settings від системних полів
-        const { _id, __v, updatedAt, createdAt, storeName, ...cleanedSettings } = settings;
+        // Оновлюємо поле name замість storeName
+        const updatedSettings = {
+            ...settings,
+            name: settings.storeName || settings.name || '', // Використовуємо name
+            contacts: settings.contacts
+        };
 
-        // Перейменовуємо storeName на name, якщо сервер очікує "name"
-        if (storeName) {
-            cleanedSettings.name = storeName;
-        }
+        // Видаляємо системні поля та storeName
+        const { _id, __v, updatedAt, createdAt, storeName, ...cleanedSettings } = updatedSettings;
 
         console.log('Надсилаємо контакти:', cleanedSettings);
 
@@ -1936,13 +1946,9 @@ async function addCategory() {
             }
             const formData = new FormData();
             formData.append('file', imgFile);
-            const token = localStorage.getItem('adminToken');
-            const uploadResponse = await fetch('/api/upload', {
+            // Використовуємо fetchWithAuth для безпеки
+            const uploadResponse = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
                 body: formData
             });
             const uploadData = await uploadResponse.json();
@@ -1953,7 +1959,7 @@ async function addCategory() {
             }
         }
 
-        const category = { name, slug, image: imageUrl, subcategories: [] };
+        const category = { name, slug, image: imageUrl || '', subcategories: [] };
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
             body: JSON.stringify(category)
@@ -1962,11 +1968,12 @@ async function addCategory() {
         const newCategory = await response.json();
         categories.push(newCategory);
         renderCategoriesAdmin();
+        showNotification('Категорію додано!');
+        // Очищаємо поля
         document.getElementById('cat-name').value = '';
         document.getElementById('cat-slug').value = '';
         document.getElementById('cat-img-url').value = '';
         document.getElementById('cat-img-file').value = '';
-        showNotification('Категорію додано!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання категорії:', err);
@@ -2376,6 +2383,16 @@ async function loadFilters() {
 }
 
 async function addFilter() {
+    const label = document.getElementById('filter-label').value;
+    const name = document.getElementById('filter-name').value;
+    const type = document.getElementById('filter-type').value;
+    const optionsInput = document.getElementById('filter-options').value;
+
+    if (!label || !name || !type || !optionsInput) {
+        showNotification('Заповніть усі поля фільтра!');
+        return;
+    }
+
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2384,16 +2401,9 @@ async function addFilter() {
             return;
         }
 
-        const name = document.getElementById('filter-name').value;
-        const label = document.getElementById('filter-label').value;
-        const options = document.getElementById('filter-options').value.split(',').map(opt => opt.trim());
+        const options = optionsInput.split(',').map(o => o.trim()).filter(o => o);
+        const filter = { label, name, type, options };
 
-        if (!name || !label || options.length === 0 || options[0] === '') {
-            showNotification('Введіть назву, відображувану назву та опції фільтру!');
-            return;
-        }
-
-        const filter = { name, label, type: 'checkbox', options };
         filters.push(filter);
 
         const token = localStorage.getItem('adminToken');
@@ -2404,17 +2414,15 @@ async function addFilter() {
         });
 
         renderFilters();
-        document.getElementById('filter-name').value = '';
-        document.getElementById('filter-label').value = '';
-        document.getElementById('filter-options').value = '';
         showNotification('Фільтр додано!');
+        document.getElementById('filter-label').value = '';
+        document.getElementById('filter-name').value = '';
+        document.getElementById('filter-type').value = '';
+        document.getElementById('filter-options').value = '';
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка збереження фільтра:', err);
-        showNotification('Помилка збереження фільтра: ' + err.message);
-        // Відкатимо зміни у разі помилки
-        filters.pop();
-        renderFilters();
+        showNotification('Не вдалося зберегти фільтр: ' + err.message);
     }
 }
 
@@ -4108,7 +4116,7 @@ async function deleteProduct(productId) {
                 throw new Error('Помилка при видаленні товару: ' + response.statusText);
             }
 
-            products = products.filter(p => p.id !== productId);
+            products = products.filter(p => p._id !== productId); // Використовуємо _id
             products.forEach(p => {
                 if (p.type === 'group') {
                     p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
