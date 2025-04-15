@@ -18,11 +18,11 @@ const csurf = require('csurf');
 const winston = require('winston');
 
 // Імпортуємо моделі з окремих файлів
+const Settings = require('./models/Settings');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
-const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
@@ -363,6 +363,16 @@ const slideSchemaValidation = Joi.object({
 const server = app.listen(process.env.PORT || 3000, () => logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
 
+// Додаємо автоматичне очищення кошиків раз на 24 години
+setInterval(async () => {
+    try {
+        const deletedCount = await cleanupOldCarts();
+        logger.info(`Автоматичне очищення кошиків: видалено ${deletedCount} кошиків`);
+    } catch (err) {
+        logger.error('Помилка при автоматичному очищенні кошиків:', err);
+    }
+}, 24 * 60 * 60 * 1000); // Раз на 24 години
+
 function broadcast(type, data) {
     logger.info(`Трансляція даних типу ${type}:`);
     wss.clients.forEach(client => {
@@ -439,49 +449,53 @@ wss.on('connection', (ws, req) => {
         logger.info('Клієнт від’єднався від WebSocket');
     });
 
-    ws.on('message', async (message) => {
-        try {
-            const { type, action } = JSON.parse(message);
-            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
+ws.on('message', async (message) => {
+    try {
+        const { type, action } = JSON.parse(message);
+        logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
 
-            if (action === 'subscribe') {
-                ws.subscriptions.add(type);
-                logger.info(`Клієнт підписався на ${type}`);
+        if (action === 'subscribe') {
+            ws.subscriptions.add(type);
+            logger.info(`Клієнт підписався на ${type}`);
 
-                if (type === 'products') {
-                    const products = ws.isAdmin
-                        ? await Product.find()
-                        : await Product.find({ visible: true, active: true });
-                    ws.send(JSON.stringify({ type: 'products', data: products }));
-                } else if (type === 'settings') {
-                    const settings = await Settings.findOne();
-                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                } else if (type === 'categories') {
-                    const categories = await Category.find();
-                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                } else if (type === 'slides') {
-                    const slides = await Slide.find().sort({ order: 1 });
-                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                } else if (type === 'orders' && ws.isAdmin) {
-                    const orders = await Order.find();
-                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                } else if (type === 'materials' && ws.isAdmin) {
-                    const materials = await Material.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                } else if (type === 'brands' && ws.isAdmin) {
-                    const brands = await Brand.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
-                }
+            let dataToSend = null;
+            if (type === 'products') {
+                const products = ws.isAdmin
+                    ? await Product.find()
+                    : await Product.find({ visible: true, active: true });
+                dataToSend = { type: 'products', data: products };
+            } else if (type === 'settings') {
+                const settings = await Settings.findOne();
+                dataToSend = { type: 'settings', data: settings || {} };
+            } else if (type === 'categories') {
+                const categories = await Category.find();
+                dataToSend = { type: 'categories', data: categories };
+            } else if (type === 'slides') {
+                const slides = await Slide.find().sort({ order: 1 });
+                dataToSend = { type: 'slides', data: slides };
+            } else if (type === 'orders' && ws.isAdmin) {
+                const orders = await Order.find();
+                dataToSend = { type: 'orders', data: orders };
+            } else if (type === 'materials' && ws.isAdmin) {
+                const materials = await Material.find().distinct('name');
+                dataToSend = { type: 'materials', data: materials };
+            } else if (type === 'brands' && ws.isAdmin) {
+                const brands = await Brand.find().distinct('name');
+                dataToSend = { type: 'brands', data: brands };
+            } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+                dataToSend = { type: 'error', error: 'Доступ заборонено для публічних клієнтів' };
             }
-        } catch (err) {
-            logger.error('Помилка обробки WebSocket-повідомлення:', err);
+
+            if (dataToSend && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(dataToSend));
+            }
+        }
+    } catch (err) {
+        logger.error('Помилка обробки WebSocket-повідомлення:', err);
+        if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
         }
-    });
-
-    ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
+    }
 });
 
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
@@ -1066,7 +1080,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         delete settingsToSend._id;
         delete settingsToSend.__v;
 
-        broadcast('settings', settingsToSend);
+        broadcast('settings', settingsToSend); // Викликаємо broadcast тут
         res.json(settingsToSend);
     } catch (err) {
         logger.error('Помилка при оновленні налаштувань:', err);
@@ -1457,6 +1471,13 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
         res.json({ message: 'Дані сайту імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті даних сайту:', err);
+        if (req.file && req.file.path) {
+            try {
+                await fs.promises.unlink(req.file.path);
+            } catch (unlinkErr) {
+                logger.error('Не вдалося видалити файл після помилки:', unlinkErr);
+            }
+        }
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -1509,11 +1530,6 @@ app.get('*', (req, res) => {
             res.status(500).send('Помилка при відображенні index.html');
         }
     });
-});
-
-app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
-    next();
 });
 
 const loginLimiter = rateLimit({

@@ -1,32 +1,43 @@
-const express = require('express');
-const Settings = require('../models/Settings');
-const authenticateToken = require('../middleware/auth');
-const { broadcast } = require('../utils/websocket');
+const mongoose = require('mongoose');
 
-const router = express.Router();
+const settingsSchema = new mongoose.Schema({
+    name: { type: String, default: '' },
+    baseUrl: { type: String, default: '' },
+    logo: { type: String, default: '' },
+    logoWidth: { type: Number, default: 150 },
+    favicon: { type: String, default: '' },
+    contacts: {
+        phones: { type: String, default: '' },
+        addresses: { type: String, default: '' },
+        schedule: { type: String, default: '' }
+    },
+    socials: [{
+        name: { type: String, default: '' },
+        url: { type: String, required: true },
+        icon: { type: String, required: true }
+    }],
+    showSocials: { type: Boolean, default: true },
+    about: { type: String, default: '' },
+    categoryWidth: { type: Number, default: 0 },
+    categoryHeight: { type: Number, default: 0 },
+    productWidth: { type: Number, default: 0 },
+    productHeight: { type: Number, default: 0 },
+    filters: [{
+        name: { type: String, required: true },
+        label: { type: String, required: true },
+        type: { type: String, required: true },
+        options: { type: [String], default: [] }
+    }],
+    orderFields: [{
+        name: { type: String, required: true },
+        label: { type: String, required: true },
+        type: { type: String, required: true },
+        options: { type: [String], default: [] }
+    }],
+    slideWidth: { type: Number, default: 0 },
+    slideHeight: { type: Number, default: 0 },
+    slideInterval: { type: Number, default: 3000 },
+    showSlides: { type: Boolean, default: true }
+}, { timestamps: true });
 
-router.get('/', async (req, res) => {
-    try {
-        const settings = await Settings.findOne();
-        res.json(settings || {});
-    } catch (error) {
-        res.status(500).json({ error: 'Помилка сервера', details: error.message });
-    }
-});
-
-router.put('/', authenticateToken, async (req, res) => {
-    try {
-        const updateData = req.body;
-        const settings = await Settings.findOneAndUpdate(
-            {},
-            { $set: updateData },
-            { new: true, upsert: true, runValidators: true }
-        );
-        broadcast('settings', settings);
-        res.json(settings);
-    } catch (error) {
-        res.status(400).json({ error: 'Помилка оновлення налаштувань', details: error.message });
-    }
-});
-
-module.exports = router;
+module.exports = mongoose.model('Settings', settingsSchema);
