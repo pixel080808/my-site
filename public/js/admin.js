@@ -1879,50 +1879,56 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-    const slideList = document.getElementById('slide-list');
-    if (slideList) {
-        slideList.innerHTML = slides.map((slide, index) => `
-            <div>
-                ${slide.title || 'Без назви'} (${slide.order || 0})
-                <button class="edit-btn" onclick="editSlide(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSlide(${index})">Видалити</button>
+    const slidesList = document.getElementById('slides-list-admin');
+    if (!slidesList) {
+        console.warn('Елемент #slides-list-admin не знайдено');
+        return;
+    }
+
+    slidesList.innerHTML = slides
+        .sort((a, b) => a.order - b.order)
+        .map((slide, index) => `
+            <div class="slide-item">
+                <img src="${slide.url}" alt="Слайд ${index + 1}" style="max-width: 100px;">
+                <div>
+                    <strong>${slide.title || 'Без назви'}</strong><br>
+                    ${slide.text || ''}<br>
+                    ${slide.link ? `<a href="${slide.link}">${slide.linkText || 'Перейти'}</a>` : ''}
+                </div>
+                <button onclick="deleteSlide('${slide._id}')">Видалити</button>
+                <button onclick="editSlide('${slide._id}')">Редагувати</button>
             </div>
         `).join('');
+
+    // Очистка полів форми
+    const formInputs = [
+        'slide-img-url',
+        'slide-img-file',
+        'slide-title',
+        'slide-text',
+        'slide-link',
+        'slide-link-text',
+        'slide-order'
+    ];
+    formInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = '';
+        } else {
+            console.warn(`Елемент #${id} не знайдено`);
+        }
+    });
+
+    // Прив’язка обробника до кнопки
+    const addSlideBtn = document.getElementById('add-slide-btn');
+    if (addSlideBtn) {
+        addSlideBtn.onclick = debounce(addSlide, 300);
+    } else {
+        console.warn('Кнопка #add-slide-btn не знайдено');
     }
-    document.getElementById('slide-toggle').checked = settings.showSlides || false;
-    document.getElementById('slide-width').value = settings.slideWidth || '';
-    document.getElementById('slide-height').value = settings.slideHeight || '';
-    document.getElementById('slide-interval').value = settings.slideInterval || '';
+
+    resetInactivityTimer();
 }
-
-    function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        if (currentPage > 1) {
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = 'Попередня';
-            prevBtn.onclick = () => { currentPage--; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(prevBtn);
-        }
-
-        for (let i = 1; i <= totalPages; i++) {
-            const btn = document.createElement('button');
-            btn.textContent = i;
-            btn.className = i === currentPage ? 'active' : '';
-            btn.onclick = () => { currentPage = i; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(btn);
-        }
-
-        if (currentPage < totalPages) {
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Наступна';
-            nextBtn.onclick = () => { currentPage++; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(nextBtn);
-        }
-    }
 
 function closeModal() {
     const modal = document.getElementById('modal');
@@ -2136,6 +2142,7 @@ async function addSubcategory() {
     try {
         const categorySelect = document.getElementById('product-category');
         const subcategoryInput = document.getElementById('subcategory-name');
+
         if (!categorySelect || !subcategoryInput) {
             console.error('Елементи форми для підкатегорії не знайдено');
             showNotification('Помилка: форма для підкатегорії не знайдена');
@@ -2144,6 +2151,7 @@ async function addSubcategory() {
 
         const categoryName = categorySelect.value;
         const subcategoryName = subcategoryInput.value.trim();
+
         if (!categoryName || !subcategoryName) {
             showNotification('Виберіть категорію та введіть назву підкатегорії');
             return;
@@ -2846,94 +2854,170 @@ async function addSlide() {
     }
 }
 
-// Додаємо обробник з дебонсінгом до кнопки
-document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
-
-    function editSlide(order) {
-        const slide = slides.find(s => s.order === order);
-        if (slide) {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Редагувати слайд</h3>
-                    <input type="number" id="edit-slide-order" value="${slide.order}"><br/>
+async function editSlide(slideId) {
+    const slide = slides.find(s => s._id === slideId);
+    if (slide) {
+        const modal = document.getElementById('modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Редагувати слайд</h3>
+                <div class="form-group">
                     <label for="edit-slide-order">Порядковий номер</label>
-                    <input type="text" id="edit-slide-img-url" value="${slide.img || ''}"><br/>
-                    <label for="edit-slide-img-url">URL зображення</label>
-                    <input type="file" id="edit-slide-img-file" accept="image/*"><br/>
-                    <label for="edit-slide-img-file">Завантажте зображення</label>
-                    ${slide.img ? `<img src="${slide.img}" style="max-width: 100px;">` : ''}
-                    <input type="text" id="edit-slide-url" value="${slide.url}"><br/>
-                    <label for="edit-slide-url">Посилання</label>
-                    <div class="modal-actions">
-                        <button id="save-slide-btn">Зберегти</button>
-                        <button id="cancel-slide-btn">Скасувати</button>
-                    </div>
+                    <input type="number" id="edit-slide-order" value="${slide.order}" class="form-control">
                 </div>
-            `;
-            modal.classList.add('active');
-            document.getElementById('save-slide-btn').addEventListener('click', () => saveSlideEdit(order));
-            document.getElementById('cancel-slide-btn').addEventListener('click', closeModal);
-            resetInactivityTimer();
-        }
+                <div class="form-group">
+                    <label for="edit-slide-img-url">URL зображення</label>
+                    <input type="text" id="edit-slide-img-url" value="${slide.url || ''}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-slide-img-file">Завантажте зображення</label>
+                    <input type="file" id="edit-slide-img-file" accept="image/jpeg,image/png,image/gif,image/webp" class="form-control">
+                    ${slide.url ? `<img src="${slide.url}" style="max-width: 100px; margin-top: 10px;">` : ''}
+                </div>
+                <div class="form-group">
+                    <label for="edit-slide-title">Заголовок</label>
+                    <input type="text" id="edit-slide-title" value="${slide.title || ''}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-slide-text">Текст</label>
+                    <input type="text" id="edit-slide-text" value="${slide.text || ''}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-slide-link">Посилання</label>
+                    <input type="text" id="edit-slide-link" value="${slide.link || ''}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-slide-link-text">Текст посилання</label>
+                    <input type="text" id="edit-slide-link-text" value="${slide.linkText || ''}" class="form-control">
+                </div>
+                <div class="modal-actions">
+                    <button id="save-slide-btn">Зберегти</button>
+                    <button id="cancel-slide-btn">Скасувати</button>
+                </div>
+            </div>
+        `;
+        modal.classList.add('active');
+        document.getElementById('save-slide-btn').addEventListener('click', () => saveSlideEdit(slideId));
+        document.getElementById('cancel-slide-btn').addEventListener('click', closeModal);
+        resetInactivityTimer();
     }
+}
 
-    function saveSlideEdit(oldOrder) {
-        const newOrder = parseInt(document.getElementById('edit-slide-order').value);
-        const newImgUrl = document.getElementById('edit-slide-img-url').value;
-        const newImgFile = document.getElementById('edit-slide-img-file').files[0];
-        const newUrl = document.getElementById('edit-slide-url').value;
-
-        if (isNaN(newOrder)) {
-            alert('Введіть порядковий номер слайду!');
+async function saveSlideEdit(slideId) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Увійдіть знову.');
+            showSection('admin-login');
             return;
         }
 
-        const slide = slides.find(s => s.order === oldOrder);
-        if (slide) {
-            slide.order = newOrder;
-            slide.url = newUrl || '#';
-            if (newImgUrl) slide.img = newImgUrl;
+        const orderInput = document.getElementById('edit-slide-order');
+        const imgUrlInput = document.getElementById('edit-slide-img-url');
+        const imgFileInput = document.getElementById('edit-slide-img-file');
+        const titleInput = document.getElementById('edit-slide-title');
+        const textInput = document.getElementById('edit-slide-text');
+        const linkInput = document.getElementById('edit-slide-link');
+        const linkTextInput = document.getElementById('edit-slide-link-text');
 
-            if (newImgFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    slide.img = e.target.result;
-                    slides = slides.filter(s => s.order !== oldOrder);
-                    slides.push(slide);
-                    slides.sort((a, b) => a.order - b.order);
-                    localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                    closeModal();
-                    renderAdmin();
-                    showNotification('Слайд відредаговано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(newImgFile);
-            } else {
-                slides = slides.filter(s => s.order !== oldOrder);
-                slides.push(slide);
-                slides.sort((a, b) => a.order - b.order);
-                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                closeModal();
-                renderAdmin();
-                showNotification('Слайд відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            }
+        if (!orderInput || !imgUrlInput || !imgFileInput || !titleInput || !textInput || !linkInput || !linkTextInput) {
+            showNotification('Помилка: форма редагування слайду не знайдена');
+            return;
         }
-    }
 
-    function deleteSlide(order) {
-        if (confirm('Ви впевнені, що хочете видалити цей слайд?')) {
-            slides = slides.filter(s => s.order !== order);
-            localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-            renderAdmin();
+        const newOrder = parseInt(orderInput.value);
+        const newImgUrl = imgUrlInput.value.trim();
+        const newImgFile = imgFileInput.files[0];
+        const newTitle = titleInput.value.trim();
+        const newText = textInput.value.trim();
+        const newLink = linkInput.value.trim();
+        const newLinkText = linkTextInput.value.trim();
+
+        if (isNaN(newOrder)) {
+            showNotification('Введіть коректний порядковий номер слайду!');
+            return;
+        }
+
+        let imageUrl = newImgUrl;
+
+        // Завантаження нового зображення, якщо вибрано файл
+        if (newImgFile) {
+            const validation = validateFile(newImgFile);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', newImgFile);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) {
+                throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
+            }
+            const data = await response.json();
+            imageUrl = data.url;
+        }
+
+        const updatedSlide = {
+            url: imageUrl || slides.find(s => s._id === slideId).url,
+            title: newTitle || '',
+            text: newText || '',
+            link: newLink || '',
+            linkText: newLinkText || '',
+            order: newOrder,
+        };
+
+        const response = await fetchWithAuth(`/api/slides/${slideId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedSlide),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Не вдалося оновити слайд: ${response.statusText}`);
+        }
+
+        // Чекаємо WebSocket-оновлення замість ручного оновлення slides
+        closeModal();
+        showNotification('Слайд відредаговано!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка редагування слайду:', err);
+        showNotification('Не вдалося відредагувати слайд: ' + err.message);
+    }
+}
+
+async function deleteSlide(slideId) {
+    if (confirm('Ви впевнені, що хочете видалити цей слайд?')) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній. Увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            const response = await fetchWithAuth(`/api/slides/${slideId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Не вдалося видалити слайд: ${response.statusText}`);
+            }
+
+            slides = slides.filter(s => s._id !== slideId);
+            renderSlidesAdmin();
             showNotification('Слайд видалено!');
             unsavedChanges = false;
             resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка видалення слайду:', err);
+            showNotification('Не вдалося видалити слайд: ' + err.message);
         }
     }
+}
 
     function toggleSlideshow() {
         settings.showSlides = document.getElementById('slide-toggle').checked;

@@ -908,16 +908,33 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
     try {
         const slideData = req.body;
 
+        // Валідація даних
         const { error } = slideSchemaValidation.validate(slideData);
         if (error) {
             logger.error('Помилка валідації слайду:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const slide = await Slide.findOneAndUpdate({ id: req.params.id }, slideData, { new: true });
-        if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
+        // Перевірка обов’язкового поля url
+        if (!slideData.url) {
+            return res.status(400).json({ error: 'URL зображення є обов’язковим' });
+        }
+
+        // Оновлення слайду за _id
+        const slide = await Slide.findByIdAndUpdate(
+            req.params.id,
+            slideData,
+            { new: true, runValidators: true }
+        );
+
+        if (!slide) {
+            return res.status(404).json({ error: 'Слайд не знайдено' });
+        }
+
+        // Оновлення всіх слайдів для WebSocket
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
+
         res.json(slide);
     } catch (err) {
         logger.error('Помилка при оновленні слайду:', err);
