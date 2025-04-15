@@ -698,7 +698,6 @@ function setDefaultVideoSizes(editor, editorId) {
     });
     document.getElementById(editorId).value = editor.root.innerHTML;
     unsavedChanges = true;
-    resetInactivityTimer(); // Додаємо виклик
 }
 
 function initializeEditors() {
@@ -5035,10 +5034,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addEventDelegations();
 });
 
-function connectAdminWebSocket() {
+function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mebli.onrender.com';
     const maxAttempts = 5;
-    let attempt = 1; // Зробимо attempt локальною змінною
 
     const connect = async () => {
         const token = localStorage.getItem('adminToken');
