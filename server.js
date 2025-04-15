@@ -1,3 +1,4 @@
+const authenticateToken = require('./middleware/auth');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const express = require('express');
@@ -357,29 +358,6 @@ const slideSchemaValidation = Joi.object({
     linkText: Joi.string().allow(''),
     order: Joi.number().default(0)
 });
-
-// Мідлвер для аутентифікації
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) {
-        logger.info('Токен відсутній у запиті:', req.path, 'Заголовки:', req.headers);
-        return res.status(401).json({ error: 'Доступ заборонено. Токен відсутній.' });
-    }
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            logger.info('Недостатньо прав:', req.path, 'Декодовані дані:', decoded);
-            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
-        }
-        logger.info('Токен верифіковано для шляху:', req.path, 'Декодовані дані:', decoded);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        logger.error('Помилка верифікації токена:', req.path, 'Токен:', token, 'Помилка:', err.message);
-        return res.status(401).json({ error: 'Недійсний або прострочений токен', details: err.message });
-    }
-};
 
 // Налаштування WebSocket
 const server = app.listen(process.env.PORT || 3000, () => logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`));
