@@ -22,7 +22,7 @@ router.put('/', authenticateToken, async (req, res) => {
             { $set: updateData },
             { new: true, upsert: true, runValidators: true }
         );
-        broadcast('settings', settings);
+        broadcast(req.app.get('wss'), 'settings', settings); // Передаємо wss через req.app
         res.json(settings);
     } catch (error) {
         res.status(400).json({ error: 'Помилка оновлення налаштувань', details: error.message });
