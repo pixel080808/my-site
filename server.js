@@ -603,14 +603,16 @@ app.get('/api/public/slides', async (req, res) => {
 
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
-        const { slug } = req.query;
-        logger.info(`GET /api/products: slug=${slug}, user=${req.user.username}`);
+        const { slug, page = 1, limit = 10 } = req.query; // Додаємо параметри пагінації
+        const skip = (page - 1) * limit;
+        logger.info(`GET /api/products: slug=${slug}, user=${req.user.username}, page=${page}, limit=${limit}`);
+        let query = {};
         if (slug) {
-            const products = await Product.find({ slug });
-            return res.json(products);
+            query.slug = slug;
         }
-        const products = await Product.find();
-        res.json(products);
+        const products = await Product.find(query).skip(skip).limit(parseInt(limit));
+        const total = await Product.countDocuments(query); // Отримуємо загальну кількість
+        res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
