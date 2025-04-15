@@ -1588,23 +1588,27 @@ async function updateAbout() {
     }
 }
 
-function renderPagination(total, currentPage, limit) {
-    const totalPages = Math.ceil(total / limit);
-    const paginationContainer = document.createElement('div');
-    paginationContainer.className = 'pagination';
-
-    for (let i = 1; i <= totalPages; i++) {
-        const pageButton = document.createElement('button');
-        pageButton.textContent = i;
-        pageButton.className = i === currentPage ? 'active' : '';
-        pageButton.onclick = () => {
-            currentPage = i;
-            loadProducts(currentPage, limit);
-        };
-        paginationContainer.appendChild(pageButton);
+function renderPagination(totalItems, itemsPerPage, currentPage, containerId, onPageChange) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.warn(`Контейнер для пагінації #${containerId} не знайдено`);
+        return;
     }
 
-    return paginationContainer;
+    let paginationHTML = '<div class="pagination">';
+    if (currentPage > 1) {
+        paginationHTML += `<button onclick="${onPageChange}(${currentPage - 1})">Попередня</button>`;
+    }
+    for (let i = 1; i <= totalPages; i++) {
+        paginationHTML += `<button class="${i === currentPage ? 'active' : ''}" onclick="${onPageChange}(${i})">${i}</button>`;
+    }
+    if (currentPage < totalPages) {
+        paginationHTML += `<button onclick="${onPageChange}(${currentPage + 1})">Наступна</button>`;
+    }
+    paginationHTML += '</div>';
+
+    container.innerHTML = paginationHTML;
 }
 
 function changeProductPage(page) {
@@ -3093,24 +3097,33 @@ async function saveSlideEdit(slideId) {
 }
 
 async function deleteSlide(slideId) {
+    if (!confirm('Ви впевнені, що хочете видалити цей слайд?')) return;
     try {
-        // Знаходимо слайд за числовим id, щоб отримати його _id
-        const slide = slides.find(s => s.id === parseInt(slideId));
-        if (!slide) {
-            console.error('Слайд не знайдено в локальному масиві:', slideId);
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Увійдіть знову.');
+            showSection('admin-login');
             return;
         }
-        const mongoId = slide._id; // Використовуємо MongoDB _id
-        const response = await fetchWithAuth(`/api/slides/${mongoId}`, {
+
+        if (!slideId.match(/^[0-9a-fA-F]{24}$/)) {
+            throw new Error('Невалідний ID слайду');
+        }
+
+        const response = await fetchWithAuth(`/api/slides/${slideId}`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            }
         });
-        console.log('Слайд видалено:', response);
-    } catch (error) {
-        console.error('Помилка видалення слайду:', error);
+
+        if (!response.ok) {
+            throw new Error(`Не вдалося видалити слайд: ${response.statusText}`);
+        }
+
+        showNotification('Слайд видалено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка видалення слайду:', err);
+        showNotification('Не вдалося видалити слайд: ' + err.message);
     }
 }
 
@@ -3890,8 +3903,8 @@ async function saveNewProduct(event) {
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
         const brand = brandInput.value.trim();
-        const category = categoryInput.value.trim(); // Додаємо .trim(), щоб уникнути пробілів
-        const subcategory = subcategoryInput.value.trim();
+        const category = categoryInput.value;
+        const subcategory = subcategoryInput.value;
         const material = materialInput.value.trim();
         let price = null;
         let salePrice = null;
@@ -3938,10 +3951,6 @@ async function saveNewProduct(event) {
             try {
                 const response = await fetchWithAuth('/api/brands', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
                     body: JSON.stringify({ name: brand }),
                 });
                 if (response.ok) {
@@ -3957,10 +3966,6 @@ async function saveNewProduct(event) {
             try {
                 const response = await fetchWithAuth('/api/materials', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
                     body: JSON.stringify({ name: material }),
                 });
                 if (response.ok) {
@@ -4092,10 +4097,6 @@ async function saveNewProduct(event) {
 
         const response = await fetchWithAuth('/api/products', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
-            },
             body: JSON.stringify(product),
         });
 
@@ -4507,19 +4508,33 @@ async function saveEditedProduct(productId) {
 }
 
 async function deleteProduct(productId) {
+    if (!confirm('Ви впевнені, що хочете видалити цей товар?')) return;
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+            throw new Error('Невалідний ID товару');
+        }
+
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            }
         });
-        console.log('Товар видалено:', response);
-        products = products.filter(p => p._id !== productId);
-        renderAdmin('products', settings);
-    } catch (error) {
-        console.error('Помилка при видаленні товару:', error);
+
+        if (!response.ok) {
+            throw new Error(`Не вдалося видалити товар: ${response.statusText}`);
+        }
+
+        showNotification('Товар видалено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при видаленні товару:', err);
+        showNotification('Не вдалося видалити товар: ' + err.message);
     }
 }
 
@@ -4836,17 +4851,8 @@ async function saveOrderStatus(index) {
 
         const response = await fetchWithAuth(`/api/orders/${order._id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken // Додаємо CSRF-токен
-            },
             body: JSON.stringify(updatedOrder)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити статус: ${errorData.error || response.statusText}`);
-        }
 
         order.status = newStatus;
         closeModal();
