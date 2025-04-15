@@ -5036,119 +5036,120 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function connectAdminWebSocket() {
-    const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mebli.onrender.com';
-    const maxAttempts = 5;
-    let attempt = 1; // Зробимо attempt локальною змінною
+  const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mebli.onrender.com';
+  const maxAttempts = 5;
+  let attempt = 1;
 
-    const connect = async () => {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній, WebSocket не підключено');
-            showSection('admin-login');
-            return;
+  const connect = async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      console.warn('Токен відсутній, WebSocket не підключено');
+      showSection('admin-login');
+      return;
+    }
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      console.log('WebSocket уже відкрито');
+      return;
+    }
+
+    socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+
+    socket.onopen = () => {
+      console.log('Адмін підключено до WebSocket');
+      ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type, action: 'subscribe' }));
         }
-
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            console.log('WebSocket уже відкрито');
-            return;
-        }
-
-        socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
-
-        socket.onopen = () => {
-            console.log('Адмін підключено до WebSocket');
-            ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ type, action: 'subscribe' }));
-                }
-            });
-            resetInactivityTimer();
-            attempt = 1; // Скидаємо лічильник спроб
-        };
-
-        socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (!message.type || !message.data) {
-                    throw new Error('Невалідний формат WebSocket-повідомлення');
-                }
-                const { type, data } = message;
-
-                switch (type) {
-                    case 'products':
-                        products = Array.isArray(data) ? data : [];
-                        if (document.getElementById('products-admin')?.style.display !== 'none') {
-                            renderAdmin('products');
-                        }
-                        break;
-                    case 'categories':
-                        categories = Array.isArray(data) ? data : [];
-                        if (document.getElementById('categories-admin')?.style.display !== 'none') {
-                            renderCategoriesAdmin();
-                        }
-                        break;
-                    case 'settings':
-                        settings = typeof data === 'object' ? { ...settings, ...data } : settings;
-                        if (document.getElementById('site-editing')?.style.display !== 'none') {
-                            renderSettingsAdmin();
-                        }
-                        break;
-                    case 'orders':
-                        orders = Array.isArray(data) ? data : [];
-                        if (document.getElementById('orders-admin')?.style.display !== 'none') {
-                            renderAdmin('orders');
-                        }
-                        break;
-                    case 'slides':
-                        slides = Array.isArray(data) ? data : [];
-                        if (document.getElementById('slides-admin')?.style.display !== 'none') {
-                            renderSlidesAdmin();
-                        }
-                        break;
-                    case 'materials':
-                        materials = Array.isArray(data) ? data : [];
-                        updateMaterialOptions();
-                        break;
-                    case 'brands':
-                        brands = Array.isArray(data) ? data : [];
-                        updateBrandOptions();
-                        break;
-                    case 'filters':
-                        filters = Array.isArray(data) ? data : [];
-                        renderFilters();
-                        break;
-                    default:
-                        console.warn('Невідомий тип WebSocket-повідомлення:', type);
-                }
-                resetInactivityTimer();
-            } catch (err) {
-                console.error('Помилка обробки WebSocket-повідомлення:', err);
-            }
-        };
-
-        socket.onclose = async () => {
-            console.log(`WebSocket закрито, спроба ${attempt}/${maxAttempts} перепідключення...`);
-            if (attempt <= maxAttempts) {
-                const tokenRefreshed = await refreshToken();
-                if (tokenRefreshed) {
-                    setTimeout(() => connect(), 5000 * attempt);
-                } else {
-                    console.warn('Не вдалося оновити токен, припиняємо спроби');
-                    showSection('admin-login');
-                }
-            } else {
-                console.error('Досягнуто максимум спроб перепідключення');
-                showNotification('Втрачено з’єднання з сервером. Увійдіть знову.');
-                showSection('admin-login');
-            }
-            attempt++;
-        };
-
-        socket.onerror = (error) => {
-            console.error('Помилка WebSocket:', error);
-            showNotification('Помилка підключення до WebSocket. Перевірте з’єднання.');
-        };
+      });
+      resetInactivityTimer();
+      attempt = 1;
     };
 
-    connect();
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('Отримано WebSocket-повідомлення:', message);
+        if (!message.type || !message.data) {
+          throw new Error('Невалідний формат WebSocket-повідомлення');
+        }
+        const { type, data } = message;
+
+        switch (type) {
+          case 'products':
+            products = Array.isArray(data) ? data : [];
+            if (document.getElementById('products-admin')?.style.display !== 'none') {
+              renderAdmin('products');
+            }
+            break;
+          case 'categories':
+            categories = Array.isArray(data) ? data : [];
+            if (document.getElementById('categories-admin')?.style.display !== 'none') {
+              renderCategoriesAdmin();
+            }
+            break;
+          case 'settings':
+            settings = typeof data === 'object' ? { ...settings, ...data } : settings;
+            if (document.getElementById('site-editing')?.style.display !== 'none') {
+              renderSettingsAdmin();
+            }
+            break;
+          case 'orders':
+            orders = Array.isArray(data) ? data : [];
+            if (document.getElementById('orders-admin')?.style.display !== 'none') {
+              renderAdmin('orders');
+            }
+            break;
+          case 'slides':
+            slides = Array.isArray(data) ? data : [];
+            if (document.getElementById('slides-admin')?.style.display !== 'none') {
+              renderSlidesAdmin();
+            }
+            break;
+          case 'materials':
+            materials = Array.isArray(data) ? data : [];
+            updateMaterialOptions();
+            break;
+          case 'brands':
+            brands = Array.isArray(data) ? data : [];
+            updateBrandOptions();
+            break;
+          case 'filters':
+            filters = Array.isArray(data) ? data : [];
+            renderFilters();
+            break;
+          default:
+            console.warn('Невідомий тип WebSocket-повідомлення:', type);
+        }
+        resetInactivityTimer();
+      } catch (err) {
+        console.error('Помилка обробки WebSocket-повідомлення:', err, 'Дані:', event.data);
+      }
+    };
+
+    socket.onclose = async () => {
+      console.log(`WebSocket закрито, спроба ${attempt}/${maxAttempts} перепідключення...`);
+      if (attempt <= maxAttempts) {
+        const tokenRefreshed = await refreshToken();
+        if (tokenRefreshed) {
+          setTimeout(() => connect(), 5000 * attempt);
+        } else {
+          console.warn('Не вдалося оновити токен, припиняємо спроби');
+          showSection('admin-login');
+        }
+      } else {
+        console.error('Досягнуто максимум спроб перепідключення');
+        showNotification('Втрачено з’єднання з сервером. Увійдіть знову.');
+        showSection('admin-login');
+      }
+      attempt++;
+    };
+
+    socket.onerror = (error) => {
+      console.error('Помилка WebSocket:', error);
+      showNotification('Помилка підключення до WebSocket. Перевірте з’єднання.');
+    };
+  };
+
+  connect();
 }

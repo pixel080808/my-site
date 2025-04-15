@@ -364,68 +364,93 @@ const server = app.listen(process.env.PORT || 3000, () => logger.info(`Серв�
 const wss = new WebSocket.Server({ server });
 
 function broadcast(type, data) {
-    logger.info(`Трансляція даних типу ${type}:`);
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
-            let filteredData = data;
-            if (type === 'products' && !client.isAdmin) {
-                filteredData = data.filter(p => p.visible && p.active);
-            }
-            client.send(JSON.stringify({ type, data: filteredData }));
-        }
-    });
+  logger.info(`Трансляція даних типу ${type}`);
+  if (!data) {
+    logger.warn(`Порожні дані для трансляції типу ${type}`);
+    return;
+  }
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
+      let filteredData = data;
+      if (type === 'products' && !client.isAdmin) {
+        filteredData = data.filter(p => p.visible && p.active);
+      }
+      client.send(JSON.stringify({ type, data: filteredData }));
+    }
+  });
 }
 
 wss.on('connection', (ws, req) => {
-    const urlParams = new URLSearchParams(req.url.split('?')[1]);
-    let token = urlParams.get('token');
+  const urlParams = new URLSearchParams(req.url.split('?')[1]);
+  let token = urlParams.get('token');
+  logger.info('WebSocket підключення з токеном:', token ? 'наявний' : 'відсутній');
 
-    ws.isAdmin = false;
-    ws.subscriptions = new Set();
+  ws.isAdmin = false;
+  ws.subscriptions = new Set();
 
-    const verifyToken = () => {
-        if (!token) {
-            logger.info('WebSocket: Підключення без токена (публічний клієнт)');
-            return true;
-        }
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            if (decoded.role === 'admin') {
-                ws.isAdmin = true;
-                logger.info('WebSocket: Адмін підключився з токеном:', decoded);
-            }
-            return true;
-        } catch (err) {
-            logger.error('WebSocket: Помилка верифікації токена:', err.message);
-            ws.close(1008, 'Недійсний токен');
-            return false;
-        }
-    };
+  const verifyToken = () => {
+    if (!token) {
+      logger.info('WebSocket: Підключення без токена (публічний клієнт)');
+      return true;
+    }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.role === 'admin') {
+        ws.isAdmin = true;
+        logger.info('WebSocket: Адмін підключився:', decoded.username);
+      }
+      return true;
+    } catch (err) {
+      logger.error('WebSocket: Помилка верифікації токена:', err.message);
+      ws.close(1008, 'Недійсний токен');
+      return false;
+    }
+  };
 
-    if (!verifyToken()) return;
+  if (!verifyToken()) return;
 
-    const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
-        for (let i = 0; i < retries; i++) {
-            try {
-                const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error(`Помилка ${response.status}`);
-                const data = await response.json();
-                token = data.token;
-                logger.info('WebSocket: Токен оновлено');
-                return true;
-            } catch (err) {
-                if (i === retries - 1) {
-                    logger.error('WebSocket: Не вдалося оновити токен після всіх спроб:', err);
-                    ws.close(1008, 'Помилка оновлення токена');
-                    return false;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-            }
-        }
-    };
+const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      logger.info(`Спроба ${i + 1} оновлення WebSocket-токена`);
+      // Отримуємо CSRF-токен
+      const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (!csrfResponse.ok) {
+        throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status}`);
+      }
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+
+      const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error(`Помилка ${response.status}: ${await response.text()}`);
+      }
+      const data = await response.json();
+      token = data.token;
+      logger.info('WebSocket: Токен успішно оновлено');
+      return true;
+    } catch (err) {
+      logger.error(`Помилка оновлення токена (спроба ${i + 1}):`, err.message);
+      if (i === retries - 1) {
+        logger.error('WebSocket: Не вдалося оновити токен після всіх спроб');
+        ws.close(1008, 'Помилка оновлення токена');
+        return false;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+    }
+  }
+};
 
     let tokenRefreshInterval;
     if (ws.isAdmin) {
@@ -439,47 +464,46 @@ wss.on('connection', (ws, req) => {
         logger.info('Клієнт від’єднався від WebSocket');
     });
 
-    ws.on('message', async (message) => {
-        try {
-            const { type, action } = JSON.parse(message);
-            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
+ws.on('message', async (message) => {
+  try {
+    const { type, action } = JSON.parse(message);
+    logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
 
-            if (action === 'subscribe') {
-                ws.subscriptions.add(type);
-                logger.info(`Клієнт підписався на ${type}`);
+    if (action === 'subscribe') {
+      ws.subscriptions.add(type);
+      logger.info(`Клієнт підписався на ${type}`);
 
-                if (type === 'products') {
-                    const products = ws.isAdmin
-                        ? await Product.find()
-                        : await Product.find({ visible: true, active: true });
-                    ws.send(JSON.stringify({ type: 'products', data: products }));
-                } else if (type === 'settings') {
-                    const settings = await Settings.findOne();
-                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                } else if (type === 'categories') {
-                    const categories = await Category.find();
-                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                } else if (type === 'slides') {
-                    const slides = await Slide.find().sort({ order: 1 });
-                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                } else if (type === 'orders' && ws.isAdmin) {
-                    const orders = await Order.find();
-                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                } else if (type === 'materials' && ws.isAdmin) {
-                    const materials = await Material.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                } else if (type === 'brands' && ws.isAdmin) {
-                    const brands = await Brand.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
-                }
-            }
-        } catch (err) {
-            logger.error('Помилка обробки WebSocket-повідомлення:', err);
-            ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
-        }
-    });
+      let data;
+      if (type === 'products') {
+        data = ws.isAdmin
+          ? await Product.find()
+          : await Product.find({ visible: true, active: true });
+      } else if (type === 'settings') {
+        data = await Settings.findOne() || {};
+      } else if (type === 'categories') {
+        data = await Category.find();
+      } else if (type === 'slides') {
+        data = await Slide.find().sort({ order: 1 });
+      } else if (type === 'orders' && ws.isAdmin) {
+        data = await Order.find();
+      } else if (type === 'materials' && ws.isAdmin) {
+        data = await Material.find().distinct('name');
+      } else if (type === 'brands' && ws.isAdmin) {
+        data = await Brand.find().distinct('name');
+      } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+        ws.send(JSON.stringify({ type: 'error', data: { error: 'Доступ заборонено для публічних клієнтів' } }));
+        return;
+      } else {
+        ws.send(JSON.stringify({ type: 'error', data: { error: `Невідомий тип підписки: ${type}` } }));
+        return;
+      }
+      ws.send(JSON.stringify({ type, data }));
+    }
+  } catch (err) {
+    logger.error('Помилка обробки WebSocket-повідомлення:', err);
+    ws.send(JSON.stringify({ type: 'error', data: { error: 'Помилка обробки підписки', details: err.message } }));
+  }
+});
 
     ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
 });
@@ -553,13 +577,42 @@ app.get('/api/public/products', async (req, res) => {
 });
 
 app.get('/api/public/settings', async (req, res) => {
-    try {
-        const settings = await Settings.findOne();
-        res.json(settings || {});
-    } catch (err) {
-        logger.error('Помилка при отриманні публічних налаштувань:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = new Settings({
+        name: '',
+        baseUrl: '',
+        logo: '',
+        logoWidth: 150,
+        favicon: '',
+        contacts: { phones: '', addresses: '', schedule: '' },
+        socials: [],
+        showSocials: true,
+        about: '',
+        categoryWidth: 0,
+        categoryHeight: 0,
+        productWidth: 0,
+        productHeight: 0,
+        filters: [],
+        orderFields: [],
+        slideWidth: 0,
+        slideHeight: 0,
+        slideInterval: 3000,
+        showSlides: true
+      });
+      await settings.save();
     }
+    const settingsToSend = settings.toObject();
+    delete settingsToSend._id;
+    delete settingsToSend.__v;
+    delete settingsToSend.createdAt;
+    delete settingsToSend.updatedAt;
+    res.json(settingsToSend);
+  } catch (err) {
+    logger.error('Помилка при отриманні публічних налаштувань:', err);
+    res.status(500).json({ error: 'Помилка сервера', details: err.message });
+  }
 });
 
 app.get('/api/public/categories', async (req, res) => {
@@ -851,13 +904,14 @@ app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtectio
 });
 
 app.get('/api/slides', authenticateToken, async (req, res) => {
-    try {
-        const slides = await Slide.find().sort({ order: 1 });
-        res.json(slides);
-    } catch (err) {
-        logger.error('Помилка при отриманні слайдів:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
+  try {
+    const slides = await Slide.find().sort({ order: 1 });
+    logger.info('Повернуто слайди:', slides.length);
+    res.json(slides);
+  } catch (err) {
+    logger.error('Помилка при отриманні слайдів:', err);
+    res.status(500).json({ error: 'Помилка сервера', details: err.message });
+  }
 });
 
 app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
@@ -950,59 +1004,72 @@ app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res
     }
 });
 
-app.post('/api/auth/refresh', csrfProtection, (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
-        }
-        const newToken = jwt.sign(
-            { userId: decoded.userId, username: decoded.username, role: 'admin' },
-            process.env.JWT_SECRET,
-            { expiresIn: '30m' }
-        );
-        logger.info('Токен успішно оновлено для користувача:', decoded.username);
-        res.json({ token: newToken });
-    } catch (err) {
-        logger.error('Помилка оновлення токена:', err.message);
-        res.status(401).json({ error: 'Недійсний або прострочений токен' });
+app.post('/api/auth/refresh', csrfProtection, async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    logger.warn('Запит до /api/auth/refresh без токена');
+    return res.status(401).json({ error: 'Токен відсутній' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      logger.warn('Спроба оновлення токена неадміном:', decoded.username);
+      return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
     }
+    const newToken = jwt.sign(
+      { userId: decoded.userId, username: decoded.username, role: 'admin' },
+      process.env.JWT_SECRET,
+      { expiresIn: '30m' }
+    );
+    logger.info('Токен успішно оновлено для користувача:', decoded.username);
+    res.json({ token: newToken });
+  } catch (err) {
+    logger.error('Помилка оновлення токена:', err.message);
+    res.status(401).json({ error: 'Недійсний або прострочений токен' });
+  }
 });
 
 app.get('/api/settings', authenticateToken, async (req, res) => {
-    try {
-        let settings = await Settings.findOne();
-        if (!settings) {
-            settings = new Settings({
-                name: '',
-                baseUrl: '',
-                logo: '',
-                logoWidth: 150,
-                favicon: '',
-                contacts: { phones: '', addresses: '', schedule: '' },
-                socials: [],
-                showSocials: true,
-                about: '',
-                categoryWidth: 0,
-                categoryHeight: 0,
-                productWidth: 0,
-                productHeight: 0,
-                filters: [],
-                orderFields: [],
-                slideWidth: 0,
-                slideHeight: 0,
-                slideInterval: 3000,
-                showSlides: true
-            });
-            await settings.save();
-        }
-        res.json(settings);
-    } catch (err) {
-        logger.error('Помилка при отриманні налаштувань:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+  try {
+    logger.info('Запит до /api/settings від користувача:', req.user.username);
+    let settings = await Settings.findOne();
+    if (!settings) {
+      logger.info('Налаштування не знайдено, створюємо нові за замовчуванням');
+      settings = new Settings({
+        name: '',
+        baseUrl: '',
+        logo: '',
+        logoWidth: 150,
+        favicon: '',
+        contacts: { phones: '', addresses: '', schedule: '' },
+        socials: [],
+        showSocials: true,
+        about: '',
+        categoryWidth: 0,
+        categoryHeight: 0,
+        productWidth: 0,
+        productHeight: 0,
+        filters: [],
+        orderFields: [],
+        slideWidth: 0,
+        slideHeight: 0,
+        slideInterval: 3000,
+        showSlides: true
+      });
+      await settings.save();
     }
+    // Видаляємо технічні поля перед відправкою
+    const settingsToSend = settings.toObject();
+    delete settingsToSend._id;
+    delete settingsToSend.__v;
+    delete settingsToSend.createdAt;
+    delete settingsToSend.updatedAt;
+    logger.info('Налаштування успішно повернуто');
+    res.json(settingsToSend);
+  } catch (err) {
+    logger.error('Помилка при отриманні налаштувань:', err);
+    res.status(500).json({ error: 'Помилка сервера', details: err.message });
+  }
 });
 
 app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => {
