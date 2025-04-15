@@ -1,7 +1,6 @@
 const express = require('express');
 const Settings = require('../models/Settings');
 const authenticateToken = require('../middleware/auth');
-const { broadcast } = require('../utils/websocket');
 
 const router = express.Router();
 
@@ -22,7 +21,6 @@ router.put('/', authenticateToken, async (req, res) => {
             { $set: updateData },
             { new: true, upsert: true, runValidators: true }
         );
-        broadcast('settings', settings);
         res.json(settings);
     } catch (error) {
         res.status(400).json({ error: 'Помилка оновлення налаштувань', details: error.message });

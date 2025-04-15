@@ -1064,7 +1064,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         delete settingsToSend._id;
         delete settingsToSend.__v;
 
-        broadcast('settings', settingsToSend);
+        broadcast('settings', settingsToSend); // Викликаємо broadcast тут
         res.json(settingsToSend);
     } catch (err) {
         logger.error('Помилка при оновленні налаштувань:', err);
