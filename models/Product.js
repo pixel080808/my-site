@@ -1,26 +1,35 @@
 const mongoose = require('mongoose');
+
 const productSchema = new mongoose.Schema({
+    type: { type: String, enum: ['simple', 'mattresses', 'group'], required: true },
     name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    brand: { type: String, default: '' },
     category: { type: String, required: true },
-    subcategory: { type: String },
+    subcategory: { type: String, default: '' },
+    material: { type: String, default: '' },
     price: { type: Number },
     salePrice: { type: Number },
-    saleEnd: { type: Date },
-    brand: { type: String },
-    material: { type: String },
-    photos: [String],
-    visible: { type: Boolean, default: true },
+    saleEnd: { type: String },
+    description: { type: String, default: '' },
+    widthCm: { type: Number },
+    depthCm: { type: Number },
+    heightCm: { type: Number },
+    lengthCm: { type: Number },
+    photos: [{ type: String }],
+    colors: [{
+        name: { type: String, required: true },
+        value: { type: String, required: true },
+        priceChange: { type: Number, default: 0 },
+        photo: { type: String },
+    }],
+    sizes: [{
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+    }],
+    groupProducts: [{ type: String }],
     active: { type: Boolean, default: true },
-    slug: { type: String, unique: true },
-    type: { type: String, enum: ['simple', 'mattresses', 'group'] },
-    sizes: [{ name: String, price: Number }],
-    colors: [{ name: String, value: String, photo: String, priceChange: Number }],
-    groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-    description: String,
-    widthCm: Number,
-    depthCm: Number,
-    heightCm: Number,
-    lengthCm: Number,
-    popularity: Number
+    visible: { type: Boolean, default: true },
 }, { timestamps: true });
+
 module.exports = mongoose.model('Product', productSchema);

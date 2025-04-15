@@ -1,40 +1,32 @@
-// models/Settings.js
-const mongoose = require('mongoose');
+const express = require('express');
+const Settings = require('../models/Settings');
+const authenticateToken = require('../middleware/auth');
+const { broadcast } = require('../utils/websocket');
 
-const settingsSchema = new mongoose.Schema({
-    name: String,
-    baseUrl: String,
-    logo: String,
-    logoWidth: Number,
-    favicon: String,
-    contacts: {
-        phones: String,
-        addresses: String,
-        schedule: String
-    },
-    socials: [{ name: String, url: String, icon: String }],
-    showSocials: { type: Boolean, default: true },
-    about: String,
-    categoryWidth: Number,
-    categoryHeight: Number,
-    productWidth: Number,
-    productHeight: Number,
-    filters: [{
-        name: String,
-        label: String,
-        type: String,
-        options: [String]
-    }],
-    orderFields: [{
-        name: String,
-        label: String,
-        type: String,
-        options: [String]
-    }],
-    slideWidth: Number,
-    slideHeight: Number,
-    slideInterval: { type: Number, default: 3000 },
-    showSlides: { type: Boolean, default: true }
-}, { timestamps: true });
+const router = express.Router();
 
-module.exports = mongoose.model('Settings', settingsSchema); // Додано
+router.get('/', async (req, res) => {
+    try {
+        const settings = await Settings.findOne();
+        res.json(settings || {});
+    } catch (error) {
+        res.status(500).json({ error: 'Помилка сервера', details: error.message });
+    }
+});
+
+router.put('/', authenticateToken, async (req, res) => {
+    try {
+        const updateData = req.body;
+        const settings = await Settings.findOneAndUpdate(
+            {},
+            { $set: updateData },
+            { new: true, upsert: true, runValidators: true }
+        );
+        broadcast('settings', settings);
+        res.json(settings);
+    } catch (error) {
+        res.status(400).json({ error: 'Помилка оновлення налаштувань', details: error.message });
+    }
+});
+
+module.exports = router;

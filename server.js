@@ -227,42 +227,40 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схеми валідації
 const productSchemaValidation = Joi.object({
-    name: Joi.string().min(1).max(255).required(),
-    category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(100).allow(''),
-    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).allow(null),
-    saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
-    photos: Joi.array().items(Joi.string()).default([]),
-    visible: Joi.boolean().default(true),
-    active: Joi.boolean().default(true),
-    slug: Joi.string().min(1).max(255).required(),
     type: Joi.string().valid('simple', 'mattresses', 'group').required(),
-    sizes: Joi.array().items(
-        Joi.object({
-            name: Joi.string().max(100).required(),
-            price: Joi.number().min(0).required()
-        })
-    ).default([]),
+    name: Joi.string().required(),
+    slug: Joi.string().required(),
+    brand: Joi.string().allow('').optional(),
+    category: Joi.string().required(),
+    subcategory: Joi.string().allow('').optional(),
+    material: Joi.string().allow('').optional(),
+    price: Joi.number().allow(null).optional(),
+    salePrice: Joi.number().allow(null).optional(),
+    saleEnd: Joi.string().allow(null).optional(),
+    description: Joi.string().allow('').optional(),
+    widthCm: Joi.number().allow(null).optional(),
+    depthCm: Joi.number().allow(null).optional(),
+    heightCm: Joi.number().allow(null).optional(),
+    lengthCm: Joi.number().allow(null).optional(),
+    photos: Joi.array().items(Joi.string()).optional(),
     colors: Joi.array().items(
         Joi.object({
-            name: Joi.string().max(100).required(),
-            value: Joi.string().max(100).required(),
-            priceChange: Joi.number().default(0),
-            photo: Joi.string().allow(null)
+            name: Joi.string().required(),
+            value: Joi.string().required(),
+            priceChange: Joi.number().optional(),
+            photo: Joi.string().allow(null).optional(),
         })
-    ).default([]),
-    groupProducts: Joi.array().items(Joi.string()).default([]),
-    description: Joi.string().allow(''),
-    widthCm: Joi.number().min(0).allow(null),
-    depthCm: Joi.number().min(0).allow(null),
-    heightCm: Joi.number().min(0).allow(null),
-    lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().allow(null)
+    ).optional(),
+    sizes: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            price: Joi.number().required(),
+        })
+    ).optional(),
+    groupProducts: Joi.array().items(Joi.string()).optional(),
+    active: Joi.boolean().optional(),
+    visible: Joi.boolean().optional(),
 });
 
 const orderSchemaValidation = Joi.object({
@@ -709,6 +707,10 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
 
 app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Невалідний ID товару' });
+        }
+
         const product = await Product.findByIdAndDelete(req.params.id);
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
@@ -728,9 +730,9 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
         const products = await Product.find();
         broadcast('products', products);
         res.json({ message: 'Товар видалено' });
-    } catch (err) {
-        logger.error('Помилка при видаленні товару:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } catch (error) {
+        logger.error('Помилка видалення товару:', error);
+        res.status(500).json({ error: 'Помилка сервера', details: error.message });
     }
 });
 
@@ -944,14 +946,29 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slide = await Slide.findOneAndDelete({ id: req.params.id });
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Невалідний ID слайду' });
+        }
+
+        const slide = await Slide.findByIdAndDelete(req.params.id);
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
+
+        const publicId = getPublicIdFromUrl(slide.url);
+        if (publicId) {
+            try {
+                await cloudinary.uploader.destroy(publicId);
+                logger.info(`Успішно видалено файл з Cloudinary: ${publicId}`);
+            } catch (err) {
+                logger.error(`Не вдалося видалити файл з Cloudinary: ${publicId}`, err);
+            }
+        }
+
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
         res.json({ message: 'Слайд видалено' });
-    } catch (err) {
-        logger.error('Помилка при видаленні слайду:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } catch (error) {
+        logger.error('Помилка видалення слайду:', error);
+        res.status(500).json({ error: 'Помилка сервера', details: error.message });
     }
 });
 
