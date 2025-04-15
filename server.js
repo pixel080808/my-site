@@ -363,15 +363,20 @@ const slideSchemaValidation = Joi.object({
 const server = app.listen(process.env.PORT || 3000, () => logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
 
-// Додаємо автоматичне очищення кошиків раз на 24 години
-setInterval(async () => {
+const cleanupInterval = setInterval(async () => {
     try {
         const deletedCount = await cleanupOldCarts();
         logger.info(`Автоматичне очищення кошиків: видалено ${deletedCount} кошиків`);
     } catch (err) {
         logger.error('Помилка при автоматичному очищенні кошиків:', err);
     }
-}, 24 * 60 * 60 * 1000); // Раз на 24 години
+}, 24 * 60 * 60 * 1000);
+
+process.on('SIGINT', () => {
+    clearInterval(cleanupInterval);
+    logger.info('Очищено інтервал для cleanupOldCarts');
+    process.exit(0);
+});
 
 function broadcast(type, data) {
     logger.info(`Трансляція даних типу ${type}:`);
@@ -494,8 +499,9 @@ ws.on('message', async (message) => {
         logger.error('Помилка обробки WebSocket-повідомлення:', err);
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
+           }
         }
-    }
+    });
 });
 
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
