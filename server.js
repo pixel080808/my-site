@@ -227,7 +227,6 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схеми валідації
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
@@ -256,7 +255,7 @@ const productSchemaValidation = Joi.object({
             photo: Joi.string().allow(null)
         })
     ).default([]),
-    groupProducts: Joi.array().items(Joi.string()).default([]),
+    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]), // Валідація ObjectId
     description: Joi.string().allow(''),
     widthCm: Joi.number().min(0).allow(null),
     depthCm: Joi.number().min(0).allow(null),
@@ -350,7 +349,7 @@ const cartIdSchema = Joi.string()
 
 const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    image: Joi.string().allow(''),
+    photo: Joi.string().allow(''), // Змінено з image на photo
     name: Joi.string().allow(''),
     url: Joi.string().allow(''),
     title: Joi.string().allow(''),
@@ -662,6 +661,18 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності slug
+        const existingProduct = await Product.findOne({ slug: productData.slug });
+        if (existingProduct) {
+            logger.error('Продукт з таким slug вже існує:', productData.slug);
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+        }
+
+        // Перетворення groupProducts у ObjectId
+        if (productData.groupProducts && productData.groupProducts.length > 0) {
+            productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
+        }
+
         const product = new Product(productData);
         await product.save();
 
@@ -693,6 +704,18 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка унікальності slug (окрім поточного продукту)
+        const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+        if (existingProduct) {
+            logger.error('Продукт з таким slug вже існує:', productData.slug);
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+        }
+
+        // Перетворення groupProducts у ObjectId
+        if (productData.groupProducts && productData.groupProducts.length > 0) {
+            productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
         const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
@@ -737,7 +760,7 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
 const categorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    img: Joi.string().allow(''),
+    photo: Joi.string().allow(''), // Змінено з img на photo
     subcategories: Joi.array().items(
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
@@ -778,7 +801,12 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
             return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
         }
 
-        const category = new Category(categoryData);
+        const category = new Category({
+            name: categoryData.name,
+            slug: categoryData.slug,
+            image: categoryData.photo, // Використовуємо photo як image
+            subcategories: categoryData.subcategories || []
+        });
         await category.save();
         const categories = await Category.find();
         broadcast('categories', categories);
@@ -893,7 +921,17 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
 
         const maxIdSlide = await Slide.findOne().sort({ id: -1 });
         slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
-        const slide = new Slide(slideData);
+        const slide = new Slide({
+            id: slideData.id,
+            photo: slideData.photo, // Використовуємо photo
+            name: slideData.name,
+            url: slideData.url,
+            title: slideData.title,
+            text: slideData.text,
+            link: slideData.link,
+            linkText: slideData.linkText,
+            order: slideData.order
+        });
         await slide.save();
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
@@ -914,7 +952,20 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const slide = await Slide.findOneAndUpdate({ id: req.params.id }, slideData, { new: true });
+        const slide = await Slide.findOneAndUpdate(
+            { id: parseInt(req.params.id) }, // Залишаємо числовий id
+            {
+                photo: slideData.photo,
+                name: slideData.name,
+                url: slideData.url,
+                title: slideData.title,
+                text: slideData.text,
+                link: slideData.link,
+                linkText: slideData.linkText,
+                order: slideData.order
+            },
+            { new: true }
+        );
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
@@ -927,8 +978,22 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slide = await Slide.findOneAndDelete({ id: req.params.id });
+        const slide = await Slide.findOneAndDelete({ id: parseInt(req.params.id) });
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
+
+        // Видаляємо зображення з Cloudinary, якщо воно існує
+        if (slide.photo) {
+            const publicId = getPublicIdFromUrl(slide.photo);
+            if (publicId) {
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    logger.info(`Успішно видалено файл з Cloudinary: ${publicId}`);
+                } catch (err) {
+                    logger.error(`Не вдалося видалити файл з Cloudinary: ${publicId}`, err);
+                }
+            }
+        }
+
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
         res.json({ message: 'Слайд видалено' });
