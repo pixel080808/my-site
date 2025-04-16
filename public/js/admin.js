@@ -590,7 +590,7 @@ async function initializeData() {
       loadSlides(),
       loadMaterials(),
       loadBrands(),
-    ].filter(fn => typeof fn === 'function')); // Фільтруємо тільки валідні функції
+    ].filter(fn => typeof fn === 'function' && fn)); // Фільтруємо валідні функції
     initializeEditors();
     console.log('Усі дані успішно ініціалізовані');
   } catch (e) {
@@ -1851,31 +1851,25 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-    const slidesList = document.getElementById('slides-list-admin');
-    if (slidesList) {
-        slidesList.innerHTML = slides.map((slide, index) => `
-            <div class="slide-item">
-                <img src="${slide.photo}" alt="Слайд ${index + 1}" style="max-width: 100px;">
-                <div class="slide-info">
-                    <p>Посилання: ${slide.link || 'Без посилання'}</p>
-                    <p>Позиція: ${slide.position}</p>
-                    <p>Активний: ${slide.active ? 'Так' : 'Ні'}</p>
-                </div>
-                <button class="edit-btn" onclick="editSlide(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSlide(${index})">Видалити</button>
-            </div>
-        `).join('');
-    } else {
-        console.warn('Елемент #slides-list-admin не знайдено');
-    }
+  const slidesList = getElement('#slides-list-admin', 'Елемент #slides-list-admin не знайдено');
+  const addSlideBtn = getElement('#add-slide-btn', 'Елемент #add-slide-btn не знайдено');
 
-    const addSlideBtn = document.getElementById('add-slide-btn');
-    if (addSlideBtn) {
-        addSlideBtn.onclick = openAddSlideModal;
-    } else {
-        console.warn('Елемент #add-slide-btn не знайдено');
-    }
-    resetInactivityTimer();
+  if (slidesList) {
+    slidesList.innerHTML = slides.map((slide, index) => `
+      <div class="slide-item">
+        <img src="${slide.image}" alt="Slide ${index + 1}" style="max-width: 100px;">
+        <p>Посилання: ${slide.link || 'Немає'}</p>
+        <button onclick="editSlide(${index})">Редагувати</button>
+        <button onclick="deleteSlide(${index})">Видалити</button>
+      </div>
+    `).join('');
+  }
+
+  if (addSlideBtn) {
+    addSlideBtn.addEventListener('click', () => openAddSlideModal());
+  }
+
+  resetInactivityTimer();
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
@@ -3618,7 +3612,7 @@ async function saveNewProduct() {
 
     const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
     const existingProducts = await slugCheck.json();
-    if (existingProducts.some(p => p.slug === slug)) {
+    if (existingProducts.some(p => p.slug === slug && !p._id)) {
       showNotification('Шлях товару має бути унікальним!');
       return;
     }
