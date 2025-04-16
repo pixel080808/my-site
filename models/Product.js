@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
-const Counter = require('./counter');
 
 const productSchema = new mongoose.Schema({
-    id: { type: Number, unique: true },
     name: { type: String, required: true },
     category: { type: String, required: true },
     subcategory: { type: String },
@@ -26,17 +24,5 @@ const productSchema = new mongoose.Schema({
     lengthCm: Number,
     popularity: Number
 }, { timestamps: true });
-
-productSchema.pre('save', async function(next) {
-    if (this.isNew) {
-        const counter = await Counter.findByIdAndUpdate(
-            { _id: 'productId' },
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
-        this.id = counter.seq;
-    }
-    next();
-});
 
 module.exports = mongoose.model('Product', productSchema);
