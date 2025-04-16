@@ -52,13 +52,12 @@ let productEditor; // Додаємо глобальну змінну для ре
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
 
-function getElement(selector, errorMsg = `Елемент ${selector} не знайдено`) {
-  const element = document.querySelector(selector);
-  if (!element) {
-    console.error(errorMsg);
-    return null;
-  }
-  return element;
+function getElement(selector, errorMessage = `Елемент ${selector} не знайдено`) {
+    const element = document.querySelector(selector);
+    if (!element) {
+        console.warn(errorMessage);
+    }
+    return element;
 }
 
 async function loadProducts() {
@@ -575,30 +574,29 @@ function updateBrandOptions() {
 let isInitializing = false;
 
 async function initializeData() {
-  if (isInitializing) {
-    console.log('Ініціалізація вже виконується, пропускаємо');
-    return;
-  }
-
-  isInitializing = true;
-  try {
-    await Promise.all([
-      loadProducts(),
-      loadCategories(),
-      loadSettings(),
-      loadOrders(),
-      loadSlides(),
-      loadMaterials(),
-      loadBrands(),
-    ].filter(fn => typeof fn === 'function' && fn)); // Фільтруємо валідні функції
-    initializeEditors();
-    console.log('Усі дані успішно ініціалізовані');
-  } catch (e) {
-    console.error('Помилка ініціалізації даних:', e);
-    showNotification('Помилка при завантаженні даних: ' + e.message);
-  } finally {
-    isInitializing = false;
-  }
+    if (isInitializing) {
+        console.log('Ініціалізація вже виконується, пропускаємо');
+        return;
+    }
+    isInitializing = true;
+    try {
+        await Promise.all([
+            loadProducts(),
+            loadCategories(),
+            loadSettings(),
+            loadOrders(),
+            loadSlides(),
+            loadMaterials(),
+            loadBrands()
+        ].filter(fn => typeof fn === 'function' && fn));
+        initializeEditors();
+        console.log('Усі дані успішно ініціалізовані');
+    } catch (e) {
+        console.error('Помилка ініціалізації даних:', e);
+        showNotification('Помилка при завантаженні даних: ' + e.message);
+    } finally {
+        isInitializing = false;
+    }
 }
 
 async function checkAuth() {
@@ -740,11 +738,8 @@ function setDefaultVideoSizes(editor, editorId) {
 }
 
 function initializeEditors() {
-    const aboutEditorElement = document.getElementById('about-editor');
-    if (!aboutEditorElement) {
-        console.warn('Елемент #about-editor не знайдено, пропускаємо ініціалізацію.');
-        return;
-    }
+    const aboutEditorElement = getElement('#about-editor', 'Елемент #about-editor не знайдено');
+    if (!aboutEditorElement) return;
 
     if (aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
@@ -768,27 +763,15 @@ function initializeEditors() {
         [{ 'undo': 'undo' }, { 'redo': 'redo' }] // Змінено формат
     ];
 
-    try {
-        // Реєструємо кастомні кнопки undo/redo
-        Quill.register('modules/undo', function(quill) {
-            return {
-                undo: () => quill.history.undo()
-            };
-        }, true);
-        Quill.register('modules/redo', function(quill) {
-            return {
-                redo: () => quill.history.redo()
-            };
-        }, true);
-
+try {
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
                     container: aboutToolbarOptions,
                     handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
+                        undo: function() { aboutEditor.history.undo(); },
+                        redo: function() { aboutEditor.history.redo(); }
                     }
                 },
                 history: {
@@ -806,7 +789,6 @@ function initializeEditors() {
             unsavedChanges = true;
             resetInactivityTimer();
 
-            // Оновлення стану кнопок undo/redo
             const undoButton = document.querySelector('.ql-undo');
             const redoButton = document.querySelector('.ql-redo');
             if (undoButton && redoButton) {
@@ -819,7 +801,6 @@ function initializeEditors() {
             }
         });
 
-        // Завантажуємо початковий вміст
         if (settings.about) {
             try {
                 aboutEditor.root.innerHTML = settings.about;
@@ -834,7 +815,6 @@ function initializeEditors() {
         }
         document.getElementById('about-edit').value = settings.about || '';
 
-        // Обробник кліків для зміни розмірів медіа
         aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
@@ -842,19 +822,6 @@ function initializeEditors() {
             }
         });
 
-        // Обробка вставки медіа
-        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
-                const src = node.getAttribute('src');
-                if (src) {
-                    const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
-                    return { ops: [{ insert }] };
-                }
-            }
-            return delta;
-        });
-
-        // Встановлюємо розміри для відео за замовчуванням
         setDefaultVideoSizes(aboutEditor, 'about-edit');
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
@@ -883,11 +850,8 @@ function addToolbarEventListeners() {
 }
 
 function initializeProductEditor(description = '', descriptionDelta = null) {
-    const editorElement = document.getElementById('product-description-editor');
-    if (!editorElement) {
-        console.warn('Елемент #product-description-editor не знайдено, пропускаємо ініціалізацію.');
-        return;
-    }
+    const editorElement = getElement('#product-description-editor', 'Елемент #product-description-editor не знайдено');
+    if (!editorElement) return;
 
     try {
         productEditor = new Quill('#product-description-editor', {
@@ -903,8 +867,8 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
                         ['clean']
                     ],
                     handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
+                        undo: function() { productEditor.history.undo(); },
+                        redo: function() { productEditor.history.redo(); }
                     }
                 },
                 history: {
@@ -915,7 +879,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Встановлюємо вміст редактора
         if (descriptionDelta) {
             productEditor.setContents(descriptionDelta, 'silent');
         } else if (description) {
@@ -931,7 +894,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         }
         document.getElementById('product-description').value = productEditor.root.innerHTML;
 
-        // Додаємо обробник для завантаження зображень через панель інструментів
         const toolbar = productEditor.getModule('toolbar');
         toolbar.addHandler('image', async () => {
             const input = document.createElement('input');
@@ -1013,23 +975,11 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Обробник для оновлення прихованого поля
         productEditor.on('text-change', () => {
             document.getElementById('product-description').value = productEditor.root.innerHTML;
             unsavedChanges = true;
         });
 
-        // Обробник вибору медіа
-        productEditor.on('selection-change', (range) => {
-            if (range && range.length > 0) {
-                const [embed] = productEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
-                selectedMedia = embed ? { type: embed.insert.image ? 'image' : 'video', url: embed.insert.image || embed.insert.video } : null;
-            } else {
-                selectedMedia = null;
-            }
-        });
-
-        // Обробник кліків для зображень і відео
         productEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
@@ -1037,18 +987,7 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Обробник вставки зображень через копіювання/вставку
-        productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG') {
-                const src = node.getAttribute('src');
-                if (src) {
-                    return { ops: [{ insert: { image: src } }] };
-                }
-            }
-            return delta;
-        });
-
-        resetInactivityTimer();
+        setDefaultVideoSizes(productEditor, 'product-description');
     } catch (e) {
         console.error('Помилка ініціалізації редактора продуктів:', e);
         showNotification('Не вдалося ініціалізувати редактор продуктів: ' + e.message);
@@ -3550,65 +3489,72 @@ function searchGroupProducts() {
     }
 
 async function saveNewProduct() {
-  try {
-    const tokenRefreshed = await refreshToken();
-    if (!tokenRefreshed) {
-      showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-      showSection('admin-login');
-      return;
-    }
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
 
-    const nameInput = getElement('#product-name', 'Елемент #product-name не знайдено');
-    const slugInput = getElement('#product-slug', 'Елемент #product-slug не знайдено');
-    const brandInput = getElement('#product-brand', 'Елемент #product-brand не знайдено');
-    const categoryInput = getElement('#product-category', 'Елемент #product-category не знайдено');
-    const subcategoryInput = getElement('#product-subcategory', 'Елемент #product-subcategory не знайдено');
-    const materialInput = getElement('#product-material', 'Елемент #product-material не знайдено');
-    const priceInput = getElement('#product-price', 'Елемент #product-price не знайдено');
-    const salePriceInput = getElement('#product-sale-price', 'Елемент #product-sale-price не знайдено');
-    const saleEndInput = getElement('#product-sale-end', 'Елемент #product-sale-end не знайдено');
-    const visibleSelect = getElement('#product-visible', 'Елемент #product-visible не знайдено');
-    const descriptionInput = getElement('#product-description', 'Елемент #product-description не знайдено');
-    const widthCmInput = getElement('#product-width-cm', 'Елемент #product-width-cm не знайдено');
-    const depthCmInput = getElement('#product-depth-cm', 'Елемент #product-depth-cm не знайдено');
-    const heightCmInput = getElement('#product-height-cm', 'Елемент #product-height-cm не знайдено');
-    const lengthCmInput = getElement('#product-length-cm', 'Елемент #product-length-cm не знайдено');
+        const nameInput = getElement('#product-name');
+        const slugInput = getElement('#product-slug');
+        const brandInput = getElement('#product-brand');
+        const categoryInput = getElement('#product-category');
+        const subcategoryInput = getElement('#product-subcategory');
+        const materialInput = getElement('#product-material');
+        const priceInput = getElement('#product-price');
+        const salePriceInput = getElement('#product-sale-price');
+        const saleEndInput = getElement('#product-sale-end');
+        const visibleSelect = getElement('#product-visible');
+        const descriptionInput = getElement('#product-description');
+        const widthCmInput = getElement('#product-width-cm');
+        const depthCmInput = getElement('#product-depth-cm');
+        const heightCmInput = getElement('#product-height-cm');
+        const lengthCmInput = getElement('#product-length-cm');
 
-    if (!nameInput || !slugInput || !visibleSelect || !descriptionInput) {
-      showNotification('Елементи форми для товару не знайдено');
-      return;
-    }
+        if (!nameInput || !slugInput || !visibleSelect || !descriptionInput) {
+            showNotification('Елементи форми для товару не знайдено');
+            return;
+        }
 
-    const name = nameInput.value.trim();
-    const slug = slugInput.value.trim();
-    const brand = brandInput.value.trim();
-    const category = categoryInput.value.trim();
-    const subcategory = subcategoryInput.value.trim();
-    const material = materialInput.value.trim();
-    let price = null;
-    let salePrice = null;
-    if (newProduct.type === 'simple' && priceInput) {
-      price = parseFloat(priceInput.value) || null;
-      salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
-    }
-    const saleEnd = saleEndInput.value || null;
-    const visible = visibleSelect.value === 'true';
-    const description = descriptionInput.value || '';
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim();
+        const brand = brandInput.value.trim();
+        const category = categoryInput.value.trim();
+        const subcategory = subcategoryInput.value.trim();
+        const material = materialInput.value.trim();
+        let price = null;
+        let salePrice = null;
+        if (newProduct.type === 'simple' && priceInput) {
+            price = parseFloat(priceInput.value) || null;
+            salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
+        }
+        const saleEnd = saleEndInput.value || null;
+        const visible = visibleSelect.value === 'true';
+        const description = descriptionInput.value || '';
 
-    const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
-    const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
-    const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
-    const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
+        const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
+        const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
+        const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
+        const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
-    if (!name || !slug) {
-      showNotification('Введіть назву та шлях товару!');
-      return;
-    }
+        if (!name || !slug) {
+            showNotification('Введіть назву та шлях товару!');
+            return;
+        }
 
-    if (!category) {
-      showNotification('Виберіть категорію для товару!');
-      return;
-    }
+        if (!category) {
+            showNotification('Виберіть категорію для товару!');
+            return;
+        }
+
+        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+        const existingProducts = await slugCheck.json();
+        if (existingProducts.some(p => p.slug === slug && !p._id)) {
+            showNotification('Шлях товару має бути унікальним!');
+            return;
+        }
 
     const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
     const existingProducts = await slugCheck.json();
@@ -3662,34 +3608,34 @@ async function saveNewProduct() {
       }
     }
 
-    let product = {
-      type: newProduct.type,
-      name,
-      slug,
-      brand: brand || '',
-      category: category || '',
-      subcategory: subcategory || '',
-      material: material || '',
-      price: newProduct.type === 'simple' ? price : null,
-      salePrice: salePrice,
-      saleEnd: saleEnd || null,
-      description: description || '',
-      widthCm,
-      depthCm,
-      heightCm,
-      lengthCm,
-      photos: [],
-      colors: newProduct.colors.map(color => ({
-        name: color.name,
-        value: color.value,
-        priceChange: color.priceChange,
-        photo: null
-      })),
-      sizes: newProduct.sizes,
-      groupProducts: newProduct.groupProducts,
-      active: true,
-      visible: visible
-    };
+        let product = {
+            type: newProduct.type,
+            name,
+            slug,
+            brand: brand || '',
+            category: category || '',
+            subcategory: subcategory || '',
+            material: material || '',
+            price: newProduct.type === 'simple' ? price : null,
+            salePrice: salePrice,
+            saleEnd: saleEnd || null,
+            description: description || '',
+            widthCm,
+            depthCm,
+            heightCm,
+            lengthCm,
+            photos: [],
+            colors: newProduct.colors.map(color => ({
+                name: color.name,
+                value: color.value,
+                priceChange: color.priceChange,
+                photo: null
+            })),
+            sizes: newProduct.sizes,
+            groupProducts: newProduct.groupProducts,
+            active: true,
+            visible: visible
+        };
 
     const mediaUrls = [];
     const parser = new DOMParser();
@@ -3780,27 +3726,27 @@ async function saveNewProduct() {
       }
     }
 
-    const response = await fetchWithAuth('/api/products', {
-      method: 'POST',
-      body: JSON.stringify(product)
-    });
+        const response = await fetchWithAuth('/api/products', {
+            method: 'POST',
+            body: JSON.stringify(product)
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Помилка додавання товару: ${errorText}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка додавання товару: ${errorText}`);
+        }
+
+        const newProductData = await response.json();
+        products.push(newProductData);
+        closeModal();
+        renderAdmin('products');
+        showNotification('Товар додано!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при додаванні товару:', err);
+        showNotification(`Не вдалося додати товар: ${err.message}`);
     }
-
-    const newProductData = await response.json();
-    products.push(newProductData);
-    closeModal();
-    renderAdmin('products');
-    showNotification('Товар додано!');
-    unsavedChanges = false;
-    resetInactivityTimer();
-  } catch (err) {
-    console.error('Помилка при додаванні товару:', err);
-    showNotification(`Не вдалося додати товар: ${err.message}`);
-  }
 }
 
 async function openEditProductModal(productId) {
