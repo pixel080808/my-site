@@ -52,6 +52,15 @@ let productEditor; // Додаємо глобальну змінну для ре
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
 
+function getElement(selector, errorMsg = `Елемент ${selector} не знайдено`) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    console.error(errorMsg);
+    return null;
+  }
+  return element;
+}
+
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
