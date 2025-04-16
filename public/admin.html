@@ -684,21 +684,18 @@
             </form>
         </div>
         <!-- Категорії -->
-<div id="categories-admin" class="admin-section" style="display: none;">
-    <h2>Категорії</h2>
-    <form onsubmit="addCategory(event)">
-        <div class="form-group">
-            <label for="category-name">Назва категорії</label>
-            <input type="text" id="category-name" class="form-control">
-        </div>
-        <div class="form-group">
-            <label for="category-slug">Slug</label>
-            <input type="text" id="category-slug" class="form-control">
-        </div>
-        <button type="submit">Додати категорію</button>
-    </form>
-    <div id="categories-list"></div>
-</div>
+        <div class="admin-section">
+            <h3>Категорії</h3>
+            <form id="category-form" onsubmit="event.preventDefault(); addCategory();">
+                <input id="cat-name" placeholder="Назва категорії" type="text"/><br/>
+                <label for="cat-name">Назва категорії</label>
+                <input id="cat-slug" placeholder="Шлях категорії (наприклад, kuhni)" type="text"/><br/>
+                <label for="cat-slug">Шлях категорії</label>
+                <input id="cat-img-url" placeholder="URL картинки (300x200)" type="text"/><br/>
+                <label for="cat-img-url">URL зображення</label>
+                <input accept="image/*" id="cat-img-file" type="file"/><br/>
+                <label for="cat-img-file">Завантажте зображення</label>
+                <button type="submit">Додати категорію</button>
             </form>
             <div id="cat-list"></div>
             <h4>Підкатегорії</h4>
@@ -741,24 +738,19 @@
             </form>
         </div>
         <!-- Фільтри -->
-<div id="filters-admin" class="admin-section" style="display: none;">
-    <h2>Фільтри</h2>
-    <form onsubmit="addFilter(event)">
-        <div class="form-group">
-            <label for="filter-name">Назва фільтра</label>
-            <input type="text" id="filter-name" class="form-control">
+        <div class="admin-section">
+            <h3>Фільтри</h3>
+            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
+                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
+                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
+                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
+                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
+                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
+                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
+                <button type="submit">Додати фільтр</button>
+            </form>
+            <div id="filter-list-admin"></div>
         </div>
-        <div class="form-group">
-            <label for="filter-type">Тип фільтра</label>
-            <select id="filter-type" class="form-control">
-                <option value="select">Вибір</option>
-                <option value="range">Діапазон</option>
-            </select>
-        </div>
-        <button type="submit">Додати фільтр</button>
-    </form>
-    <div id="filters-list"></div>
-</div>
         <!-- Поля замовлення -->
         <div class="admin-section">
             <h3>Поля замовлення</h3>
