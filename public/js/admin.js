@@ -269,9 +269,10 @@ async function fetchWithAuth(url, options = {}) {
         }
     }
 
+    // Визначаємо заголовки, але не додаємо Content-Type, якщо використовується FormData
     const headers = {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), // Уникаємо Content-Type для FormData
         ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
     };
 
@@ -2216,63 +2217,56 @@ async function addCategory() {
 
         const name = document.getElementById('category-name').value.trim();
         const slug = document.getElementById('category-slug').value.trim();
+        const parentCategory = document.getElementById('parent-category').value || '';
+        const file = document.getElementById('category-photo-file').files[0];
         const photoUrl = document.getElementById('category-photo-url').value.trim();
-        const photoFile = document.getElementById('category-photo-file').files[0];
-        const visible = document.getElementById('category-visible').value === 'true';
 
-        console.log('Значення полів при додаванні категорії:', { name, slug, photoUrl, photoFile, visible });
+        console.log('Значення полів при додаванні категорії:', { name, slug, parentCategory, file, photoUrl });
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
             return;
         }
 
-        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        if (!slugCheck.ok) {
-            throw new Error('Помилка перевірки унікальності шляху категорії');
-        }
-        const existingCategories = await slugCheck.json();
-        if (existingCategories.some(c => c.slug === slug)) {
-            showNotification('Шлях категорії має бути унікальним!');
-            return;
+        // Перевірка parentCategory
+        let parentCategoryId = null;
+        if (parentCategory) {
+            const parent = categories.find(c => c.name === parentCategory || c._id === parentCategory);
+            if (!parent) {
+                showNotification('Вибрана батьківська категорія не існує!');
+                return;
+            }
+            parentCategoryId = parent._id;
         }
 
-        let finalPhotoUrl = photoUrl;
-        if (photoFile) {
-            const validation = validateFile(photoFile);
+        let photo = null;
+        if (file) {
+            const validation = validateFile(file);
             if (!validation.valid) {
                 showNotification(validation.error);
                 return;
             }
-            try {
-                const formData = new FormData();
-                formData.append('file', photoFile);
-                const response = await fetchWithAuth('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Помилка завантаження зображення: ${errorText || response.statusText}`);
-                }
-                const data = await response.json();
-                if (!data.url) {
-                    throw new Error('Сервер не повернув URL зображення');
-                }
-                finalPhotoUrl = data.url;
-            } catch (uploadError) {
-                console.error('Помилка завантаження зображення:', uploadError);
-                showNotification('Не вдалося завантажити зображення: ' + uploadError.message);
-                return;
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
             }
+            const data = await response.json();
+            photo = data.url;
+        } else if (photoUrl) {
+            photo = photoUrl;
         }
 
         const category = {
             name,
             slug,
-            photo: finalPhotoUrl || null,
-            visible,
-            subcategories: []
+            parentCategory: parentCategoryId, // Надсилаємо ID, а не назву
+            photo: photo || null
         };
 
         console.log('Дані, що надсилаються на сервер:', category);
@@ -2283,28 +2277,22 @@ async function addCategory() {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = 'Невідома помилка';
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.error || errorData.message || response.statusText;
-            } catch {
-                errorMessage = errorText || response.statusText;
-            }
-            throw new Error(`Не вдалося додати категорію: ${errorMessage}`);
+            const errorData = await response.json();
+            throw new Error(`Не вдалося додати категорію: ${errorData.error || response.statusText}`);
         }
 
         const newCategory = await response.json();
         categories.push(newCategory);
-        renderCategoriesAdmin();
+        renderAdmin('categories');
+        showNotification('Категорію додано!');
+        resetInactivityTimer();
+
+        // Очистка полів
         document.getElementById('category-name').value = '';
         document.getElementById('category-slug').value = '';
+        document.getElementById('parent-category').value = '';
         document.getElementById('category-photo-url').value = '';
         document.getElementById('category-photo-file').value = '';
-        document.getElementById('category-visible').value = 'true';
-        showNotification('Категорію додано!');
-        unsavedChanges = false;
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні категорії:', err);
         showNotification('Не вдалося додати категорію: ' + err.message);
