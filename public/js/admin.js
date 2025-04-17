@@ -60,6 +60,18 @@ function getElement(selector, errorMessage = `Елемент ${selector} не з
     return element;
 }
 
+function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleString('uk-UA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -760,10 +772,10 @@ function initializeEditors() {
         [{ 'align': [] }],
         ['clean'],
         ['image', 'video'],
-        [{ 'undo': 'undo' }, { 'redo': 'redo' }] // Змінено формат
+        [{ 'undo': 'undo' }, { 'redo': 'redo' }]
     ];
 
-try {
+    try {
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
@@ -1851,15 +1863,17 @@ function closeModal() {
 }
 
 function validateFile(file) {
-    const maxSize = 5 * 1024 * 1024; // 5 MB
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5 МБ
 
     if (!allowedTypes.includes(file.type)) {
         return { valid: false, error: 'Дозволені формати: JPEG, PNG, GIF, WebP' };
     }
+
     if (file.size > maxSize) {
-        return { valid: false, error: 'Максимальний розмір файлу: 5 MB' };
+        return { valid: false, error: 'Максимальний розмір файлу: 5 МБ' };
     }
+
     return { valid: true };
 }
 
@@ -3488,13 +3502,29 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
-async function saveNewProduct() {
+let cachedSlugs = new Set();
+
+async function checkSlugUniqueness(slug) {
+    if (cachedSlugs.has(slug)) {
+        return false; // Якщо slug уже в кеші, він не унікальний
+    }
+
+    const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+    const existingProducts = await slugCheck.json();
+    const isUnique = !existingProducts.some(p => p.slug === slug && !p._id);
+
+    if (!isUnique) {
+        cachedSlugs.add(slug); // Додаємо до кешу, якщо slug зайнятий
+    }
+
+    return isUnique;
+}
+
+async function prepareProductData(productId = null) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
+            throw new Error('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
         }
 
         const nameInput = getElement('#product-name');
@@ -3514,8 +3544,7 @@ async function saveNewProduct() {
         const lengthCmInput = getElement('#product-length-cm');
 
         if (!nameInput || !slugInput || !visibleSelect || !descriptionInput) {
-            showNotification('Елементи форми для товару не знайдено');
-            return;
+            throw new Error('Елементи форми для товару не знайдено');
         }
 
         const name = nameInput.value.trim();
@@ -3526,8 +3555,8 @@ async function saveNewProduct() {
         const material = materialInput.value.trim();
         let price = null;
         let salePrice = null;
-        if (newProduct.type === 'simple' && priceInput) {
-            price = parseFloat(priceInput.value) || null;
+        if (newProduct.type === 'simple') {
+            price = priceInput ? parseFloat(priceInput.value) || null : null;
             salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
         }
         const saleEnd = saleEndInput.value || null;
@@ -3540,73 +3569,72 @@ async function saveNewProduct() {
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
         if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
-            return;
+            throw new Error('Введіть назву та шлях товару!');
         }
 
         if (!category) {
-            showNotification('Виберіть категорію для товару!');
-            return;
+            throw new Error('Виберіть категорію для товару!');
         }
 
-        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-        const existingProducts = await slugCheck.json();
-        if (existingProducts.some(p => p.slug === slug && !p._id)) {
-            showNotification('Шлях товару має бути унікальним!');
-            return;
+        if (productId) {
+            const productObj = products.find(p => p._id === productId);
+            if (!productObj || !productObj._id) {
+                throw new Error('Товар не знайдено або відсутній ID!');
+            }
+
+            const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+            const existingProducts = await slugCheck.json();
+            if (existingProducts.some(p => p.slug === slug && p._id !== productId)) {
+                throw new Error('Шлях товару має бути унікальним!');
+            }
+        } else {
+            const isSlugUnique = await checkSlugUniqueness(slug);
+            if (!isSlugUnique) {
+                throw new Error('Шлях товару має бути унікальним!');
+            }
         }
 
-    const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-    const existingProducts = await slugCheck.json();
-    if (existingProducts.some(p => p.slug === slug && !p._id)) {
-      showNotification('Шлях товару має бути унікальним!');
-      return;
-    }
-
-    if (newProduct.type === 'simple' && (price === null || price < 0)) {
-      showNotification('Введіть коректну ціну для простого товару!');
-      return;
-    }
-
-    if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
-      showNotification('Додайте хоча б один розмір для матрацу!');
-      return;
-    }
-
-    if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
-      showNotification('Додайте хоча б один товар до групового товару!');
-      return;
-    }
-
-    if (brand && !brands.includes(brand)) {
-      try {
-        const response = await fetchWithAuth('/api/brands', {
-          method: 'POST',
-          body: JSON.stringify({ name: brand })
-        });
-        if (response.ok) {
-          brands.push(brand);
-          updateBrandOptions();
+        if (newProduct.type === 'simple' && (price === null || price < 0)) {
+            throw new Error('Введіть коректну ціну для простого товару!');
         }
-      } catch (e) {
-        console.error('Помилка додавання бренду:', e);
-      }
-    }
 
-    if (material && !materials.includes(material)) {
-      try {
-        const response = await fetchWithAuth('/api/materials', {
-          method: 'POST',
-          body: JSON.stringify({ name: material })
-        });
-        if (response.ok) {
-          materials.push(material);
-          updateMaterialOptions();
+        if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
+            throw new Error('Додайте хоча б один розмір для матрацу!');
         }
-      } catch (e) {
-        console.error('Помилка додавання матеріалу:', e);
-      }
-    }
+
+        if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
+            throw new Error('Додайте хоча б один товар до групового товару!');
+        }
+
+        if (brand && !brands.includes(brand)) {
+            try {
+                const response = await fetchWithAuth('/api/brands', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: brand })
+                });
+                if (response.ok) {
+                    brands.push(brand);
+                    updateBrandOptions();
+                }
+            } catch (e) {
+                console.error('Помилка додавання бренду:', e);
+            }
+        }
+
+        if (material && !materials.includes(material)) {
+            try {
+                const response = await fetchWithAuth('/api/materials', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: material })
+                });
+                if (response.ok) {
+                    materials.push(material);
+                    updateMaterialOptions();
+                }
+            } catch (e) {
+                console.error('Помилка додавання матеріалу:', e);
+            }
+        }
 
         let product = {
             type: newProduct.type,
@@ -3617,7 +3645,7 @@ async function saveNewProduct() {
             subcategory: subcategory || '',
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice,
+            salePrice: salePrice || null,
             saleEnd: saleEnd || null,
             description: description || '',
             widthCm,
@@ -3628,103 +3656,106 @@ async function saveNewProduct() {
             colors: newProduct.colors.map(color => ({
                 name: color.name,
                 value: color.value,
-                priceChange: color.priceChange,
-                photo: null
+                priceChange: color.priceChange || 0,
+                photo: color.photo || null
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts,
-            active: true,
-            visible: visible
+            active: productId ? newProduct.active : true,
+            visible
         };
 
-    const mediaUrls = [];
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(description, 'text/html');
-    const images = doc.querySelectorAll('img');
+        const mediaUrls = [];
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(description, 'text/html');
+        const images = doc.querySelectorAll('img');
 
-    for (let img of images) {
-      const src = img.getAttribute('src');
-      if (src && src.startsWith('blob:')) {
-        try {
-          const response = await fetch(src);
-          const blob = await response.blob();
-          const formData = new FormData();
-          formData.append('file', blob, `description-image-${Date.now()}.png`);
-          const uploadResponse = await fetchWithAuth('/api/upload', {
-            method: 'POST',
-            body: formData
-          });
-          const uploadData = await uploadResponse.json();
-          if (uploadData.url) {
-            mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
-          } else {
-            throw new Error('Не вдалося завантажити зображення');
-          }
-        } catch (err) {
-          console.error('Помилка завантаження зображення з опису:', err);
-          showNotification('Не вдалося завантажити зображення з опису: ' + err.message);
-          return;
+        for (let img of images) {
+            const src = img.getAttribute('src');
+            if (src && src.startsWith('blob:')) {
+                try {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const formData = new FormData();
+                    formData.append('file', blob, `description-image-${Date.now()}.png`);
+                    const uploadResponse = await fetchWithAuth('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await uploadResponse.json();
+                    if (uploadData.url) {
+                        mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
+                    } else {
+                        throw new Error('Не вдалося завантажити зображення');
+                    }
+                } catch (err) {
+                    console.error('Помилка завантаження зображення з опису:', err);
+                    throw new Error('Не вдалося завантажити зображення з опису: ' + err.message);
+                }
+            }
         }
-      }
-    }
 
-    let updatedDescription = description;
-    mediaUrls.forEach(({ oldUrl, newUrl }) => {
-      updatedDescription = updatedDescription.replace(oldUrl, newUrl);
-    });
-    product.description = updatedDescription;
-
-    const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
-    for (let file of photoFiles) {
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        showNotification(validation.error);
-        return;
-      }
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetchWithAuth('/api/upload', {
-          method: 'POST',
-          body: formData
+        let updatedDescription = description;
+        mediaUrls.forEach(({ oldUrl, newUrl }) => {
+            updatedDescription = updatedDescription.replace(oldUrl, newUrl);
         });
-        const data = await response.json();
-        product.photos.push(data.url);
-      } catch (err) {
-        console.error('Помилка завантаження фото:', err);
-        showNotification('Не вдалося завантажити фото: ' + err.message);
-        return;
-      }
-    }
+        product.description = updatedDescription;
 
-    product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
+        const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
+        for (let file of photoFiles) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                throw new Error(validation.error);
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetchWithAuth('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                product.photos.push(data.url);
+            } catch (err) {
+                console.error('Помилка завантаження фото:', err);
+                throw new Error('Не вдалося завантажити фото: ' + err.message);
+            }
+        }
 
-    for (let i = 0; i < newProduct.colors.length; i++) {
-      const color = newProduct.colors[i];
-      if (color.photo instanceof File) {
-        const validation = validateFile(color.photo);
-        if (!validation.valid) {
-          showNotification(validation.error);
-          return;
+        product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
+
+        for (let i = 0; i < newProduct.colors.length; i++) {
+            const color = newProduct.colors[i];
+            if (color.photo instanceof File) {
+                const validation = validateFile(color.photo);
+                if (!validation.valid) {
+                    throw new Error(validation.error);
+                }
+                try {
+                    const formData = new FormData();
+                    formData.append('file', color.photo);
+                    const response = await fetchWithAuth('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    product.colors[i].photo = data.url;
+                } catch (err) {
+                    console.error('Помилка завантаження фото кольору:', err);
+                    throw new Error('Не вдалося завантажити фото кольору: ' + err.message);
+                }
+            }
         }
-        try {
-          const formData = new FormData();
-          formData.append('file', color.photo);
-          const response = await fetchWithAuth('/api/upload', {
-            method: 'POST',
-            body: formData
-          });
-          const data = await response.json();
-          product.colors[i].photo = data.url;
-        } catch (err) {
-          console.error('Помилка завантаження фото кольору:', err);
-          showNotification('Не вдалося завантажити фото кольору: ' + err.message);
-          return;
-        }
-      } else if (typeof color.photo === 'string') {
-        product.colors[i].photo = color.photo;
-      }
+
+        return product;
+    } catch (err) {
+        throw err;
     }
+}
+
+async function saveNewProduct() {
+    try {
+        const product = await prepareProductData();
 
         const response = await fetchWithAuth('/api/products', {
             method: 'POST',
@@ -3745,6 +3776,9 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
+        if (err.message.includes('Токен відсутній')) {
+            showSection('admin-login');
+        }
         showNotification(`Не вдалося додати товар: ${err.message}`);
     }
 }
@@ -3753,7 +3787,7 @@ async function openEditProductModal(productId) {
     const product = products.find(p => p._id === productId);
     if (product) {
         newProduct = { ...product, colors: [...product.colors], photos: [...product.photos], sizes: [...product.sizes], groupProducts: [...product.groupProducts] };
-        const escapedName = product.name.replace(/"/g, '&quot;');
+        const escapedName = product.name.replace(/"/g, '"');
         const modal = document.getElementById('modal');
         modal.innerHTML = `
             <div class="modal-content">
@@ -3897,213 +3931,7 @@ async function openEditProductModal(productId) {
 
 async function saveEditedProduct(productId) {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
-        const category = document.getElementById('product-category').value;
-        const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
-        let price = null;
-        let salePrice = null;
-        if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value) || null;
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
-        }
-        const saleEnd = document.getElementById('product-sale-end').value || null;
-        const visible = document.getElementById('product-visible').value === 'true';
-        const description = document.getElementById('product-description').value || '';
-        const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
-        const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
-        const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
-        const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
-
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
-            return;
-        }
-
-        const productObj = products.find(p => p._id === productId);
-        if (!productObj || !productObj._id) {
-            showNotification('Товар не знайдено або відсутній ID!');
-            return;
-        }
-
-        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-        const existingProducts = await slugCheck.json();
-        if (existingProducts.some(p => p.slug === slug && p._id !== productId)) {
-            showNotification('Шлях товару має бути унікальним!');
-            return;
-        }
-
-        if (newProduct.type === 'simple' && (price === null || price < 0)) {
-            showNotification('Введіть коректну ціну для простого товару!');
-            return;
-        }
-
-        if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
-            showNotification('Додайте хоча б один розмір для матрацу!');
-            return;
-        }
-
-        if (newProduct.type === 'group' && newProduct.groupProducts.length === 0) {
-            showNotification('Додайте хоча б один товар до групового товару!');
-            return;
-        }
-
-        if (brand && !brands.includes(brand)) {
-            try {
-                const response = await fetchWithAuth('/api/brands', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: brand })
-                });
-                if (response.ok) {
-                    brands.push(brand);
-                    updateBrandOptions();
-                }
-            } catch (e) {
-                console.error('Помилка додавання бренду:', e);
-            }
-        }
-
-        if (material && !materials.includes(material)) {
-            try {
-                const response = await fetchWithAuth('/api/materials', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: material })
-                });
-                if (response.ok) {
-                    materials.push(material);
-                    updateMaterialOptions();
-                }
-            } catch (e) {
-                console.error('Помилка додавання матеріалу:', e);
-            }
-        }
-
-        let product = {
-            type: newProduct.type,
-            name,
-            slug,
-            brand: brand || '',
-            category: category || '',
-            subcategory: subcategory || '',
-            material: material || '',
-            price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice || null,
-            saleEnd: saleEnd || null,
-            description,
-            widthCm,
-            depthCm,
-            heightCm,
-            lengthCm,
-            photos: [],
-            colors: newProduct.colors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: color.photo || null
-            })),
-            sizes: newProduct.sizes,
-            groupProducts: newProduct.groupProducts,
-            active: newProduct.active,
-            visible
-        };
-
-        const mediaUrls = [];
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(description, 'text/html');
-        const images = doc.querySelectorAll('img');
-        const videos = doc.querySelectorAll('iframe');
-
-        for (let img of images) {
-            const src = img.getAttribute('src');
-            if (src && src.startsWith('blob:')) {
-                try {
-                    const response = await fetch(src);
-                    const blob = await response.blob();
-                    const formData = new FormData();
-                    formData.append('file', blob, `description-image-${Date.now()}.png`);
-                    const uploadResponse = await fetchWithAuth('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    if (!uploadResponse.ok) {
-                        throw new Error('Помилка завантаження зображення');
-                    }
-                    const uploadData = await uploadResponse.json();
-                    if (uploadData.url) {
-                        mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
-                    }
-                } catch (err) {
-                    console.error('Помилка завантаження зображення:', err);
-                    showNotification('Не вдалося завантажити зображення: ' + err.message);
-                    return;
-                }
-            }
-        }
-
-        let updatedDescription = description;
-        mediaUrls.forEach(({ oldUrl, newUrl }) => {
-            updatedDescription = updatedDescription.replace(oldUrl, newUrl);
-        });
-        product.description = updatedDescription;
-
-        const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
-        for (let file of photoFiles) {
-            const validation = validateFile(file);
-            if (!validation.valid) {
-                showNotification(validation.error);
-                return;
-            }
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await fetchWithAuth('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                product.photos.push(data.url);
-            } catch (err) {
-                console.error('Помилка завантаження фото:', err);
-                showNotification('Не вдалося завантажити фото: ' + err.message);
-                return;
-            }
-        }
-
-        product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
-
-        for (let i = 0; i < newProduct.colors.length; i++) {
-            const color = newProduct.colors[i];
-            if (color.photo instanceof File) {
-                const validation = validateFile(color.photo);
-                if (!validation.valid) {
-                    showNotification(validation.error);
-                    return;
-                }
-                try {
-                    const formData = new FormData();
-                    formData.append('file', color.photo);
-                    const response = await fetchWithAuth('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    product.colors[i].photo = data.url;
-                } catch (err) {
-                    console.error('Помилка завантаження фото кольору:', err);
-                    showNotification('Не вдалося завантажити фото кольору: ' + err.message);
-                    return;
-                }
-            }
-        }
+        const product = await prepareProductData(productId);
 
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PUT',
@@ -4124,51 +3952,54 @@ async function saveEditedProduct(productId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
+        if (err.message.includes('Токен відсутній')) {
+            showSection('admin-login');
+        }
         showNotification('Не вдалося оновити товар: ' + err.message);
     }
 }
 
 async function deleteProduct(productId) {
-  if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
-    try {
-      const tokenRefreshed = await refreshToken();
-      if (!tokenRefreshed) {
-        showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-      }
+    if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
 
-      // Перевірка, чи productId виглядає як ObjectId (24 символи для MongoDB)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productId);
-      if (!isValidObjectId) {
-        showNotification('Некоректний ID товару. Перевірте дані.');
-        return;
-      }
+            // Перевірка, чи productId виглядає як ObjectId (24 символи для MongoDB)
+            const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productId);
+            if (!isValidObjectId) {
+                showNotification('Некоректний ID товару. Перевірте дані.');
+                return;
+            }
 
-      const response = await fetchWithAuth(`/api/products/${productId}`, {
-        method: 'DELETE'
-      });
+            const response = await fetchWithAuth(`/api/products/${productId}`, {
+                method: 'DELETE'
+            });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Помилка при видаленні товару: ${errorText}`);
-      }
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Помилка при видаленні товару: ${errorText}`);
+            }
 
-      products = products.filter(p => p._id !== productId);
-      products.forEach(p => {
-        if (p.type === 'group') {
-          p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
+            products = products.filter(p => p._id !== productId);
+            products.forEach(p => {
+                if (p.type === 'group') {
+                    p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
+                }
+            });
+            renderAdmin('products');
+            showNotification('Товар видалено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка при видаленні товару:', err);
+            showNotification(`Не вдалося видалити товар: ${err.message}`);
         }
-      });
-      renderAdmin('products');
-      showNotification('Товар видалено!');
-      unsavedChanges = false;
-      resetInactivityTimer();
-    } catch (err) {
-      console.error('Помилка при видаленні товару:', err);
-      showNotification(`Не вдалося видалити товар: ${err.message}`);
     }
-  }
 }
 
 async function toggleProductActive(productId) {
