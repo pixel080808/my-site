@@ -240,88 +240,61 @@ if (aboutEditor) {
 }
 
 async function fetchWithAuth(url, options = {}) {
-    try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            throw new Error('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-        }
-
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
-        }
-        const csrfData = await csrfResponse.json();
-        const csrfToken = csrfData.csrfToken;
-        if (!csrfToken) {
-            throw new Error('CSRF-токен не отримано');
-        }
-
-        const token = localStorage.getItem('adminToken');
-        const headers = {
-            ...options.headers,
-            'Authorization': `Bearer ${token}`,
-            'X-CSRF-Token': csrfToken
-        };
-
-        // Не додаємо Content-Type для multipart/form-data
-        if (!(options.body instanceof FormData)) {
-            headers['Content-Type'] = 'application/json';
-        }
-
-        const response = await fetch(url, {
-            ...options,
-            headers,
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error(`Помилка запиту до ${url}: ${response.status} ${text}`);
-            if (response.status === 401 || response.status === 403) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    const newToken = localStorage.getItem('adminToken');
-                    const newCsrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                        method: 'GET',
-                        credentials: 'include'
-                    });
-                    const newCsrfData = await newCsrfResponse.json();
-                    const newCsrfToken = newCsrfData.csrfToken;
-
-                    const retryHeaders = {
-                        ...options.headers,
-                        'Authorization': `Bearer ${newToken}`,
-                        'X-CSRF-Token': newCsrfToken
-                    };
-                    if (!(options.body instanceof FormData)) {
-                        retryHeaders['Content-Type'] = 'application/json';
-                    }
-
-                    const retryResponse = await fetch(url, {
-                        ...options,
-                        headers: retryHeaders,
-                        credentials: 'include'
-                    });
-                    if (!retryResponse.ok) {
-                        throw new Error(`Повторний запит не вдався: ${retryResponse.statusText}`);
-                    }
-                    return retryResponse;
-                } else {
-                    throw new Error('Не вдалося оновити токен.');
-                }
-            }
-            throw new Error(`Помилка: ${response.status} ${text}`);
-        }
-
-        return response;
-    } catch (err) {
-        console.error('Помилка fetchWithAuth:', err);
-        showNotification(err.message);
-        throw err;
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+        throw new Error('Токен відсутній. Увійдіть знову.');
     }
+
+    // Отримуємо CSRF-токен для POST-запитів
+    let csrfToken = localStorage.getItem('csrfToken');
+    if ((options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') && !csrfToken) {
+        try {
+            const csrfResponse = await fetch('/api/csrf-token', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!csrfResponse.ok) {
+                throw new Error('Не вдалося отримати CSRF-токен');
+            }
+            const csrfData = await csrfResponse.json();
+            csrfToken = csrfData.csrfToken;
+            localStorage.setItem('csrfToken', csrfToken);
+        } catch (err) {
+            console.error('Помилка отримання CSRF-токена:', err);
+            throw err;
+        }
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
+    };
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    if (response.status === 401) {
+        const tokenRefreshed = await refreshToken();
+        if (tokenRefreshed) {
+            const newToken = localStorage.getItem('adminToken');
+            const newResponse = await fetch(url, {
+                ...options,
+                headers: {
+                    ...headers,
+                    'Authorization': `Bearer ${newToken}`
+                }
+            });
+            return newResponse;
+        }
+    }
+
+    return response;
 }
 
 async function loadOrders() {
@@ -1846,6 +1819,12 @@ async function deleteCategory(categoryId) {
     }
 
     try {
+        const category = categories.find(c => c._id === categoryId);
+        if (!category) {
+            showNotification('Категорія не знайдена!');
+            return;
+        }
+
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
@@ -1853,8 +1832,11 @@ async function deleteCategory(categoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
-            method: 'DELETE'
+        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(category.slug)}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': localStorage.getItem('csrfToken') // Додаємо CSRF-токен
+            }
         });
 
         if (!response.ok) {
@@ -1862,16 +1844,7 @@ async function deleteCategory(categoryId) {
             throw new Error(`Помилка: ${response.status} ${JSON.stringify(errorData)}`);
         }
 
-        const deletedCategory = categories.find(c => c._id === categoryId);
         categories = categories.filter(c => c._id !== categoryId);
-
-        products.forEach(p => {
-            if (p.category === deletedCategory?.name) {
-                p.category = '';
-                p.subcategory = '';
-            }
-        });
-
         renderCategoriesAdmin();
         renderAdmin('products');
         showNotification('Категорію видалено!');
@@ -2053,22 +2026,20 @@ async function addCategory() {
     const imgUrlInput = document.getElementById('cat-img-url');
     const imgFileInput = document.getElementById('cat-img-file');
 
-    console.log('Елементи форми:', {
-        nameInput: !!nameInput,
-        slugInput: !!slugInput,
-        imgUrlInput: !!imgUrlInput,
-        imgFileInput: !!imgFileInput
-    });
-
     if (!nameInput || !slugInput || !imgUrlInput || !imgFileInput) {
-        console.error('Елементи форми не знайдено');
+        console.error('Елементи форми не знайдено:', {
+            nameInput: !!nameInput,
+            slugInput: !!slugInput,
+            imgUrlInput: !!imgUrlInput,
+            imgFileInput: !!imgFileInput
+        });
         showNotification('Елементи форми для категорії не знайдено. Перевірте HTML.');
         return;
     }
 
     const name = nameInput.value.trim();
     const slug = slugInput.value.trim();
-    let img = imgUrlInput.value.trim();
+    let photo = imgUrlInput.value.trim(); // Змінено з img на photo
 
     if (!name || !slug) {
         showNotification('Назва та шлях категорії обов’язкові!');
@@ -2084,7 +2055,7 @@ async function addCategory() {
                 body: formData
             });
             const uploadData = await uploadResponse.json();
-            img = uploadData.url;
+            photo = uploadData.url; // Змінено з img на photo
         }
 
         const tokenRefreshed = await refreshToken();
@@ -2096,7 +2067,7 @@ async function addCategory() {
 
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
-            body: JSON.stringify({ name, slug, img })
+            body: JSON.stringify({ name, slug, photo }) // Змінено з img на photo
         });
 
         if (!response.ok) {
@@ -2189,7 +2160,7 @@ async function saveCategoryEdit(categoryId) {
 
     const name = nameInput.value.trim();
     const slug = slugInput.value.trim();
-    let img = imgUrlInput.value.trim();
+    let photo = imgUrlInput.value.trim(); // Змінено з img на photo
 
     if (!name || !slug) {
         showNotification('Назва та шлях категорії обов’язкові!');
@@ -2205,7 +2176,7 @@ async function saveCategoryEdit(categoryId) {
                 body: formData
             });
             const uploadData = await uploadResponse.json();
-            img = uploadData.url;
+            photo = uploadData.url; // Змінено з img на photo
         }
 
         const tokenRefreshed = await refreshToken();
@@ -2217,7 +2188,7 @@ async function saveCategoryEdit(categoryId) {
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
-            body: JSON.stringify({ name, slug, img })
+            body: JSON.stringify({ name, slug, photo }) // Змінено з img на photo
         });
 
         if (!response.ok) {

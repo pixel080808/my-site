@@ -1,13 +1,13 @@
 // models/Category.js
 const mongoose = require('mongoose');
 const categorySchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    slug: { type: String, unique: true, required: true },
-    image: String,
+    name: { type: String, required: true, maxlength: 255 },
+    slug: { type: String, required: true, maxlength: 255, unique: true },
+    photo: { type: String, default: '' },
     subcategories: [{
-        name: { type: String, required: true },
-        slug: { type: String, required: true },
-        image: { type: String, default: '' } // Додаємо поле image
+        name: { type: String, required: true, maxlength: 255 },
+        slug: { type: String, required: true, maxlength: 255 },
+        photo: { type: String, default: '' }
     }]
 }, { timestamps: true });
 module.exports = mongoose.model('Category', categorySchema);
