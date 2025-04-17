@@ -1003,24 +1003,42 @@ app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res
     }
 });
 
-app.post('/api/auth/refresh', csrfProtection, (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
+app.post('/api/auth/refresh', csrfProtection, async (req, res) => {
+    const refreshToken = req.body.refreshToken;
+    if (!refreshToken) {
+        return res.status(401).json({ error: 'Refresh-токен відсутній' });
+    }
+
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret');
+        const RefreshToken = require('./models/RefreshToken');
+        const storedToken = await RefreshToken.findOne({ token: refreshToken, userId: decoded.userId });
+
+        if (!storedToken || storedToken.expiresAt < new Date()) {
+            return res.status(401).json({ error: 'Недійсний або прострочений refresh-токен' });
         }
-        const newToken = jwt.sign(
+
+        const newAccessToken = jwt.sign(
             { userId: decoded.userId, username: decoded.username, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
+
         logger.info('Токен успішно оновлено для користувача:', decoded.username);
-        res.json({ token: newToken });
+        res.json({ token: newAccessToken });
     } catch (err) {
         logger.error('Помилка оновлення токена:', err.message);
-        res.status(401).json({ error: 'Недійсний або прострочений токен' });
+        res.status(401).json({ error: 'Недійсний або прострочений refresh-токен' });
+    }
+});
+
+app.get('/api/auth/check', authenticateToken, (req, res) => {
+    try {
+        logger.info('Перевірка авторизації для користувача:', req.user.username);
+        res.status(200).json({ message: 'Токен валідний', user: { username: req.user.username, role: req.user.role } });
+    } catch (err) {
+        logger.error('Помилка перевірки авторизації:', err.message);
+        res.status(401).json({ error: 'Недійсний токен', details: err.message });
     }
 });
 
@@ -1573,22 +1591,35 @@ const loginLimiter = rateLimit({
     message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
 });
 
-app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
+app.post('/api/auth/login', loginLimiter, csrfProtection, async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
-        return res.status(400).json({ error: 'Логін і пароль обов’язкові', message: 'Логін і пароль обов’язкові' });
+        return res.status(400).json({ error: 'Логін і пароль обов’язкові' });
     }
 
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-        const token = jwt.sign(
+        const accessToken = jwt.sign(
             { userId: username, username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
-        res.json({ token });
+        const refreshToken = jwt.sign(
+            { userId: username, username: ADMIN_USERNAME, role: 'admin' },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+            { expiresIn: '7d' }
+        );
+
+        const RefreshToken = require('./models/RefreshToken');
+        await new RefreshToken({
+            token: refreshToken,
+            userId: username,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }).save();
+
+        res.json({ accessToken, refreshToken });
     } else {
         logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`);
-        res.status(401).json({ error: 'Невірні дані для входу', message: 'Невірні дані для входу' });
+        res.status(401).json({ error: 'Невірні дані для входу' });
     }
 });
 

@@ -603,44 +603,43 @@ async function checkAuth() {
     try {
         const storedSession = localStorage.getItem('adminSession');
         const token = localStorage.getItem('adminToken');
+        console.log('checkAuth: Перевірка сесії', { storedSessionExists: !!storedSession, tokenExists: !!token });
 
         if (!token || !storedSession) {
-            console.warn('Токен або сесія відсутні, переходимо до логіну.');
+            console.warn('checkAuth: Токен або сесія відсутні, переходимо до логіну.');
             showSection('admin-login');
             return;
         }
 
-        // Розшифровуємо сесію
         let sessionData;
         try {
             sessionData = JSON.parse(LZString.decompressFromUTF16(storedSession));
+            console.log('checkAuth: Сесія розшифрована', sessionData);
         } catch (e) {
-            console.error('Помилка розшифровки сесії:', e);
+            console.error('checkAuth: Помилка розшифровки сесії:', e);
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminSession');
             showSection('admin-login');
             return;
         }
 
-        // Перевіряємо, чи сесія активна та чи не минув тайм-аут
         if (!sessionData.isActive || (Date.now() - sessionData.timestamp) > sessionTimeout) {
-            console.warn('Сесія неактивна або прострочена.');
+            console.warn('checkAuth: Сесія неактивна або прострочена.', { isActive: sessionData.isActive, timeDiff: Date.now() - sessionData.timestamp });
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminSession');
             showSection('admin-login');
             return;
         }
 
-        // Спроба оновити токен
         const tokenRefreshed = await refreshToken();
+        console.log('checkAuth: Результат оновлення токена', tokenRefreshed);
         if (!tokenRefreshed) {
-            console.warn('Не вдалося оновити токен.');
+            console.warn('checkAuth: Не вдалося оновити токен.');
             showSection('admin-login');
             showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
             return;
         }
 
-        // Перевірка авторизації через сервер
         const response = await fetch('/api/auth/check', {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
@@ -648,6 +647,7 @@ async function checkAuth() {
             },
             credentials: 'include'
         });
+        console.log('checkAuth: Відповідь від /api/auth/check', { status: response.status, ok: response.ok });
 
         if (response.ok) {
             session = { isActive: true, timestamp: Date.now() };
@@ -656,16 +656,17 @@ async function checkAuth() {
             await initializeData();
             connectAdminWebSocket();
             resetInactivityTimer();
-            startTokenRefreshTimer(); // Запускаємо періодичне оновлення токена
+            startTokenRefreshTimer();
+            console.log('checkAuth: Авторизація успішна, відкрито admin-panel');
         } else {
-            console.warn('Перевірка авторизації не вдалася:', response.status);
+            console.warn('checkAuth: Перевірка авторизації не вдалася:', response.status);
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminSession');
             showSection('admin-login');
             showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
     } catch (e) {
-        console.error('Помилка перевірки авторизації:', e);
+        console.error('checkAuth: Помилка перевірки авторизації:', e);
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminSession');
         showSection('admin-login');
@@ -1185,30 +1186,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refreshToken(attempt = 1) {
     const maxAttempts = 3;
+    console.log('refreshToken: Спроба оновлення токена', { attempt });
     try {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            console.warn('Токен відсутній.');
+            console.warn('refreshToken: Токен відсутній.');
             return false;
         }
 
-        // Отримуємо CSRF-токен
         const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
+        console.log('refreshToken: Відповідь від /api/csrf-token', { status: csrfResponse.status, ok: csrfResponse.ok });
 
         if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfResponse.statusText}`);
         }
 
         const csrfData = await csrfResponse.json();
         const csrfToken = csrfData.csrfToken;
+        console.log('refreshToken: Отримано CSRF-токен', { csrfToken });
+
         if (!csrfToken) {
             throw new Error('CSRF-токен не отримано');
         }
 
-        // Запит на оновлення токена
         const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
             method: 'POST',
             headers: {
@@ -1218,17 +1221,20 @@ async function refreshToken(attempt = 1) {
             },
             credentials: 'include'
         });
+        console.log('refreshToken: Відповідь від /api/auth/refresh', { status: response.status, ok: response.ok });
 
         if (!response.ok) {
             if ((response.status === 401 || response.status === 403) && attempt < maxAttempts) {
-                console.log(`Спроба ${attempt} оновлення токена не вдалася, повторюємо...`);
+                console.log(`refreshToken: Спроба ${attempt} не вдалася, повторюємо...`);
                 await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 return refreshToken(attempt + 1);
             }
-            throw new Error(`Помилка оновлення токена: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Помилка оновлення токена: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('refreshToken: Дані від сервера', data);
         if (!data.token) {
             throw new Error('Новий токен не отримано від сервера');
         }
@@ -1236,10 +1242,10 @@ async function refreshToken(attempt = 1) {
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        console.log('Токен успішно оновлено.');
+        console.log('refreshToken: Токен успішно оновлено.');
         return true;
     } catch (err) {
-        console.error('Помилка оновлення токена:', err);
+        console.error('refreshToken: Помилка оновлення токена:', err);
         if (attempt >= maxAttempts) {
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminSession');
