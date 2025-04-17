@@ -1537,7 +1537,11 @@ async function updateAbout() {
 }
 
 function renderAdmin(activeTab = 'site-editing') {
-    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings);
+    const adminPanel = document.getElementById('admin-panel');
+    if (!adminPanel) {
+        console.error('Елемент #admin-panel не знайдено');
+        return;
+    }
 
     const storeName = document.getElementById('store-name');
     if (storeName) storeName.value = settings.name || '';
@@ -1759,29 +1763,99 @@ function renderAdmin(activeTab = 'site-editing') {
 }
 
 function renderCategoriesAdmin() {
-    const catList = document.getElementById('cat-list');
-    if (catList) {
-        catList.innerHTML = categories.map(cat => `
+    const categoryList = document.getElementById('category-list');
+    if (!categoryList) {
+        console.warn('Елемент #category-list не знайдено, пропускаємо рендеринг категорій.');
+        return;
+    }
+
+    categoryList.innerHTML = categories.length > 0
+        ? categories.map((cat, index) => `
             <div class="category-item">
-                ${cat.name}
-                <button class="edit-btn" onclick="editCategory('${cat._id}')">Редагувати</button>
-                <button class="delete-btn" onclick="deleteCategory('${cat._id}')">Видалити</button>
-                <div class="subcat-list">
-                    ${(cat.subcategories || []).map(sub => `
-                        <p>
+                <span>${cat.name}</span>
+                <button onclick="openEditCategoryModal(${index})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteCategory(${index})">Видалити</button>
+                <h4>Підкатегорії:</h4>
+                <div id="subcategory-list-${index}">
+                    ${cat.subcategories.map((sub, subIndex) => `
+                        <div class="subcategory-item">
                             ${sub.name}
-                            <button class="edit-btn" onclick="editSubcategory('${cat._id}', '${sub._id}')">Редагувати</button>
-                            <button class="delete-btn" onclick="deleteSubcategory('${cat._id}', '${sub._id}')">Видалити</button>
-                        </p>
+                            <button onclick="openEditSubcategoryModal(${index}, ${subIndex})">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteSubcategory(${index}, ${subIndex})">Видалити</button>
+                        </div>
                     `).join('')}
                 </div>
+                <button onclick="openAddSubcategoryModal(${index})">Додати підкатегорію</button>
             </div>
-        `).join('');
+        `).join('')
+        : '<p>Категорії відсутні.</p>';
+
+    resetInactivityTimer();
+}
+
+function openAddCategoryModal() {
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        showNotification('Модальне вікно не знайдено!');
+        return;
     }
-    const subcatSelect = document.getElementById('subcat-category');
-    if (subcatSelect) {
-        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' + 
-            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Додати категорію</h3>
+            <input type="text" id="category-name" placeholder="Назва категорії"><br/>
+            <label for="category-name">Назва категорії</label>
+            <div class="modal-actions">
+                <button onclick="saveNewCategory()">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    resetInactivityTimer();
+}
+
+async function saveNewCategory() {
+    const nameInput = document.getElementById('category-name');
+    if (!nameInput) {
+        showNotification('Поле для назви категорії не знайдено!');
+        return;
+    }
+
+    const name = nameInput.value.trim();
+    if (!name) {
+        showNotification('Введіть назву категорії!');
+        return;
+    }
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const newCategory = { name, subcategories: [] };
+        const response = await fetchWithAuth('/api/categories', {
+            method: 'POST',
+            body: JSON.stringify(newCategory)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка додавання категорії: ${errorText}`);
+        }
+
+        const savedCategory = await response.json();
+        categories.push(savedCategory);
+        closeModal();
+        renderCategoriesAdmin();
+        showNotification('Категорію додано!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при додаванні категорії:', err);
+        showNotification('Не вдалося додати категорію: ' + err.message);
     }
 }
 
@@ -1819,25 +1893,127 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-  const slidesList = getElement('#slides-list-admin', 'Елемент #slides-list-admin не знайдено');
-  const addSlideBtn = getElement('#add-slide-btn', 'Елемент #add-slide-btn не знайдено');
+    const slidesTab = document.getElementById('slides-tab');
+    if (!slidesTab) {
+        console.warn('Елемент #slides-tab не знайдено, пропускаємо рендеринг слайдів.');
+        return;
+    }
 
-  if (slidesList) {
-    slidesList.innerHTML = slides.map((slide, index) => `
-      <div class="slide-item">
-        <img src="${slide.image}" alt="Slide ${index + 1}" style="max-width: 100px;">
-        <p>Посилання: ${slide.link || 'Немає'}</p>
-        <button onclick="editSlide(${index})">Редагувати</button>
-        <button onclick="deleteSlide(${index})">Видалити</button>
-      </div>
-    `).join('');
-  }
+    slidesTab.innerHTML = `
+        <h3>Слайди</h3>
+        <div id="slide-list">
+            ${slides.length > 0 ? slides.map((slide, index) => `
+                <div class="slide-item">
+                    <img src="${slide.url}" alt="Слайд ${index + 1}" style="max-width: 100px;">
+                    <button onclick="openEditSlideModal(${index})">Редагувати</button>
+                    <button class="delete-btn" onclick="deleteSlide(${index})">Видалити</button>
+                </div>
+            `).join('') : '<p>Слайди відсутні.</p>'}
+        </div>
+        <button onclick="openAddSlideModal()">Додати слайд</button>
+        <h4>Налаштування слайдів</h4>
+        <input type="checkbox" id="slides-toggle" ${settings.showSlides ? 'checked' : ''} onchange="toggleSlides()">
+        <label for="slides-toggle">Показувати слайди</label><br/>
+        <input type="number" id="slide-width" value="${settings.slideWidth || ''}" placeholder="Ширина слайду (пікс)" min="0">
+        <label for="slide-width">Ширина слайду (пікс)</label><br/>
+        <input type="number" id="slide-height" value="${settings.slideHeight || ''}" placeholder="Висота слайду (пікс)" min="0">
+        <label for="slide-height">Висота слайду (пікс)</label><br/>
+        <input type="number" id="slide-interval" value="${settings.slideInterval || ''}" placeholder="Інтервал (мс)" min="1000">
+        <label for="slide-interval">Інтервал (мс)</label><br/>
+        <button onclick="updateSlideSettings()">Зберегти налаштування</button>
+    `;
 
-  if (addSlideBtn) {
-    addSlideBtn.addEventListener('click', () => openAddSlideModal());
-  }
+    resetInactivityTimer();
+}
 
-  resetInactivityTimer();
+function openAddSlideModal() {
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        showNotification('Модальне вікно не знайдено!');
+        return;
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Додати слайд</h3>
+            <input type="text" id="slide-url" placeholder="URL слайду"><br/>
+            <label for="slide-url">URL слайду</label>
+            <input type="file" id="slide-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <label for="slide-file">Завантажте слайд</label>
+            <div class="modal-actions">
+                <button onclick="saveNewSlide()">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    resetInactivityTimer();
+}
+
+async function saveNewSlide() {
+    const urlInput = document.getElementById('slide-url');
+    const fileInput = document.getElementById('slide-file');
+    if (!urlInput || !fileInput) {
+        showNotification('Елементи форми для додавання слайду не знайдені!');
+        return;
+    }
+
+    const url = urlInput.value.trim();
+    const file = fileInput.files[0];
+    let finalUrl = url;
+
+    if (!url && !file) {
+        showNotification('Введіть URL або завантажте файл для слайду!');
+        return;
+    }
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        if (file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            finalUrl = data.url;
+        }
+
+        const newSlide = { url: finalUrl };
+        const response = await fetchWithAuth('/api/slides', {
+            method: 'POST',
+            body: JSON.stringify(newSlide)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка додавання слайду: ${errorText}`);
+        }
+
+        const savedSlide = await response.json();
+        slides.push(savedSlide);
+        closeModal();
+        renderSlidesAdmin();
+        showNotification('Слайд додано!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при додаванні слайду:', err);
+        showNotification('Не вдалося додати слайд: ' + err.message);
+    }
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
@@ -2157,6 +2333,28 @@ async function addSubcategory() {
     }
 }
 
+function openAddSubcategoryModal(categoryIndex) {
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        showNotification('Модальне вікно не знайдено!');
+        return;
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Додати підкатегорію до "${categories[categoryIndex].name}"</h3>
+            <input type="text" id="subcategory-name" placeholder="Назва підкатегорії"><br/>
+            <label for="subcategory-name">Назва підкатегорії</label>
+            <div class="modal-actions">
+                <button onclick="saveNewSubcategory(${categoryIndex})">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    resetInactivityTimer();
+}
+
     function editSubcategory(categoryName, subcatName) {
         const category = categories.find(c => c.name === categoryName);
         if (category) {
@@ -2401,6 +2599,26 @@ async function loadFilters() {
 }
 
 async function addFilter() {
+    const labelInput = document.getElementById('filter-label');
+    const nameInput = document.getElementById('filter-name');
+    const typeSelect = document.getElementById('filter-type');
+    const optionsInput = document.getElementById('filter-options');
+
+    if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
+        showNotification('Елементи форми для додавання фільтра не знайдені!');
+        return;
+    }
+
+    const label = labelInput.value.trim();
+    const name = nameInput.value.trim();
+    const type = typeSelect.value;
+    const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
+
+    if (!label || !name || !type || options.length === 0) {
+        showNotification('Заповніть усі поля для фільтра!');
+        return;
+    }
+
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2409,48 +2627,33 @@ async function addFilter() {
             return;
         }
 
-        const labelInput = document.getElementById('filter-label');
-        const nameInput = document.getElementById('filter-name');
-        const typeSelect = document.getElementById('filter-type');
-        const optionsInput = document.getElementById('filter-options');
-
-        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
-            showNotification('Елементи форми для фільтра не знайдено');
-            return;
-        }
-
-        const label = labelInput.value.trim();
-        const name = nameInput.value.trim();
-        const type = typeSelect.value;
-        const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
-
-        if (!label || !name || !type || options.length === 0) {
-            showNotification('Заповніть усі поля фільтра!');
-            return;
-        }
-
         filters.push({ label, name, type, options });
 
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+        const response = await fetch(`${baseUrl}/api/settings`, {
             method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
             body: JSON.stringify({ ...settings, filters })
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити фільтри');
+            throw new Error('Не вдалося зберегти фільтр');
         }
 
-        renderFilters();
-        showNotification('Фільтр додано!');
         labelInput.value = '';
         nameInput.value = '';
-        typeSelect.value = 'select';
+        typeSelect.value = '';
         optionsInput.value = '';
+        renderFilters();
+        showNotification('Фільтр додано!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка додавання фільтру:', err);
+        console.error('Помилка додавання фільтра:', err);
         showNotification('Помилка: ' + err.message);
     }
 }
@@ -3786,6 +3989,7 @@ async function saveNewProduct() {
 
         const newProductData = await response.json();
         products.push(newProductData);
+        cachedSlugs.add(newProductData.slug); // Додаємо новий slug до кешу
         closeModal();
         renderAdmin('products');
         showNotification('Товар додано!');
@@ -3986,13 +4190,6 @@ async function deleteProduct(productId) {
                 return;
             }
 
-            // Перевірка, чи productId виглядає як ObjectId (24 символи для MongoDB)
-            const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productId);
-            if (!isValidObjectId) {
-                showNotification('Некоректний ID товару. Перевірте дані.');
-                return;
-            }
-
             const response = await fetchWithAuth(`/api/products/${productId}`, {
                 method: 'DELETE'
             });
@@ -4008,6 +4205,7 @@ async function deleteProduct(productId) {
                     p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
                 }
             });
+            cachedSlugs.delete(products.find(p => p._id === productId)?.slug); // Видаляємо slug з кешу
             renderAdmin('products');
             showNotification('Товар видалено!');
             unsavedChanges = false;
