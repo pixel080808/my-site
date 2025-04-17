@@ -4562,6 +4562,7 @@ async function deleteOrder(index) {
             const response = await fetch(`/api/orders/${order._id}`, {
                 method: 'DELETE',
                 headers: {
+                    'Authorization': `Bearer ${token}`, // Додаємо токен для авторизації
                     credentials: 'include'
                 }
             });
@@ -4579,27 +4580,27 @@ async function deleteOrder(index) {
     }
 }
 
-    function sortOrders(criteria) {
-        const [key, direction] = criteria.split('-');
-        orders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
-            if (direction === 'asc') {
-                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-            } else {
-                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
-            }
-        });
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
+function sortOrders(criteria) {
+    const [key, direction] = criteria.split('-');
+    orders.sort((a, b) => {
+        let valA = key === 'date' ? new Date(a[key]) : a[key];
+        let valB = key === 'date' ? new Date(b[key]) : b[key];
+        if (direction === 'asc') {
+            return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+        } else {
+            return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+        }
+    });
+    currentPage = 1;
+    renderAdmin('orders');
+    resetInactivityTimer();
+}
 
-    function filterOrders() {
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
+function filterOrders() {
+    currentPage = 1;
+    renderAdmin('orders');
+    resetInactivityTimer();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM завантажено, ініціалізація...');
@@ -4624,40 +4625,37 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.addEventListener('click', login);
     }
 
-    // Перевіряємо авторизацію
-    checkAuth();
-});
+    // Перевірка сесії та токена
+    const storedSession = localStorage.getItem('adminSession');
+    const token = localStorage.getItem('adminToken');
 
-  const storedSession = localStorage.getItem('adminSession');
-  const token = localStorage.getItem('adminToken');
-
-  if (storedSession && token) {
-    try {
-      session = JSON.parse(LZString.decompressFromUTF16(storedSession));
-      if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-        checkAuth();
-      } else {
-        localStorage.removeItem('adminToken');
+    if (storedSession && token) {
+        try {
+            session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+            if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+                checkAuth();
+            } else {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+            }
+        } catch (e) {
+            console.error('Помилка розшифровки сесії:', e);
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-login');
+        }
+    } else {
         session = { isActive: false, timestamp: 0 };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-login');
-      }
-    } catch (e) {
-      console.error('Помилка розшифровки сесії:', e);
-      localStorage.removeItem('adminToken');
-      session = { isActive: false, timestamp: 0 };
-      localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-      showSection('admin-login');
     }
-  } else {
-    session = { isActive: false, timestamp: 0 };
-    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-    showSection('admin-login');
-  }
 
-  if (getElement('#about-editor')) {
-    initializeEditors();
-  }
+    if (getElement('#about-editor')) {
+        initializeEditors();
+    }
 });
 
 document.addEventListener('mousemove', resetInactivityTimer);
@@ -4715,7 +4713,7 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onclose = () => {
         console.log('WebSocket закрито, спроба перепідключення...');
-        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000); // Спроба перепідключення через 5 секунд
+        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000);
     };
 
     socket.onerror = (error) => {
