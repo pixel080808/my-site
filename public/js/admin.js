@@ -1795,7 +1795,7 @@ function renderCategoriesAdmin() {
                 <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
                 <div class="category-actions">
                     <button onclick="openEditCategoryModal('${category._id}')">Редагувати</button>
-                    <button onclick="deleteCategory('${category._id}')">Видалити</button>
+                    <button onclick="deleteCategory('${category._id}')">Видалити daha </button>
                     <button id="add-subcategory-btn-${category._id}">Додати підкатегорію</button>
                 </div>
             </div>
@@ -1816,13 +1816,17 @@ function renderCategoriesAdmin() {
         </div>
     `).join('');
 
-    // Додаємо обробники подій для кнопок "Додати підкатегорію"
-    categories.forEach(category => {
-        const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
-        if (addSubcategoryBtn) {
-            addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
-        }
-    });
+    // Додаємо обробники подій для кнопок "Додати підкатегорію", лише якщо є категорії
+    if (categories.length > 0) {
+        categories.forEach(category => {
+            const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
+            if (addSubcategoryBtn) {
+                addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
+            } else {
+                console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
+            }
+        });
+    }
 
     // Оновлюємо випадаючий список категорій для підкатегорій
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2215,28 +2219,29 @@ async function addCategory() {
             return;
         }
 
-        const name = document.getElementById('category-name').value.trim();
-        const slug = document.getElementById('category-slug').value.trim();
-        const parentCategory = document.getElementById('parent-category').value || '';
-        const file = document.getElementById('category-photo-file').files[0];
-        const photoUrl = document.getElementById('category-photo-url').value.trim();
+        const nameInput = document.getElementById('category-name');
+        const slugInput = document.getElementById('category-slug');
+        const parentCategoryInput = document.getElementById('parent-category');
+        const fileInput = document.getElementById('category-photo-file');
+        const photoUrlInput = document.getElementById('category-photo-url');
+
+        // Перевірка наявності всіх елементів
+        if (!nameInput || !slugInput || !parentCategoryInput || !fileInput || !photoUrlInput) {
+            showNotification('Не вдалося знайти всі необхідні поля форми. Переконайтеся, що ви на вкладці редагування категорій.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim();
+        const parentCategory = parentCategoryInput.value || '';
+        const file = fileInput.files[0];
+        const photoUrl = photoUrlInput.value.trim();
 
         console.log('Значення полів при додаванні категорії:', { name, slug, parentCategory, file, photoUrl });
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
             return;
-        }
-
-        // Перевірка parentCategory
-        let parentCategoryId = null;
-        if (parentCategory) {
-            const parent = categories.find(c => c.name === parentCategory || c._id === parentCategory);
-            if (!parent) {
-                showNotification('Вибрана батьківська категорія не існує!');
-                return;
-            }
-            parentCategoryId = parent._id;
         }
 
         let photo = null;
@@ -2265,7 +2270,7 @@ async function addCategory() {
         const category = {
             name,
             slug,
-            parentCategory: parentCategoryId, // Надсилаємо ID, а не назву
+            parentCategory: parentCategory || null,
             photo: photo || null
         };
 
@@ -2288,11 +2293,11 @@ async function addCategory() {
         resetInactivityTimer();
 
         // Очистка полів
-        document.getElementById('category-name').value = '';
-        document.getElementById('category-slug').value = '';
-        document.getElementById('parent-category').value = '';
-        document.getElementById('category-photo-url').value = '';
-        document.getElementById('category-photo-file').value = '';
+        nameInput.value = '';
+        slugInput.value = '';
+        parentCategoryInput.value = '';
+        photoUrlInput.value = '';
+        fileInput.value = '';
     } catch (err) {
         console.error('Помилка при додаванні категорії:', err);
         showNotification('Не вдалося додати категорію: ' + err.message);
