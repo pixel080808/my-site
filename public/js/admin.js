@@ -601,37 +601,75 @@ async function initializeData() {
 
 async function checkAuth() {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
+        const storedSession = localStorage.getItem('adminSession');
+        const token = localStorage.getItem('adminToken');
+
+        if (!token || !storedSession) {
+            console.warn('Токен або сесія відсутні, переходимо до логіну.');
             showSection('admin-login');
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
+        // Розшифровуємо сесію
+        let sessionData;
+        try {
+            sessionData = JSON.parse(LZString.decompressFromUTF16(storedSession));
+        } catch (e) {
+            console.error('Помилка розшифровки сесії:', e);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
+            showSection('admin-login');
+            return;
+        }
+
+        // Перевіряємо, чи сесія активна та чи не минув тайм-аут
+        if (!sessionData.isActive || (Date.now() - sessionData.timestamp) > sessionTimeout) {
+            console.warn('Сесія неактивна або прострочена.');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
+            showSection('admin-login');
+            return;
+        }
+
+        // Спроба оновити токен
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            console.warn('Не вдалося оновити токен.');
+            showSection('admin-login');
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            return;
+        }
+
+        // Перевірка авторизації через сервер
         const response = await fetch('/api/auth/check', {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
         });
 
         if (response.ok) {
+            session = { isActive: true, timestamp: Date.now() };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
             showSection('admin-panel');
             await initializeData();
             connectAdminWebSocket();
             resetInactivityTimer();
+            startTokenRefreshTimer(); // Запускаємо періодичне оновлення токена
         } else {
+            console.warn('Перевірка авторизації не вдалася:', response.status);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
             showSection('admin-login');
-            if (response.status === 401 || response.status === 403) {
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-            }
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
     } catch (e) {
         console.error('Помилка перевірки авторизації:', e);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminSession');
         showSection('admin-login');
-        showNotification('Не вдалося перевірити авторизацію. Перевірте з’єднання.');
+        showNotification('Не вдалося перевірити авторизацію: ' + e.message);
     }
 }
 
@@ -1022,39 +1060,26 @@ async function login() {
         return;
     }
 
-    console.log('Спроба входу:', { username, passwordLength: password.length });
+    console.log('Спроба входу:', { username });
 
     try {
         // Отримуємо CSRF-токен
-        console.log('Отримуємо CSRF-токен...');
         const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
 
-        console.log('Статус CSRF-запиту:', csrfResponse.status);
-        const csrfText = await csrfResponse.text();
-        console.log('Відповідь CSRF-запиту:', csrfText);
-
         if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfText}`);
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
         }
 
-        let csrfData;
-        try {
-            csrfData = JSON.parse(csrfText);
-        } catch (jsonError) {
-            throw new Error('Некоректна відповідь CSRF-запиту: не вдалося розпарсити JSON');
-        }
-
+        const csrfData = await csrfResponse.json();
         const csrfToken = csrfData.csrfToken;
         if (!csrfToken) {
-            throw new Error('CSRF-токен не отримано від сервера');
+            throw new Error('CSRF-токен не отримано');
         }
-        console.log('Отримано CSRF-токен:', csrfToken);
 
         // Відправляємо запит на логін
-        console.log('Відправляємо запит на логін:', { username });
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
             headers: {
@@ -1065,42 +1090,38 @@ async function login() {
             credentials: 'include'
         });
 
-        console.log('Статус відповіді:', response.status);
-        const responseText = await response.text();
-        console.log('Відповідь сервера:', responseText);
-
         if (!response.ok) {
+            const responseText = await response.text();
             try {
                 const errorData = JSON.parse(responseText);
                 showNotification(`Помилка входу: ${errorData.error || response.statusText}`);
                 return;
-            } catch (jsonError) {
+            } catch {
                 showNotification(`Помилка входу: ${response.status} ${responseText}`);
                 return;
             }
         }
 
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (jsonError) {
-            throw new Error('Некоректна відповідь сервера: не вдалося розпарсити JSON');
-        }
-
-        console.log('Отримано дані:', data);
-
+        const data = await response.json();
         if (!data.token) {
             throw new Error('Токен не отримано від сервера');
         }
 
+        // Очищаємо старі дані
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminSession');
+
+        // Зберігаємо новий токен і сесію
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+
         showSection('admin-panel');
         await initializeData();
         connectAdminWebSocket();
         showNotification('Вхід виконано!');
         resetInactivityTimer();
+        startTokenRefreshTimer();
     } catch (e) {
         console.error('Помилка входу:', e);
         showNotification('Помилка входу: ' + e.message);
@@ -1108,10 +1129,23 @@ async function login() {
 }
 
 function logout() {
+    // Очищаємо таймери
+    clearTimeout(inactivityTimer);
+    if (window.tokenRefreshInterval) {
+        clearInterval(window.tokenRefreshInterval);
+    }
+
+    // Закриваємо WebSocket
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+
+    // Очищаємо localStorage
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminSession');
+
     session = { isActive: false, timestamp: 0 };
-    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-    if (socket) socket.close();
     showSection('admin-login');
     showNotification('Ви вийшли з системи');
 }
@@ -1158,7 +1192,7 @@ async function refreshToken(attempt = 1) {
             return false;
         }
 
-        // Отримуємо CSRF-токен перед оновленням
+        // Отримуємо CSRF-токен
         const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
@@ -1174,7 +1208,8 @@ async function refreshToken(attempt = 1) {
             throw new Error('CSRF-токен не отримано');
         }
 
-        const response = await fetch('/api/auth/refresh', {
+        // Запит на оновлення токена
+        const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1185,18 +1220,19 @@ async function refreshToken(attempt = 1) {
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                if (attempt < maxAttempts) {
-                    console.log(`Спроба ${attempt} оновлення токена не вдалася, повторюємо...`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                    return refreshToken(attempt + 1);
-                }
-                throw new Error('Не вдалося оновити токен: доступ заборонено.');
+            if ((response.status === 401 || response.status === 403) && attempt < maxAttempts) {
+                console.log(`Спроба ${attempt} оновлення токена не вдалася, повторюємо...`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                return refreshToken(attempt + 1);
             }
             throw new Error(`Помилка оновлення токена: ${response.statusText}`);
         }
 
         const data = await response.json();
+        if (!data.token) {
+            throw new Error('Новий токен не отримано від сервера');
+        }
+
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
@@ -1206,8 +1242,7 @@ async function refreshToken(attempt = 1) {
         console.error('Помилка оновлення токена:', err);
         if (attempt >= maxAttempts) {
             localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            localStorage.removeItem('adminSession');
             showSection('admin-login');
             showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
@@ -1216,7 +1251,12 @@ async function refreshToken(attempt = 1) {
 }
 
 function startTokenRefreshTimer() {
-    setInterval(async () => {
+    // Очищаємо попередній інтервал, якщо він існує
+    if (window.tokenRefreshInterval) {
+        clearInterval(window.tokenRefreshInterval);
+    }
+
+    window.tokenRefreshInterval = setInterval(async () => {
         if (session.isActive) {
             await refreshToken();
         }
@@ -4562,27 +4602,31 @@ async function deleteOrder(index) {
     }
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM завантажено, ініціалізація форми логіну...');
+    console.log('DOM завантажено, ініціалізація...');
 
-  const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
-  const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
-  const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
+    const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
+    const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
+    const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
 
-  if (usernameInput) {
-    usernameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && passwordInput) passwordInput.focus();
-    });
-  }
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && passwordInput) passwordInput.focus();
+        });
+    }
 
-  if (passwordInput) {
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') login();
-    });
-  }
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    }
 
-  if (loginBtn) {
-    loginBtn.addEventListener('click', login);
-  }
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    }
+
+    // Перевіряємо авторизацію
+    checkAuth();
+});
 
   const storedSession = localStorage.getItem('adminSession');
   const token = localStorage.getItem('adminToken');
