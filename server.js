@@ -227,7 +227,6 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Схеми валідації
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
@@ -256,7 +255,7 @@ const productSchemaValidation = Joi.object({
             photo: Joi.string().allow(null)
         })
     ).default([]),
-    groupProducts: Joi.array().items(Joi.string()).default([]),
+    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]), // Валідація ObjectId
     description: Joi.string().allow(''),
     widthCm: Joi.number().min(0).allow(null),
     depthCm: Joi.number().min(0).allow(null),
@@ -350,7 +349,7 @@ const cartIdSchema = Joi.string()
 
 const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    image: Joi.string().allow(''),
+    photo: Joi.string().allow(''), // Змінено з image на photo
     name: Joi.string().allow(''),
     url: Joi.string().allow(''),
     title: Joi.string().allow(''),
@@ -662,6 +661,18 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності slug
+        const existingProduct = await Product.findOne({ slug: productData.slug });
+        if (existingProduct) {
+            logger.error('Продукт з таким slug вже існує:', productData.slug);
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+        }
+
+        // Перетворення groupProducts у ObjectId
+        if (productData.groupProducts && productData.groupProducts.length > 0) {
+            productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
+        }
+
         const product = new Product(productData);
         await product.save();
 
@@ -693,6 +704,18 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка унікальності slug (окрім поточного продукту)
+        const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+        if (existingProduct) {
+            logger.error('Продукт з таким slug вже існує:', productData.slug);
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+        }
+
+        // Перетворення groupProducts у ObjectId
+        if (productData.groupProducts && productData.groupProducts.length > 0) {
+            productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
         const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
@@ -737,7 +760,7 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
 const categorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    img: Joi.string().allow(''),
+    photo: Joi.string().allow(''), // Змінено з img на photo
     subcategories: Joi.array().items(
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
@@ -778,7 +801,12 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
             return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
         }
 
-        const category = new Category(categoryData);
+        const category = new Category({
+            name: categoryData.name,
+            slug: categoryData.slug,
+            image: categoryData.photo, // Використовуємо photo як image
+            subcategories: categoryData.subcategories || []
+        });
         await category.save();
         const categories = await Category.find();
         broadcast('categories', categories);
@@ -893,7 +921,17 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
 
         const maxIdSlide = await Slide.findOne().sort({ id: -1 });
         slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
-        const slide = new Slide(slideData);
+        const slide = new Slide({
+            id: slideData.id,
+            photo: slideData.photo, // Використовуємо photo
+            name: slideData.name,
+            url: slideData.url,
+            title: slideData.title,
+            text: slideData.text,
+            link: slideData.link,
+            linkText: slideData.linkText,
+            order: slideData.order
+        });
         await slide.save();
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
@@ -914,7 +952,20 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const slide = await Slide.findOneAndUpdate({ id: req.params.id }, slideData, { new: true });
+        const slide = await Slide.findOneAndUpdate(
+            { id: parseInt(req.params.id) }, // Залишаємо числовий id
+            {
+                photo: slideData.photo,
+                name: slideData.name,
+                url: slideData.url,
+                title: slideData.title,
+                text: slideData.text,
+                link: slideData.link,
+                linkText: slideData.linkText,
+                order: slideData.order
+            },
+            { new: true }
+        );
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
@@ -927,8 +978,22 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slide = await Slide.findOneAndDelete({ id: req.params.id });
+        const slide = await Slide.findOneAndDelete({ id: parseInt(req.params.id) });
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
+
+        // Видаляємо зображення з Cloudinary, якщо воно існує
+        if (slide.photo) {
+            const publicId = getPublicIdFromUrl(slide.photo);
+            if (publicId) {
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    logger.info(`Успішно видалено файл з Cloudinary: ${publicId}`);
+                } catch (err) {
+                    logger.error(`Не вдалося видалити файл з Cloudinary: ${publicId}`, err);
+                }
+            }
+        }
+
         const slides = await Slide.find().sort({ order: 1 });
         broadcast('slides', slides);
         res.json({ message: 'Слайд видалено' });
@@ -938,24 +1003,42 @@ app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res
     }
 });
 
-app.post('/api/auth/refresh', csrfProtection, (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
+app.post('/api/auth/refresh', csrfProtection, async (req, res) => {
+    const refreshToken = req.body.refreshToken;
+    if (!refreshToken) {
+        return res.status(401).json({ error: 'Refresh-токен відсутній' });
+    }
+
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret');
+        const RefreshToken = require('./models/RefreshToken');
+        const storedToken = await RefreshToken.findOne({ token: refreshToken, userId: decoded.userId });
+
+        if (!storedToken || storedToken.expiresAt < new Date()) {
+            return res.status(401).json({ error: 'Недійсний або прострочений refresh-токен' });
         }
-        const newToken = jwt.sign(
+
+        const newAccessToken = jwt.sign(
             { userId: decoded.userId, username: decoded.username, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
+
         logger.info('Токен успішно оновлено для користувача:', decoded.username);
-        res.json({ token: newToken });
+        res.json({ token: newAccessToken });
     } catch (err) {
         logger.error('Помилка оновлення токена:', err.message);
-        res.status(401).json({ error: 'Недійсний або прострочений токен' });
+        res.status(401).json({ error: 'Недійсний або прострочений refresh-токен' });
+    }
+});
+
+app.get('/api/auth/check', authenticateToken, (req, res) => {
+    try {
+        logger.info('Перевірка авторизації для користувача:', req.user.username);
+        res.status(200).json({ message: 'Токен валідний', user: { username: req.user.username, role: req.user.role } });
+    } catch (err) {
+        logger.error('Помилка перевірки авторизації:', err.message);
+        res.status(401).json({ error: 'Недійсний токен', details: err.message });
     }
 });
 
@@ -1508,22 +1591,35 @@ const loginLimiter = rateLimit({
     message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
 });
 
-app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
+app.post('/api/auth/login', loginLimiter, csrfProtection, async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
-        return res.status(400).json({ error: 'Логін і пароль обов’язкові', message: 'Логін і пароль обов’язкові' });
+        return res.status(400).json({ error: 'Логін і пароль обов’язкові' });
     }
 
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-        const token = jwt.sign(
+        const accessToken = jwt.sign(
             { userId: username, username: ADMIN_USERNAME, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
-        res.json({ token });
+        const refreshToken = jwt.sign(
+            { userId: username, username: ADMIN_USERNAME, role: 'admin' },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+            { expiresIn: '7d' }
+        );
+
+        const RefreshToken = require('./models/RefreshToken');
+        await new RefreshToken({
+            token: refreshToken,
+            userId: username,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }).save();
+
+        res.json({ accessToken, refreshToken });
     } else {
         logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`);
-        res.status(401).json({ error: 'Невірні дані для входу', message: 'Невірні дані для входу' });
+        res.status(401).json({ error: 'Невірні дані для входу' });
     }
 });
 

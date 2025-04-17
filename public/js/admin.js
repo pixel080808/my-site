@@ -52,6 +52,14 @@ let productEditor; // Додаємо глобальну змінну для ре
 let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
 
+function getElement(selector, errorMessage = `Елемент ${selector} не знайдено`) {
+    const element = document.querySelector(selector);
+    if (!element) {
+        console.warn(errorMessage);
+    }
+    return element;
+}
+
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -570,7 +578,6 @@ async function initializeData() {
         console.log('Ініціалізація вже виконується, пропускаємо');
         return;
     }
-
     isInitializing = true;
     try {
         await Promise.all([
@@ -580,9 +587,8 @@ async function initializeData() {
             loadOrders(),
             loadSlides(),
             loadMaterials(),
-            loadBrands(),
-            loadFilters()
-        ]);
+            loadBrands()
+        ].filter(fn => typeof fn === 'function' && fn));
         initializeEditors();
         console.log('Усі дані успішно ініціалізовані');
     } catch (e) {
@@ -595,37 +601,76 @@ async function initializeData() {
 
 async function checkAuth() {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
+        const storedSession = localStorage.getItem('adminSession');
+        const token = localStorage.getItem('adminToken');
+        console.log('checkAuth: Перевірка сесії', { storedSessionExists: !!storedSession, tokenExists: !!token });
+
+        if (!token || !storedSession) {
+            console.warn('checkAuth: Токен або сесія відсутні, переходимо до логіну.');
             showSection('admin-login');
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
+        let sessionData;
+        try {
+            sessionData = JSON.parse(LZString.decompressFromUTF16(storedSession));
+            console.log('checkAuth: Сесія розшифрована', sessionData);
+        } catch (e) {
+            console.error('checkAuth: Помилка розшифровки сесії:', e);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
+            showSection('admin-login');
+            return;
+        }
+
+        if (!sessionData.isActive || (Date.now() - sessionData.timestamp) > sessionTimeout) {
+            console.warn('checkAuth: Сесія неактивна або прострочена.', { isActive: sessionData.isActive, timeDiff: Date.now() - sessionData.timestamp });
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
+            showSection('admin-login');
+            return;
+        }
+
+        const tokenRefreshed = await refreshToken();
+        console.log('checkAuth: Результат оновлення токена', tokenRefreshed);
+        if (!tokenRefreshed) {
+            console.warn('checkAuth: Не вдалося оновити токен.');
+            showSection('admin-login');
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            return;
+        }
+
         const response = await fetch('/api/auth/check', {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
         });
+        console.log('checkAuth: Відповідь від /api/auth/check', { status: response.status, ok: response.ok });
 
         if (response.ok) {
+            session = { isActive: true, timestamp: Date.now() };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
             showSection('admin-panel');
             await initializeData();
             connectAdminWebSocket();
             resetInactivityTimer();
+            startTokenRefreshTimer();
+            console.log('checkAuth: Авторизація успішна, відкрито admin-panel');
         } else {
+            console.warn('checkAuth: Перевірка авторизації не вдалася:', response.status);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
             showSection('admin-login');
-            if (response.status === 401 || response.status === 403) {
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-            }
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
     } catch (e) {
-        console.error('Помилка перевірки авторизації:', e);
+        console.error('checkAuth: Помилка перевірки авторизації:', e);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminSession');
         showSection('admin-login');
-        showNotification('Не вдалося перевірити авторизацію. Перевірте з’єднання.');
+        showNotification('Не вдалося перевірити авторизацію: ' + e.message);
     }
 }
 
@@ -732,11 +777,8 @@ function setDefaultVideoSizes(editor, editorId) {
 }
 
 function initializeEditors() {
-    const aboutEditorElement = document.getElementById('about-editor');
-    if (!aboutEditorElement) {
-        console.warn('Елемент #about-editor не знайдено, пропускаємо ініціалізацію.');
-        return;
-    }
+    const aboutEditorElement = getElement('#about-editor', 'Елемент #about-editor не знайдено');
+    if (!aboutEditorElement) return;
 
     if (aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
@@ -760,27 +802,15 @@ function initializeEditors() {
         [{ 'undo': 'undo' }, { 'redo': 'redo' }] // Змінено формат
     ];
 
-    try {
-        // Реєструємо кастомні кнопки undo/redo
-        Quill.register('modules/undo', function(quill) {
-            return {
-                undo: () => quill.history.undo()
-            };
-        }, true);
-        Quill.register('modules/redo', function(quill) {
-            return {
-                redo: () => quill.history.redo()
-            };
-        }, true);
-
+try {
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
                     container: aboutToolbarOptions,
                     handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
+                        undo: function() { aboutEditor.history.undo(); },
+                        redo: function() { aboutEditor.history.redo(); }
                     }
                 },
                 history: {
@@ -798,7 +828,6 @@ function initializeEditors() {
             unsavedChanges = true;
             resetInactivityTimer();
 
-            // Оновлення стану кнопок undo/redo
             const undoButton = document.querySelector('.ql-undo');
             const redoButton = document.querySelector('.ql-redo');
             if (undoButton && redoButton) {
@@ -811,7 +840,6 @@ function initializeEditors() {
             }
         });
 
-        // Завантажуємо початковий вміст
         if (settings.about) {
             try {
                 aboutEditor.root.innerHTML = settings.about;
@@ -826,7 +854,6 @@ function initializeEditors() {
         }
         document.getElementById('about-edit').value = settings.about || '';
 
-        // Обробник кліків для зміни розмірів медіа
         aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
@@ -834,19 +861,6 @@ function initializeEditors() {
             }
         });
 
-        // Обробка вставки медіа
-        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
-                const src = node.getAttribute('src');
-                if (src) {
-                    const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
-                    return { ops: [{ insert }] };
-                }
-            }
-            return delta;
-        });
-
-        // Встановлюємо розміри для відео за замовчуванням
         setDefaultVideoSizes(aboutEditor, 'about-edit');
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
@@ -875,11 +889,8 @@ function addToolbarEventListeners() {
 }
 
 function initializeProductEditor(description = '', descriptionDelta = null) {
-    const editorElement = document.getElementById('product-description-editor');
-    if (!editorElement) {
-        console.warn('Елемент #product-description-editor не знайдено, пропускаємо ініціалізацію.');
-        return;
-    }
+    const editorElement = getElement('#product-description-editor', 'Елемент #product-description-editor не знайдено');
+    if (!editorElement) return;
 
     try {
         productEditor = new Quill('#product-description-editor', {
@@ -895,8 +906,8 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
                         ['clean']
                     ],
                     handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
+                        undo: function() { productEditor.history.undo(); },
+                        redo: function() { productEditor.history.redo(); }
                     }
                 },
                 history: {
@@ -907,7 +918,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Встановлюємо вміст редактора
         if (descriptionDelta) {
             productEditor.setContents(descriptionDelta, 'silent');
         } else if (description) {
@@ -923,7 +933,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         }
         document.getElementById('product-description').value = productEditor.root.innerHTML;
 
-        // Додаємо обробник для завантаження зображень через панель інструментів
         const toolbar = productEditor.getModule('toolbar');
         toolbar.addHandler('image', async () => {
             const input = document.createElement('input');
@@ -1005,23 +1014,11 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Обробник для оновлення прихованого поля
         productEditor.on('text-change', () => {
             document.getElementById('product-description').value = productEditor.root.innerHTML;
             unsavedChanges = true;
         });
 
-        // Обробник вибору медіа
-        productEditor.on('selection-change', (range) => {
-            if (range && range.length > 0) {
-                const [embed] = productEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
-                selectedMedia = embed ? { type: embed.insert.image ? 'image' : 'video', url: embed.insert.image || embed.insert.video } : null;
-            } else {
-                selectedMedia = null;
-            }
-        });
-
-        // Обробник кліків для зображень і відео
         productEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
@@ -1029,18 +1026,7 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
             }
         });
 
-        // Обробник вставки зображень через копіювання/вставку
-        productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG') {
-                const src = node.getAttribute('src');
-                if (src) {
-                    return { ops: [{ insert: { image: src } }] };
-                }
-            }
-            return delta;
-        });
-
-        resetInactivityTimer();
+        setDefaultVideoSizes(productEditor, 'product-description');
     } catch (e) {
         console.error('Помилка ініціалізації редактора продуктів:', e);
         showNotification('Не вдалося ініціалізувати редактор продуктів: ' + e.message);
@@ -1066,210 +1052,240 @@ function showSection(sectionId) {
 
 session = { isActive: false, timestamp: 0 };
 
-async function login() {
-    const username = document.getElementById('admin-username')?.value?.trim();
-    const password = document.getElementById('admin-password')?.value;
-
-    if (!username || !password) {
-        showNotification('Введіть ім’я користувача та пароль!');
-        return;
-    }
-
-    console.log('Спроба входу:', { username, passwordLength: password.length });
-
-    try {
-        // Отримуємо CSRF-токен
-        console.log('Отримуємо CSRF-токен...');
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        console.log('Статус CSRF-запиту:', csrfResponse.status);
-        const csrfText = await csrfResponse.text();
-        console.log('Відповідь CSRF-запиту:', csrfText);
-
-        if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfText}`);
-        }
-
-        let csrfData;
+    async function login() {
         try {
-            csrfData = JSON.parse(csrfText);
-        } catch (jsonError) {
-            throw new Error('Некоректна відповідь CSRF-запиту: не вдалося розпарсити JSON');
-        }
+            const username = document.getElementById('admin-username').value.trim();
+            const password = document.getElementById('admin-password').value;
+            console.log('Спроба входу:', { username });
 
-        const csrfToken = csrfData.csrfToken;
-        if (!csrfToken) {
-            throw new Error('CSRF-токен не отримано від сервера');
-        }
-        console.log('Отримано CSRF-токен:', csrfToken);
-
-        // Відправляємо запит на логін
-        console.log('Відправляємо запит на логін:', { username });
-        const response = await fetch('https://mebli.onrender.com/api/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            body: JSON.stringify({ username, password }),
-            credentials: 'include'
-        });
-
-        console.log('Статус відповіді:', response.status);
-        const responseText = await response.text();
-        console.log('Відповідь сервера:', responseText);
-
-        if (!response.ok) {
-            try {
-                const errorData = JSON.parse(responseText);
-                showNotification(`Помилка входу: ${errorData.error || response.statusText}`);
-                return;
-            } catch (jsonError) {
-                showNotification(`Помилка входу: ${response.status} ${responseText}`);
+            if (!username || !password) {
+                showNotification('Введіть ім’я користувача та пароль.');
                 return;
             }
+
+            // Отримання CSRF-токена
+            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            console.log('CSRF response:', {
+                status: csrfResponse.status,
+                ok: csrfResponse.ok,
+                headers: Object.fromEntries(csrfResponse.headers.entries())
+            });
+
+            if (!csrfResponse.ok) {
+                const errorText = await csrfResponse.text();
+                throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${errorText}`);
+            }
+
+            let csrfData;
+            try {
+                csrfData = await csrfResponse.json();
+            } catch (e) {
+                console.error('Помилка парсингу CSRF відповіді:', e);
+                throw new Error('Сервер повернув некоректну CSRF відповідь');
+            }
+            console.log('CSRF data:', csrfData);
+            const csrfToken = csrfData.csrfToken;
+            if (!csrfToken) {
+                throw new Error('CSRF-токен не отримано');
+            }
+
+            // Запит на логін
+            const response = await fetch('https://mebli.onrender.com/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
+            console.log('Login response:', {
+                status: response.status,
+                ok: response.ok,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                console.error('Помилка парсингу Login відповіді:', e);
+                throw new Error('Сервер повернув некоректну відповідь');
+            }
+            console.log('Login data:', data);
+
+            if (!response.ok) {
+                throw new Error(`Помилка входу: ${data.message || response.statusText} (Статус: ${response.status})`);
+            }
+
+            const token = data.accessToken || data.token || data.authToken;
+            const refreshTokenValue = data.refreshToken;
+            if (!token) {
+                throw new Error(`Токен не отримано від сервера. Відповідь: ${JSON.stringify(data)}`);
+            }
+            if (!refreshTokenValue) {
+                throw new Error(`Refresh-токен не отримано від сервера. Відповідь: ${JSON.stringify(data)}`);
+            }
+
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('adminRefreshToken', refreshTokenValue);
+            session = { isActive: true, timestamp: Date.now() };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-panel');
+            showNotification('Вхід виконано успішно!');
+            await checkAuth();
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка входу:', err);
+            showNotification(`Не вдалося увійти: ${err.message}`);
         }
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (jsonError) {
-            throw new Error('Некоректна відповідь сервера: не вдалося розпарсити JSON');
-        }
-
-        console.log('Отримано дані:', data);
-
-        if (!data.token) {
-            throw new Error('Токен не отримано від сервера');
-        }
-
-        localStorage.setItem('adminToken', data.token);
-        session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-panel');
-        await initializeData();
-        connectAdminWebSocket();
-        showNotification('Вхід виконано!');
-        resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка входу:', e);
-        showNotification('Помилка входу: ' + e.message);
     }
-}
 
 function logout() {
+    // Очищаємо таймери
+    clearTimeout(inactivityTimer);
+    if (window.tokenRefreshInterval) {
+        clearInterval(window.tokenRefreshInterval);
+    }
+
+    // Закриваємо WebSocket
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+
+    // Очищаємо localStorage
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminSession');
+
     session = { isActive: false, timestamp: 0 };
-    localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-    if (socket) socket.close();
     showSection('admin-login');
     showNotification('Ви вийшли з системи');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM завантажено, ініціалізація форми логіну...');
-    
-    const usernameInput = document.getElementById('admin-username');
-    const passwordInput = document.getElementById('admin-password');
-    const loginBtn = document.getElementById('login-btn');
+    console.log('DOM завантажено, ініціалізація...');
 
-    if (!usernameInput || !passwordInput || !loginBtn) {
-        console.error('Не знайдено елементи форми логіну:', {
-            usernameInput: !!usernameInput,
-            passwordInput: !!passwordInput,
-            loginBtn: !!loginBtn
+    // Ініціалізація форми логіну
+    const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
+    const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
+    const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && passwordInput) passwordInput.focus();
         });
-        return;
     }
 
-    usernameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            passwordInput.focus();
-        }
-    });
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    }
 
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    }
 
-    loginBtn.addEventListener('click', login);
+    // Ініціалізація обробника для addSlideButton
+    const addSlideButton = document.querySelector('#slide-img-file ~ button');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', debounce(addSlide, 300));
+    } else {
+        console.warn('Кнопка для додавання слайду (#slide-img-file ~ button) не знайдена');
+    }
 
+    // Показ секції логіну
     showSection('admin-login');
 });
 
-async function refreshToken(attempt = 1) {
-    const maxAttempts = 3;
-    try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній.');
+    async function refreshToken(attempt = 1) {
+        const maxAttempts = 3;
+        try {
+            console.log('refreshToken: Спроба оновлення токена', { attempt });
+            const storedRefreshToken = localStorage.getItem('adminRefreshToken');
+            if (!storedRefreshToken) {
+                throw new Error('Refresh-токен відсутній у localStorage');
+            }
+
+            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            console.log('refreshToken: Відповідь від /api/csrf-token', {
+                status: csrfResponse.status,
+                ok: csrfResponse.ok
+            });
+
+            if (!csrfResponse.ok) {
+                throw new Error('Не вдалося отримати CSRF-токен');
+            }
+
+            const csrfData = await csrfResponse.json();
+            console.log('refreshToken: Отримано CSRF-токен', csrfData);
+            const csrfToken = csrfData.csrfToken;
+            if (!csrfToken) {
+                throw new Error('CSRF-токен не отримано');
+            }
+
+            const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include',
+                body: JSON.stringify({ refreshToken: storedRefreshToken })
+            });
+
+            console.log('refreshToken: Відповідь від /api/auth/refresh', {
+                status: response.status,
+                ok: response.ok
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Помилка оновлення токена: ${response.status} ${JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+            const newAccessToken = data.accessToken || data.token;
+            const newRefreshToken = data.refreshToken;
+            if (!newAccessToken) {
+                throw new Error('Новий access-токен не отримано');
+            }
+
+            localStorage.setItem('adminToken', newAccessToken);
+            if (newRefreshToken) {
+                localStorage.setItem('adminRefreshToken', newRefreshToken);
+            }
+            return true;
+        } catch (err) {
+            console.error(`refreshToken: Спроба ${attempt} не вдалася:`, err);
+            if (attempt < maxAttempts) {
+                console.log(`refreshToken: Спроба ${attempt} не вдалася, повторюємо...`);
+                return await refreshToken(attempt + 1);
+            }
+            console.error('refreshToken: Помилка оновлення токена:', err);
             return false;
         }
-
-        // Отримуємо CSRF-токен перед оновленням
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
-        }
-
-        const csrfData = await csrfResponse.json();
-        const csrfToken = csrfData.csrfToken;
-        if (!csrfToken) {
-            throw new Error('CSRF-токен не отримано');
-        }
-
-        const response = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                if (attempt < maxAttempts) {
-                    console.log(`Спроба ${attempt} оновлення токена не вдалася, повторюємо...`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                    return refreshToken(attempt + 1);
-                }
-                throw new Error('Не вдалося оновити токен: доступ заборонено.');
-            }
-            throw new Error(`Помилка оновлення токена: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        localStorage.setItem('adminToken', data.token);
-        session = { isActive: true, timestamp: Date.now() };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        console.log('Токен успішно оновлено.');
-        return true;
-    } catch (err) {
-        console.error('Помилка оновлення токена:', err);
-        if (attempt >= maxAttempts) {
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-        }
-        return false;
     }
-}
+
+    // Експортуємо функції для використання в admin.js
+    window.login = login;
+    window.refreshToken = refreshToken;
+})();
 
 function startTokenRefreshTimer() {
-    setInterval(async () => {
+    // Очищаємо попередній інтервал, якщо він існує
+    if (window.tokenRefreshInterval) {
+        clearInterval(window.tokenRefreshInterval);
+    }
+
+    window.tokenRefreshInterval = setInterval(async () => {
         if (session.isActive) {
             await refreshToken();
         }
@@ -1843,20 +1859,71 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-    const slideList = document.getElementById('slide-list');
-    if (slideList) {
-        slideList.innerHTML = slides.map((slide, index) => `
-            <div>
-                ${slide.title || 'Без назви'} (${slide.order || 0})
-                <button class="edit-btn" onclick="editSlide(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSlide(${index})">Видалити</button>
-            </div>
-        `).join('');
+    const slideList = document.getElementById('slide-list-admin');
+    if (!slideList) {
+        console.warn('Елемент #slide-list-admin не знайдено');
+        return;
     }
-    document.getElementById('slide-toggle').checked = settings.showSlides || false;
-    document.getElementById('slide-width').value = settings.slideWidth || '';
-    document.getElementById('slide-height').value = settings.slideHeight || '';
-    document.getElementById('slide-interval').value = settings.slideInterval || '';
+    slideList.innerHTML = slides.map((slide, index) => `
+        <div class="slide-item">
+            <img src="${slide.photo}" alt="Слайд ${index + 1}" style="max-width: 100px;">
+            <p>Позиція: ${slide.position}</p>
+            <p>Посилання: ${slide.link || 'Немає'}</p>
+            <p>Активний: ${slide.active ? 'Так' : 'Ні'}</p>
+            <button class="delete-btn" data-index="${index}">Видалити</button>
+        </div>
+    `).join('');
+
+    // Додаємо обробники для кнопок видалення
+    document.querySelectorAll('#slide-list-admin .delete-btn').forEach(button => {
+        const index = parseInt(button.getAttribute('data-index'));
+        button.addEventListener('click', () => deleteSlide(index));
+    });
+
+    // Перевіряємо і додаємо обробник для кнопки додавання слайду
+    const addSlideButton = document.querySelector('#slide-photo-file ~ button');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', debounce(addSlide, 300));
+    } else {
+        console.warn('Кнопка для додавання слайду (#slide-photo-file ~ button) не знайдена');
+    }
+
+    resetInactivityTimer();
+}
+
+async function deleteSlide(index) {
+    if (!confirm('Ви впевнені, що хочете видалити цей слайд?')) return;
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const slide = slides[index];
+        if (!slide || !slide._id) {
+            throw new Error('Слайд не знайдено або відсутній ID');
+        }
+
+        const response = await fetchWithAuth(`/api/slides/${slide._id}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка видалення слайду: ${errorText}`);
+        }
+
+        slides.splice(index, 1);
+        renderSlidesAdmin();
+        showNotification('Слайд видалено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка видалення слайду:', err);
+        showNotification(`Не вдалося видалити слайд: ${err.message}`);
+    }
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
@@ -1920,60 +1987,52 @@ async function addCategory() {
             return;
         }
 
-        const name = document.getElementById('cat-name').value;
-        const slug = document.getElementById('cat-slug').value;
-        const imgUrl = document.getElementById('cat-img-url').value;
-        const imgFile = document.getElementById('cat-img-file').files[0];
+        const nameInput = document.getElementById('category-name');
+        const photoUrlInput = document.getElementById('category-photo-url');
+        const photoFileInput = document.getElementById('category-photo-file');
 
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях категорії!');
+        if (!nameInput) {
+            showNotification('Елемент category-name не знайдено');
             return;
         }
 
-        // Перевірка унікальності назви
-        const existingCategory = categories.find(cat => cat.name.toLowerCase() === name.toLowerCase());
-        if (existingCategory) {
-            showNotification('Категорія з такою назвою вже існує!');
+        const name = nameInput.value.trim();
+        let photo = photoUrlInput ? photoUrlInput.value.trim() : '';
+
+        if (!name) {
+            showNotification('Введіть назву категорії!');
             return;
         }
 
-        let imageUrl = imgUrl;
-        if (imgFile) {
-            const validation = validateFile(imgFile);
+        if (photoFileInput && photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
             if (!validation.valid) {
                 showNotification(validation.error);
                 return;
             }
             const formData = new FormData();
-            formData.append('file', imgFile);
-            // Використовуємо fetchWithAuth для безпеки
-            const uploadResponse = await fetchWithAuth('/api/upload', {
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
                 body: formData
             });
-            const uploadData = await uploadResponse.json();
-            if (uploadData.url) {
-                imageUrl = uploadData.url;
-            } else {
-                throw new Error('Не вдалося завантажити зображення');
-            }
+            const data = await response.json();
+            photo = data.url;
         }
 
-        const category = { name, slug, image: imageUrl || '', subcategories: [] };
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
-            body: JSON.stringify(category)
+            body: JSON.stringify({ name, photo }) // Змінено image на photo
         });
 
         const newCategory = await response.json();
         categories.push(newCategory);
         renderCategoriesAdmin();
         showNotification('Категорію додано!');
-        // Очищаємо поля
-        document.getElementById('cat-name').value = '';
-        document.getElementById('cat-slug').value = '';
-        document.getElementById('cat-img-url').value = '';
-        document.getElementById('cat-img-file').value = '';
+        if (nameInput) nameInput.value = '';
+        if (photoUrlInput) photoUrlInput.value = '';
+        if (photoFileInput) photoFileInput.value = '';
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання категорії:', err);
@@ -2100,42 +2159,85 @@ async function addCategory() {
     }
 
 async function addSubcategory() {
-    const categoryName = document.getElementById('category-name').value;
-    const subcategoryName = document.getElementById('subcategory-name').value.trim();
-    if (categoryName && subcategoryName) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-            const category = categories.find(c => c.name === categoryName);
-            if (!category || !category._id) {
-                showNotification('Категорію не знайдено або відсутній ID!');
-                return;
-            }
-            const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
-                method: 'POST',
-                body: JSON.stringify({ name: subcategoryName })
-            });
-            const updatedCategory = await response.json();
-            const existingCategory = categories.find(c => c._id === category._id);
-            if (existingCategory) {
-                existingCategory.subcategories = updatedCategory.subcategories;
-            } else {
-                categories.push(updatedCategory);
-            }
-            document.getElementById('subcategory-name').value = '';
-            renderCategoriesAdmin();
-            showNotification('Підкатегорію додано!');
-            resetInactivityTimer();
-        } catch (err) {
-            console.error('Помилка додавання підкатегорії:', err);
-            showNotification('Помилка додавання підкатегорії: ' + err.message);
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
         }
-    } else {
-        alert('Виберіть категорію та введіть назву підкатегорії!');
+
+        const categorySelect = document.getElementById('subcategory-parent');
+        const nameInput = document.getElementById('subcategory-name');
+        const photoUrlInput = document.getElementById('subcategory-photo-url');
+        const photoFileInput = document.getElementById('subcategory-photo-file');
+
+        if (!categorySelect || !nameInput) {
+            showNotification('Елементи форми для підкатегорії не знайдено');
+            return;
+        }
+
+        const categoryName = categorySelect.value;
+        const name = nameInput.value.trim();
+        let photo = photoUrlInput ? photoUrlInput.value.trim() : '';
+
+        if (!categoryName || !name) {
+            showNotification('Виберіть категорію та введіть назву підкатегорії!');
+            return;
+        }
+
+        const category = categories.find(c => c.name === categoryName);
+        if (!category) {
+            showNotification('Категорію не знайдено!');
+            return;
+        }
+
+        if (photoFileInput && photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            photo = data.url;
+        }
+
+        if (!category.subcategories) {
+            category.subcategories = [];
+        }
+
+        if (category.subcategories.includes(name)) {
+            showNotification('Така підкатегорія вже існує!');
+            return;
+        }
+
+        category.subcategories.push({ name, photo });
+        const response = await fetchWithAuth(`/api/categories/${category._id}`, {
+            method: 'PUT',
+            body: JSON.stringify(category)
+        });
+
+        const updatedCategory = await response.json();
+        const index = categories.findIndex(c => c._id === category._id);
+        if (index !== -1) {
+            categories[index] = updatedCategory;
+        }
+        renderCategoriesAdmin();
+        showNotification('Підкатегорію додано!');
+        if (nameInput) nameInput.value = '';
+        if (photoUrlInput) photoUrlInput.value = '';
+        if (photoFileInput) photoFileInput.value = '';
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка додавання підкатегорії:', err);
+        showNotification('Помилка додавання підкатегорії: ' + err.message);
     }
 }
 
@@ -2383,16 +2485,6 @@ async function loadFilters() {
 }
 
 async function addFilter() {
-    const label = document.getElementById('filter-label').value;
-    const name = document.getElementById('filter-name').value;
-    const type = document.getElementById('filter-type').value;
-    const optionsInput = document.getElementById('filter-options').value;
-
-    if (!label || !name || !type || !optionsInput) {
-        showNotification('Заповніть усі поля фільтра!');
-        return;
-    }
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2401,10 +2493,27 @@ async function addFilter() {
             return;
         }
 
-        const options = optionsInput.split(',').map(o => o.trim()).filter(o => o);
-        const filter = { label, name, type, options };
+        const labelInput = document.getElementById('filter-label');
+        const nameInput = document.getElementById('filter-name');
+        const typeSelect = document.getElementById('filter-type');
+        const optionsInput = document.getElementById('filter-options');
 
-        filters.push(filter);
+        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
+            showNotification('Елементи форми для фільтра не знайдено');
+            return;
+        }
+
+        const label = labelInput.value.trim();
+        const name = nameInput.value.trim();
+        const type = typeSelect.value;
+        const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
+
+        if (!label || !name || !type || options.length === 0) {
+            showNotification('Заповніть усі поля фільтра!');
+            return;
+        }
+
+        filters.push({ label, name, type, options });
 
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
@@ -2413,16 +2522,20 @@ async function addFilter() {
             body: JSON.stringify({ ...settings, filters })
         });
 
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити фільтри');
+        }
+
         renderFilters();
         showNotification('Фільтр додано!');
-        document.getElementById('filter-label').value = '';
-        document.getElementById('filter-name').value = '';
-        document.getElementById('filter-type').value = '';
-        document.getElementById('filter-options').value = '';
+        labelInput.value = '';
+        nameInput.value = '';
+        typeSelect.value = 'select';
+        optionsInput.value = '';
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка збереження фільтра:', err);
-        showNotification('Не вдалося зберегти фільтр: ' + err.message);
+        console.error('Помилка додавання фільтру:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -2694,76 +2807,72 @@ async function addSlide() {
             return;
         }
 
-        const imgUrl = document.getElementById('slide-img-url').value;
-        const imgFile = document.getElementById('slide-img-file').files[0];
-        const title = document.getElementById('slide-title').value;
-        const text = document.getElementById('slide-text').value;
-        const link = document.getElementById('slide-link').value;
-        const linkText = document.getElementById('slide-link-text').value;
-        const order = parseInt(document.getElementById('slide-order').value) || slides.length + 1;
+        const photoUrlInput = document.getElementById('slide-photo-url');
+        const photoFileInput = document.getElementById('slide-photo-file');
+        const linkInput = document.getElementById('slide-link');
+        const positionInput = document.getElementById('slide-position');
+        const activeCheckbox = document.getElementById('slide-active');
 
-        if (!imgUrl && !imgFile) {
-            showNotification('Введіть URL зображення або виберіть файл!');
+        if (!photoUrlInput || !photoFileInput || !positionInput || !activeCheckbox) {
+            showNotification('Елементи форми для слайду не знайдено');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
-        let imageUrl = imgUrl;
+        let photo = photoUrlInput.value.trim();
+        const link = linkInput ? linkInput.value.trim() : '';
+        const position = parseInt(positionInput.value) || slides.length + 1;
+        const active = activeCheckbox.checked;
 
-        // Завантаження зображення, якщо вибрано файл
-        if (imgFile) {
-            const validation = validateFile(imgFile);
+        if (!photo && !photoFileInput.files[0]) {
+            showNotification('Виберіть фото або вкажіть URL!');
+            return;
+        }
+
+        if (photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
             if (!validation.valid) {
                 showNotification(validation.error);
                 return;
             }
             const formData = new FormData();
-            formData.append('file', imgFile);
-	        const response = await fetchWithAuth('/api/upload', {
-    	        method: 'POST',
-    	    body: formData
-	    });
-            if (!response.ok) {
-                throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
-            }
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
             const data = await response.json();
-            imageUrl = data.url;
+            console.log('Upload response:', data);
+            if (!data.url) {
+                throw new Error('URL зображення не отримано від сервера');
+            }
+            photo = data.url;
         }
 
-        const slide = {
-            img: imageUrl, // Змінено з image
-            title: title || '',
-            text: text || '',
-            link: link || '',
-            linkText: linkText || '',
-            order
-        };
-
+        const slideData = { photo, link, position, active };
+        console.log('Sending slide data:', slideData);
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify(slide)
+            body: JSON.stringify(slideData)
         });
 
         const newSlide = await response.json();
+        console.log('New slide response:', newSlide);
         slides.push(newSlide);
         renderSlidesAdmin();
         showNotification('Слайд додано!');
-        unsavedChanges = false;
+        photoUrlInput.value = '';
+        if (linkInput) linkInput.value = '';
+        positionInput.value = '';
+        activeCheckbox.checked = true;
+        photoFileInput.value = '';
         resetInactivityTimer();
-
-        // Очистка полів
-        document.getElementById('slide-img-url').value = '';
-        document.getElementById('slide-img-file').value = '';
-        document.getElementById('slide-title').value = '';
-        document.getElementById('slide-text').value = '';
-        document.getElementById('slide-link').value = '';
-        document.getElementById('slide-link-text').value = '';
-        document.getElementById('slide-order').value = '';
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
-        showNotification('Не вдалося додати слайд: ' + err.message);
+        showNotification(`Не вдалося додати слайд: ${err.message}`);
     }
 }
+
 
 // Додаємо обробник з дебонсінгом до кнопки
 document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
@@ -3502,6 +3611,24 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
+let cachedSlugs = new Set();
+
+async function checkSlugUniqueness(slug) {
+    if (cachedSlugs.has(slug)) {
+        return false; // Якщо slug уже в кеші, він не унікальний
+    }
+
+    const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+    const existingProducts = await slugCheck.json();
+    const isUnique = !existingProducts.some(p => p.slug === slug && !p._id);
+
+    if (!isUnique) {
+        cachedSlugs.add(slug); // Додаємо до кешу, якщо slug зайнятий
+    }
+
+    return isUnique;
+}
+
 async function saveNewProduct() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3511,41 +3638,65 @@ async function saveNewProduct() {
             return;
         }
 
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
-        const category = document.getElementById('product-category').value;
-        const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
+        const nameInput = getElement('#product-name');
+        const slugInput = getElement('#product-slug');
+        const brandInput = getElement('#product-brand');
+        const categoryInput = getElement('#product-category');
+        const subcategoryInput = getElement('#product-subcategory');
+        const materialInput = getElement('#product-material');
+        const priceInput = getElement('#product-price');
+        const salePriceInput = getElement('#product-sale-price');
+        const saleEndInput = getElement('#product-sale-end');
+        const visibleSelect = getElement('#product-visible');
+        const descriptionInput = getElement('#product-description');
+        const widthCmInput = getElement('#product-width-cm');
+        const depthCmInput = getElement('#product-depth-cm');
+        const heightCmInput = getElement('#product-height-cm');
+        const lengthCmInput = getElement('#product-length-cm');
+
+        if (!nameInput || !slugInput || !visibleSelect || !descriptionInput) {
+            showNotification('Елементи форми для товару не знайдено');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim();
+        const brand = brandInput.value.trim();
+        const category = categoryInput.value.trim();
+        const subcategory = subcategoryInput.value.trim();
+        const material = materialInput.value.trim();
         let price = null;
         let salePrice = null;
-        if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value);
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+        if (newProduct.type === 'simple' && priceInput) {
+            price = parseFloat(priceInput.value) || null;
+            salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
         }
-        const saleEnd = document.getElementById('product-sale-end').value;
-        const visible = document.getElementById('product-visible').value === 'true';
-        const description = document.getElementById('product-description').value;
-        const widthCm = parseFloat(document.getElementById('product-width-cm').value) || null;
-        const depthCm = parseFloat(document.getElementById('product-depth-cm').value) || null;
-        const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
-        const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
+        const saleEnd = saleEndInput.value || null;
+        const visible = visibleSelect.value === 'true';
+        const description = descriptionInput.value || '';
+
+        const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
+        const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
+        const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
+        const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях товару!');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
+        if (!category) {
+            showNotification('Виберіть категорію для товару!');
+            return;
+        }
 
-        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
-        const existingProducts = await slugCheck.json();
-        if (existingProducts.some(p => p.slug === slug)) {
+        const isSlugUnique = await checkSlugUniqueness(slug);
+        if (!isSlugUnique) {
             showNotification('Шлях товару має бути унікальним!');
             return;
         }
 
-        if (newProduct.type === 'simple' && (isNaN(price) || price < 0)) {
+        if (newProduct.type === 'simple' && (price === null || price < 0)) {
             showNotification('Введіть коректну ціну для простого товару!');
             return;
         }
@@ -3713,6 +3864,11 @@ async function saveNewProduct() {
             body: JSON.stringify(product)
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка додавання товару: ${errorText}`);
+        }
+
         const newProductData = await response.json();
         products.push(newProductData);
         closeModal();
@@ -3722,7 +3878,7 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
-        showNotification('Не вдалося додати товар: ' + err.message);
+        showNotification(`Не вдалося додати товар: ${err.message}`);
     }
 }
 
@@ -4106,31 +4262,46 @@ async function saveEditedProduct(productId) {
 }
 
 async function deleteProduct(productId) {
-    if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
-        try {
-            const response = await fetchWithAuth(`/api/products/${productId}`, {
-                method: 'DELETE'
-            });
+  if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+    try {
+      const tokenRefreshed = await refreshToken();
+      if (!tokenRefreshed) {
+        showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+        showSection('admin-login');
+        return;
+      }
 
-            if (!response.ok) {
-                throw new Error('Помилка при видаленні товару: ' + response.statusText);
-            }
+      // Перевірка, чи productId виглядає як ObjectId (24 символи для MongoDB)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productId);
+      if (!isValidObjectId) {
+        showNotification('Некоректний ID товару. Перевірте дані.');
+        return;
+      }
 
-            products = products.filter(p => p._id !== productId); // Використовуємо _id
-            products.forEach(p => {
-                if (p.type === 'group') {
-                    p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
-                }
-            });
-            renderAdmin('products');
-            showNotification('Товар видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        } catch (err) {
-            console.error('Помилка при видаленні товару:', err);
-            showNotification('Не вдалося видалити товар: ' + err.message);
+      const response = await fetchWithAuth(`/api/products/${productId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Помилка при видаленні товару: ${errorText}`);
+      }
+
+      products = products.filter(p => p._id !== productId);
+      products.forEach(p => {
+        if (p.type === 'group') {
+          p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
         }
+      });
+      renderAdmin('products');
+      showNotification('Товар видалено!');
+      unsavedChanges = false;
+      resetInactivityTimer();
+    } catch (err) {
+      console.error('Помилка при видаленні товару:', err);
+      showNotification(`Не вдалося видалити товар: ${err.message}`);
     }
+  }
 }
 
 async function toggleProductActive(productId) {
@@ -4474,6 +4645,7 @@ async function deleteOrder(index) {
             const response = await fetch(`/api/orders/${order._id}`, {
                 method: 'DELETE',
                 headers: {
+                    'Authorization': `Bearer ${token}`, // Додаємо токен для авторизації
                     credentials: 'include'
                 }
             });
@@ -4491,63 +4663,61 @@ async function deleteOrder(index) {
     }
 }
 
-    function sortOrders(criteria) {
-        const [key, direction] = criteria.split('-');
-        orders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
-            if (direction === 'asc') {
-                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-            } else {
-                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
-            }
-        });
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
+function sortOrders(criteria) {
+    const [key, direction] = criteria.split('-');
+    orders.sort((a, b) => {
+        let valA = key === 'date' ? new Date(a[key]) : a[key];
+        let valB = key === 'date' ? new Date(b[key]) : b[key];
+        if (direction === 'asc') {
+            return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+        } else {
+            return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+        }
+    });
+    currentPage = 1;
+    renderAdmin('orders');
+    resetInactivityTimer();
+}
 
-    function filterOrders() {
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
-
-// Виклик ініціалізації редакторів незалежно від авторизації для тестування
+function filterOrders() {
+    currentPage = 1;
+    renderAdmin('orders');
+    resetInactivityTimer();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Ініціалізація елементів форми
-    const usernameInput = document.getElementById('admin-username');
-    const passwordInput = document.getElementById('admin-password');
-    const loginBtn = document.getElementById('login-btn');
+    console.log('DOM завантажено, ініціалізація...');
+
+    // Ініціалізація форми логіну
+    const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
+    const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
+    const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
 
     if (usernameInput) {
         usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && passwordInput) {
-                passwordInput.focus();
-            }
+            if (e.key === 'Enter' && passwordInput) passwordInput.focus();
         });
-    } else {
-        console.warn('Елемент #admin-username не знайдено');
     }
 
     if (passwordInput) {
         passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                login();
-            }
+            if (e.key === 'Enter') login();
         });
-    } else {
-        console.warn('Елемент #admin-password не знайдено');
     }
 
     if (loginBtn) {
         loginBtn.addEventListener('click', login);
-    } else {
-        console.warn('Елемент #login-btn не знайдено');
     }
 
-    // Перевірка сесії
+    // Ініціалізація обробника для addSlideButton
+    const addSlideButton = document.querySelector('#slide-img-file ~ button');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', debounce(addSlide, 300));
+    } else {
+        console.warn('Кнопка для додавання слайду (#slide-img-file ~ button) не знайдена');
+    }
+
+    // Перевірка сесії та токена
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
 
@@ -4575,15 +4745,17 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів
-    if (document.getElementById('about-editor')) {
+    // Ініціалізація редактора, якщо елемент присутній
+    if (getElement('#about-editor')) {
         initializeEditors();
     }
 });
 
+// Слухачі для скидання таймера неактивності
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
+// Функція для підключення WebSocket
 function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
@@ -4636,7 +4808,7 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onclose = () => {
         console.log('WebSocket закрито, спроба перепідключення...');
-        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000); // Спроба перепідключення через 5 секунд
+        setTimeout(() => connectAdminWebSocket(attempt + 1), 5000);
     };
 
     socket.onerror = (error) => {

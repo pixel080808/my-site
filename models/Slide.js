@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const slideSchema = new mongoose.Schema({
     id: Number,
-    image: String, // Змінено з img
+    photo: String, // Змінено з image на photo
     name: String,
     url: String,
     title: String,
