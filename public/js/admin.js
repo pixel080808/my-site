@@ -1053,79 +1053,75 @@ function showSection(sectionId) {
 session = { isActive: false, timestamp: 0 };
 
 async function login() {
-    const username = document.getElementById('admin-username')?.value?.trim();
-    const password = document.getElementById('admin-password')?.value;
-
-    if (!username || !password) {
-        showNotification('Введіть ім’я користувача та пароль!');
-        return;
-    }
-
-    console.log('Спроба входу:', { username });
-
     try {
-        // Отримуємо CSRF-токен
+        const username = document.getElementById('admin-username').value.trim();
+        const password = document.getElementById('admin-password').value;
+        console.log('Спроба входу:', { username });
+
+        if (!username || !password) {
+            showNotification('Введіть ім’я користувача та пароль.');
+            return;
+        }
+
+        // Отримання CSRF-токена
         const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
+        console.log('CSRF response:', {
+            status: csrfResponse.status,
+            ok: csrfResponse.ok,
+            headers: Object.fromEntries(csrfResponse.headers.entries())
+        });
 
         if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfResponse.statusText}`);
         }
 
         const csrfData = await csrfResponse.json();
+        console.log('CSRF data:', csrfData);
         const csrfToken = csrfData.csrfToken;
         if (!csrfToken) {
             throw new Error('CSRF-токен не отримано');
         }
 
-        // Відправляємо запит на логін
+        // Запит на логін
         const response = await fetch('https://mebli.onrender.com/api/auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({ username, password }),
-            credentials: 'include'
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+        console.log('Login response:', {
+            status: response.status,
+            ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries())
         });
 
+        const data = await response.json();
+        console.log('Login data:', data);
+
         if (!response.ok) {
-            const responseText = await response.text();
-            try {
-                const errorData = JSON.parse(responseText);
-                showNotification(`Помилка входу: ${errorData.error || response.statusText}`);
-                return;
-            } catch {
-                showNotification(`Помилка входу: ${response.status} ${responseText}`);
-                return;
-            }
+            throw new Error(`Помилка входу: ${data.message || response.statusText}`);
         }
 
-        const data = await response.json();
         if (!data.token) {
             throw new Error('Токен не отримано від сервера');
         }
 
-        // Очищаємо старі дані
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminSession');
-
-        // Зберігаємо новий токен і сесію
         localStorage.setItem('adminToken', data.token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-
         showSection('admin-panel');
-        await initializeData();
-        connectAdminWebSocket();
-        showNotification('Вхід виконано!');
+        showNotification('Вхід виконано успішно!');
+        checkAuth();
         resetInactivityTimer();
-        startTokenRefreshTimer();
-    } catch (e) {
-        console.error('Помилка входу:', e);
-        showNotification('Помилка входу: ' + e.message);
+    } catch (err) {
+        console.error('Помилка входу:', err);
+        showNotification('Не вдалося увійти: ' + err.message);
     }
 }
 
