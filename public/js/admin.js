@@ -1252,19 +1252,36 @@ function startTokenRefreshTimer() {
         }, sessionTimeout);
     }
 
-    function showAdminTab(tabId) {
-        document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const tab = document.getElementById(tabId);
-        const button = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick') === `showAdminTab('${tabId}')`);
-        if (tab && button) {
-            tab.classList.add('active');
-            button.classList.add('active');
-            currentPage = 1;
-            renderAdmin(tabId);
-            resetInactivityTimer();
+function showAdminTab(tabId) {
+    const tabs = document.querySelectorAll('.admin-tab');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    
+    tabs.forEach(tab => tab.classList.remove('active'));
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    
+    const targetTab = document.getElementById(tabId);
+    const targetButton = document.querySelector(`.tab-btn[onclick="showAdminTab('${tabId}')"]`);
+    
+    if (targetTab && targetButton) {
+        targetTab.classList.add('active');
+        targetButton.classList.add('active');
+        
+        // Викликаємо відповідний рендеринг залежно від вкладки
+        if (tabId === 'slides-tab') {
+            renderSlidesAdmin();
+        } else if (tabId === 'categories-tab') {
+            renderCategoriesAdmin();
+        } else if (tabId === 'products-tab') {
+            renderAdmin('products');
+        } else if (tabId === 'filters-tab') {
+            renderFilters();
+        } else if (tabId === 'orders') {
+            renderAdmin('orders');
         }
+    } else {
+        console.error(`Вкладка з id="${tabId}" не знайдена.`);
     }
+}
 
 async function updateStoreInfo() {
     try {
