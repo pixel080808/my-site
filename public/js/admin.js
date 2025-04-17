@@ -1,3 +1,4 @@
+let activeTab = 'products';
 let newProduct = {
     type: 'simple', 
     photos: [],
@@ -1285,11 +1286,14 @@ function showAdminTab(tabId) {
         document.querySelector(`.tab-btn[onclick="showAdminTab('${tabId}')"]`).classList.add('active');
     }
     if (tabId === 'products') {
+        activeTab = 'products';
         renderCategoriesAdmin();
         renderAdmin('products');
     } else if (tabId === 'site-editing') {
+        activeTab = 'categories';
         renderAdmin('categories');
     } else if (tabId === 'orders') {
+        activeTab = 'orders';
         renderAdmin('orders');
     }
     resetInactivityTimer();
@@ -1308,7 +1312,8 @@ async function updateStoreInfo() {
         const baseUrl = document.getElementById('base-url').value;
         const logoUrl = document.getElementById('logo-url').value;
         const logoFile = document.getElementById('logo-file').files[0];
-        const logoWidth = parseInt(document.getElementById('logo-width').value) || settings.logoWidth;
+        const logoWidthInput = document.getElementById('logo-width').value;
+        const logoWidth = logoWidthInput ? parseInt(logoWidthInput) || 0 : 0; // Змінено
         const faviconUrl = document.getElementById('favicon-url').value;
         const faviconFile = document.getElementById('favicon-file').files[0];
 
@@ -1378,7 +1383,7 @@ async function updateStoreInfo() {
             name: name || settings.name,
             baseUrl: baseUrl || settings.baseUrl,
             logo: finalLogoUrl || settings.logo,
-            logoWidth: logoWidth || settings.logoWidth,
+            logoWidth: logoWidth, // Змінено
             favicon: finalFaviconUrl || settings.favicon
         };
 
@@ -1388,6 +1393,11 @@ async function updateStoreInfo() {
             method: 'PUT',
             body: JSON.stringify(updatedSettings)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення налаштувань: ${errorData.error || response.statusText}`);
+        }
 
         const serverSettings = await response.json();
         settings = { ...settings, ...serverSettings };
@@ -1776,24 +1786,24 @@ function renderCategoriesAdmin() {
         console.warn('Елемент #category-list-admin не знайдено');
         return;
     }
-
-    categoryList.innerHTML = categories.map(cat => `
+    categoryList.innerHTML = categories.map(c => `
         <div class="category-item">
-            <span>${cat.name}</span>
-            <div>
-                <button onclick="openEditCategoryModal('${cat._id}')">Редагувати</button>
-                <button class="delete-btn" onclick="deleteCategory('${cat._id}')">Видалити</button>
+            <span>${c.name}</span>
+            <img src="${c.photo || '/placeholder.jpg'}" alt="${c.name}" width="50">
+            <div class="category-actions">
+                <button onclick="editCategory('${c.slug}')">Редагувати</button>
+                <button onclick="deleteCategory('${c.slug}')">Видалити</button>
+                <button onclick="addSubcategory('${c.slug}')">Додати підкатегорію</button>
             </div>
             <div class="subcategories">
-                ${cat.subcategories?.map(sub => `
+                ${c.subcategories?.map(s => `
                     <div class="subcategory-item">
-                        ${sub.name} ${sub.img ? `<img src="${sub.img}" style="max-width: 50px;">` : ''}
-                        <div>
-                            <button onclick="openEditSubcategoryModal('${cat.name}', '${sub.name}')">Редагувати</button>
-                            <button class="delete-btn" onclick="deleteSubcategory('${cat.name}', '${sub.name}')">Видалити</button>
-                        </div>
+                        <span>${s.name}</span>
+                        <img src="${s.photo || '/placeholder.jpg'}" alt="${s.name}" width="30">
+                        <button onclick="editSubcategory('${c.slug}', '${s.slug}')">Редагувати</button>
+                        <button onclick="deleteSubcategory('${c.slug}', '${s.slug}')">Видалити</button>
                     </div>
-                `).join('') || 'Немає підкатегорій'}
+                `).join('') || ''}
             </div>
         </div>
     `).join('');
