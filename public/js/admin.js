@@ -1152,35 +1152,38 @@ function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM завантажено, ініціалізація форми логіну...');
-    
-    const usernameInput = document.getElementById('admin-username');
-    const passwordInput = document.getElementById('admin-password');
-    const loginBtn = document.getElementById('login-btn');
+    console.log('DOM завантажено, ініціалізація...');
 
-    if (!usernameInput || !passwordInput || !loginBtn) {
-        console.error('Не знайдено елементи форми логіну:', {
-            usernameInput: !!usernameInput,
-            passwordInput: !!passwordInput,
-            loginBtn: !!loginBtn
+    // Ініціалізація форми логіну
+    const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
+    const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
+    const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && passwordInput) passwordInput.focus();
         });
-        return;
     }
 
-    usernameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            passwordInput.focus();
-        }
-    });
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    }
 
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    }
 
-    loginBtn.addEventListener('click', login);
+    // Ініціалізація обробника для addSlideButton
+    const addSlideButton = document.querySelector('#slide-img-file ~ button');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', debounce(addSlide, 300));
+    } else {
+        console.warn('Кнопка для додавання слайду (#slide-img-file ~ button) не знайдена');
+    }
 
+    // Показ секції логіну
     showSection('admin-login');
 });
 
@@ -1836,25 +1839,29 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-  const slidesList = getElement('#slides-list-admin', 'Елемент #slides-list-admin не знайдено');
-  const addSlideBtn = getElement('#add-slide-btn', 'Елемент #add-slide-btn не знайдено');
-
-  if (slidesList) {
-    slidesList.innerHTML = slides.map((slide, index) => `
-      <div class="slide-item">
-        <img src="${slide.image}" alt="Slide ${index + 1}" style="max-width: 100px;">
-        <p>Посилання: ${slide.link || 'Немає'}</p>
-        <button onclick="editSlide(${index})">Редагувати</button>
-        <button onclick="deleteSlide(${index})">Видалити</button>
-      </div>
-    `).join('');
-  }
-
-  if (addSlideBtn) {
-    addSlideBtn.addEventListener('click', () => openAddSlideModal());
-  }
-
-  resetInactivityTimer();
+    const slideList = document.getElementById('slide-list-admin');
+    if (!slideList) {
+        console.warn('Елемент #slide-list-admin не знайдено');
+        return;
+    }
+    slideList.innerHTML = '';
+    slides.forEach((slide, index) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <div>
+                <img src="${slide.url}" alt="Слайд ${index + 1}" style="max-width: 100px;">
+                <button class="delete-btn" data-index="${index}">Видалити</button>
+            </div>
+        `;
+        const button = div.querySelector('.delete-btn');
+        if (button) {
+            button.addEventListener('click', () => deleteSlide(index));
+        } else {
+            console.warn(`Кнопка .delete-btn для слайду ${index} не знайдена`);
+        }
+        slideList.appendChild(div);
+    });
+    resetInactivityTimer();
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
