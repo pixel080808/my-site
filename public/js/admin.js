@@ -4611,6 +4611,7 @@ function filterOrders() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM завантажено, ініціалізація...');
 
+    // Ініціалізація форми логіну
     const usernameInput = getElement('#admin-username', 'Елемент #admin-username не знайдено');
     const passwordInput = getElement('#admin-password', 'Елемент #admin-password не знайдено');
     const loginBtn = getElement('#login-btn', 'Елемент #login-btn не знайдено');
@@ -4629,6 +4630,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginBtn) {
         loginBtn.addEventListener('click', login);
+    }
+
+    // Ініціалізація обробника для addSlideButton
+    const addSlideButton = document.querySelector('#slide-img-file ~ button');
+    if (addSlideButton) {
+        addSlideButton.addEventListener('click', debounce(addSlide, 300));
+    } else {
+        console.warn('Кнопка для додавання слайду (#slide-img-file ~ button) не знайдена');
     }
 
     // Перевірка сесії та токена
@@ -4659,14 +4668,17 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
+    // Ініціалізація редактора, якщо елемент присутній
     if (getElement('#about-editor')) {
         initializeEditors();
     }
 });
 
+// Слухачі для скидання таймера неактивності
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
+// Функція для підключення WebSocket
 function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
