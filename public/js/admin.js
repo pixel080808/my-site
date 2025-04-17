@@ -1075,10 +1075,17 @@ async function login() {
         });
 
         if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfResponse.statusText}`);
+            const errorText = await csrfResponse.text();
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${errorText}`);
         }
 
-        const csrfData = await csrfResponse.json();
+        let csrfData;
+        try {
+            csrfData = await csrfResponse.json();
+        } catch (e) {
+            console.error('Помилка парсингу CSRF відповіді:', e);
+            throw new Error('Сервер повернув некоректну CSRF відповідь');
+        }
         console.log('CSRF data:', csrfData);
         const csrfToken = csrfData.csrfToken;
         if (!csrfToken) {
@@ -1101,18 +1108,25 @@ async function login() {
             headers: Object.fromEntries(response.headers.entries())
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            console.error('Помилка парсингу Login відповіді:', e);
+            throw new Error('Сервер повернув некоректну відповідь');
+        }
         console.log('Login data:', data);
 
         if (!response.ok) {
-            throw new Error(`Помилка входу: ${data.message || response.statusText}`);
+            throw new Error(`Помилка входу: ${data.message || response.statusText} (Статус: ${response.status})`);
         }
 
-        if (!data.token) {
-            throw new Error('Токен не отримано від сервера');
+        const token = data.token || data.accessToken || data.authToken;
+        if (!token) {
+            throw new Error(`Токен не отримано від сервера. Відповідь: ${JSON.stringify(data)}`);
         }
 
-        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminToken', token);
         session = { isActive: true, timestamp: Date.now() };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-panel');
@@ -1121,7 +1135,7 @@ async function login() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка входу:', err);
-        showNotification('Не вдалося увійти: ' + err.message);
+        showNotification(`Не вдалося увійти: ${err.message}`);
     }
 }
 
@@ -1840,24 +1854,58 @@ function renderSlidesAdmin() {
         console.warn('Елемент #slide-list-admin не знайдено');
         return;
     }
-    slideList.innerHTML = '';
-    slides.forEach((slide, index) => {
-        const div = document.createElement('div');
-        div.innerHTML = `
-            <div>
-                <img src="${slide.url}" alt="Слайд ${index + 1}" style="max-width: 100px;">
-                <button class="delete-btn" data-index="${index}">Видалити</button>
-            </div>
-        `;
-        const button = div.querySelector('.delete-btn');
-        if (button) {
-            button.addEventListener('click', () => deleteSlide(index));
-        } else {
-            console.warn(`Кнопка .delete-btn для слайду ${index} не знайдена`);
-        }
-        slideList.appendChild(div);
+    slideList.innerHTML = slides.map((slide, index) => `
+        <div class="slide-item">
+            <img src="${slide.photo}" alt="Слайд ${index + 1}" style="max-width: 100px;">
+            <p>Позиція: ${slide.position}</p>
+            <p>Посилання: ${slide.link || 'Немає'}</p>
+            <p>Активний: ${slide.active ? 'Так' : 'Ні'}</p>
+            <button class="delete-btn" data-index="${index}">Видалити</button>
+        </div>
+    `).join('');
+
+    // Додаємо обробники для кнопок видалення
+    document.querySelectorAll('#slide-list-admin .delete-btn').forEach(button => {
+        const index = parseInt(button.getAttribute('data-index'));
+        button.addEventListener('click', () => deleteSlide(index));
     });
+
     resetInactivityTimer();
+}
+
+async function deleteSlide(index) {
+    if (!confirm('Ви впевнені, що хочете видалити цей слайд?')) return;
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const slide = slides[index];
+        if (!slide || !slide._id) {
+            throw new Error('Слайд не знайдено або відсутній ID');
+        }
+
+        const response = await fetchWithAuth(`/api/slides/${slide._id}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Помилка видалення слайду: ${errorText}`);
+        }
+
+        slides.splice(index, 1);
+        renderSlidesAdmin();
+        showNotification('Слайд видалено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка видалення слайду:', err);
+        showNotification(`Не вдалося видалити слайд: ${err.message}`);
+    }
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
@@ -2776,15 +2824,22 @@ async function addSlide() {
                 body: formData
             });
             const data = await response.json();
+            console.log('Upload response:', data);
+            if (!data.url) {
+                throw new Error('URL зображення не отримано від сервера');
+            }
             photo = data.url;
         }
 
+        const slideData = { photo, link, position, active };
+        console.log('Sending slide data:', slideData);
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify({ photo, link, position, active }) // Змінено img на photo
+            body: JSON.stringify(slideData)
         });
 
         const newSlide = await response.json();
+        console.log('New slide response:', newSlide);
         slides.push(newSlide);
         renderSlidesAdmin();
         showNotification('Слайд додано!');
@@ -2796,9 +2851,10 @@ async function addSlide() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
-        showNotification('Помилка: ' + err.message);
+        showNotification(`Не вдалося додати слайд: ${err.message}`);
     }
 }
+
 
 // Додаємо обробник з дебонсінгом до кнопки
 document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
