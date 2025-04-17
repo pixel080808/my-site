@@ -1783,27 +1783,63 @@ const catList = document.getElementById('cat-list');
 function renderCategoriesAdmin() {
     const categoryList = document.getElementById('category-list-admin');
     if (!categoryList) {
-        console.warn('Елемент #category-list-admin не знайдено, пропускаємо рендеринг категорій');
+        console.error('Елемент #category-list-admin не знайдено');
         return;
     }
 
-    categoryList.innerHTML = categories.map((category, index) => `
+    categoryList.innerHTML = categories.map(category => `
         <div class="category-item">
-            <strong>${category.name}</strong> (${category.slug})<br/>
-            Фото: ${category.photo ? `<img src="${category.photo}" alt="${category.name}" style="max-width: 100px;">` : 'Немає'}<br/>
-            Видимість: ${category.visible ? 'Показується' : 'Прихована'}<br/>
-            Підкатегорії: ${category.subcategories?.length || 0}<br/>
-            <button onclick="openEditCategoryModal('${category._id}')">Редагувати</button>
-            <button onclick="deleteCategory('${category._id}')">Видалити</button>
-            <button onclick="openAddSubcategoryModal()">Додати підкатегорію</button>
+            <img src="${category.photo || 'placeholder.jpg'}" alt="${category.name}" class="category-photo">
+            <div class="category-details">
+                <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
+                <div class="category-actions">
+                    <button onclick="openEditCategoryModal('${category._id}')">Редагувати</button>
+                    <button onclick="deleteCategory('${category._id}')">Видалити</button>
+                    <button id="add-subcategory-btn-${category._id}">Додати підкатегорію</button>
+                </div>
+            </div>
+            <div class="subcategories">
+                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map(sub => `
+                    <div class="subcategory-item">
+                        <img src="${sub.photo || 'placeholder.jpg'}" alt="${sub.name}" class="subcategory-photo">
+                        <div class="subcategory-details">
+                            ${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
+                            <div class="subcategory-actions">
+                                <button onclick="openEditSubcategoryModal('${category._id}', '${sub._id}')">Редагувати</button>
+                                <button onclick="deleteSubcategory('${category._id}', '${sub._id}')">Видалити</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : '<p>Підкатегорії відсутні</p>'}
+            </div>
         </div>
     `).join('');
 
-    const editButtons = document.querySelectorAll('.category-item button[onclick*="openEditCategoryModal"]');
-    if (editButtons.length > 0) {
-        editButtons.forEach(btn => {
-            btn.onclick = () => openEditCategoryModal(btn.getAttribute('onclick').match(/'([^']+)'/)[1]);
-        });
+    // Додаємо обробники подій для кнопок "Додати підкатегорію"
+    categories.forEach(category => {
+        const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
+        if (addSubcategoryBtn) {
+            addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
+        }
+    });
+
+    // Оновлюємо випадаючий список категорій для підкатегорій
+    const subcatSelect = document.getElementById('subcategory-category');
+    if (subcatSelect) {
+        const currentValue = subcatSelect.value;
+        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
+            categories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+        subcatSelect.value = currentValue; // Відновлюємо вибране значення
+    }
+
+    // Оновлюємо випадаючий список категорій для товарів
+    const productCatSelect = document.getElementById('product-category');
+    if (productCatSelect) {
+        const currentValue = productCatSelect.value;
+        productCatSelect.innerHTML = '<option value="">Без категорії</option>' +
+            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        productCatSelect.value = currentValue; // Відновлюємо вибране значення
+        updateSubcategories(); // Оновлюємо підкатегорії
     }
 
     resetInactivityTimer();
@@ -2178,75 +2214,96 @@ async function addCategory() {
             return;
         }
 
-        const nameInput = document.getElementById('category-name');
-        const slugInput = document.getElementById('category-slug');
-        const photoUrlInput = document.getElementById('category-photo-url');
-        const photoFileInput = document.getElementById('category-photo-file');
-        const visibleSelect = document.getElementById('category-visible');
+        const name = document.getElementById('category-name').value.trim();
+        const slug = document.getElementById('category-slug').value.trim();
+        const photoUrl = document.getElementById('category-photo-url').value.trim();
+        const photoFile = document.getElementById('category-photo-file').files[0];
+        const visible = document.getElementById('category-visible').value === 'true';
 
-        if (!nameInput || !slugInput || !visibleSelect) {
-            showNotification('Елементи форми для категорії не знайдено');
-            return;
-        }
-
-        const name = nameInput.value.trim();
-        const slug = slugInput.value.trim();
-        const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput ? photoUrlInput.value.trim() : '';
-
-        console.log('Значення полів при додаванні категорії:', { name, slug, visible, photo }); // Додаємо логування для дебагу
+        console.log('Значення полів при додаванні категорії:', { name, slug, photoUrl, photoFile, visible });
 
         if (!name || !slug) {
-            showNotification('Назва та шлях категорії обов’язкові!');
+            showNotification('Введіть назву та шлях категорії!');
             return;
         }
 
         const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        if (!slugCheck.ok) {
+            throw new Error('Помилка перевірки унікальності шляху категорії');
+        }
         const existingCategories = await slugCheck.json();
         if (existingCategories.some(c => c.slug === slug)) {
             showNotification('Шлях категорії має бути унікальним!');
             return;
         }
 
-        if (photoFileInput && photoFileInput.files[0]) {
-            const file = photoFileInput.files[0];
-            const validation = validateFile(file);
+        let finalPhotoUrl = photoUrl;
+        if (photoFile) {
+            const validation = validateFile(photoFile);
             if (!validation.valid) {
                 showNotification(validation.error);
                 return;
             }
-            const formData = new FormData();
-            formData.append('file', file);
-            const response = await fetchWithAuth('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            photo = data.url;
+            try {
+                const formData = new FormData();
+                formData.append('file', photoFile);
+                const response = await fetchWithAuth('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Помилка завантаження зображення: ${errorText || response.statusText}`);
+                }
+                const data = await response.json();
+                if (!data.url) {
+                    throw new Error('Сервер не повернув URL зображення');
+                }
+                finalPhotoUrl = data.url;
+            } catch (uploadError) {
+                console.error('Помилка завантаження зображення:', uploadError);
+                showNotification('Не вдалося завантажити зображення: ' + uploadError.message);
+                return;
+            }
         }
 
-        const newCategory = {
+        const category = {
             name,
             slug,
-            photo: photo || null,
+            photo: finalPhotoUrl || null,
             visible,
             subcategories: []
         };
 
+        console.log('Дані, що надсилаються на сервер:', category);
+
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
-            body: JSON.stringify(newCategory)
+            body: JSON.stringify(category)
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося додати категорію');
+            const errorText = await response.text();
+            let errorMessage = 'Невідома помилка';
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.error || errorData.message || response.statusText;
+            } catch {
+                errorMessage = errorText || response.statusText;
+            }
+            throw new Error(`Не вдалося додати категорію: ${errorMessage}`);
         }
 
-        const addedCategory = await response.json();
-        categories.push(addedCategory);
-        closeModal();
+        const newCategory = await response.json();
+        categories.push(newCategory);
         renderCategoriesAdmin();
+        document.getElementById('category-name').value = '';
+        document.getElementById('category-slug').value = '';
+        document.getElementById('category-photo-url').value = '';
+        document.getElementById('category-photo-file').value = '';
+        document.getElementById('category-visible').value = 'true';
         showNotification('Категорію додано!');
+        unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні категорії:', err);
