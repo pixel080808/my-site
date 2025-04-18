@@ -1816,17 +1816,17 @@ function renderCategoriesAdmin() {
         </div>
     `).join('');
 
-    // Додаємо обробники подій для кнопок "Додати підкатегорію"
+    // Додаємо обробники подій для кнопок "Додати підкатегорію" після оновлення DOM
     if (categories.length > 0) {
-categories.forEach(category => {
-    const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
-    console.log(`Перевірка кнопки #add-subcategory-btn-${category._id}:`, !!addSubcategoryBtn);
-    if (addSubcategoryBtn) {
-        addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
-    } else {
-        console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
-    }
-});
+        categories.forEach(category => {
+            const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
+            console.log(`Перевірка кнопки #add-subcategory-btn-${category._id}:`, !!addSubcategoryBtn);
+            if (addSubcategoryBtn) {
+                addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
+            } else {
+                console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
+            }
+        });
     }
 
     // Оновлюємо випадаючий список категорій для підкатегорій
@@ -1835,7 +1835,7 @@ categories.forEach(category => {
         const currentValue = subcatSelect.value;
         subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
             categories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
-        subcatSelect.value = currentValue; // Відновлюємо вибране значення
+        subcatSelect.value = currentValue;
     }
 
     // Оновлюємо випадаючий список категорій для товарів
@@ -1844,8 +1844,8 @@ categories.forEach(category => {
         const currentValue = productCatSelect.value;
         productCatSelect.innerHTML = '<option value="">Без категорії</option>' +
             categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        productCatSelect.value = currentValue; // Відновлюємо вибране значення
-        updateSubcategories(); // Оновлюємо підкатегорії
+        productCatSelect.value = currentValue;
+        updateSubcategories();
     }
 
     resetInactivityTimer();
@@ -2056,13 +2056,15 @@ function openAddCategoryModal() {
     modal.classList.add('active');
     
     // Дебагінг: Перевіряємо, чи всі елементи присутні
-    console.log('Елементи форми після відкриття модального вікна:', {
-        nameInput: !!document.getElementById('category-name'),
-        slugInput: !!document.getElementById('category-slug'),
-        photoUrlInput: !!document.getElementById('category-photo-url'),
-        fileInput: !!document.getElementById('category-photo-file'),
-        visibleSelect: !!document.getElementById('category-visible')
-    });
+    setTimeout(() => {
+        console.log('Елементи форми після відкриття модального вікна:', {
+            nameInput: !!document.getElementById('category-name'),
+            slugInput: !!document.getElementById('category-slug'),
+            photoUrlInput: !!document.getElementById('category-photo-url'),
+            fileInput: !!document.getElementById('category-photo-file'),
+            visibleSelect: !!document.getElementById('category-visible')
+        });
+    }, 0);
 
     resetInactivityTimer();
 }
@@ -2234,9 +2236,8 @@ async function addCategory() {
         const slugInput = document.getElementById('category-slug');
         const fileInput = document.getElementById('category-photo-file');
         const photoUrlInput = document.getElementById('category-photo-url');
-        const visibleSelect = document.getElementById('category-visible'); // Додаємо видимість
+        const visibleSelect = document.getElementById('category-visible');
 
-        // Перевірка наявності всіх елементів
         if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect) {
             showNotification('Не вдалося знайти всі необхідні поля форми. Переконайтеся, що форма заповнена коректно.');
             console.error('Елементи форми не знайдено:', {
@@ -2255,10 +2256,38 @@ async function addCategory() {
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
 
-        console.log('Значення полів при додаванні категорії:', { name, slug, visible, file, photoUrl });
+        console.log('Значення полів при додаванні категорії:', { name, slug, visible, file: file ? file.name : null, photoUrl });
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
+            return;
+        }
+
+        if (name.length < 2) {
+            showNotification('Назва категорії має містити принаймні 2 символи!');
+            return;
+        }
+        if (slug.length < 2) {
+            showNotification('Шлях категорії має містити принаймні 2 символи!');
+            return;
+        }
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+        if (photoUrl && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photoUrl)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
+        // Перевірка унікальності slug
+        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        if (!slugCheck.ok) {
+            throw new Error('Помилка перевірки унікальності шляху категорії');
+        }
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug)) {
+            showNotification('Шлях категорії має бути унікальним!');
             return;
         }
 
@@ -2288,7 +2317,7 @@ async function addCategory() {
         const category = {
             name,
             slug,
-            parentCategory: null, // Явно встановлюємо null, оскільки поле не використовується
+            parentCategory: null,
             photo: photo || null,
             visible
         };
@@ -2297,22 +2326,26 @@ async function addCategory() {
 
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken')
+            },
             body: JSON.stringify(category)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Деталі помилки сервера:', errorData);
             throw new Error(`Не вдалося додати категорію: ${errorData.error || response.statusText}`);
         }
 
         const newCategory = await response.json();
         categories.push(newCategory);
-        closeModal(); // Закриваємо модальне вікно
+        closeModal();
         renderCategoriesAdmin();
         showNotification('Категорію додано!');
         resetInactivityTimer();
 
-        // Очистка полів
         nameInput.value = '';
         slugInput.value = '';
         photoUrlInput.value = '';
