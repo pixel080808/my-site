@@ -761,15 +761,16 @@ const categorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
     photo: Joi.string().allow(''),
-    visible: Joi.boolean().default(true), // Додаємо visible
+    visible: Joi.boolean().default(true),
     subcategories: Joi.array().items(
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
             slug: Joi.string().min(1).max(255).required(),
             photo: Joi.string().allow(''),
-            visible: Joi.boolean().default(true) // Додаємо visible
+            visible: Joi.boolean().default(true)
         })
-    ).default([])
+    ).default([]),
+    parentCategory: Joi.any().allow(null).optional() // Додаємо parentCategory
 });
 
 app.get('/api/categories', authenticateToken, async (req, res) => {
@@ -787,7 +788,7 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
         const categoryData = req.body;
         logger.info('Отримано дані категорії:', categoryData);
 
-        const { error } = categorySchemaValidation.validate(categoryData);
+        const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації категорії:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -808,7 +809,7 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
             slug: categoryData.slug,
             photo: categoryData.photo,
             parentCategory: categoryData.parentCategory || null,
-            visible: categoryData.visible !== undefined ? categoryData.visible : true, // Додаємо visible
+            visible: categoryData.visible !== undefined ? categoryData.visible : true,
             subcategories: categoryData.subcategories || []
         });
         await category.save();

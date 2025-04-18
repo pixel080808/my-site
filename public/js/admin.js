@@ -1816,20 +1816,19 @@ function renderCategoriesAdmin() {
         </div>
     `).join('');
 
-    // Додаємо обробники подій для кнопок "Додати підкатегорію" після оновлення DOM
-    if (categories.length > 0) {
+    // Додаємо обробники подій після оновлення DOM
+    setTimeout(() => {
         categories.forEach(category => {
             const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
-            console.log(`Перевірка кнопки #add-subcategory-btn-${category._id}:`, !!addSubcategoryBtn);
             if (addSubcategoryBtn) {
                 addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
             } else {
                 console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
             }
         });
-    }
+    }, 0);
 
-    // Оновлюємо випадаючий список категорій для підкатегорій
+    // Оновлюємо випадаючий список категорій
     const subcatSelect = document.getElementById('subcategory-category');
     if (subcatSelect) {
         const currentValue = subcatSelect.value;
@@ -1838,7 +1837,6 @@ function renderCategoriesAdmin() {
         subcatSelect.value = currentValue;
     }
 
-    // Оновлюємо випадаючий список категорій для товарів
     const productCatSelect = document.getElementById('product-category');
     if (productCatSelect) {
         const currentValue = productCatSelect.value;
@@ -2054,8 +2052,8 @@ function openAddCategoryModal() {
         </div>
     `;
     modal.classList.add('active');
-    
-    // Дебагінг: Перевіряємо, чи всі елементи присутні
+
+    // Дебагінг
     setTimeout(() => {
         console.log('Елементи форми після відкриття модального вікна:', {
             nameInput: !!document.getElementById('category-name'),
@@ -2263,12 +2261,8 @@ async function addCategory() {
             return;
         }
 
-        if (name.length < 2) {
-            showNotification('Назва категорії має містити принаймні 2 символи!');
-            return;
-        }
-        if (slug.length < 2) {
-            showNotification('Шлях категорії має містити принаймні 2 символи!');
+        if (name.length < 1 || slug.length < 1) {
+            showNotification('Назва та шлях категорії не можуть бути порожніми!');
             return;
         }
         if (!/^[a-z0-9-]+$/.test(slug)) {
@@ -2291,7 +2285,7 @@ async function addCategory() {
             return;
         }
 
-        let photo = null;
+        let photo = '';
         if (file) {
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -2317,8 +2311,7 @@ async function addCategory() {
         const category = {
             name,
             slug,
-            parentCategory: null,
-            photo: photo || null,
+            photo,
             visible
         };
 
@@ -2335,7 +2328,7 @@ async function addCategory() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Деталі помилки сервера:', errorData);
+            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося додати категорію: ${errorData.error || response.statusText}`);
         }
 
