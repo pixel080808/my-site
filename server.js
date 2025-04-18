@@ -896,16 +896,38 @@ app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, 
     }
 });
 
+const categoryOrderSchema = Joi.object({
+    categories: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).required()
+});
+
 app.put('/api/categories/order', authenticateToken, async (req, res) => {
     try {
         const { categories: categoryIds } = req.body;
+
+        // Валідація
+        const { error } = categoryOrderSchema.validate({ categories: categoryIds });
+        if (error) {
+            logger.error('Помилка валідації порядку категорій:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка існування всіх категорій
         const categories = await Category.find({ _id: { $in: categoryIds } });
-        const orderedCategories = categoryIds.map(id => categories.find(c => c._id.toString() === id));
-        // Оновлення порядку в базі даних, якщо потрібно
-        res.status(200).json(orderedCategories);
+        if (categories.length !== categoryIds.length) {
+            return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
+        }
+
+        // Оновлення порядку
+        for (let i = 0; i < categoryIds.length; i++) {
+            await Category.findByIdAndUpdate(categoryIds[i], { order: i });
+        }
+
+        const updatedCategories = await Category.find().sort({ order: 1 });
+        broadcast('categories', updatedCategories);
+        res.status(200).json(updatedCategories);
     } catch (err) {
         logger.error('Помилка оновлення порядку категорій:', err);
-        res.status(400).json({ error: 'Не вдалося оновити порядок' });
+        res.status(400).json({ error: 'Не вдалося оновити порядок', details: err.message });
     }
 });
 
@@ -996,7 +1018,8 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 const subcategorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    image: Joi.string().allow('')
+    photo: Joi.string().allow('').optional(), // Змінено з image на photo
+    visible: Joi.boolean().optional()
 });
 
 app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtection, async (req, res) => {

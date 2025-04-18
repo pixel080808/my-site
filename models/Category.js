@@ -12,7 +12,8 @@ const categorySchema = new mongoose.Schema({
     slug: { type: String, required: true },
     photo: { type: String, default: '' },
     visible: { type: Boolean, default: true },
-    subcategories: [subcategorySchema]
+    subcategories: [subcategorySchema],
+    order: { type: Number, default: 0 }
 });
 
 module.exports = mongoose.model('Category', categorySchema);
