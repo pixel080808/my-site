@@ -762,7 +762,6 @@ function renderBreadcrumbs() {
             }
         });
 
-// script.js, функція renderCategories
 function renderCategories() {
     const catDiv = document.getElementById('categories');
     if (!catDiv) {
@@ -783,10 +782,10 @@ function renderCategories() {
         categoryDiv.className = 'category';
 
         const img = document.createElement('img');
-        img.src = cat.image || NO_IMAGE_URL; // Змінено з cat.img на cat.image
+        img.src = cat.photo || NO_IMAGE_URL; // Змінено з cat.image на cat.photo
         img.alt = cat.name;
         img.loading = 'lazy';
-        img.onerror = () => { img.src = NO_IMAGE_URL; }; // Додаємо обробник помилок
+        img.onerror = () => { img.src = NO_IMAGE_URL; };
         img.onclick = () => { 
             currentCategory = cat.name; 
             currentSubcategory = null; 

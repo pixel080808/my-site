@@ -760,26 +760,33 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
 const categorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    photo: Joi.string().allow(''),
+    photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().default(true),
     subcategories: Joi.array().items(
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
             slug: Joi.string().min(1).max(255).required(),
-            photo: Joi.string().allow(''),
+            photo: Joi.string().allow('').optional(),
             visible: Joi.boolean().default(true)
         })
-    ).default([]),
-    parentCategory: Joi.any().allow(null).optional() // Додаємо parentCategory
+    ).default([])
 });
 
-app.get('/api/categories', authenticateToken, async (req, res) => {
+app.get('/api/categories', async (req, res) => {
     try {
+        const { slug, subcategorySlug } = req.query;
+        if (slug) {
+            const categories = await Category.find({ slug });
+            return res.status(200).json(categories);
+        }
+        if (subcategorySlug) {
+            const categories = await Category.find({ 'subcategories.slug': subcategorySlug });
+            return res.status(200).json(categories);
+        }
         const categories = await Category.find();
-        res.json(categories);
+        res.status(200).json(categories);
     } catch (err) {
-        logger.error('Помилка при отриманні категорій:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+        res.status(400).json({ error: 'Помилка отримання категорій' });
     }
 });
 
@@ -886,6 +893,19 @@ app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, 
     } catch (err) {
         logger.error('Помилка при оновленні категорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
+app.put('/api/categories/order', authenticateToken, async (req, res) => {
+    try {
+        const { categories: categoryIds } = req.body;
+        const categories = await Category.find({ _id: { $in: categoryIds } });
+        const orderedCategories = categoryIds.map(id => categories.find(c => c._id.toString() === id));
+        // Оновлення порядку в базі даних, якщо потрібно
+        res.status(200).json(orderedCategories);
+    } catch (err) {
+        logger.error('Помилка оновлення порядку категорій:', err);
+        res.status(400).json({ error: 'Не вдалося оновити порядок' });
     }
 });
 
