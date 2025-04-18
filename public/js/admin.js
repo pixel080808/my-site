@@ -1795,7 +1795,7 @@ function renderCategoriesAdmin() {
                 <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
                 <div class="category-actions">
                     <button onclick="openEditCategoryModal('${category._id}')">Редагувати</button>
-                    <button onclick="deleteCategory('${category._id}')">Видалити daha </button>
+                    <button onclick="deleteCategory('${category._id}')">Видалити</button>
                     <button id="add-subcategory-btn-${category._id}">Додати підкатегорію</button>
                 </div>
             </div>
@@ -1816,16 +1816,17 @@ function renderCategoriesAdmin() {
         </div>
     `).join('');
 
-    // Додаємо обробники подій для кнопок "Додати підкатегорію", лише якщо є категорії
+    // Додаємо обробники подій для кнопок "Додати підкатегорію"
     if (categories.length > 0) {
-        categories.forEach(category => {
-            const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
-            if (addSubcategoryBtn) {
-                addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
-            } else {
-                console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
-            }
-        });
+categories.forEach(category => {
+    const addSubcategoryBtn = document.getElementById(`add-subcategory-btn-${category._id}`);
+    console.log(`Перевірка кнопки #add-subcategory-btn-${category._id}:`, !!addSubcategoryBtn);
+    if (addSubcategoryBtn) {
+        addSubcategoryBtn.onclick = () => openAddSubcategoryModal(category._id);
+    } else {
+        console.warn(`Кнопка #add-subcategory-btn-${category._id} не знайдена`);
+    }
+});
     }
 
     // Оновлюємо випадаючий список категорій для підкатегорій
@@ -2053,6 +2054,16 @@ function openAddCategoryModal() {
         </div>
     `;
     modal.classList.add('active');
+    
+    // Дебагінг: Перевіряємо, чи всі елементи присутні
+    console.log('Елементи форми після відкриття модального вікна:', {
+        nameInput: !!document.getElementById('category-name'),
+        slugInput: !!document.getElementById('category-slug'),
+        photoUrlInput: !!document.getElementById('category-photo-url'),
+        fileInput: !!document.getElementById('category-photo-file'),
+        visibleSelect: !!document.getElementById('category-visible')
+    });
+
     resetInactivityTimer();
 }
 
@@ -2221,23 +2232,30 @@ async function addCategory() {
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
-        const parentCategoryInput = document.getElementById('parent-category');
         const fileInput = document.getElementById('category-photo-file');
         const photoUrlInput = document.getElementById('category-photo-url');
+        const visibleSelect = document.getElementById('category-visible'); // Додаємо видимість
 
         // Перевірка наявності всіх елементів
-        if (!nameInput || !slugInput || !parentCategoryInput || !fileInput || !photoUrlInput) {
-            showNotification('Не вдалося знайти всі необхідні поля форми. Переконайтеся, що ви на вкладці редагування категорій.');
+        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect) {
+            showNotification('Не вдалося знайти всі необхідні поля форми. Переконайтеся, що форма заповнена коректно.');
+            console.error('Елементи форми не знайдено:', {
+                nameInput: !!nameInput,
+                slugInput: !!slugInput,
+                fileInput: !!fileInput,
+                photoUrlInput: !!photoUrlInput,
+                visibleSelect: !!visibleSelect
+            });
             return;
         }
 
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
-        const parentCategory = parentCategoryInput.value || '';
+        const visible = visibleSelect.value === 'true';
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
 
-        console.log('Значення полів при додаванні категорії:', { name, slug, parentCategory, file, photoUrl });
+        console.log('Значення полів при додаванні категорії:', { name, slug, visible, file, photoUrl });
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
@@ -2270,8 +2288,9 @@ async function addCategory() {
         const category = {
             name,
             slug,
-            parentCategory: parentCategory || null,
-            photo: photo || null
+            parentCategory: null, // Явно встановлюємо null, оскільки поле не використовується
+            photo: photo || null,
+            visible
         };
 
         console.log('Дані, що надсилаються на сервер:', category);
@@ -2288,16 +2307,17 @@ async function addCategory() {
 
         const newCategory = await response.json();
         categories.push(newCategory);
-        renderAdmin('categories');
+        closeModal(); // Закриваємо модальне вікно
+        renderCategoriesAdmin();
         showNotification('Категорію додано!');
         resetInactivityTimer();
 
         // Очистка полів
         nameInput.value = '';
         slugInput.value = '';
-        parentCategoryInput.value = '';
         photoUrlInput.value = '';
         fileInput.value = '';
+        visibleSelect.value = 'true';
     } catch (err) {
         console.error('Помилка при додаванні категорії:', err);
         showNotification('Не вдалося додати категорію: ' + err.message);
