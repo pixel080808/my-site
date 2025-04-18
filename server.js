@@ -761,15 +761,15 @@ const categorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
     photo: Joi.string().allow('').optional(),
-    visible: Joi.boolean().default(true),
+    visible: Joi.boolean().optional(),
     subcategories: Joi.array().items(
         Joi.object({
             name: Joi.string().min(1).max(255).required(),
             slug: Joi.string().min(1).max(255).required(),
             photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().default(true)
+            visible: Joi.boolean().optional()
         })
-    ).default([])
+    ).optional()
 });
 
 app.get('/api/categories', async (req, res) => {
@@ -907,7 +907,6 @@ app.put('/api/categories/order', authenticateToken, async (req, res) => {
         // Валідація
         const { error } = categoryOrderSchema.validate({ categories: categoryIds });
         if (error) {
-            logger.error('Помилка валідації порядку категорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
@@ -926,7 +925,7 @@ app.put('/api/categories/order', authenticateToken, async (req, res) => {
         broadcast('categories', updatedCategories);
         res.status(200).json(updatedCategories);
     } catch (err) {
-        logger.error('Помилка оновлення порядку категорій:', err);
+        console.error('Помилка оновлення порядку категорій:', err);
         res.status(400).json({ error: 'Не вдалося оновити порядок', details: err.message });
     }
 });
@@ -1018,23 +1017,22 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 const subcategorySchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
-    photo: Joi.string().allow('').optional(), // Змінено з image на photo
+    photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional()
 });
 
-app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtection, async (req, res) => {
+app.post('/api/categories/:id/subcategories', authenticateToken, async (req, res) => {
     try {
-        const categorySlug = req.params.slug;
+        const categoryId = req.params.id;
         const subcategoryData = req.body;
-        logger.info('Отримано дані для підкатегорії:', subcategoryData);
 
         const { error } = subcategorySchemaValidation.validate(subcategoryData);
         if (error) {
-            logger.error('Помилка валідації підкатегорії:', error.details);
+            console.error('Помилка валідації підкатегорії:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const category = await Category.findOne({ slug: categorySlug });
+        const category = await Category.findById(categoryId);
         if (!category) {
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
@@ -1043,7 +1041,6 @@ app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtectio
             category.subcategories = [];
         }
 
-        // Перевірка унікальності slug у межах категорії
         if (category.subcategories.some(sub => sub.slug === subcategoryData.slug)) {
             return res.status(400).json({ error: 'Підкатегорія з таким slug уже існує в цій категорії' });
         }
@@ -1052,15 +1049,16 @@ app.post('/api/categories/:slug/subcategories', authenticateToken, csrfProtectio
             name: subcategoryData.name,
             slug: subcategoryData.slug,
             photo: subcategoryData.photo || '',
-            visible: subcategoryData.visible !== undefined ? subcategoryData.visible : true // Додаємо visible
+            visible: subcategoryData.visible !== undefined ? subcategoryData.visible : true
         });
+
         await category.save();
 
-        const categories = await Category.find();
-        broadcast('categories', categories);
-        res.status(201).json(subcategoryData);
+        const updatedCategories = await Category.find();
+        broadcast('categories', updatedCategories);
+        res.status(201).json(category);
     } catch (err) {
-        logger.error('Помилка при додаванні підкатегорії:', err);
+        console.error('Помилка при додаванні підкатегорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
