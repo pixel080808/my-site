@@ -215,6 +215,27 @@ app.get('/test-admin', (req, res) => {
     res.send('Це тестовий маршрут для адміна');
 });
 
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
+});
+
+const refreshTokenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    skipSuccessfulRequests: false,
+    keyGenerator: (req) => {
+        const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        return clientIp;
+    },
+    handler: (req, res, next) => {
+        const err = new Error('Занадто багато запитів на оновлення токена');
+        err.status = 429;
+        next(err);
+    }
+});
+
 // Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB підключено'))
@@ -2224,27 +2245,6 @@ app.get('*', (req, res) => {
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
-});
-
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
-    message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
-});
-
-const refreshTokenLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 30,
-    skipSuccessfulRequests: false,
-    keyGenerator: (req) => {
-        const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-        return clientIp;
-    },
-    handler: (req, res, next) => {
-        const err = new Error('Занадто багато запитів на оновлення токена');
-        err.status = 429;
-        next(err);
-    }
 });
 
 app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res, next) => {
