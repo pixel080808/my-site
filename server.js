@@ -1004,7 +1004,7 @@ const subcategorySchemaValidation = Joi.object({
     slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
-    order: Joi.number().integer().min(0).optional() // Додано для відповідності моделі
+    order: Joi.number().integer().min(0).optional() 
 });
 
 app.get('/api/categories', async (req, res) => {
@@ -1295,14 +1295,6 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
     }
 });
 
-const subcategorySchemaValidation = Joi.object({
-    _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-    name: Joi.string().max(255).required(), // Зроблено обов’язковим
-    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(), // Зроблено обов’язковим
-    photo: Joi.string().allow('').optional(),
-    visible: Joi.boolean().optional()
-});
-
 app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryId = req.params.id;
@@ -1404,10 +1396,11 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
-        subcategory.name = subcategoryData.name || subcategory.name;
-        subcategory.slug = subcategoryData.slug || subcategory.slug;
-        subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
-        subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
+subcategory.name = subcategoryData.name || subcategory.name;
+subcategory.slug = subcategoryData.slug || subcategory.slug;
+subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
+subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
+subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order; // Додано
 
         await category.save();
 
