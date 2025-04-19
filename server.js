@@ -2420,11 +2420,12 @@ app.use((err, req, res, next) => {
         const field = Object.keys(err.keyValue)[0];
         return res.status(400).json({ error: `Значення для поля ${field} уже існує` });
     }
-    // Існуюча логіка
     if (err.code === 'EBADCSRFTOKEN') {
         logger.error('Помилка CSRF:', err);
         return res.status(403).json({ error: 'Недійсний CSRF-токен' });
     }
+    if (err instanceof multer.MulterError || err.message.includes('Дозволені лише файли')) {
+        logger.error('Помилка завантаження файлу:', err);
         return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
     }
     if (err.status === 429) {
