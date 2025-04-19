@@ -982,21 +982,21 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
 });
 
 const categorySchemaValidation = Joi.object({
-    name: Joi.string().min(1).max(255).required(),
-    slug: Joi.string().min(1).max(255).required(),
+    name: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
+    slug: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
-    order: Joi.number().integer().min(0).default(0).optional(), // Додано
+    order: Joi.number().integer().min(0).default(0).optional(),
     subcategories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-            name: Joi.string().min(1).max(255).required(),
-            slug: Joi.string().min(1).max(255).required(),
+            name: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
+            slug: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
             photo: Joi.string().allow('').optional(),
             visible: Joi.boolean().optional()
         })
     ).optional()
-});
+}).min(1); // Вимагаємо хоча б одне поле
 
 app.get('/api/categories', async (req, res) => {
     try {
@@ -1066,7 +1066,7 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
     }
 });
 
-app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, res) => {
+app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryData = req.body;
         const { error } = categorySchemaValidation.validate(categoryData);
@@ -1075,22 +1075,32 @@ app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const category = await Category.findOne({ slug: req.params.slug });
+        // Перевірка формату ID
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            logger.error(`Невірний формат ID категорії: ${req.params.id}`);
+            return res.status(400).json({ error: 'Невірний формат ID категорії' });
+        }
+
+        const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: 'Категорію не знайдено' });
 
         // Перевірка унікальності name і slug (окрім поточної категорії)
-        const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } });
-        if (existingCategoryByName) {
-            return res.status(400).json({ error: 'Категорія з такою назвою вже існує' });
+        if (categoryData.name) {
+            const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } });
+            if (existingCategoryByName) {
+                return res.status(400).json({ error: 'Категорія з такою назвою вже існує' });
+            }
         }
 
-        const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } });
-        if (existingCategoryBySlug) {
-            return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
+        if (categoryData.slug) {
+            const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } });
+            if (existingCategoryBySlug) {
+                return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
+            }
         }
 
         // Видаляємо старе зображення, якщо воно змінилося
-        if (category.photo && categoryData.photo !== category.photo) {
+        if (category.photo && categoryData.photo && categoryData.photo !== category.photo) {
             const publicId = getPublicIdFromUrl(category.photo);
             if (publicId) {
                 try {
@@ -1106,20 +1116,21 @@ app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, 
         const subcategories = categoryData.subcategories || [];
         const subSlugs = new Set();
         for (const sub of subcategories) {
-            if (subSlugs.has(sub.slug)) {
+            if (sub.slug && subSlugs.has(sub.slug)) {
                 return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
             }
             subSlugs.add(sub.slug);
         }
 
-        const updatedCategory = await Category.findOneAndUpdate(
-            { slug: req.params.slug },
+        const updatedCategory = await Category.findByIdAndUpdate(
+            req.params.id,
             {
-                name: categoryData.name,
-                slug: categoryData.slug,
-                photo: categoryData.photo,
+                name: categoryData.name || category.name,
+                slug: categoryData.slug || category.slug,
+                photo: categoryData.photo || category.photo,
                 visible: categoryData.visible !== undefined ? categoryData.visible : category.visible,
-                subcategories: subcategories
+                subcategories: subcategories.length > 0 ? subcategories : category.subcategories,
+                order: categoryData.order !== undefined ? categoryData.order : category.order
             },
             { new: true }
         );
@@ -1287,11 +1298,11 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-    name: Joi.string().min(1).max(255).required(),
-    slug: Joi.string().min(1).max(255).required(),
+    name: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
+    slug: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional()
-});
+}).min(1); // Вимагаємо хоча б одне поле
 
 app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection, async (req, res) => {
     try {
@@ -1335,24 +1346,27 @@ app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection,
     }
 });
 
-const subcategoryOrderSchemaValidation = Joi.array().items(
-    Joi.object({
-        _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-        order: Joi.number().required()
-    })
-);
+const subcategoryOrderSchemaValidation = Joi.object({
+    subcategories: Joi.array().items(
+        Joi.object({
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+            order: Joi.number().integer().min(0).required()
+        })
+    ).required()
+});
 
 app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryId = req.params.categoryId;
-if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-    logger.error(`Невірний формат categoryId: ${categoryId}`);
-    return res.status(400).json({ error: 'Невірний формат categoryId' });
-}
-        const subcategoryOrder = req.body;
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            logger.error(`Невірний формат categoryId: ${categoryId}`);
+            return res.status(400).json({ error: 'Невірний формат categoryId' });
+        }
+
+        const { subcategories } = req.body;
 
         // Валідація
-        const { error } = subcategoryOrderSchemaValidation.validate(subcategoryOrder);
+        const { error } = subcategoryOrderSchemaValidation.validate({ subcategories });
         if (error) {
             logger.error('Помилка валідації порядку підкатегорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -1365,14 +1379,14 @@ if (!mongoose.Types.ObjectId.isValid(categoryId)) {
         }
 
         // Перевірка, що всі підкатегорії з запиту існують
-        const subcategoryIds = subcategoryOrder.map(item => item._id);
+        const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
         // Створюємо новий масив підкатегорій із врахуванням нового порядку
-        const reorderedSubcategories = subcategoryOrder.map(item => {
+        const reorderedSubcategories = subcategories.map(item => {
             const subcat = category.subcategories.find(sub => sub._id.toString() === item._id);
             return {
                 _id: subcat._id,

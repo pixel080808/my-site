@@ -241,6 +241,8 @@ if (aboutEditor) {
 }
 
 async function fetchWithAuth(url, options = {}) {
+    console.log('Request URL:', url);
+    console.log('Request Options:', JSON.stringify(options, null, 2));
     const token = localStorage.getItem('adminToken');
     if (!token) {
         throw new Error('Токен відсутній. Увійдіть знову.');
@@ -2134,7 +2136,7 @@ async function saveEditedCategory(categoryId) {
         const visibleSelect = document.getElementById('category-visible');
 
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми відсутні:', {
+            console.error('Form elements missing:', {
                 nameInput: !!nameInput,
                 slugInput: !!slugInput,
                 photoUrlInput: !!photoUrlInput,
@@ -2145,40 +2147,32 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        let name = nameInput.value.trim();
-        let slug = slugInput.value.trim();
+        const name = nameInput.value.trim() || ''; // Дозволяємо порожнє значення
+        const slug = slugInput.value.trim() || (name ? name.toLowerCase().replace(/\s+/g, '-') : '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        // Клієнтська валідація
-        if (!name) {
-            name = 'Без назви'; // Значення за замовчуванням
-            console.warn('Назва категорії порожня, використано значення за замовчуванням:', name);
-        }
-
-        if (!slug) {
-            slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug';
-            console.warn('Шлях категорії порожній, згенеровано:', slug);
-        }
-
-        if (!/^[a-z0-9-]+$/.test(slug)) {
+        // Перевірка формату slug
+        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
         // Перевірка унікальності slug
-        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        if (!slugCheck.ok) {
-            const errorData = await slugCheck.json();
-            throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
-        }
-        const existingCategories = await slugCheck.json();
-        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-            showNotification('Шлях категорії має бути унікальним!');
-            return;
+        if (slug) {
+            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+            if (!slugCheck.ok) {
+                const errorData = await slugCheck.json();
+                throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
+            }
+            const existingCategories = await slugCheck.json();
+            if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+                showNotification('Шлях категорії має бути унікальним!');
+                return;
+            }
         }
 
-        // Завантаження фото
+        // Обробка завантаження фото
         if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2516,14 +2510,16 @@ async function moveCategoryUp(index) {
             return;
         }
         [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
-        
-        const categoryOrder = categories.map((cat, idx) => ({
-            _id: cat._id,
-            order: idx
-        })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id));
-        console.log('Новий порядок категорій:', categoryOrder);
 
-        if (categoryOrder.length !== categories.length) {
+        const categoryOrder = {
+            categories: categories.map((cat, idx) => ({
+                _id: cat._id,
+                order: idx
+            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+        };
+        console.log('Новий порядок категорій:', JSON.stringify(categoryOrder, null, 2));
+
+        if (categoryOrder.categories.length !== categories.length) {
             console.error('Некоректні ID категорій:', categoryOrder);
             categories = originalCategories;
             showNotification('Помилка: не всі категорії мають валідні ID.');
@@ -2541,10 +2537,13 @@ async function moveCategoryUp(index) {
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Server error details:', JSON.stringify(errorData, null, 2));
             categories = originalCategories;
             throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
         }
 
+        const updatedCategories = await response.json();
+        categories.splice(0, categories.length, ...updatedCategories);
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
         resetInactivityTimer();
@@ -2571,14 +2570,16 @@ async function moveCategoryDown(index) {
             return;
         }
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
-        
-        const categoryOrder = categories.map((cat, idx) => ({
-            _id: cat._id,
-            order: idx
-        })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id));
-        console.log('Новий порядок категорій:', categoryOrder);
 
-        if (categoryOrder.length !== categories.length) {
+        const categoryOrder = {
+            categories: categories.map((cat, idx) => ({
+                _id: cat._id,
+                order: idx
+            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+        };
+        console.log('Новий порядок категорій:', JSON.stringify(categoryOrder, null, 2));
+
+        if (categoryOrder.categories.length !== categories.length) {
             console.error('Некоректні ID категорій:', categoryOrder);
             categories = originalCategories;
             showNotification('Помилка: не всі категорії мають валідні ID.');
@@ -2591,15 +2592,15 @@ async function moveCategoryDown(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(categoryOrder) // Надсилаємо масив об’єктів
+            body: JSON.stringify(categoryOrder)
         });
 
-if (!response.ok) {
-    const errorData = await response.json();
-    console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-    categories = originalCategories;
-    throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
-}
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Server error details:', JSON.stringify(errorData, null, 2));
+            categories = originalCategories;
+            throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+        }
 
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
@@ -3011,31 +3012,21 @@ async function moveSubcategoryUp(categoryId, index) {
         const originalSubcategories = [...category.subcategories];
         [category.subcategories[index - 1], category.subcategories[index]] = [category.subcategories[index], category.subcategories[index - 1]];
 
-        // Перевірка наявності _id і встановлення значень за замовчуванням
-        const updatedData = {
-            subcategories: category.subcategories.map(subcat => {
-                if (!subcat._id) {
-                    console.warn('Підкатегорія без _id:', subcat);
-                    throw new Error('Усі підкатегорії повинні мати _id');
-                }
-                return {
-                    _id: subcat._id,
-                    name: subcat.name || 'Без назви',
-                    slug: subcat.slug || subcat.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug',
-                    photo: subcat.photo || '',
-                    visible: subcat.visible !== undefined ? subcat.visible : true
-                };
-            })
+        const subcategoriesOrder = {
+            subcategories: category.subcategories.map((subcat, idx) => ({
+                _id: subcat._id,
+                order: idx
+            }))
         };
-        console.log('Data sent to /api/categories/:id:', JSON.stringify(updatedData, null, 2));
+        console.log('Data sent to /api/categories/:categoryId/subcategories/order:', JSON.stringify(subcategoriesOrder, null, 2));
 
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(updatedData)
+            body: JSON.stringify(subcategoriesOrder)
         });
 
         if (!response.ok) {
@@ -3072,31 +3063,21 @@ async function moveSubcategoryDown(categoryId, index) {
         const originalSubcategories = [...category.subcategories];
         [category.subcategories[index], category.subcategories[index + 1]] = [category.subcategories[index + 1], category.subcategories[index]];
 
-        // Перевірка наявності _id і встановлення значень за замовчуванням
-        const updatedData = {
-            subcategories: category.subcategories.map(subcat => {
-                if (!subcat._id) {
-                    console.warn('Підкатегорія без _id:', subcat);
-                    throw new Error('Усі підкатегорії повинні мати _id');
-                }
-                return {
-                    _id: subcat._id,
-                    name: subcat.name || 'Без назви',
-                    slug: subcat.slug || subcat.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug',
-                    photo: subcat.photo || '',
-                    visible: subcat.visible !== undefined ? subcat.visible : true
-                };
-            })
+        const subcategoriesOrder = {
+            subcategories: category.subcategories.map((subcat, idx) => ({
+                _id: subcat._id,
+                order: idx
+            }))
         };
-        console.log('Data sent to /api/categories/:id:', JSON.stringify(updatedData, null, 2));
+        console.log('Data sent to /api/categories/:categoryId/subcategories/order:', JSON.stringify(subcategoriesOrder, null, 2));
 
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(updatedData)
+            body: JSON.stringify(subcategoriesOrder)
         });
 
         if (!response.ok) {
