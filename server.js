@@ -267,7 +267,12 @@ const productSchemaValidation = Joi.object({
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     date: Joi.date().default(Date.now),
-    customer: Joi.object().required(),
+    customer: Joi.object({
+        name: Joi.string().min(1).max(255).required(),
+        email: Joi.string().email().allow('').optional(),
+        phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).allow('').optional(),
+        address: Joi.string().allow('').optional()
+    }).required(),
     items: Joi.array().items(
         Joi.object({
             id: Joi.number().required(),
@@ -386,8 +391,48 @@ const authenticateToken = (req, res, next) => {
 const server = app.listen(process.env.PORT || 3000, () => logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`));
 const wss = new WebSocket.Server({ server });
 
+// Додаємо автоматичне очищення старих кошиків
+setInterval(async () => {
+    try {
+        const deletedCount = await cleanupOldCarts();
+        if (deletedCount > 0) {
+            logger.info(`Автоматичне очищення старих кошиків: видалено ${deletedCount} кошиків`);
+        }
+    } catch (err) {
+        logger.error('Помилка при автоматичному очищенні старих кошиків:', err);
+    }
+}, 24 * 60 * 60 * 1000); // Раз на день
+
+// Додаємо автоматичне очищення застарілих файлів у папці uploads/
+setInterval(async () => {
+    try {
+        const files = await fs.promises.readdir(uploadPath);
+        const thresholdDate = Date.now() - 24 * 60 * 60 * 1000; // Файли старше 24 годин
+        const filesToDelete = [];
+
+        for (const file of files) {
+            const filePath = path.join(uploadPath, file);
+            const stats = await fs.promises.stat(filePath);
+            if (stats.mtimeMs < thresholdDate) {
+                filesToDelete.push(filePath);
+            }
+        }
+
+        await Promise.all(filesToDelete.map(async (filePath) => {
+            await fs.promises.unlink(filePath);
+            logger.info(`Видалено застарілий файл: ${filePath}`);
+        }));
+
+        if (filesToDelete.length > 0) {
+            logger.info(`Автоматичне очищення uploads/: видалено ${filesToDelete.length} файлів`);
+        }
+    } catch (err) {
+        logger.error('Помилка при автоматичному очищенні папки uploads/:', err);
+    }
+}, 24 * 60 * 60 * 1000); // Раз на день
+
 function broadcast(type, data) {
-    logger.info(`Трансляція даних типу ${type}:`);
+    logger.info(`Трансляція даних типу ${type}, кількість елементів: ${Array.isArray(data) ? data.length : 1}`);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
             let filteredData = data;
@@ -403,23 +448,32 @@ wss.on('connection', (ws, req) => {
     const urlParams = new URLSearchParams(req.url.split('?')[1]);
     let token = urlParams.get('token');
 
+    const allowedOrigins = ['https://mebli.onrender.com', 'http://localhost:3000'];
+    const origin = req.headers.origin;
+    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    if (!allowedOrigins.includes(origin)) {
+        logger.warn(`WebSocket: Підключення відхилено через недозволене походження: ${origin}, IP: ${clientIp}`);
+        ws.close(1008, 'Недозволене походження');
+        return;
+    }
+
     ws.isAdmin = false;
     ws.subscriptions = new Set();
 
     const verifyToken = () => {
         if (!token) {
-            logger.info('WebSocket: Підключення без токена (публічний клієнт)');
+            logger.info(`WebSocket: Підключення без токена (публічний клієнт), IP: ${clientIp}`);
             return true;
         }
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             if (decoded.role === 'admin') {
                 ws.isAdmin = true;
-                logger.info('WebSocket: Адмін підключився з токеном:', decoded);
+                logger.info(`WebSocket: Адмін підключився з токеном, IP: ${clientIp}, Декодовані дані:`, decoded);
             }
             return true;
         } catch (err) {
-            logger.error('WebSocket: Помилка верифікації токена:', err.message);
+            logger.error(`WebSocket: Помилка верифікації токена, IP: ${clientIp}, Помилка:`, err.message);
             ws.close(1008, 'Недійсний токен');
             return false;
         }
@@ -427,28 +481,60 @@ wss.on('connection', (ws, req) => {
 
     if (!verifyToken()) return;
 
-    const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
-        for (let i = 0; i < retries; i++) {
-            try {
-                const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error(`Помилка ${response.status}`);
-                const data = await response.json();
-                token = data.token;
-                logger.info('WebSocket: Токен оновлено');
-                return true;
-            } catch (err) {
-                if (i === retries - 1) {
-                    logger.error('WebSocket: Не вдалося оновити токен після всіх спроб:', err);
-                    ws.close(1008, 'Помилка оновлення токена');
-                    return false;
+const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
+    let csrfToken;
+    try {
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const csrfData = await csrfResponse.json();
+        csrfToken = csrfData.csrfToken;
+    } catch (err) {
+        logger.error(`WebSocket: Помилка отримання CSRF-токена, IP: ${clientIp}:`, err);
+        return false;
+    }
+
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-Token': csrfToken
                 }
-                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            });
+            if (response.status === 429) {
+                logger.warn(`WebSocket: Занадто багато запитів на оновлення токена, IP: ${clientIp}`);
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    error: 'Занадто багато запитів. Спробуйте знову через 15 хвилин.'
+                }));
+                ws.close(1008, 'Перевищено ліміт запитів');
+                return false;
             }
+            if (!response.ok) {
+                throw new Error(`HTTP помилка ${response.status}: ${response.statusText}`);
+            }
+            const data = await response.json();
+            token = data.token;
+            logger.info(`WebSocket: Токен оновлено, IP: ${clientIp}`);
+            return true;
+        } catch (err) {
+            logger.error(`WebSocket: Помилка оновлення токена, спроба ${i + 1}/${retries}, IP: ${clientIp}:`, {
+                message: err.message,
+                stack: err.stack
+            });
+            if (i === retries - 1) {
+                logger.error(`WebSocket: Не вдалося оновити токен після всіх спроб, IP: ${clientIp}`);
+                ws.send(JSON.stringify({ type: 'error', error: 'Не вдалося оновити токен. З’єднання буде закрито.' }));
+                ws.close(1008, 'Помилка оновлення токена');
+                return false;
+            }
+            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
         }
-    };
+    }
+};
 
     let tokenRefreshInterval;
     if (ws.isAdmin) {
@@ -459,17 +545,17 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', () => {
         if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
-        logger.info('Клієнт від’єднався від WebSocket');
+        logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
     });
 
     ws.on('message', async (message) => {
         try {
             const { type, action } = JSON.parse(message);
-            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}`);
+            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
 
             if (action === 'subscribe') {
                 ws.subscriptions.add(type);
-                logger.info(`Клієнт підписався на ${type}`);
+                logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
 
                 if (type === 'products') {
                     const products = ws.isAdmin
@@ -499,12 +585,12 @@ wss.on('connection', (ws, req) => {
                 }
             }
         } catch (err) {
-            logger.error('Помилка обробки WebSocket-повідомлення:', err);
+            logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
             ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
         }
     });
 
-    ws.on('error', (err) => logger.error('Помилка WebSocket:', err));
+    ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
 
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
@@ -518,7 +604,6 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
     }
 });
 
-// Маршрути з CSRF-захистом
 app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
@@ -530,18 +615,19 @@ app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
         }
         try {
             logger.info('Файл отримано:', req.file);
-            if (!req.file || !req.file.path) {
-                logger.error('Cloudinary не повернув шлях файлу:', req.file);
-                return res.status(500).json({ error: 'Помилка завантаження: файл не отриміано від Cloudinary' });
+            if (!req.file || !req.file.path || !req.file.filename) {
+                logger.error('Cloudinary не повернув необхідні дані файлу:', req.file);
+                return res.status(500).json({ error: 'Помилка завантаження: неповні дані від Cloudinary' });
             }
             res.json({ url: req.file.path });
         } catch (cloudinaryErr) {
             logger.error('Помилка Cloudinary:', cloudinaryErr);
-            if (req.file && req.file.path) {
+            if (req.file && req.file.filename) {
                 try {
                     await cloudinary.uploader.destroy(req.file.filename);
+                    logger.info(`Файл видалено з Cloudinary після помилки: ${req.file.filename}`);
                 } catch (deleteErr) {
-                    logger.error('Не вдалося видалити файл після помилки:', deleteErr);
+                    logger.error(`Не вдалося видалити файл з Cloudinary: ${req.file.filename}`, deleteErr);
                 }
             }
             res.status(500).json({ error: 'Не вдалося завантажити файл до Cloudinary', details: cloudinaryErr.message });
@@ -616,8 +702,11 @@ app.get('/api/public/search', async (req, res) => {
 
 app.get('/api/public/slides', async (req, res) => {
     try {
-        const slides = await Slide.find().sort({ order: 1 });
-        res.json(slides);
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+        const slides = await Slide.find().sort({ order: 1 }).skip(skip).limit(parseInt(limit));
+        const total = await Slide.countDocuments();
+        res.json({ slides, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні публічних слайдів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -626,14 +715,18 @@ app.get('/api/public/slides', async (req, res) => {
 
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
-        const { slug } = req.query;
-        logger.info(`GET /api/products: slug=${slug}, user=${req.user.username}`);
+        const { slug, page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+        logger.info(`GET /api/products: slug=${slug}, page=${page}, limit=${limit}, user=${req.user.username}`);
+        
+        let query = {};
         if (slug) {
-            const products = await Product.find({ slug });
-            return res.json(products);
+            query.slug = slug;
         }
-        const products = await Product.find();
-        res.json(products);
+
+        const products = await Product.find(query).skip(skip).limit(parseInt(limit));
+        const total = await Product.countDocuments(query);
+        res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -642,12 +735,19 @@ app.get('/api/products', authenticateToken, async (req, res) => {
 
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
-    const parts = url.split('/');
-    const versionIndex = parts.findIndex(part => part.startsWith('v') && !isNaN(part.substring(1)));
-    if (versionIndex === -1) return null;
-    const publicIdWithExtension = parts.slice(versionIndex + 1).join('/');
-    const publicId = publicIdWithExtension.split('.')[0];
-    return publicId;
+    try {
+        const parts = url.split('/');
+        // Знаходимо індекс папки 'products' (або іншої папки, визначеної в Cloudinary)
+        const folderIndex = parts.findIndex(part => part === 'products');
+        if (folderIndex === -1) return null;
+        // Беремо всі частини після папки і до розширення файлу
+        const publicIdWithExtension = parts.slice(folderIndex + 1).join('/');
+        const publicId = publicIdWithExtension.split('.')[0];
+        return publicId || null;
+    } catch (err) {
+        logger.error('Помилка при отриманні publicId з URL:', { url, error: err.message });
+        return null;
+    }
 };
 
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
@@ -668,18 +768,75 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перетворення groupProducts у ObjectId
+        // Перевірка існування brand
+        if (productData.brand) {
+            const brand = await Brand.findOne({ name: productData.brand });
+            if (!brand) {
+                logger.error('Бренд не знайдено:', productData.brand);
+                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+            }
+        }
+
+        // Перевірка існування material
+        if (productData.material) {
+            const material = await Material.findOne({ name: productData.material });
+            if (!material) {
+                logger.error('Матеріал не знайдено:', productData.material);
+                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+            }
+        }
+
+        // Перевірка існування category
+        const category = await Category.findOne({ name: productData.category });
+        if (!category) {
+            logger.error('Категорія не знайдено:', productData.category);
+            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+        }
+
+        // Перевірка існування subcategory
+        if (productData.subcategory) {
+            const subcategoryExists = category.subcategories.some(sub => sub.name === productData.subcategory);
+            if (!subcategoryExists) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+            }
+        }
+
+        // Перевірка існування groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
+            const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
+            if (invalidIds.length > 0) {
+                logger.error('Некоректні ObjectId у groupProducts:', invalidIds);
+                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: invalidIds });
+            }
+
+            const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
+            if (existingProducts.length !== productData.groupProducts.length) {
+                logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
+                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені' });
+            }
+
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
-        const product = new Product(productData);
-        await product.save();
+        // Транзакція для створення продукту
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const product = new Product(productData);
+            await product.save({ session });
 
-        const products = await Product.find();
-        broadcast('products', products);
+            const products = await Product.find().session(session);
+            broadcast('products', products);
 
-        res.status(201).json(product);
+            await session.commitTransaction();
+            res.status(201).json(product);
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        } finally {
+            session.endSession();
+        }
     } catch (err) {
         logger.error('Помилка при додаванні товару:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -713,8 +870,54 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перетворення groupProducts у ObjectId
+        // Перевірка існування brand
+        if (productData.brand) {
+            const brand = await Brand.findOne({ name: productData.brand });
+            if (!brand) {
+                logger.error('Бренд не знайдено:', productData.brand);
+                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+            }
+        }
+
+        // Перевірка існування material
+        if (productData.material) {
+            const material = await Material.findOne({ name: productData.material });
+            if (!material) {
+                logger.error('Матеріал не знайдено:', productData.material);
+                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+            }
+        }
+
+        // Перевірка існування category
+        const category = await Category.findOne({ name: productData.category });
+        if (!category) {
+            logger.error('Категорія не знайдено:', productData.category);
+            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+        }
+
+        // Перевірка існування subcategory
+        if (productData.subcategory) {
+            const subcategoryExists = category.subcategories.some(sub => sub.name === productData.subcategory);
+            if (!subcategoryExists) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+            }
+        }
+
+        // Валідація groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
+            const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
+            if (invalidIds.length > 0) {
+                logger.error('Некоректні ObjectId у groupProducts:', invalidIds);
+                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: invalidIds });
+            }
+
+            const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
+            if (existingProducts.length !== productData.groupProducts.length) {
+                logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
+                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені' });
+            }
+
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
@@ -762,14 +965,14 @@ const categorySchemaValidation = Joi.object({
     slug: Joi.string().min(1).max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
+    order: Joi.number().integer().min(0).default(0).optional(), // Додано
     subcategories: Joi.array().items(
         Joi.object({
-            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(), // Додаємо _id
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
             name: Joi.string().min(1).max(255).required(),
             slug: Joi.string().min(1).max(255).required(),
             photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().optional(),
-            order: Joi.number().integer().min(0).optional() // Додаємо order
+            visible: Joi.boolean().optional()
         })
     ).optional()
 });
@@ -778,14 +981,14 @@ app.get('/api/categories', async (req, res) => {
     try {
         const { slug, subcategorySlug } = req.query;
         if (slug) {
-            const categories = await Category.find({ slug });
+            const categories = await Category.find({ slug }).sort({ order: 1 });
             return res.status(200).json(categories);
         }
         if (subcategorySlug) {
-            const categories = await Category.find({ 'subcategories.slug': subcategorySlug });
+            const categories = await Category.find({ 'subcategories.slug': subcategorySlug }).sort({ order: 1 });
             return res.status(200).json(categories);
         }
-        const categories = await Category.find();
+        const categories = await Category.find().sort({ order: 1 });
         res.status(200).json(categories);
     } catch (err) {
         res.status(400).json({ error: 'Помилка отримання категорій' });
@@ -813,6 +1016,17 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
             return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
         }
 
+        // Перевірка унікальності slug у підкатегоріях
+        const subcategories = categoryData.subcategories || [];
+        const subSlugs = new Set();
+        for (const sub of subcategories) {
+            if (subSlugs.has(sub.slug)) {
+                logger.error(`Дублювання slug у підкатегоріях: ${sub.slug}`);
+                return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
+            }
+            subSlugs.add(sub.slug);
+        }
+
         const category = new Category({
             name: categoryData.name,
             slug: categoryData.slug,
@@ -828,62 +1042,6 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
     } catch (err) {
         logger.error('Помилка при додаванні категорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
-const subcategoryOrderSchema = Joi.array().items(
-    Joi.object({
-        _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-        order: Joi.number().integer().min(0).required()
-    })
-);
-
-app.put('/api/categories/:id/subcategories/order', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const categoryId = req.params.id;
-        const subcategoryOrder = req.body;
-
-        // Валідація
-        const { error } = subcategoryOrderSchema.validate(subcategoryOrder);
-        if (error) {
-            logger.error('Помилка валідації порядку підкатегорій:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        // Перевірка існування категорії
-        const category = await Category.findById(categoryId);
-        if (!category) {
-            return res.status(404).json({ error: 'Категорію не знайдено' });
-        }
-
-        // Перевірка, що всі підкатегорії існують у категорії
-        const subcategoryIds = subcategoryOrder.map(item => item._id);
-        const existingSubcategories = category.subcategories.filter(sub =>
-            subcategoryIds.includes(sub._id.toString())
-        );
-        if (existingSubcategories.length !== subcategoryIds.length) {
-            return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
-        }
-
-        // Оновлення порядку підкатегорій
-        subcategoryOrder.forEach(({ _id, order }) => {
-            const subcategory = category.subcategories.id(_id);
-            if (subcategory) {
-                subcategory.order = order;
-            }
-        });
-
-        // Сортуємо підкатегорії за полем order
-        category.subcategories.sort((a, b) => a.order - b.order);
-
-        await category.save();
-
-        const updatedCategories = await Category.find();
-        broadcast('categories', updatedCategories);
-        res.status(200).json(category);
-    } catch (err) {
-        logger.error('Помилка оновлення порядку підкатегорій:', err);
-        res.status(400).json({ error: 'Не вдалося оновити порядок підкатегорій', details: err.message });
     }
 });
 
@@ -954,54 +1112,34 @@ app.put('/api/categories/:slug', authenticateToken, csrfProtection, async (req, 
     }
 });
 
-const categoryOrderSchema = Joi.alternatives().try(
-    Joi.object({
-        categories: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).required()
-    }),
-    Joi.array().items(
+const categoryOrderSchema = Joi.object({
+    categories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-            order: Joi.number().integer().min(0).required()
+            order: Joi.number().required()
         })
-    )
-);
+    ).required()
+});
 
 app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const body = req.body;
+        const { categories } = req.body;
 
         // Валідація
-        const { error } = categoryOrderSchema.validate(body);
+        const { error } = categoryOrderSchema.validate({ categories });
         if (error) {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        let categoryIdsWithOrder;
-
-        // Визначаємо, який формат даних отримали
-        if (Array.isArray(body)) {
-            // Формат: [{ _id: "id", order: number }, ...]
-            categoryIdsWithOrder = body.map(item => ({
-                _id: item._id,
-                order: item.order
-            }));
-        } else {
-            // Формат: { categories: ["id1", "id2", ...] }
-            categoryIdsWithOrder = body.categories.map((id, index) => ({
-                _id: id,
-                order: index
-            }));
-        }
-
         // Перевірка існування всіх категорій
-        const categoryIds = categoryIdsWithOrder.map(item => item._id);
-        const categories = await Category.find({ _id: { $in: categoryIds } });
-        if (categories.length !== categoryIds.length) {
+        const categoryIds = categories.map(item => item._id);
+        const foundCategories = await Category.find({ _id: { $in: categoryIds } });
+        if (foundCategories.length !== categoryIds.length) {
             return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
         }
 
         // Оновлення порядку
-        for (const { _id, order } of categoryIdsWithOrder) {
+        for (const { _id, order } of categories) {
             await Category.findByIdAndUpdate(_id, { order });
         }
 
@@ -1016,41 +1154,69 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
 
 app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const category = await Category.findOneAndDelete({ slug: req.params.slug });
-        if (!category) return res.status(404).json({ error: 'Категорію не знайдено' });
-
-        // Видаляємо зображення категорії
-        if (category.photo) {
-            const publicId = getPublicIdFromUrl(category.photo);
-            if (publicId) {
-                try {
-                    await cloudinary.uploader.destroy(publicId);
-                    logger.info(`Успішно видалено зображення категорії з Cloudinary: ${publicId}`);
-                } catch (err) {
-                    logger.error(`Не вдалося видалити зображення категорії з Cloudinary: ${publicId}`, err);
-                }
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const category = await Category.findOneAndDelete({ slug: req.params.slug }, { session });
+            if (!category) {
+                await session.abortTransaction();
+                return res.status(404).json({ error: 'Категорію не знайдено' });
             }
-        }
 
-        // Видаляємо зображення підкатегорій
-        for (const subcategory of category.subcategories) {
-            if (subcategory.photo) {
-                const publicId = getPublicIdFromUrl(subcategory.photo);
+            // Оновлення продуктів, які посилаються на цю категорію
+            await Product.updateMany(
+                { category: category.name },
+                { $set: { category: '' } },
+                { session }
+            );
+
+            // Оновлення продуктів, які посилаються на підкатегорії
+            await Product.updateMany(
+                { subcategory: { $in: category.subcategories.map(sub => sub.name) } },
+                { $set: { subcategory: '' } },
+                { session }
+            );
+
+            // Видаляємо зображення категорії
+            if (category.photo) {
+                const publicId = getPublicIdFromUrl(category.photo);
                 if (publicId) {
                     try {
                         await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Успішно видалено зображення підкатегорії з Cloudinary: ${publicId}`);
+                        logger.info(`Успішно видалено зображення категорії з Cloudinary: ${publicId}`);
                     } catch (err) {
-                        logger.error(`Не вдалося видалити зображення підкатегорії з Cloudinary: ${publicId}`, err);
+                        logger.error(`Не вдалося видалити зображення категорії з Cloudinary: ${publicId}`, err);
                     }
                 }
             }
-        }
 
-        const categories = await Category.find();
-        broadcast('categories', categories);
-        logger.info(`Категорію видалено: ${req.params.slug}, користувач: ${req.user.username}`);
-        res.json({ message: 'Категорію видалено' });
+            // Видаляємо зображення підкатегорій
+            for (const subcategory of category.subcategories) {
+                if (subcategory.photo) {
+                    const publicId = getPublicIdFromUrl(subcategory.photo);
+                    if (publicId) {
+                        try {
+                            await cloudinary.uploader.destroy(publicId);
+                            logger.info(`Успішно видалено зображення підкатегорії з Cloudinary: ${publicId}`);
+                        } catch (err) {
+                            logger.error(`Не вдалося видалити зображення підкатегорії з Cloudinary: ${publicId}`, err);
+                        }
+                    }
+                }
+            }
+
+            const categories = await Category.find().session(session);
+            broadcast('categories', categories);
+
+            await session.commitTransaction();
+            logger.info(`Категорію видалено: ${req.params.slug}, користувач: ${req.user.username}`);
+            res.json({ message: 'Категорію видалено' });
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        } finally {
+            session.endSession();
+        }
     } catch (err) {
         logger.error('Помилка при видаленні категорії:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1099,20 +1265,21 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 });
 
 const subcategorySchemaValidation = Joi.object({
+    _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
     name: Joi.string().min(1).max(255).required(),
     slug: Joi.string().min(1).max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional()
 });
 
-app.post('/api/categories/:id/subcategories', authenticateToken, async (req, res) => {
+app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryId = req.params.id;
         const subcategoryData = req.body;
 
         const { error } = subcategorySchemaValidation.validate(subcategoryData);
         if (error) {
-            console.error('Помилка валідації підкатегорії:', error.details);
+            logger.error('Помилка валідації підкатегорії:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
@@ -1142,15 +1309,79 @@ app.post('/api/categories/:id/subcategories', authenticateToken, async (req, res
         broadcast('categories', updatedCategories);
         res.status(201).json(category);
     } catch (err) {
-        console.error('Помилка при додаванні підкатегорії:', err);
+        logger.error('Помилка при додаванні підкатегорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
+const subcategoryOrderSchemaValidation = Joi.array().items(
+    Joi.object({
+        _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+        order: Joi.number().required()
+    })
+);
+
+app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, csrfProtection, async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    logger.error(`Невірний формат categoryId: ${categoryId}`);
+    return res.status(400).json({ error: 'Невірний формат categoryId' });
+}
+        const subcategoryOrder = req.body;
+
+        // Валідація
+        const { error } = subcategoryOrderSchemaValidation.validate(subcategoryOrder);
+        if (error) {
+            logger.error('Помилка валідації порядку підкатегорій:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Знаходимо категорію
+        const category = await Category.findById(categoryId);
+        if (!category) {
+            return res.status(404).json({ error: 'Категорію не знайдено' });
+        }
+
+        // Перевірка, що всі підкатегорії з запиту існують
+        const subcategoryIds = subcategoryOrder.map(item => item._id);
+        const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
+        if (existingSubcategories.length !== subcategoryIds.length) {
+            return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
+        }
+
+        // Створюємо новий масив підкатегорій із врахуванням нового порядку
+        const reorderedSubcategories = subcategoryOrder.map(item => {
+            const subcat = category.subcategories.find(sub => sub._id.toString() === item._id);
+            return {
+                _id: subcat._id,
+                name: subcat.name,
+                slug: subcat.slug,
+                photo: subcat.photo,
+                visible: subcat.visible
+            };
+        });
+
+        // Оновлюємо підкатегорії в категорії
+        category.subcategories = reorderedSubcategories;
+        await category.save();
+
+        const updatedCategories = await Category.find();
+        broadcast('categories', updatedCategories);
+        res.status(200).json(category);
+    } catch (err) {
+        logger.error('Помилка оновлення порядку підкатегорій:', err);
+        res.status(400).json({ error: 'Не вдалося оновити порядок підкатегорій', details: err.message });
     }
 });
 
 app.get('/api/slides', authenticateToken, async (req, res) => {
     try {
-        const slides = await Slide.find().sort({ order: 1 });
-        res.json(slides);
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+        const slides = await Slide.find().sort({ order: 1 }).skip(skip).limit(parseInt(limit));
+        const total = await Slide.countDocuments();
+        res.json({ slides, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні слайдів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1168,23 +1399,35 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const maxIdSlide = await Slide.findOne().sort({ id: -1 });
-        slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
-        const slide = new Slide({
-            id: slideData.id,
-            photo: slideData.photo, // Використовуємо photo
-            name: slideData.name,
-            url: slideData.url,
-            title: slideData.title,
-            text: slideData.text,
-            link: slideData.link,
-            linkText: slideData.linkText,
-            order: slideData.order
-        });
-        await slide.save();
-        const slides = await Slide.find().sort({ order: 1 });
-        broadcast('slides', slides);
-        res.status(201).json(slide);
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const maxIdSlide = await Slide.findOne().sort({ id: -1 }).session(session);
+            slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
+            const slide = new Slide({
+                id: slideData.id,
+                photo: slideData.photo,
+                name: slideData.name,
+                url: slideData.url,
+                title: slideData.title,
+                text: slideData.text,
+                link: slideData.link,
+                linkText: slideData.linkText,
+                order: slideData.order
+            });
+            await slide.save({ session });
+
+            const slides = await Slide.find().sort({ order: 1 }).session(session);
+            broadcast('slides', slides);
+
+            await session.commitTransaction();
+            res.status(201).json(slide);
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        } finally {
+            session.endSession();
+        }
     } catch (err) {
         logger.error('Помилка при додаванні слайду:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -1194,6 +1437,11 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
 app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const slideData = req.body;
+        const slideId = parseInt(req.params.id);
+        if (isNaN(slideId)) {
+            logger.error(`Невірний формат ID слайду: ${req.params.id}`);
+            return res.status(400).json({ error: 'Невірний формат ID слайду' });
+        }
 
         const { error } = slideSchemaValidation.validate(slideData);
         if (error) {
@@ -1201,24 +1449,39 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const slide = await Slide.findOneAndUpdate(
-            { id: parseInt(req.params.id) }, // Залишаємо числовий id
-            {
-                photo: slideData.photo,
-                name: slideData.name,
-                url: slideData.url,
-                title: slideData.title,
-                text: slideData.text,
-                link: slideData.link,
-                linkText: slideData.linkText,
-                order: slideData.order
-            },
-            { new: true }
-        );
-        if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
-        const slides = await Slide.find().sort({ order: 1 });
-        broadcast('slides', slides);
-        res.json(slide);
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const slide = await Slide.findOneAndUpdate(
+                { id: slideId },
+                {
+                    photo: slideData.photo,
+                    name: slideData.name,
+                    url: slideData.url,
+                    title: slideData.title,
+                    text: slideData.text,
+                    link: slideData.link,
+                    linkText: slideData.linkText,
+                    order: slideData.order
+                },
+                { new: true, session }
+            );
+            if (!slide) {
+                await session.abortTransaction();
+                return res.status(404).json({ error: 'Слайд не знайдено' });
+            }
+
+            const slides = await Slide.find().sort({ order: 1 }).session(session);
+            broadcast('slides', slides);
+
+            await session.commitTransaction();
+            res.json(slide);
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        } finally {
+            session.endSession();
+        }
     } catch (err) {
         logger.error('Помилка при оновленні слайду:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -1227,10 +1490,15 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slide = await Slide.findOneAndDelete({ id: parseInt(req.params.id) });
+        const slideId = parseInt(req.params.id);
+        if (isNaN(slideId)) {
+            logger.error(`Невірний формат ID слайду: ${req.params.id}`);
+            return res.status(400).json({ error: 'Невірний формат ID слайду' });
+        }
+
+        const slide = await Slide.findOneAndDelete({ id: slideId });
         if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
 
-        // Видаляємо зображення з Cloudinary, якщо воно існує
         if (slide.photo) {
             const publicId = getPublicIdFromUrl(slide.photo);
             if (publicId) {
@@ -1252,13 +1520,24 @@ app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res
     }
 });
 
-app.post('/api/auth/refresh', csrfProtection, (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
+app.post('/api/auth/refresh', refreshTokenLimiter, csrfProtection, (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        logger.warn('Некоректний заголовок Authorization:', authHeader);
+        return res.status(401).json({ error: 'Некоректний заголовок Authorization', details: 'Очікується формат Bearer <token>' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        logger.warn('Токен відсутній у заголовку Authorization');
+        return res.status(401).json({ error: 'Токен відсутній', details: 'Токен не надано' });
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
+            logger.warn('Спроба оновлення токена без прав адміністратора:', decoded);
+            return res.status(403).json({ error: 'Доступ заборонено', details: 'Потрібні права адміністратора' });
         }
         const newToken = jwt.sign(
             { userId: decoded.userId, username: decoded.username, role: 'admin' },
@@ -1268,8 +1547,22 @@ app.post('/api/auth/refresh', csrfProtection, (req, res) => {
         logger.info('Токен успішно оновлено для користувача:', decoded.username);
         res.json({ token: newToken });
     } catch (err) {
-        logger.error('Помилка оновлення токена:', err.message);
-        res.status(401).json({ error: 'Недійсний або прострочений токен' });
+        if (err.status === 429) {
+            const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+            logger.warn(`Занадто багато запитів на оновлення токена, IP: ${clientIp}`);
+            return res.status(429).json({
+                error: 'Занадто багато запитів',
+                details: 'Перевищено ліміт запитів на оновлення токена. Спробуйте знову через 15 хвилин'
+            });
+        }
+        logger.error('Помилка оновлення токена:', { message: err.message, stack: err.stack });
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Токен прострочений', details: 'Будь ласка, увійдіть знову' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Недійсний токен', details: 'Токен некоректний або пошкоджений' });
+        }
+        res.status(500).json({ error: 'Помилка обробки токена', details: err.message });
     }
 });
 
@@ -1298,7 +1591,13 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
                 slideInterval: 3000,
                 showSlides: true
             });
-            await settings.save();
+            try {
+                await settings.save();
+                logger.info('Створено початкові налаштування');
+            } catch (saveErr) {
+                logger.error('Помилка при збереженні початкових налаштувань:', saveErr);
+                return res.status(500).json({ error: 'Не вдалося створити початкові налаштування', details: saveErr.message });
+            }
         }
         res.json(settings);
     } catch (err) {
@@ -1376,8 +1675,11 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
 
 app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
-        const orders = await Order.find();
-        res.json(orders);
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+        const orders = await Order.find().sort({ date: -1 }).skip(skip).limit(parseInt(limit));
+        const total = await Order.countDocuments();
+        res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні замовлень:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1389,6 +1691,14 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
         logger.info('Отримано запит на створення замовлення:', req.body);
         const orderData = req.body;
         const cartId = req.query.cartId;
+
+        if (cartId) {
+            const { error } = cartIdSchema.validate(cartId);
+            if (error) {
+                logger.error('Помилка валідації cartId:', error.details);
+                return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
+            }
+        }
 
         const { error } = orderSchemaValidation.validate(orderData);
         if (error) {
@@ -1406,7 +1716,13 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
             await order.save({ session });
 
             if (cartId) {
-                await Cart.findOneAndUpdate({ cartId }, { items: [] }, { session });
+                const cart = await Cart.findOne({ cartId }).session(session);
+                if (cart) {
+                    cart.items = [];
+                    await cart.save({ session });
+                } else {
+                    logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
+                }
             }
 
             await session.commitTransaction();
@@ -1466,7 +1782,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
                 quantity: Joi.number().min(1).required(),
                 price: Joi.number().min(0).required(),
                 color: Joi.string().allow(''),
-                photo: Joi.string().uri().allow('')
+                photo: Joi.string().uri().allow('').optional()
             })
         );
 
@@ -1483,7 +1799,6 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         } else {
             logger.info('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
-            cart.updatedAt = Date.now();
         }
         await cart.save();
 
@@ -1524,6 +1839,12 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
+        const orderId = parseInt(req.params.id);
+        if (isNaN(orderId)) {
+            logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
+            return res.status(400).json({ error: 'Невірний формат ID замовлення' });
+        }
+
         let orderData = req.body;
 
         if (orderData.items) {
@@ -1539,10 +1860,10 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const order = await Order.findByIdAndUpdate(req.params.id, orderData, { new: true });
+        const order = await Order.findOneAndUpdate({ id: orderId }, orderData, { new: true });
         if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
-        const orders = await Order.find();
+        const orders = await Order.find().sort({ date: -1 });
         broadcast('orders', orders);
         res.json(order);
     } catch (err) {
@@ -1553,7 +1874,12 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const order = await Order.findOneAndDelete({ id: req.params.id });
+const orderId = parseInt(req.params.id);
+if (isNaN(orderId)) {
+    logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
+    return res.status(400).json({ error: 'Невірний формат ID замовлення' });
+}
+        const order = await Order.findOneAndDelete({ id: orderId });
         if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
         const orders = await Order.find();
@@ -1679,10 +2005,11 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
         const categories = await Category.find();
         const settings = await Settings.findOne();
 
+        const baseUrl = settings?.baseUrl || 'https://mebli.onrender.com';
         let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
             <url>
-                <loc>${settings.baseUrl || 'https://mebli.onrender.com'}</loc>
+                <loc>${baseUrl}</loc>
                 <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
                 <priority>1.0</priority>
             </url>`;
@@ -1690,14 +2017,14 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
         categories.forEach(cat => {
             sitemap += `
             <url>
-                <loc>${settings.baseUrl || 'https://mebli.onrender.com'}/category/${cat.slug}</loc>
+                <loc>${baseUrl}/category/${cat.slug}</loc>
                 <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
                 <priority>0.8</priority>
             </url>`;
             cat.subcategories.forEach(subcat => {
                 sitemap += `
                 <url>
-                    <loc>${settings.baseUrl || 'https://mebli.onrender.com'}/category/${cat.slug}/${subcat.slug}</loc>
+                    <loc>${baseUrl}/category/${cat.slug}/${subcat.slug}</loc>
                     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
                     <priority>0.7</priority>
                 </url>`;
@@ -1707,7 +2034,7 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
         products.forEach(product => {
             sitemap += `
             <url>
-                <loc>${settings.baseUrl || 'https://mebli.onrender.com'}/product/${product.slug}</loc>
+                <loc>${baseUrl}/product/${product.slug}</loc>
                 <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
                 <priority>0.6</priority>
             </url>`;
@@ -1730,24 +2057,57 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
 
+        const maxJsonSize = 10 * 1024 * 1024; // 10 МБ
+        if (req.file.size > maxJsonSize) {
+            logger.error('Розмір файлу перевищує ліміт:', { size: req.file.size });
+            await fs.promises.unlink(req.file.path);
+            return res.status(400).json({ error: `Розмір файлу перевищує ліміт у ${maxJsonSize / (1024 * 1024)} МБ` });
+        }
+
         const fileContent = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
         const { settings, categories, slides } = fileContent;
 
+        // Валідація даних
         if (settings) {
+            const { error } = settingsSchemaValidation.validate(settings, { abortEarly: false });
+            if (error) {
+                logger.error('Помилка валідації налаштувань при імпорті:', error.details);
+                return res.status(400).json({ error: 'Помилка валідації налаштувань', details: error.details });
+            }
             await Settings.findOneAndUpdate({}, settings, { upsert: true });
         }
 
         if (categories) {
+            for (const category of categories) {
+                const { error } = categorySchemaValidation.validate(category, { abortEarly: false });
+                if (error) {
+                    logger.error('Помилка валідації категорії при імпорті:', error.details);
+                    return res.status(400).json({ error: 'Помилка валідації категорій', details: error.details });
+                }
+            }
             await Category.deleteMany({});
             await Category.insertMany(categories);
         }
 
         if (slides) {
+            for (const slide of slides) {
+                const { error } = slideSchemaValidation.validate(slide, { abortEarly: false });
+                if (error) {
+                    logger.error('Помилка валідації слайду при імпорті:', error.details);
+                    return res.status(400).json({ error: 'Помилка валідації слайдів', details: error.details });
+                }
+            }
             await Slide.deleteMany({});
             await Slide.insertMany(slides);
         }
 
-        await fs.promises.unlink(req.file.path);
+try {
+            await fs.promises.unlink(req.file.path);
+            logger.info(`Тимчасовий файл видалено: ${req.file.path}`);
+        } catch (unlinkErr) {
+            logger.error(`Не вдалося видалити тимчасовий файл ${req.file.path}:`, unlinkErr);
+        }
+
         const updatedCategories = await Category.find();
         broadcast('categories', updatedCategories);
         const updatedSlides = await Slide.find().sort({ order: 1 });
@@ -1757,6 +2117,14 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
         res.json({ message: 'Дані сайту імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті даних сайту:', err);
+        if (req.file) {
+            try {
+                await fs.promises.unlink(req.file.path);
+                logger.info(`Тимчасовий файл видалено після помилки: ${req.file.path}`);
+            } catch (unlinkErr) {
+                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${req.file.path}:`, unlinkErr);
+            }
+        }
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -1768,15 +2136,36 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
         }
 
         const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        for (const product of products) {
+            const { error } = productSchemaValidation.validate(product, { abortEarly: false });
+            if (error) {
+                logger.error('Помилка валідації продукту при імпорті:', error.details);
+                return res.status(400).json({ error: 'Помилка валідації продуктів', details: error.details });
+            }
+        }
         await Product.deleteMany({});
         await Product.insertMany(products);
 
-        await fs.promises.unlink(req.file.path);
+        try {
+            await fs.promises.unlink(req.file.path);
+            logger.info(`Тимчасовий файл видалено: ${req.file.path}`);
+        } catch (unlinkErr) {
+            logger.error(`Не вдалося видалити тимчасовий файл ${req.file.path}:`, unlinkErr);
+        }
+
         const updatedProducts = await Product.find();
         broadcast('products', updatedProducts);
         res.json({ message: 'Товари імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті товарів:', err);
+        if (req.file) {
+            try {
+                await fs.promises.unlink(req.file.path);
+                logger.info(`Тимчасовий файл видалено після помилки: ${req.file.path}`);
+            } catch (unlinkErr) {
+                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${req.file.path}:`, unlinkErr);
+            }
+        }
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -1788,15 +2177,36 @@ app.post('/api/import/orders', authenticateToken, csrfProtection, importUpload.s
         }
 
         const orders = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        for (const order of orders) {
+            const { error } = orderSchemaValidation.validate(order, { abortEarly: false });
+            if (error) {
+                logger.error('Помилка валідації замовлення при імпорті:', error.details);
+                return res.status(400).json({ error: 'Помилка валідації замовлень', details: error.details });
+            }
+        }
         await Order.deleteMany({});
         await Order.insertMany(orders);
 
-        await fs.promises.unlink(req.file.path);
+        try {
+            await fs.promises.unlink(req.file.path);
+            logger.info(`Тимчасовий файл видалено: ${req.file.path}`);
+        } catch (unlinkErr) {
+            logger.error(`Не вдалося видалити тимчасовий файл ${req.file.path}:`, unlinkErr);
+        }
+
         const updatedOrders = await Order.find();
         broadcast('orders', updatedOrders);
         res.json({ message: 'Замовлення імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті замовлень:', err);
+        if (req.file) {
+            try {
+                await fs.promises.unlink(req.file.path);
+                logger.info(`Тимчасовий файл видалено після помилки: ${req.file.path}`);
+            } catch (unlinkErr) {
+                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${req.file.path}:`, unlinkErr);
+            }
+        }
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -1822,12 +2232,26 @@ const loginLimiter = rateLimit({
     message: 'Занадто багато спроб входу, спробуйте знову через 15 хвилин'
 });
 
-app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res) => {
+const refreshTokenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    skipSuccessfulRequests: false,
+    keyGenerator: (req) => {
+        const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        return clientIp;
+    },
+    handler: (req, res, next) => {
+        const err = new Error('Занадто багато запитів на оновлення токена');
+        err.status = 429;
+        next(err);
+    }
+});
+
+app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res, next) => {
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Логін і пароль обов’язкові', message: 'Логін і пароль обов’язкові' });
     }
-
     if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
         const token = jwt.sign(
             { userId: username, username: ADMIN_USERNAME, role: 'admin' },
@@ -1851,6 +2275,12 @@ app.use((err, req, res, next) => {
             return res.status(400).json({ error: 'Файл занадто великий. Максимальний розмір — 5 МБ.' });
         }
         return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
+    }
+    if (err.status === 429) {
+        return res.status(429).json({
+            error: 'Занадто багато запитів',
+            details: err.message || 'Перевищено ліміт запитів. Спробуйте знову через 15 хвилин'
+        });
     }
     logger.error('Помилка сервера:', err);
     res.status(500).json({ error: 'Внутрішня помилка сервера', details: err.message });

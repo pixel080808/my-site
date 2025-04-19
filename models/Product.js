@@ -23,4 +23,10 @@ const productSchema = new mongoose.Schema({
     lengthCm: Number,
     popularity: Number
 }, { timestamps: true });
+
+// Додаємо індекси
+productSchema.index({ slug: 1 }, { unique: true });
+productSchema.index({ visible: 1, active: 1 });
+productSchema.index({ category: 1, subcategory: 1 });
+
 module.exports = mongoose.model('Product', productSchema);

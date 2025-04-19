@@ -13,4 +13,8 @@ const slideSchema = new mongoose.Schema({
     order: { type: Number, default: 0 }
 }, { timestamps: true });
 
+// Додаємо індекси
+slideSchema.index({ id: 1 }, { unique: true });
+slideSchema.index({ order: 1 });
+
 module.exports = mongoose.model('Slide', slideSchema);

@@ -13,4 +13,9 @@ const orderSchema = new mongoose.Schema({
     total: Number,
     status: String
 }, { timestamps: true });
+
+// Додаємо індекси
+orderSchema.index({ id: 1 }, { unique: true });
+orderSchema.index({ date: -1 });
+
 module.exports = mongoose.model('Order', orderSchema);

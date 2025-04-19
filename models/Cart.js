@@ -15,4 +15,8 @@ const cartSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// Додаємо індекси
+cartSchema.index({ cartId: 1 }, { unique: true });
+cartSchema.index({ updatedAt: 1 });
+
 module.exports = mongoose.model('Cart', cartSchema);
