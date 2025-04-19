@@ -24,8 +24,7 @@ const productSchema = new mongoose.Schema({
     popularity: Number
 }, { timestamps: true });
 
-// Додаємо індекси
-productSchema.index({ slug: 1 }, { unique: true });
+// Залишаємо інші індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
 
