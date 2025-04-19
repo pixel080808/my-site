@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="Меблевий магазин - широкий вибір меблів для дому: вітальні, спальні, кухні та матраци. Якісні товари за доступними цінами."/>
+    <meta name="keywords" content="меблі, меблевий магазин, вітальні, спальні, кухні, матраци, купити меблі"/>
+    <meta name="robots" content="index, follow"/>
+    <meta property="og:title" content="Меблевий магазин"/>
+    <meta property="og:description" content="Якісні меблі для вашого дому за доступними цінами."/>
+    <meta property="og:image" content="https://picsum.photos/1200/630"/> <!-- Замініть на реальне зображення -->
+    <meta property="og:url" content="https://mebli.onrender.com"/> <!-- Оновлено URL -->
+    <meta property="og:type" content="website"/>
+    <title>Меблевий магазин</title>
+    <link href="/css/styles.css" rel="stylesheet"/>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- Основний скрипт із defer -->
+    <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
+    <!-- Google Analytics асинхронно -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script type="text/javascript">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX'); // Замініть G-XXXXXXXXXX на ваш ID Google Analytics
+    </script>
+    <!-- LZ-String із defer -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <style>
+.logo {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 150px;
+    height: auto; /* Змінено на auto */
+    padding-top: 33.33%; /* Співвідношення сторін 150/50 = 3, тому 33.33% */
+    cursor: pointer;
+    position: relative;
+}
+/* Попередні стилі */
+#about-text img,
+#about-text iframe {
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+}
+.color-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: inline-block;
+    margin: 10px;
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background-size: cover;
+    background-position: center;
+}
+.color-circle.selected {
+    border-color: #000;
+}
+.color-circle span {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    white-space: nowrap;
+}
+.group-product-item {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.group-product-item:hover {
+    transform: translateY(-3px);
+}
+
+.group-product-item img {
+    width: 150px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+.group-product-item label {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.group-product-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.group-product-item .group-product-info {
+    flex: 1;
+}
+
+.group-product-item .group-product-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #333;
+    cursor: pointer;
+}
+
+.group-product-item .group-product-info h4:hover {
+    color: #333;
+}
+
+.group-product-item .group-product-info .price {
+    margin: 8px 0;
+}
+
+.group-product-item .group-product-info .price .sale-price {
+    color: #ff4500;
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.group-product-item .group-product-info .price s {
+    color: #999;
+    font-size: 16px;
+}
+
+.group-product-item .group-product-info .price .regular-price {
+    color: #000;
+    font-size: 18px;
+}
+
+.group-product-item .group-product-info .dimensions {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.group-product-item .group-product-info .dimensions span {
+    margin: 0 5px;
+}
+
+.group-product-item .group-product-info .dimensions .dimension-item,
+.product-characteristics .dimension-item {
+    display: inline-block;
+    margin-right: 5px; /* Зменшуємо відступ для компактності */
+}
+
+.group-product-item .group-product-info .dimensions .dimension-item .label,
+.product-characteristics .dimension-item .label {
+    font-weight: bold;
+    margin-right: 2px; /* Зменшуємо відступ між підписом і значенням */
+    color: #555; /* Темно-сірий колір для підпунктів */
+}
+
+.group-product-item .group-product-info .dimensions .dimension-item .value,
+.product-characteristics .dimension-item .value {
+    margin-right: 2px; /* Зменшуємо відступ */
+}
+
+.sale-timer {
+    font-size: 14px;
+    color: #ff4500;
+    margin-top: 5px;
+}
+.custom-select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #fff;
+    cursor: pointer;
+}
+.price-start {
+    font-size: 16px;
+    display: inline;
+}
+.price-value {
+    font-size: 22px;
+    color: #000; /* Змінюємо на чорний */
+    display: inline;
+}
+
+/* Стилі для цін */
+.price .regular-price {
+    color: #000; /* Звичайна ціна — чорна */
+    font-size: 18px;
+}
+.price .sale-price {
+    color: #ff4500; /* Акційна ціна — помаранчева */
+    font-size: 22px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+.price s {
+    color: #999; /* Закреслена ціна — сіра */
+    font-size: 16px;
+}
+
+.product-item {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 5px;
+    text-align: center;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+.product-item:hover {
+    transform: translateY(-3px);
+}
+.product-item img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+.product-item h3 {
+    font-size: 18px;
+    margin: 10px 0;
+    color: #333;
+}
+.product-item a {
+    display: inline-block;
+    margin-top: 10px;
+    color: #007bff;
+    text-decoration: none;
+}
+.product-item a:hover {
+    text-decoration: underline;
+}
+
+/* Стилі для виправлення висоти фільтрів */
+.container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.filters {
+    width: 250px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    height: auto;
+    min-height: 0;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.products {
+    flex: 1;
+    padding: 20px;
+    min-width: 0;
+}
+
+/* Стилі для цін у деталях товару */
+.product-detail-price .regular-price {
+    font-size: 24px; /* Збільшуємо розмір звичайної ціни */
+}
+.product-detail-price .sale-price {
+    font-size: 28px; /* Збільшуємо розмір акційної ціни */
+    color: #ff4500;
+    font-weight: bold;
+    margin-right: 10px;
+}
+.product-detail-price s {
+    font-size: 20px; /* Зменшуємо розмір закресленої ціни */
+    color: #999;
+}
+
+/* Базові стилі для кнопки "Назад" у групових товарах */
+.back-to-group-btn {
+    background-color: #E2E8F0; /* Світлий фон для світлої теми */
+    color: #2D3748; /* Темний текст для світлої теми */
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    padding: 12px 20px; /* Фіксовані відступи */
+    font-weight: 500;
+    font-size: 16px; /* Фіксований розмір шрифту */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    width: 100%; /* Фіксована ширина */
+    max-width: 255px; /* Максимальна ширина */
+    height: 48px; /* Фіксована висота */
+    display: flex; /* Для вирівнювання тексту */
+    align-items: center;
+    justify-content: center;
+    margin: 15px auto; /* Центрування */
+    box-sizing: border-box; /* Щоб padding не впливав на розміри */
+}
+
+.back-to-group-btn:hover {
+    background-color: #D1D5DB; /* Трохи темніший фон при наведенні */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo" id="logo" onclick="showSection('home')">
+        </div>
+        <div class="logo-text" id="logo-text">
+        </div>
+        <div class="phones" id="phones">
+        </div>
+        <div class="search-bar">
+            <input aria-label="Пошук товарів" id="search" placeholder="Пошук товарів" type="text"/>
+            <button aria-label="Шукати" class="search-btn" onclick="searchProducts()">
+                🔍
+            </button>
+        </div>
+        <div class="cart" onclick="showSection('cart')">
+            Кошик
+            <span class="cart-count">
+                0
+            </span>
+        </div>
+    </header>
+    <nav class="nav">
+        <a href="#" onclick="showSection('home'); return false;">
+            Головна
+        </a>
+        <div class="catalog-menu">
+            <a href="#" id="catalog-toggle">
+                Каталог
+            </a>
+            <div class="dropdown" id="catalog-dropdown">
+            </div>
+        </div>
+        <a href="#" onclick="showSection('contacts'); return false;">
+            Контакти
+        </a>
+        <a href="#" onclick="showSection('about'); return false;">
+            Про нас
+        </a>
+    </nav>
+    <div class="breadcrumbs" id="breadcrumbs">
+    </div>
+    <div class="content">
+        <div class="section active" id="home">
+            <div class="slideshow" id="slideshow">
+            </div>
+            <div class="categories" id="categories">
+            </div>
+        </div>
+        <div class="section" id="catalog">
+            <div class="container">
+                <div class="filters">
+                    <div id="filter-list">
+                    </div>
+                </div>
+                <div class="products" id="products">
+                </div>
+            </div>
+        </div>
+        <div class="section" id="cart">
+            <div id="cart-items">
+            </div>
+            <div id="cart-content">
+            </div>
+        </div>
+        <div class="section" id="contacts">
+            <div id="contact-info">
+            </div>
+            <div id="socials">
+            </div>
+        </div>
+        <div class="section" id="about">
+            <div id="about-text">
+            </div>
+        </div>
+        <div class="section" id="product-details">
+        </div>
+    </div>
+    <div class="notification" id="notification">
+    </div>
+    <div class="confirm-modal" id="confirm-modal">
+        <div class="confirm-modal-content">
+            <p>
+                Чи дійсно видалити товар з кошика?
+            </p>
+            <button class="confirm-btn" onclick="confirmRemoveFromCart()">
+                Так
+            </button>
+            <button class="cancel-btn" onclick="closeConfirmModal()">
+                Ні
+            </button>
+        </div>
+    </div>
+    <div class="gallery-modal" id="gallery-modal">
+        <div class="gallery-modal-content">
+            <span class="gallery-close" onclick="closeGallery()">
+                ×
+            </span>
+            <button class="gallery-prev" onclick="prevGalleryImage()">
+                ◄
+            </button>
+            <img alt="" class="gallery-image" id="gallery-image" loading="lazy"/>
+            <button class="gallery-next" onclick="nextGalleryImage()">
+                ►
+            </button>
+        </div>
+    </div>
+    <!-- Підключаємо script.js -->
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
