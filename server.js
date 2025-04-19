@@ -1,5 +1,6 @@
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const sanitizeHtml = require('sanitize-html');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -251,20 +252,20 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
-    if (!value) return value;
-    const category = await Category.findOne({ 'subcategories.name': value });
-    if (!category) {
-        return helpers.error('any.invalid', { message: 'Підкатегорія не існує' });
-    }
-    return value;
-}),
+    subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
+        if (!value) return value;
+        const category = await Category.findOne({ 'subcategories.slug': value });
+        if (!category) {
+            return helpers.error('any.invalid', { message: 'Підкатегорія не існує' });
+        }
+        return value;
+    }),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
     salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
     material: Joi.string().max(100).allow(''),
-    photos: Joi.array().items(Joi.string()).default([]),
+    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
     slug: Joi.string().min(1).max(255).required(),
@@ -280,10 +281,10 @@ subcategory: Joi.string().max(255).optional().allow('').custom(async (value, hel
             name: Joi.string().max(100).required(),
             value: Joi.string().max(100).required(),
             priceChange: Joi.number().default(0),
-            photo: Joi.string().allow(null)
+            photo: Joi.string().uri().allow('', null)
         })
     ).default([]),
-    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]), // Валідація ObjectId
+    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
     description: Joi.string().allow(''),
     widthCm: Joi.number().min(0).allow(null),
     depthCm: Joi.number().min(0).allow(null),
@@ -318,9 +319,9 @@ const orderSchemaValidation = Joi.object({
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
-    logo: Joi.string().allow(''),
+    logo: Joi.string().uri().allow(''),
     logoWidth: Joi.number().min(0).allow(null),
-    favicon: Joi.string().allow(''),
+    favicon: Joi.string().uri().allow(''),
     contacts: Joi.object({
         phones: Joi.string().allow(''),
         addresses: Joi.string().allow(''),
@@ -344,7 +345,7 @@ const settingsSchemaValidation = Joi.object({
             name: Joi.string().required(),
             label: Joi.string().required(),
             type: Joi.string().required(),
-            options: Joi.array().items(Joi.string()).default([])
+            options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
     orderFields: Joi.array().items(
@@ -352,7 +353,7 @@ const settingsSchemaValidation = Joi.object({
             name: Joi.string().required(),
             label: Joi.string().required(),
             type: Joi.string().required(),
-            options: Joi.array().items(Joi.string()).default([])
+            options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
     slideWidth: Joi.number().min(0).allow(null),
@@ -382,14 +383,14 @@ const cartIdSchema = Joi.string()
 
 const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    photo: Joi.string().allow(''), // Змінено з image на photo
+    photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
-    url: Joi.string().allow(''),
+    url: Joi.string().uri().allow('').optional(),
     title: Joi.string().allow(''),
     text: Joi.string().allow(''),
-    link: Joi.string().allow(''),
+    link: Joi.string().uri().allow('').optional(),
     linkText: Joi.string().allow(''),
-    order: Joi.number().default(0)
+    order: Joi.number().min(0).default(0)
 });
 
 // Мідлвер для аутентифікації
@@ -525,13 +526,32 @@ const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
 
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await fetch('https://mebli.onrender.com/api/auth/refresh', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'X-CSRF-Token': csrfToken
-                }
+            const response = {};
+            await new Promise((resolve, reject) => {
+                app.handle(
+                    {
+                        ...req,
+                        method: 'POST',
+                        url: '/api/auth/refresh',
+                        headers: { Authorization: `Bearer ${token}`, 'X-CSRF-Token': csrfToken }
+                    },
+                    {
+                        json: (data) => {
+                            response.data = data;
+                            response.status = 200;
+                            resolve();
+                        },
+                        status: (code) => ({
+                            json: (data) => {
+                                response.status = code;
+                                response.data = data;
+                                reject(new Error(`HTTP помилка ${code}: ${JSON.stringify(data)}`));
+                            }
+                        })
+                    }
+                );
             });
+
             if (response.status === 429) {
                 logger.warn(`WebSocket: Занадто багато запитів на оновлення токена, IP: ${clientIp}`);
                 ws.send(JSON.stringify({
@@ -541,11 +561,12 @@ const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
                 ws.close(1008, 'Перевищено ліміт запитів');
                 return false;
             }
-            if (!response.ok) {
-                throw new Error(`HTTP помилка ${response.status}: ${response.statusText}`);
+
+            if (response.status !== 200) {
+                throw new Error(`HTTP помилка ${response.status}: ${JSON.stringify(response.data)}`);
             }
-            const data = await response.json();
-            token = data.token;
+
+            token = response.data.token;
             logger.info(`WebSocket: Токен оновлено, IP: ${clientIp}`);
             return true;
         } catch (err) {
@@ -571,10 +592,11 @@ const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
         }, 25 * 60 * 1000);
     }
 
-    ws.on('close', () => {
-        if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
-        logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
-    });
+ws.on('close', () => {
+    if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
+    ws.subscriptions.clear();
+    logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
+});
 
     ws.on('message', async (message) => {
         try {
@@ -621,7 +643,7 @@ const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
 
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
+app.get('/api/csrf-token', authenticateToken, csrfProtection, (req, res) => {
     try {
         const token = req.csrfToken();
         logger.info('Згенеровано CSRF-токен:', token);
@@ -822,13 +844,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         }
 
         // Перевірка існування subcategory
-        if (productData.subcategory) {
-            const subcategoryExists = category.subcategories.some(sub => sub.name === productData.subcategory);
-            if (!subcategoryExists) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-            }
-        }
+if (productData.subcategory) {
+    const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+    if (!subcategoryExists) {
+        logger.error('Підкатегорія не знайдено:', productData.subcategory);
+        return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+    }
+}
 
         // Перевірка існування groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
@@ -924,13 +946,13 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         // Перевірка існування subcategory
-        if (productData.subcategory) {
-            const subcategoryExists = category.subcategories.some(sub => sub.name === productData.subcategory);
-            if (!subcategoryExists) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-            }
-        }
+if (productData.subcategory) {
+    const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+    if (!subcategoryExists) {
+        logger.error('Підкатегорія не знайдено:', productData.subcategory);
+        return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+    }
+}
 
         // Валідація groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
@@ -1069,7 +1091,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка формату ID
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             logger.error(`Невірний формат ID категорії: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID категорії' });
@@ -1081,7 +1102,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
-        // Перевірка унікальності name і slug (окрім поточної категорії)
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } });
             if (existingCategoryByName) {
@@ -1098,7 +1118,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        // Видаляємо старе зображення, якщо воно змінилося
+        // Видаляємо старе зображення категорії
         if (category.photo && categoryData.photo && categoryData.photo !== category.photo) {
             const publicId = getPublicIdFromUrl(category.photo);
             if (publicId) {
@@ -1111,7 +1131,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        // Перевірка унікальності slug у підкатегоріях
+        // Перевірка унікальності slug у підкатегоріях і видалення старих зображень
         const subcategories = categoryData.subcategories || [];
         const subSlugs = new Set();
         for (const sub of subcategories) {
@@ -1120,6 +1140,20 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                 return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
             }
             subSlugs.add(sub.slug);
+
+            // Видаляємо старе зображення підкатегорії, якщо воно змінилося
+            const existingSub = category.subcategories.find(s => s._id.toString() === sub._id);
+            if (existingSub && existingSub.photo && sub.photo && sub.photo !== existingSub.photo) {
+                const publicId = getPublicIdFromUrl(existingSub.photo);
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                        logger.info(`Видалено старе зображення підкатегорії: ${publicId}`);
+                    } catch (err) {
+                        logger.error(`Не вдалося видалити старе зображення підкатегорії: ${publicId}`, err);
+                    }
+                }
+            }
         }
 
         const updatedCategory = await Category.findByIdAndUpdate(
@@ -1717,6 +1751,28 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Санітізація текстових полів
+        if (cleanedSettingsData.about) {
+            cleanedSettingsData.about = sanitizeHtml(cleanedSettingsData.about, {
+                allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li'],
+                allowedAttributes: { 'a': ['href'] }
+            });
+        }
+        if (cleanedSettingsData.contacts) {
+            cleanedSettingsData.contacts.phones = sanitizeHtml(cleanedSettingsData.contacts.phones || '', {
+                allowedTags: [],
+                allowedAttributes: {}
+            });
+            cleanedSettingsData.contacts.addresses = sanitizeHtml(cleanedSettingsData.contacts.addresses || '', {
+                allowedTags: [],
+                allowedAttributes: {}
+            });
+            cleanedSettingsData.contacts.schedule = sanitizeHtml(cleanedSettingsData.contacts.schedule || '', {
+                allowedTags: [],
+                allowedAttributes: {}
+            });
+        }
+
         let settings = await Settings.findOne();
         if (!settings) {
             settings = new Settings({
@@ -1804,6 +1860,15 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності id
+        if (orderData.id) {
+            const existingOrder = await Order.findOne({ id: orderData.id });
+            if (existingOrder) {
+                logger.error('Замовлення з таким id уже існує:', orderData.id);
+                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
+            }
+        }
+
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
@@ -1824,17 +1889,16 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
             }
 
             await session.commitTransaction();
+            logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
+            const orders = await Order.find();
+            broadcast('orders', orders);
+            res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
             throw err;
         } finally {
             session.endSession();
         }
-
-        logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
-        const orders = await Order.find();
-        broadcast('orders', orders);
-        res.status(201).json(orderData);
     } catch (err) {
         logger.error('Помилка при додаванні замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -1864,6 +1928,8 @@ app.get('/api/cart', async (req, res) => {
 });
 
 app.post('/api/cart', csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const cartId = req.query.cartId;
         logger.info('POST /api/cart:', { cartId, body: req.body });
@@ -1890,7 +1956,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: cartError.details });
         }
 
-        let cart = await Cart.findOne({ cartId });
+        let cart = await Cart.findOne({ cartId }).session(session);
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
             cart = new Cart({ cartId, items: cartItems });
@@ -1898,20 +1964,29 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             logger.info('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
         }
-        await cart.save();
+        await cart.save({ session });
 
+        await session.commitTransaction();
         logger.info('Кошик успішно збережено:', { cartId });
         res.status(200).json({ success: true });
     } catch (err) {
+        await session.abortTransaction();
         logger.error('Помилка при збереженні кошика:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } finally {
+        session.endSession();
     }
 });
 
 const cleanupOldCarts = async () => {
     try {
         const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const result = await Cart.deleteMany({ updatedAt: { $lt: thresholdDate } });
+        const carts = await Cart.find({ updatedAt: { $lt: thresholdDate } });
+        const cartIds = carts.map(cart => cart.cartId);
+        const orders = await Order.find({ cartId: { $in: cartIds } });
+        const activeCartIds = new Set(orders.map(order => order.cartId));
+        const cartsToDelete = carts.filter(cart => !activeCartIds.has(cart.cartId));
+        const result = await Cart.deleteMany({ _id: { $in: cartsToDelete.map(cart => cart._id) } });
         return result.deletedCount;
     } catch (err) {
         logger.error('Помилка при очищенні старих кошиків:', err);
@@ -1956,6 +2031,15 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
         if (error) {
             logger.error('Помилка валідації замовлення:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка унікальності id (якщо id змінюється)
+        if (orderData.id && orderData.id !== orderId) {
+            const existingOrder = await Order.findOne({ id: orderData.id });
+            if (existingOrder) {
+                logger.error('Замовлення з таким id уже існує:', orderData.id);
+                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
+            }
         }
 
         const order = await Order.findOneAndUpdate({ id: orderId }, orderData, { new: true });
@@ -2150,22 +2234,22 @@ app.get('/api/sitemap', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.single('file'), async (req, res) => {
+    let filePath;
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
+        filePath = req.file.path;
 
         const maxJsonSize = 10 * 1024 * 1024; // 10 МБ
         if (req.file.size > maxJsonSize) {
             logger.error('Розмір файлу перевищує ліміт:', { size: req.file.size });
-            await fs.promises.unlink(req.file.path);
             return res.status(400).json({ error: `Розмір файлу перевищує ліміт у ${maxJsonSize / (1024 * 1024)} МБ` });
         }
 
-        const fileContent = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        const fileContent = JSON.parse(await fs.promises.readFile(filePath, 'utf8'));
         const { settings, categories, slides } = fileContent;
 
-        // Валідація даних
         if (settings) {
             const { error } = settingsSchemaValidation.validate(settings, { abortEarly: false });
             if (error) {
@@ -2199,13 +2283,6 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
             await Slide.insertMany(slides);
         }
 
-try {
-            await fs.promises.unlink(req.file.path);
-            logger.info(`Тимчасовий файл видалено: ${req.file.path}`);
-        } catch (unlinkErr) {
-            logger.error(`Не вдалося видалити тимчасовий файл ${req.file.path}:`, unlinkErr);
-        }
-
         const updatedCategories = await Category.find();
         broadcast('categories', updatedCategories);
         const updatedSlides = await Slide.find().sort({ order: 1 });
@@ -2215,15 +2292,16 @@ try {
         res.json({ message: 'Дані сайту імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті даних сайту:', err);
-        if (req.file) {
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } finally {
+        if (filePath) {
             try {
-                await fs.promises.unlink(req.file.path);
-                logger.info(`Тимчасовий файл видалено після помилки: ${req.file.path}`);
+                await fs.promises.unlink(filePath);
+                logger.info(`Тимчасовий файл видалено: ${filePath}`);
             } catch (unlinkErr) {
-                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${req.file.path}:`, unlinkErr);
+                logger.error(`Не вдалося видалити тимчасовий файл ${filePath}:`, unlinkErr);
             }
         }
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
@@ -2319,11 +2397,6 @@ app.get('*', (req, res) => {
     });
 });
 
-app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
-    next();
-});
-
 app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res, next) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -2343,14 +2416,15 @@ app.post('/api/auth/login', loginLimiter, csrfProtection, (req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
+    if (err.code === 11000) {
+        const field = Object.keys(err.keyValue)[0];
+        return res.status(400).json({ error: `Значення для поля ${field} уже існує` });
+    }
+    // Існуюча логіка
     if (err.code === 'EBADCSRFTOKEN') {
         logger.error('Помилка CSRF:', err);
         return res.status(403).json({ error: 'Недійсний CSRF-токен' });
     }
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'Файл занадто великий. Максимальний розмір — 5 МБ.' });
-        }
         return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
     }
     if (err.status === 429) {
