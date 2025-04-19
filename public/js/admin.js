@@ -1903,7 +1903,6 @@ function renderSettingsAdmin() {
 
 function renderSlidesAdmin() {
     const slidesList = document.getElementById('slides-list-admin');
-    const addSlideBtn = document.getElementById('add-slide-btn');
     if (!slidesList) {
         console.warn('Елемент #slides-list-admin не знайдено');
         return;
@@ -1914,8 +1913,14 @@ function renderSlidesAdmin() {
             <button onclick="deleteSlide(${index})">Видалити</button>
         </div>
     `).join('');
+
+    const addSlideBtn = document.getElementById('add-slide-btn');
     if (addSlideBtn) {
-        addSlideBtn.onclick = openNewSlideModal;
+        // Видаляємо попередні слухачі, щоб уникнути дублювання
+        addSlideBtn.removeEventListener('click', openNewSlideModal);
+        addSlideBtn.addEventListener('click', openNewSlideModal);
+    } else {
+        console.warn('Елемент #add-slide-btn не знайдено');
     }
     resetInactivityTimer();
 }
@@ -2504,11 +2509,14 @@ async function moveCategoryUp(index) {
         }
         [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
         
-        const categoryIds = categories.map(c => c._id).filter(id => id && /^[0-9a-fA-F]{24}$/.test(id));
-        console.log('Новий порядок категорій:', categoryIds);
+        const categoryOrder = categories.map((cat, idx) => ({
+            _id: cat._id,
+            order: idx
+        })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id));
+        console.log('Новий порядок категорій:', categoryOrder);
 
-        if (categoryIds.length !== categories.length) {
-            console.error('Некоректні ID категорій:', categoryIds);
+        if (categoryOrder.length !== categories.length) {
+            console.error('Некоректні ID категорій:', categoryOrder);
             categories = originalCategories;
             showNotification('Помилка: не всі категорії мають валідні ID.');
             return;
@@ -2520,7 +2528,7 @@ async function moveCategoryUp(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify({ categories: categoryIds })
+            body: JSON.stringify(categoryOrder)
         });
 
         if (!response.ok) {
@@ -2556,11 +2564,14 @@ async function moveCategoryDown(index) {
         }
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
         
-        const categoryIds = categories.map(c => c._id).filter(id => id && /^[0-9a-fA-F]{24}$/.test(id));
-        console.log('Новий порядок категорій:', categoryIds);
+        const categoryOrder = categories.map((cat, idx) => ({
+            _id: cat._id,
+            order: idx
+        })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id));
+        console.log('Новий порядок категорій:', categoryOrder);
 
-        if (categoryIds.length !== categories.length) {
-            console.error('Некоректні ID категорій:', categoryIds);
+        if (categoryOrder.length !== categories.length) {
+            console.error('Некоректні ID категорій:', categoryOrder);
             categories = originalCategories;
             showNotification('Помилка: не всі категорії мають валідні ID.');
             return;
@@ -2572,14 +2583,15 @@ async function moveCategoryDown(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify({ categories: categoryIds })
+            body: JSON.stringify(categoryOrder) // Надсилаємо масив об’єктів
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            categories = originalCategories;
-            throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
-        }
+if (!response.ok) {
+    const errorData = await response.json();
+    console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
+    categories = originalCategories;
+    throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+}
 
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
@@ -2868,12 +2880,25 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
             return;
         }
 
+        const existingSubcat = category.subcategories[subcatIndex];
         category.subcategories[subcatIndex] = {
+            _id: existingSubcat._id, // Зберігаємо _id
             name,
             slug,
-            photo: photo || category.subcategories[subcatIndex].photo || '',
+            photo: photo || existingSubcat.photo || '',
             visible
         };
+
+        const updatedData = {
+            subcategories: category.subcategories.map(subcat => ({
+                _id: subcat._id,
+                name: subcat.name,
+                slug: subcat.slug,
+                photo: subcat.photo || '',
+                visible: subcat.visible
+            }))
+        };
+        console.log('Оновлені дані для сервера:', updatedData);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2881,11 +2906,12 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken')
             },
-            body: JSON.stringify(category)
+            body: JSON.stringify(updatedData)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося оновити підкатегорію: ${errorData.error || response.statusText}`);
         }
 
@@ -2975,24 +3001,39 @@ async function moveSubcategoryUp(categoryId, index) {
                 return;
             }
 
+            const originalSubcategories = [...category.subcategories];
             [category.subcategories[index - 1], category.subcategories[index]] = [category.subcategories[index], category.subcategories[index - 1]];
+            
+            const updatedData = {
+                subcategories: category.subcategories.map(subcat => ({
+                    name: subcat.name,
+                    slug: subcat.slug,
+                    photo: subcat.photo || '',
+                    visible: subcat.visible
+                }))
+            };
+            console.log('Оновлені дані для сервера:', updatedData);
+
             const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': localStorage.getItem('csrfToken')
                 },
-                body: JSON.stringify(category)
+                body: JSON.stringify(updatedData)
             });
 
             if (!response.ok) {
-                throw new Error('Не вдалося оновити порядок підкатегорій');
+                const errorData = await response.json();
+                category.subcategories = originalSubcategories;
+                throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
             }
 
             const updatedCategory = await response.json();
             const catIndex = categories.findIndex(c => c._id === categoryId);
             categories[catIndex] = updatedCategory;
             renderCategoriesAdmin();
+            showNotification('Порядок підкатегорій оновлено!');
             resetInactivityTimer();
         } catch (err) {
             console.error('Помилка зміни порядку підкатегорій:', err);
@@ -3012,24 +3053,39 @@ async function moveSubcategoryDown(categoryId, index) {
                 return;
             }
 
+            const originalSubcategories = [...category.subcategories];
             [category.subcategories[index], category.subcategories[index + 1]] = [category.subcategories[index + 1], category.subcategories[index]];
+            
+            const updatedData = {
+                subcategories: category.subcategories.map(subcat => ({
+                    name: subcat.name,
+                    slug: subcat.slug,
+                    photo: subcat.photo || '',
+                    visible: subcat.visible
+                }))
+            };
+            console.log('Оновлені дані для сервера:', updatedData);
+
             const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': localStorage.getItem('csrfToken')
                 },
-                body: JSON.stringify(category)
+                body: JSON.stringify(updatedData)
             });
 
             if (!response.ok) {
-                throw new Error('Не вдалося оновити порядок підкатегорій');
+                const errorData = await response.json();
+                category.subcategories = originalSubcategories;
+                throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
             }
 
             const updatedCategory = await response.json();
             const catIndex = categories.findIndex(c => c._id === categoryId);
             categories[catIndex] = updatedCategory;
             renderCategoriesAdmin();
+            showNotification('Порядок підкатегорій оновлено!');
             resetInactivityTimer();
         } catch (err) {
             console.error('Помилка зміни порядку підкатегорій:', err);
