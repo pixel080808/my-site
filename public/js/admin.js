@@ -2134,7 +2134,7 @@ async function saveEditedCategory(categoryId) {
         const visibleSelect = document.getElementById('category-visible');
 
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Form elements missing:', {
+            console.error('Елементи форми відсутні:', {
                 nameInput: !!nameInput,
                 slugInput: !!slugInput,
                 photoUrlInput: !!photoUrlInput,
@@ -2145,32 +2145,40 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const name = nameInput.value.trim();
-        const slug = slugInput.value.trim();
+        let name = nameInput.value.trim();
+        let slug = slugInput.value.trim();
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        // Validate slug format if provided
-        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+        // Клієнтська валідація
+        if (!name) {
+            name = 'Без назви'; // Значення за замовчуванням
+            console.warn('Назва категорії порожня, використано значення за замовчуванням:', name);
+        }
+
+        if (!slug) {
+            slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug';
+            console.warn('Шлях категорії порожній, згенеровано:', slug);
+        }
+
+        if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
-        // Check slug uniqueness if slug is provided
-        if (slug) {
-            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-            if (!slugCheck.ok) {
-                const errorData = await slugCheck.json();
-                throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
-            }
-            const existingCategories = await slugCheck.json();
-            if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-                showNotification('Шлях категорії має бути унікальним!');
-                return;
-            }
+        // Перевірка унікальності slug
+        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        if (!slugCheck.ok) {
+            const errorData = await slugCheck.json();
+            throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
+        }
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+            showNotification('Шлях категорії має бути унікальним!');
+            return;
         }
 
-        // Handle photo upload
+        // Завантаження фото
         if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2202,8 +2210,8 @@ async function saveEditedCategory(categoryId) {
         }
 
         const updatedCategory = {
-            name: name || '',
-            slug: slug || '',
+            name,
+            slug,
             photo: photo || category.photo || '',
             visible,
             subcategories: category.subcategories || [],
@@ -3003,15 +3011,21 @@ async function moveSubcategoryUp(categoryId, index) {
         const originalSubcategories = [...category.subcategories];
         [category.subcategories[index - 1], category.subcategories[index]] = [category.subcategories[index], category.subcategories[index - 1]];
 
-        // Ensure all subcategories have required fields
+        // Перевірка наявності _id і встановлення значень за замовчуванням
         const updatedData = {
-            subcategories: category.subcategories.map(subcat => ({
-                _id: subcat._id, // Preserve _id
-                name: subcat.name || '',
-                slug: subcat.slug || '',
-                photo: subcat.photo || '',
-                visible: subcat.visible !== undefined ? subcat.visible : true
-            }))
+            subcategories: category.subcategories.map(subcat => {
+                if (!subcat._id) {
+                    console.warn('Підкатегорія без _id:', subcat);
+                    throw new Error('Усі підкатегорії повинні мати _id');
+                }
+                return {
+                    _id: subcat._id,
+                    name: subcat.name || 'Без назви',
+                    slug: subcat.slug || subcat.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug',
+                    photo: subcat.photo || '',
+                    visible: subcat.visible !== undefined ? subcat.visible : true
+                };
+            })
         };
         console.log('Data sent to /api/categories/:id:', JSON.stringify(updatedData, null, 2));
 
@@ -3058,15 +3072,21 @@ async function moveSubcategoryDown(categoryId, index) {
         const originalSubcategories = [...category.subcategories];
         [category.subcategories[index], category.subcategories[index + 1]] = [category.subcategories[index + 1], category.subcategories[index]];
 
-        // Ensure all subcategories have required fields
+        // Перевірка наявності _id і встановлення значень за замовчуванням
         const updatedData = {
-            subcategories: category.subcategories.map(subcat => ({
-                _id: subcat._id, // Preserve _id
-                name: subcat.name || '',
-                slug: subcat.slug || '',
-                photo: subcat.photo || '',
-                visible: subcat.visible !== undefined ? subcat.visible : true
-            }))
+            subcategories: category.subcategories.map(subcat => {
+                if (!subcat._id) {
+                    console.warn('Підкатегорія без _id:', subcat);
+                    throw new Error('Усі підкатегорії повинні мати _id');
+                }
+                return {
+                    _id: subcat._id,
+                    name: subcat.name || 'Без назви',
+                    slug: subcat.slug || subcat.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') || 'no-slug',
+                    photo: subcat.photo || '',
+                    visible: subcat.visible !== undefined ? subcat.visible : true
+                };
+            })
         };
         console.log('Data sent to /api/categories/:id:', JSON.stringify(updatedData, null, 2));
 
