@@ -9,12 +9,16 @@ const cartSchema = new mongoose.Schema({
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
             color: { type: String, default: '' },
-            photo: { type: String, default: '', validate: {
-                validator: function(v) {
-                    return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-                },
-                message: 'Photo must be a valid URL or empty string'
-            } }
+            photo: {
+                type: String,
+                default: '',
+                validate: {
+                    validator: function(v) {
+                        return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                    },
+                    message: 'Photo must be a valid URL or empty string'
+                }
+            }
         }
     ],
     updatedAt: { type: Date, default: Date.now }
@@ -26,8 +30,7 @@ cartSchema.pre('save', function(next) {
     next();
 });
 
-// Індекси
-cartSchema.index({ cartId: 1 }, { unique: true });
+// Індекс для updatedAt (залишаємо, оскільки він потрібен для сортування)
 cartSchema.index({ updatedAt: 1 });
 
 module.exports = mongoose.model('Cart', cartSchema);
