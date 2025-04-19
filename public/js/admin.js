@@ -1738,72 +1738,57 @@ function renderCategoriesAdmin() {
 
     categoryList.innerHTML = categories.map((category, index) => `
         <div class="category-item">
-            <div class="category-order-controls">
-                <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-            </div>
-            ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
+            <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+            <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
             <div class="category-details">
-                <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
+                ${category.name} (${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
+                ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo" width="50">` : ''}
                 <div class="category-actions">
                     <button class="edit-btn" data-id="${category._id}">Редагувати</button>
                     <button class="delete-btn" data-id="${category._id}">Видалити</button>
                 </div>
             </div>
-            <div class="subcategories">
-                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
-                    <div class="subcategory-item">
-                        <div class="subcategory-order-controls">
-                            <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-index="${subIndex}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
-                        </div>
-                        ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
-                        <div class="subcategory-details">
-                            ${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
-                            <div class="subcategory-actions">
-                                <button class="sub-edit" data-cat-id="${category._id}" data-sub-name="${sub.name}">Редагувати</button>
-                                <button class="sub-delete" data-cat-id="${category._id}" data-sub-name="${sub.name}">Видалити</button>
-                            </div>
+        </div>
+        <div class="subcategories">
+            ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
+                <div class="subcategory-item">
+                    <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-index="${subIndex}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
+                    <div class="subcategory-details">
+                        ${sub.name} (${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
+                        ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo" width="50">` : ''}
+                        <div class="subcategory-actions">
+                            <button class="sub-edit" data-cat-id="${category._id}" data-sub-name="${sub.name}">Редагувати</button>
+                            <button class="sub-delete" data-cat-id="${category._id}" data-sub-name="${sub.name}">Видалити</button>
                         </div>
                     </div>
-                `).join('') : '<p>Підкатегорії відсутні</p>'}
-            </div>
+                </div>
+            `).join('') : '<p>Підкатегорії відсутні</p>'}
         </div>
     `).join('');
 
-    // Додаємо делегування подій
+    // Делегування подій
     categoryList.addEventListener('click', (event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryUp(index);
+            moveCategoryUp(parseInt(target.dataset.index));
         } else if (target.classList.contains('move-down')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryDown(index);
+            moveCategoryDown(parseInt(target.dataset.index));
         } else if (target.classList.contains('edit-btn')) {
-            const id = target.dataset.id;
-            openEditCategoryModal(id);
+            openEditCategoryModal(target.dataset.id);
         } else if (target.classList.contains('delete-btn')) {
-            const id = target.dataset.id;
-            deleteCategory(id);
+            deleteCategory(target.dataset.id);
         } else if (target.classList.contains('sub-move-up')) {
-            const catId = target.dataset.catId;
-            const subIndex = parseInt(target.dataset.subIndex);
-            moveSubcategoryUp(catId, subIndex);
+            moveSubcategoryUp(target.dataset.catId, parseInt(target.dataset.subIndex));
         } else if (target.classList.contains('sub-move-down')) {
-            const catId = target.dataset.catId;
-            const subIndex = parseInt(target.dataset.subIndex);
-            moveSubcategoryDown(catId, subIndex);
+            moveSubcategoryDown(target.dataset.catId, parseInt(target.dataset.subIndex));
         } else if (target.classList.contains('sub-edit')) {
-            const catId = target.dataset.catId;
-            const subName = target.dataset.subName;
-            openEditSubcategoryModal(catId, subName);
+            openEditSubcategoryModal(target.dataset.catId, target.dataset.subName);
         } else if (target.classList.contains('sub-delete')) {
-            const catId = target.dataset.catId;
-            const subName = target.dataset.subName;
-            deleteSubcategory(catId, subName);
+            deleteSubcategory(target.dataset.catId, target.dataset.subName);
         }
     });
+}
 
     // Оновлюємо випадаючий список категорій
     const subcatSelect = document.getElementById('subcategory-category');
@@ -1979,34 +1964,34 @@ function validateFile(file) {
 
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
-    if (category) {
-        const modal = document.getElementById('modal');
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Редагувати категорію #${categoryId}</h3>
-                <input type="text" id="category-name" value="${category.name}"><br/>
-                <label for="category-name">Назва категорії</label>
-                <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
-                <label for="category-photo-url">URL фотографії</label>
-                <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-                <label for="category-photo-file">Завантажте фотографію</label>
-                <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="category-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
-                    <button onclick="closeModal()">Скасувати</button>
-                </div>
-            </div>
-        `;
-        modal.classList.add('active');
-        console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
-        resetInactivityTimer();
+    if (!category) {
+        showNotification('Категорія не знайдена!');
+        return;
     }
+
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати категорію</h3>
+            <input type="text" id="category-name" value="${category.name}" placeholder="Назва категорії" required><br/>
+            <label for="category-name">Назва (обов’язково)</label>
+            <input type="text" id="category-slug" value="${category.slug}" placeholder="шлях-категорії" pattern="[a-z0-9-]+" required><br/>
+            <label for="category-slug">Шлях (лише малі літери, цифри, дефіси)</label>
+            <select id="category-visible">
+                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+            </select><br/>
+            <label for="category-visible">Видимість</label>
+            <div class="modal-actions">
+                <button class="save-btn">Зберегти</button>
+                <button class="cancel-btn">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+
+    modal.querySelector('.save-btn').addEventListener('click', () => saveEditedCategory(categoryId));
+    modal.querySelector('.cancel-btn').addEventListener('click', closeModal);
 }
 
 function openAddCategoryModal() {
@@ -2128,91 +2113,29 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const nameInput = document.getElementById('category-name');
-        const slugInput = document.getElementById('category-slug');
-        const photoUrlInput = document.getElementById('category-photo-url');
-        const photoFileInput = document.getElementById('category-photo-file');
-        const visibleSelect = document.getElementById('category-visible');
-
-        if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми не знайдено:', {
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                photoUrlInput: !!photoUrlInput,
-                photoFileInput: !!photoFileInput,
-                visibleSelect: !!visibleSelect
-            });
-            showNotification('Елементи форми для редагування категорії не знайдено.');
-            return;
-        }
-
-        const name = nameInput.value.trim();
-        const slug = slugInput.value.trim();
-        const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput.value.trim();
-
-        console.log('Дані категорії:', { name, slug, visible, photo });
+        const name = document.getElementById('category-name').value.trim();
+        const slug = document.getElementById('category-slug').value.trim();
+        const visible = document.getElementById('category-visible').value === 'true';
 
         if (!name || !slug) {
-            showNotification('Назва та шлях категорії обов’язкові!');
+            showNotification('Назва та шлях обов’язкові!');
             return;
         }
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+            showNotification('Шлях може містити лише малі літери, цифри та дефіси!');
             return;
-        }
-
-        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        if (!slugCheck.ok) {
-            const errorData = await slugCheck.json();
-            throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
-        }
-        const existingCategories = await slugCheck.json();
-        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-            showNotification('Шлях категорії має бути унікальним!');
-            return;
-        }
-
-        if (photoFileInput.files[0]) {
-            const file = photoFileInput.files[0];
-            const validation = validateFile(file);
-            if (!validation.valid) {
-                showNotification(validation.error);
-                return;
-            }
-            const formData = new FormData();
-            formData.append('file', file);
-            const response = await fetchWithAuth('/api/upload', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
-            }
-            const data = await response.json();
-            photo = data.url;
         }
 
         const category = categories.find(c => c._id === categoryId);
-        if (!category) {
-            showNotification('Категорія не знайдена!');
-            return;
-        }
-
         const updatedCategory = {
             name,
             slug,
-            photo: photo || category.photo || '',
             visible,
-            subcategories: category.subcategories || []
+            photo: category.photo || null,
+            subcategories: category.subcategories || [],
+            order: category.order || 0
         };
-
-        console.log('Оновлені дані для сервера:', updatedCategory);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2225,18 +2148,18 @@ async function saveEditedCategory(categoryId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити категорію: ${errorData.error || response.statusText}`);
+            throw new Error(`Помилка: ${errorData.error || response.statusText}`);
         }
 
         const updatedCategoryData = await response.json();
         const index = categories.findIndex(c => c._id === categoryId);
         categories[index] = updatedCategoryData;
+
         closeModal();
         renderCategoriesAdmin();
         showNotification('Категорію оновлено!');
-        resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оновленні категорії:', err);
+        console.error('Помилка:', err);
         showNotification('Не вдалося оновити категорію: ' + err.message);
     }
 }
@@ -2493,41 +2416,41 @@ async function moveCategoryUp(index) {
 
         if (index <= 0) return;
 
-        const category1 = categories[index];
-        const category2 = categories[index - 1];
+        const category1 = { ...categories[index] }; // Створюємо копію
+        const category2 = { ...categories[index - 1] }; // Створюємо копію
 
-        // Міняємо значення order
-        const tempOrder = category1.order;
-        category1.order = category2.order;
+        // Міняємо порядок
+        const tempOrder = category1.order || index;
+        category1.order = category2.order || (index - 1);
         category2.order = tempOrder;
 
-        // Оновлюємо категорії на сервері
-        const updates = [
-            { _id: category1._id, order: category1.order },
-            { _id: category2._id, order: category2.order }
-        ];
+        // Логуємо дані для дебагування
+        console.log('Оновлення категорій:', { category1, category2 });
 
-        for (const update of updates) {
-            const response = await fetchWithAuth(`/api/categories/${update._id}`, {
+        // Оновлюємо обидві категорії
+        for (const cat of [category1, category2]) {
+            const response = await fetchWithAuth(`/api/categories/${cat._id}`, {
                 method: 'PUT',
-                body: JSON.stringify({ ...categories.find(c => c._id === update._id), order: update.order })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                },
+                body: JSON.stringify(cat)
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+                throw new Error(`Помилка оновлення категорії ${cat._id}: ${errorData.error || response.statusText}`);
             }
         }
 
         // Оновлюємо локальний масив
-        [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
+        [categories[index], categories[index - 1]] = [category2, category1];
 
-        renderAdmin('categories');
+        renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка зміни порядку категорій:', err);
-        console.log('Деталі помилки сервера:', err.message);
+        console.error('Помилка зміни порядку:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
     }
 }
@@ -2543,41 +2466,41 @@ async function moveCategoryDown(index) {
 
         if (index >= categories.length - 1) return;
 
-        const category1 = categories[index];
-        const category2 = categories[index + 1];
+        const category1 = { ...categories[index] }; // Копія першої категорії
+        const category2 = { ...categories[index + 1] }; // Копія другої категорії
 
-        // Міняємо значення order
-        const tempOrder = category1.order;
-        category1.order = category2.order;
+        // Міняємо порядок
+        const tempOrder = category1.order || index;
+        category1.order = category2.order || (index + 1);
         category2.order = tempOrder;
 
-        // Оновлюємо категорії на сервері
-        const updates = [
-            { _id: category1._id, order: category1.order },
-            { _id: category2._id, order: category2.order }
-        ];
+        // Логуємо дані для дебагування
+        console.log('Оновлення категорій:', { category1, category2 });
 
-        for (const update of updates) {
-            const response = await fetchWithAuth(`/api/categories/${update._id}`, {
+        // Оновлюємо обидві категорії на сервері
+        for (const cat of [category1, category2]) {
+            const response = await fetchWithAuth(`/api/categories/${cat._id}`, {
                 method: 'PUT',
-                body: JSON.stringify({ ...categories.find(c => c._id === update._id), order: update.order })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                },
+                body: JSON.stringify(cat)
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+                throw new Error(`Помилка оновлення категорії ${cat._id}: ${errorData.error || response.statusText}`);
             }
         }
 
         // Оновлюємо локальний масив
-        [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
+        [categories[index], categories[index + 1]] = [category2, category1];
 
-        renderAdmin('categories');
+        renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
-        console.log('Деталі помилки сервера:', err.message);
         showNotification('Не вдалося змінити порядок: ' + err.message);
     }
 }
@@ -2763,7 +2686,7 @@ function openEditSubcategoryModal(categoryId, subcatName) {
             <input type="text" id="subcategory-name" value="${subcategory.name}"><br/>
             <label for="subcategory-name">Назва підкатегорії</label>
             <input type="text" id="subcategory-slug" value="${subcategory.slug}"><br/>
-            <label for="subcategory-slug">Шлях підкатегорії</label>
+            <label for="subcategory-slug">Ш18:00:00Z">Шлях підкатегорії</label>
             <input type="text" id="subcategory-photo-url" value="${subcategory.photo || ''}"><br/>
             <label for="subcategory-photo-url">URL фотографії</label>
             <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
@@ -2774,13 +2697,16 @@ function openEditSubcategoryModal(categoryId, subcatName) {
             </select><br/>
             <label for="subcategory-visible">Видимість</label>
             <div class="modal-actions">
-                <button onclick="saveSubcategoryEdit('${categoryId}', '${subcatName}')">Зберегти</button>
-                <button onclick="closeModal()">Скасувати</button>
+                <button class="save-subcategory-btn">Зберегти</button>
+                <button class="cancel-btn">Скасувати</button>
             </div>
         </div>
     `;
     modal.classList.add('active');
-    resetInactivityTimer();
+
+    // Делегування подій
+    modal.querySelector('.save-subcategory-btn').addEventListener('click', () => saveSubcategoryEdit(categoryId, subcatName));
+    modal.querySelector('.cancel-btn').addEventListener('click', closeModal);
 }
 
 async function saveSubcategory(categoryId, subIndex) {
@@ -2830,6 +2756,103 @@ async function saveSubcategory(categoryId, subIndex) {
         renderAdmin('categories');
         showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка оновлення підкатегорії:', err);
+        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
+    }
+}
+
+async function saveSubcategoryEdit(categoryId, oldSubcatName) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const nameInput = document.getElementById('subcategory-name');
+        const slugInput = document.getElementById('subcategory-slug');
+        const photoUrlInput = document.getElementById('subcategory-photo-url');
+        const photoFileInput = document.getElementById('subcategory-photo-file');
+        const visibleSelect = document.getElementById('subcategory-visible');
+
+        if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
+            showNotification('Елементи форми не знайдено.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim();
+        const visible = visibleSelect.value === 'true';
+        let photo = photoUrlInput.value.trim();
+
+        if (!name || !slug) {
+            showNotification('Назва та шлях підкатегорії обов’язкові!');
+            return;
+        }
+
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+
+        const category = categories.find(c => c._id === categoryId);
+        if (!category) {
+            showNotification('Категорія не знайдена!');
+            return;
+        }
+
+        if (category.subcategories.some(s => s.slug === slug && s.name !== oldSubcatName)) {
+            showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
+            return;
+        }
+
+        if (photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
+            });
+            const data = await response.json();
+            photo = data.url;
+        }
+
+        const updatedSubcategory = { name, slug, photo: photo || null, visible };
+        const subIndex = category.subcategories.findIndex(s => s.name === oldSubcatName);
+        category.subcategories[subIndex] = updatedSubcategory;
+
+        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify(category)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка: ${errorData.error || response.statusText}`);
+        }
+
+        const updatedCategory = await response.json();
+        const catIndex = categories.findIndex(c => c._id === categoryId);
+        categories[catIndex] = updatedCategory;
+
+        closeModal();
+        renderCategoriesAdmin();
+        showNotification('Підкатегорію оновлено!');
     } catch (err) {
         console.error('Помилка оновлення підкатегорії:', err);
         showNotification('Не вдалося оновити підкатегорію: ' + err.message);
@@ -2909,33 +2932,40 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const category = categories.find(c => c._id === categoryId);
         if (!category || subIndex <= 0) {
+            console.warn('Категорія не знайдена або subIndex некоректний:', { categoryId, subIndex });
             return;
         }
 
         // Міняємо порядок підкатегорій
-        [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = 
-            [category.subcategories[subIndex - 1], category.subcategories[subIndex]];
+        const subcategories = [...category.subcategories];
+        [subcategories[subIndex], subcategories[subIndex - 1]] = [subcategories[subIndex - 1], subcategories[subIndex]];
+        category.subcategories = subcategories;
+
+        // Логуємо дані для дебагування
+        console.log('Оновлення підкатегорій:', { categoryId, subcategories });
 
         // Оновлюємо категорію на сервері
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(category)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
+            throw new Error(`Помилка оновлення підкатегорій: ${errorData.error || response.statusText}`);
         }
 
+        // Оновлюємо локальний масив
         const updatedCategory = await response.json();
         const index = categories.findIndex(c => c._id === categoryId);
         categories[index] = updatedCategory;
 
-        console.log('Оновлені дані для сервера:', updatedCategory);
-
-        renderAdmin('categories');
+        renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -2953,33 +2983,40 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const category = categories.find(c => c._id === categoryId);
         if (!category || subIndex >= category.subcategories.length - 1) {
+            console.warn('Категорія не знайдена або subIndex некоректний:', { categoryId, subIndex });
             return;
         }
 
         // Міняємо порядок підкатегорій
-        [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = 
-            [category.subcategories[subIndex + 1], category.subcategories[subIndex]];
+        const subcategories = [...category.subcategories];
+        [subcategories[subIndex], subcategories[subIndex + 1]] = [subcategories[subIndex + 1], subcategories[subIndex]];
+        category.subcategories = subcategories;
+
+        // Логуємо дані для дебагування
+        console.log('Оновлення підкатегорій:', { categoryId, subcategories });
 
         // Оновлюємо категорію на сервері
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(category)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
+            throw new Error(`Помилка оновлення підкатегорій: ${errorData.error || response.statusText}`);
         }
 
+        // Оновлюємо локальний масив
         const updatedCategory = await response.json();
         const index = categories.findIndex(c => c._id === categoryId);
         categories[index] = updatedCategory;
 
-        console.log('Оновлені дані для сервера:', updatedCategory);
-
-        renderAdmin('categories');
+        renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
