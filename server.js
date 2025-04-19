@@ -251,7 +251,14 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(100).allow(''),
+subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
+    if (!value) return value;
+    const category = await Category.findOne({ 'subcategories.name': value });
+    if (!category) {
+        return helpers.error('any.invalid', { message: 'Підкатегорія не існує' });
+    }
+    return value;
+}),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
     salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
