@@ -982,86 +982,71 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
 });
 
 const categorySchemaValidation = Joi.object({
-    name: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
-    slug: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
+    name: Joi.string().max(255).required(),
+    slug: Joi.string().max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
     order: Joi.number().integer().min(0).default(0).optional(),
     subcategories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-            name: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
-            slug: Joi.string().allow('').max(255).optional(), // Дозволяємо порожнє значення
+            name: Joi.string().max(255).required(),
+            slug: Joi.string().max(255).required(),
             photo: Joi.string().allow('').optional(),
             visible: Joi.boolean().optional()
         })
     ).optional()
-}).min(1); // Вимагаємо хоча б одне поле
+}).min(1);
+
+const subcategorySchemaValidation = Joi.object({
+    _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
+    name: Joi.string().max(255).required(),
+    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
+    photo: Joi.string().allow('').optional(),
+    visible: Joi.boolean().optional(),
+    order: Joi.number().integer().min(0).optional() // Додано для відповідності моделі
+});
 
 app.get('/api/categories', async (req, res) => {
     try {
         const { slug, subcategorySlug } = req.query;
+        let categories;
         if (slug) {
-            const categories = await Category.find({ slug }).sort({ order: 1 });
-            return res.status(200).json(categories);
+            categories = await Category.find({ slug }).sort({ order: 1 });
+        } else if (subcategorySlug) {
+            categories = await Category.find({ 'subcategories.slug': subcategorySlug }).sort({ order: 1 });
+        } else {
+            categories = await Category.find().sort({ order: 1 });
         }
-        if (subcategorySlug) {
-            const categories = await Category.find({ 'subcategories.slug': subcategorySlug }).sort({ order: 1 });
-            return res.status(200).json(categories);
-        }
-        const categories = await Category.find().sort({ order: 1 });
+        // Сортуємо підкатегорії за order
+        categories.forEach(category => {
+            category.subcategories.sort((a, b) => a.order - b.order);
+        });
         res.status(200).json(categories);
     } catch (err) {
-        res.status(400).json({ error: 'Помилка отримання категорій' });
+        res.status(400).json({ error: 'Помилка отримання категорій', details: err.message });
     }
 });
 
 app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryData = req.body;
-        logger.info('Отримано дані категорії:', categoryData);
-
-        const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
+        const { error } = categorySchemaValidation.validate(categoryData);
         if (error) {
             logger.error('Помилка валідації категорії:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const existingCategoryByName = await Category.findOne({ name: categoryData.name });
-        if (existingCategoryByName) {
-            return res.status(400).json({ error: 'Категорія з такою назвою вже існує' });
-        }
-
-        const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug });
-        if (existingCategoryBySlug) {
-            return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
-        }
-
-        // Перевірка унікальності slug у підкатегоріях
-        const subcategories = categoryData.subcategories || [];
-        const subSlugs = new Set();
-        for (const sub of subcategories) {
-            if (subSlugs.has(sub.slug)) {
-                logger.error(`Дублювання slug у підкатегоріях: ${sub.slug}`);
-                return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
-            }
-            subSlugs.add(sub.slug);
-        }
-
-        const category = new Category({
-            name: categoryData.name,
-            slug: categoryData.slug,
-            photo: categoryData.photo,
-            parentCategory: categoryData.parentCategory || null,
-            visible: categoryData.visible !== undefined ? categoryData.visible : true,
-            subcategories: categoryData.subcategories || []
-        });
+        const category = new Category(categoryData);
         await category.save();
         const categories = await Category.find();
         broadcast('categories', categories);
         res.status(201).json(category);
     } catch (err) {
         logger.error('Помилка при додаванні категорії:', err);
+        if (err.code === 11000) { // MongoDB duplicate key error
+            return res.status(400).json({ error: 'Категорія з таким slug уже існує' });
+        }
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
@@ -1437,6 +1422,8 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 });
 
 app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const categoryId = req.params.categoryId;
         if (!mongoose.Types.ObjectId.isValid(categoryId)) {
@@ -1445,15 +1432,13 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         }
 
         const { subcategories } = req.body;
-        logger.info('Отримано дані для оновлення порядку підкатегорій:', JSON.stringify(subcategories, null, 2));
-
         const { error } = subcategoryOrderSchemaValidation.validate({ subcategories });
         if (error) {
             logger.error('Помилка валідації порядку підкатегорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const category = await Category.findById(categoryId);
+        const category = await Category.findById(categoryId).session(session);
         if (!category) {
             logger.error(`Категорію не знайдено: ${categoryId}`);
             return res.status(404).json({ error: 'Категорію не знайдено' });
@@ -1466,30 +1451,25 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
-        const reorderedSubcategories = subcategories.map(item => {
-            const subcat = category.subcategories.find(sub => sub._id.toString() === item._id);
-            if (!subcat) {
-                throw new Error(`Підкатегорія з _id ${item._id} не знайдена`);
+        for (const { _id, order } of subcategories) {
+            const subcat = category.subcategories.id(_id);
+            if (subcat) {
+                subcat.order = order;
             }
-            return {
-                _id: subcat._id,
-                name: subcat.name,
-                slug: subcat.slug,
-                photo: subcat.photo,
-                visible: subcat.visible
-            };
-        });
+        }
 
-        category.subcategories = reorderedSubcategories;
-        await category.save();
-
-        const updatedCategories = await Category.find();
+        await category.save({ session });
+        const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
+        await session.commitTransaction();
         logger.info(`Порядок підкатегорій оновлено для категорії ${categoryId}`);
-        res.status(200).json(category); // Повертаємо повну категорію
+        res.status(200).json(category);
     } catch (err) {
+        await session.abortTransaction();
         logger.error('Помилка оновлення порядку підкатегорій:', err);
         res.status(400).json({ error: 'Не вдалося оновити порядок підкатегорій', details: err.message });
+    } finally {
+        session.endSession();
     }
 });
 
