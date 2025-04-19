@@ -258,28 +258,24 @@ async function fetchWithAuth(url, options = {}) {
     }
 
     // Отримуємо CSRF-токен для запитів, що змінюють дані
-    let csrfToken = localStorage.getItem('csrfToken');
-    if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
-        try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            });
-            if (!csrfResponse.ok) {
-                throw new Error('Не вдалося отримати CSRF-токен');
-            }
-            const csrfData = await csrfResponse.json();
-            csrfToken = csrfData.csrfToken;
-            localStorage.setItem('csrfToken', csrfToken);
-        } catch (err) {
-            console.error('Помилка отримання CSRF-токена:', err);
-            throw err;
+let csrfToken = localStorage.getItem('csrfToken');
+if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
+    try {
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!csrfResponse.ok) {
+            throw new Error('Не вдалося отримати CSRF-токен');
         }
+        const csrfData = await csrfResponse.json();
+        csrfToken = csrfData.csrfToken;
+        localStorage.setItem('csrfToken', csrfToken);
+    } catch (err) {
+        console.error('Помилка отримання CSRF-токена:', err);
+        throw err;
     }
+}
 
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -1247,6 +1243,11 @@ document.addEventListener('DOMContentLoaded', () => {
         session = { isActive: false, timestamp: 0 };
         localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
         showSection('admin-login');
+    }
+
+    // Ініціалізація редакторів
+    if (document.getElementById('about-editor')) {
+        initializeEditors();
     }
 });
 
@@ -5766,75 +5767,6 @@ async function deleteOrder(index) {
         renderAdmin('orders');
         resetInactivityTimer();
     }
-
-// Виклик ініціалізації редакторів незалежно від авторизації для тестування
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Ініціалізація елементів форми
-    const usernameInput = document.getElementById('admin-username');
-    const passwordInput = document.getElementById('admin-password');
-    const loginBtn = document.getElementById('login-btn');
-
-    if (usernameInput) {
-        usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && passwordInput) {
-                passwordInput.focus();
-            }
-        });
-    } else {
-        console.warn('Елемент #admin-username не знайдено');
-    }
-
-    if (passwordInput) {
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                login();
-            }
-        });
-    } else {
-        console.warn('Елемент #admin-password не знайдено');
-    }
-
-    if (loginBtn) {
-        loginBtn.addEventListener('click', login);
-    } else {
-        console.warn('Елемент #login-btn не знайдено');
-    }
-
-    // Перевірка сесії
-    const storedSession = localStorage.getItem('adminSession');
-    const token = localStorage.getItem('adminToken');
-
-    if (storedSession && token) {
-        try {
-            session = JSON.parse(LZString.decompressFromUTF16(storedSession));
-            if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
-                checkAuth();
-            } else {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-            }
-        } catch (e) {
-            console.error('Помилка розшифровки сесії:', e);
-            localStorage.removeItem('adminToken');
-            session = { isActive: false, timestamp: 0 };
-            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-            showSection('admin-login');
-        }
-    } else {
-        session = { isActive: false, timestamp: 0 };
-        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-        showSection('admin-login');
-    }
-
-    // Ініціалізація редакторів
-    if (document.getElementById('about-editor')) {
-        initializeEditors();
-    }
-});
-
 
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);

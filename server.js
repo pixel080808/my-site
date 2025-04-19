@@ -643,7 +643,7 @@ ws.on('close', () => {
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
 
-app.get('/api/csrf-token', authenticateToken, csrfProtection, (req, res) => {
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
     try {
         const token = req.csrfToken();
         logger.info('Згенеровано CSRF-токен:', token);
