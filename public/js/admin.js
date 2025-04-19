@@ -1069,16 +1069,14 @@ async function login() {
         });
 
         console.log('Статус CSRF-запиту:', csrfResponse.status);
-        const csrfText = await csrfResponse.text();
-        console.log('Відповідь CSRF-запиту:', csrfText);
-
         if (!csrfResponse.ok) {
+            const csrfText = await csrfResponse.text();
             throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.status} ${csrfText}`);
         }
 
         let csrfData;
         try {
-            csrfData = JSON.parse(csrfText);
+            csrfData = await csrfResponse.json();
         } catch (jsonError) {
             throw new Error('Некоректна відповідь CSRF-запиту: не вдалося розпарсити JSON');
         }
@@ -1088,6 +1086,7 @@ async function login() {
             throw new Error('CSRF-токен не отримано від сервера');
         }
         console.log('Отримано CSRF-токен:', csrfToken);
+        localStorage.setItem('csrfToken', csrfToken); // Зберігаємо CSRF-токен
 
         // Відправляємо запит на логін
         console.log('Відправляємо запит на логін:', { username });
@@ -1102,10 +1101,8 @@ async function login() {
         });
 
         console.log('Статус відповіді:', response.status);
-        const responseText = await response.text();
-        console.log('Відповідь сервера:', responseText);
-
         if (!response.ok) {
+            const responseText = await response.text();
             try {
                 const errorData = JSON.parse(responseText);
                 showNotification(`Помилка входу: ${errorData.error || response.statusText}`);
@@ -1118,7 +1115,7 @@ async function login() {
 
         let data;
         try {
-            data = JSON.parse(responseText);
+            data = await response.json();
         } catch (jsonError) {
             throw new Error('Некоректна відповідь сервера: не вдалося розпарсити JSON');
         }
@@ -1135,6 +1132,13 @@ async function login() {
         showSection('admin-panel');
         await initializeData();
         connectAdminWebSocket();
+        // Перевіряємо, чи WebSocket підключився
+        setTimeout(() => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                console.warn('WebSocket не підключено після входу');
+                showNotification('Не вдалося підключити WebSocket. Деякі функції можуть бути недоступні.');
+            }
+        }, 3000);
         showNotification('Вхід виконано!');
         resetInactivityTimer();
     } catch (e) {
@@ -1153,36 +1157,70 @@ function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM завантажено, ініціалізація форми логіну...');
-    
+    // Ініціалізація елементів форми
     const usernameInput = document.getElementById('admin-username');
     const passwordInput = document.getElementById('admin-password');
     const loginBtn = document.getElementById('login-btn');
 
-    if (!usernameInput || !passwordInput || !loginBtn) {
-        console.error('Не знайдено елементи форми логіну:', {
-            usernameInput: !!usernameInput,
-            passwordInput: !!passwordInput,
-            loginBtn: !!loginBtn
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && passwordInput) {
+                passwordInput.focus();
+            }
         });
-        return;
+    } else {
+        console.warn('Елемент #admin-username не знайдено');
     }
 
-    usernameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            passwordInput.focus();
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    } else {
+        console.warn('Елемент #admin-password не знайдено');
+    }
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+    } else {
+        console.warn('Елемент #login-btn не знайдено');
+    }
+
+    // Перевірка сесії
+    const storedSession = localStorage.getItem('adminSession');
+    const token = localStorage.getItem('adminToken');
+
+    if (storedSession && token) {
+        try {
+            session = JSON.parse(LZString.decompressFromUTF16(storedSession));
+            if (session.isActive && (Date.now() - session.timestamp) < sessionTimeout) {
+                checkAuth();
+                connectAdminWebSocket(); // Додаємо виклик WebSocket
+            } else {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+            }
+        } catch (e) {
+            console.error('Помилка розшифровки сесії:', e);
+            localStorage.removeItem('adminToken');
+            session = { isActive: false, timestamp: 0 };
+            localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+            showSection('admin-login');
         }
-    });
+    } else {
+        session = { isActive: false, timestamp: 0 };
+        localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+        showSection('admin-login');
+    }
 
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-
-    loginBtn.addEventListener('click', login);
-
-    showSection('admin-login');
+    // Ініціалізація редакторів
+    if (document.getElementById('about-editor')) {
+        initializeEditors();
+    }
 });
 
 async function refreshToken(attempt = 1) {
@@ -2651,6 +2689,111 @@ function openAddSubcategoryModal() {
     resetInactivityTimer();
 }
 
+async function saveEditedSubcategory(categoryId, subcategoryId) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const nameInput = document.getElementById('subcategory-name');
+        const slugInput = document.getElementById('subcategory-slug');
+        const photoUrlInput = document.getElementById('subcategory-photo-url');
+        const photoFileInput = document.getElementById('subcategory-photo-file');
+        const visibleSelect = document.getElementById('subcategory-visible');
+
+        if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
+            console.error('Form elements missing:', {
+                nameInput: !!nameInput,
+                slugInput: !!slugInput,
+                photoUrlInput: !!photoUrlInput,
+                photoFileInput: !!photoFileInput,
+                visibleSelect: !!visibleSelect
+            });
+            showNotification('Елементи форми для редагування підкатегорії не знайдено.');
+            return;
+        }
+
+        const name = nameInput.value.trim() || '';
+        const slug = slugInput.value.trim() || (name ? name.toLowerCase().replace(/\s+/g, '-') : '');
+        const visible = visibleSelect.value === 'true';
+        let photo = photoUrlInput.value.trim();
+
+        // Перевірка формату slug
+        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+
+        // Обробка завантаження фото
+        if (photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
+            }
+            const data = await response.json();
+            photo = data.url;
+        }
+
+        const updatedSubcategory = {
+            name,
+            slug,
+            photo: photo || '',
+            visible
+        };
+
+        console.log('Data sent to server:', JSON.stringify(updatedSubcategory, null, 2));
+
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify(updatedSubcategory)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Server error details:', JSON.stringify(errorData, null, 2));
+            throw new Error(`Не вдалося оновити підкатегорію: ${errorData.error || response.statusText}`);
+        }
+
+        const updatedCategory = await response.json();
+        const catIndex = categories.findIndex(c => c._id === categoryId);
+        if (catIndex !== -1) {
+            categories[catIndex] = updatedCategory;
+        } else {
+            console.error('Категорія не знайдена в локальному масиві:', categoryId);
+        }
+
+        closeModal();
+        renderCategoriesAdmin();
+        showNotification('Підкатегорію оновлено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при оновленні підкатегорії:', err);
+        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
+    }
+}
+
 async function addSubcategory() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -2998,9 +3141,6 @@ async function deleteSubcategory(categoryId, subcatName) {
 
 
 async function moveSubcategoryUp(categoryId, index) {
-    const category = categories.find(c => c._id === categoryId);
-    if (!category || index <= 0) return;
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -3009,7 +3149,14 @@ async function moveSubcategoryUp(categoryId, index) {
             return;
         }
 
+        const category = categories.find(c => c._id === categoryId);
+        if (!category || index <= 0 || index >= category.subcategories.length) {
+            console.error('Невалідний індекс або категорія:', { categoryId, index });
+            return;
+        }
+
         const originalSubcategories = [...category.subcategories];
+        // Зміна порядку
         [category.subcategories[index - 1], category.subcategories[index]] = [category.subcategories[index], category.subcategories[index - 1]];
 
         const subcategoriesOrder = {
@@ -3032,13 +3179,18 @@ async function moveSubcategoryUp(categoryId, index) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Server error details:', JSON.stringify(errorData, null, 2));
-            category.subcategories = originalSubcategories;
+            category.subcategories = originalSubcategories; // Відкат змін
             throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
         }
 
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
-        categories[catIndex] = updatedCategory;
+        if (catIndex !== -1) {
+            categories[catIndex] = updatedCategory;
+        } else {
+            console.error('Категорія не знайдена в локальному масиві:', categoryId);
+        }
+
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій оновлено!');
         resetInactivityTimer();
@@ -3049,9 +3201,6 @@ async function moveSubcategoryUp(categoryId, index) {
 }
 
 async function moveSubcategoryDown(categoryId, index) {
-    const category = categories.find(c => c._id === categoryId);
-    if (!category || index >= category.subcategories.length - 1) return;
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -3060,7 +3209,14 @@ async function moveSubcategoryDown(categoryId, index) {
             return;
         }
 
+        const category = categories.find(c => c._id === categoryId);
+        if (!category || index < 0 || index >= category.subcategories.length - 1) {
+            console.error('Невалідний індекс або категорія:', { categoryId, index });
+            return;
+        }
+
         const originalSubcategories = [...category.subcategories];
+        // Зміна порядку
         [category.subcategories[index], category.subcategories[index + 1]] = [category.subcategories[index + 1], category.subcategories[index]];
 
         const subcategoriesOrder = {
@@ -3083,13 +3239,18 @@ async function moveSubcategoryDown(categoryId, index) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Server error details:', JSON.stringify(errorData, null, 2));
-            category.subcategories = originalSubcategories;
+            category.subcategories = originalSubcategories; // Відкат змін
             throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
         }
 
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
-        categories[catIndex] = updatedCategory;
+        if (catIndex !== -1) {
+            categories[catIndex] = updatedCategory;
+        } else {
+            console.error('Категорія не знайдена в локальному масиві:', categoryId);
+        }
+
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій оновлено!');
         resetInactivityTimer();
@@ -5441,6 +5602,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
@@ -5456,7 +5618,10 @@ function connectAdminWebSocket(attempt = 1) {
         return;
     }
 
-    if (socket && socket.readyState === WebSocket.OPEN) return;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket уже відкрито');
+        return;
+    }
 
     socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 
@@ -5467,11 +5632,19 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onclose = (event) => {
         console.log('WebSocket закрито:', event.code, event.reason);
+        if (event.code === 4001) { // Код 4001 = неавторизований
+            console.warn('Недійсний токен, очищення сесії');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminSession');
+            showSection('admin-login');
+            showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+            return;
+        }
         if (attempt <= 3) {
             setTimeout(() => {
                 console.log(`Повторна спроба підключення ${attempt}...`);
                 connectAdminWebSocket(attempt + 1);
-            }, 3000 * attempt);
+            }, 5000 * attempt); // Збільшено затримку: 5с, 10с, 15с
         } else {
             showNotification('Не вдалося підключитися до WebSocket після кількох спроб');
             showSection('admin-login');
@@ -5500,13 +5673,8 @@ function connectAdminWebSocket(attempt = 1) {
                     renderAdmin('products');
                 }
             } else if (type === 'categories') {
-                categories = data;
-                if (document.querySelector('#products.active')) {
-                    renderCategoriesAdmin();
-                }
-                if (document.querySelector('#site-editing.active')) {
-                    renderAdmin('categories');
-                }
+                categories = data; // Завжди оновлюємо categories
+                renderCategoriesAdmin(); // Завжди оновлюємо відображення категорій
             } else if (type === 'orders') {
                 orders = data;
                 if (document.querySelector('#orders.active')) {
@@ -5526,9 +5694,17 @@ function connectAdminWebSocket(attempt = 1) {
             } else if (type === 'filters') {
                 filters = data;
                 renderFilters();
+            } else if (type === 'error') {
+                console.error('WebSocket помилка від сервера:', data);
+                showNotification('Помилка WebSocket: ' + data.error);
+                if (data.error.includes('неавторизований')) {
+                    localStorage.removeItem('adminToken');
+                    localStorage.removeItem('adminSession');
+                    showSection('admin-login');
+                }
             }
         } catch (e) {
-            console.error('Помилка WebSocket:', e);
+            console.error('Помилка обробки WebSocket-повідомлення:', e);
             showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
         }
     };
