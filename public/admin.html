@@ -180,18 +180,16 @@
             justify-content: center;
             align-items: center;
         }
-.modal-content {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 500px;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    position: relative;
-    /* Додаємо внутрішній відступ для прокрутки */
-    padding-bottom: 40px;
-}
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
         .modal-actions {
             margin-top: 20px;
             display: flex;
@@ -474,7 +472,7 @@
 }
 
 .import-btn {
-    background: #2ecc71;
+    background: #27ae60; /* Зелений колір для кнопки імпорту */
     padding: 10px 20px;
     color: #fff;
     border: none;
@@ -485,7 +483,7 @@
 }
 
 .import-btn:hover {
-    background: #27ae60;
+    background: #219653; /* Темніший зелений при наведенні */
 }
 
 /* Модальне вікно для зміни розмірів */
@@ -541,44 +539,37 @@
     box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
 }
 
-/* Замінити поточні стилі для undo/redo */
-.ql-toolbar .ql-undo,
-.ql-toolbar .ql-redo {
+/* Стилі для кнопок "Назад" і "Вперед" */
+.ql-undo,
+.ql-redo {
     background: none;
     border: none;
-    padding: 8px;
+    padding: 0 8px;
     cursor: pointer;
-    color: #333;
+    color: #000; /* Чорний колір для видимості */
     font-size: 16px;
     line-height: 1;
-    transition: background 0.3s ease;
 }
 
-.ql-toolbar .ql-undo::before,
-.ql-toolbar .ql-redo::before {
+.ql-undo::before,
+.ql-redo::before {
     font-family: 'Arial', sans-serif;
     display: inline-block;
     width: 16px;
     height: 16px;
 }
 
-.ql-toolbar .ql-undo::before {
-    content: '↶';
+.ql-undo::before {
+    content: '↶'; /* Символ для "Назад" */
 }
 
-.ql-toolbar .ql-redo::before {
-    content: '↷';
+.ql-redo::before {
+    content: '↷'; /* Символ для "Вперед" */
 }
 
-.ql-toolbar .ql-undo:hover,
-.ql-toolbar .ql-redo:hover {
-    background: #e0e0e0;
-}
-
-.ql-toolbar .ql-undo[disabled],
-.ql-toolbar .ql-redo[disabled] {
-    color: #ccc;
-    cursor: not-allowed;
+.ql-undo:hover,
+.ql-redo:hover {
+    background: #f0f0f0;
 }
 
 @media (max-width: 768px) {
