@@ -344,7 +344,7 @@ filters: Joi.array().items(
     Joi.object({
         name: Joi.string().required(),
         label: Joi.string().required(),
-        options: Joi.array().items(Joi.string().min(1)).default([]) // Прибираємо type
+        options: Joi.array().items(Joi.string().min(1)).default([])
     })
 ).default([]),
     orderFields: Joi.array().items(

@@ -3523,13 +3523,13 @@ async function loadFilters() {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFilters(); // Замінено на renderFilters
+            renderFilters();
             return;
         }
 
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetch(`${baseUrl}/api/filters`, {
+        const response = await fetch(`${baseUrl}/api/settings`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -3547,15 +3547,16 @@ async function loadFilters() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити фільтри: ${text}`);
+            throw new Error(`Не вдалося завантажити налаштування: ${text}`);
         }
 
-        filters = await response.json();
-        renderFilters(); // Замінено на renderFilters
+        const data = await response.json();
+        filters = data.filters || [];
+        renderFilters();
     } catch (err) {
         console.error('Помилка завантаження фільтрів:', err);
         showNotification('Помилка завантаження фільтрів: ' + err.message);
-        renderFilters(); // Рендеримо локальні дані при помилці
+        renderFilters();
     }
 }
 
