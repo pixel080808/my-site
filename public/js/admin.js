@@ -114,22 +114,7 @@ async function loadCategories() {
         });
 
         if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('csrfToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити категорії: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося завантажити категорії: ${response.status} ${text}`);
-            }
+            // ... обробка помилок ...
         }
 
         const data = await response.json();
@@ -138,7 +123,10 @@ async function loadCategories() {
             categories = [];
             showNotification('Отримано некоректні дані категорій');
         } else {
-            categories = data;
+            categories = data.map(cat => ({
+                ...cat,
+                subcategories: cat.subcategories || [] // Додаємо порожній масив, якщо subcategories відсутнє
+            }));
             console.log('Категорії завантажено:', categories);
             updateSubcategories();
             renderCategoriesAdmin();
@@ -353,7 +341,7 @@ async function loadOrders() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити замовлення: ${text}`);
+            throw new Error(`Не вдалося завантажити замовлення: ${response.status} ${text}`);
         }
 
         orders = await response.json();
@@ -361,7 +349,7 @@ async function loadOrders() {
         renderAdmin('orders');
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження замовлень: ' + e.message);
         orders = [];
         renderAdmin('orders');
     }
@@ -395,14 +383,14 @@ async function loadSlides() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити слайди: ${text}`);
+            throw new Error(`Не вдалося завантажити слайди: ${response.status} ${text}`);
         }
 
         slides = await response.json();
         renderSlidesAdmin();
     } catch (e) {
         console.error('Помилка завантаження слайдів:', e);
-        showNotification('Помилка: ' + e.message);
+        showNotification('Помилка завантаження слайдів: ' + e.message);
         slides = [];
         renderSlidesAdmin();
     }
@@ -1057,12 +1045,13 @@ function showSection(sectionId) {
     console.log('Показуємо секцію:', sectionId);
     const sections = document.querySelectorAll('.section');
     sections.forEach(el => el.classList.remove('active'));
-    
+
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
         if (sectionId === 'admin-panel') {
-            renderAdmin();
+            // Відкласти рендеринг до завершення завантаження DOM
+            setTimeout(() => renderAdmin(), 0);
         }
     } else {
         console.error('Секція не знайдена:', sectionId);
@@ -1172,13 +1161,14 @@ async function login() {
 
 function logout() {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('csrfToken'); // Очищаємо CSRF-токен
+    localStorage.removeItem('csrfToken');
     session = { isActive: false, timestamp: 0 };
     localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close(1000, 'User logged out');
     }
-    socket = null; // Очищаємо socket
+    socket = null;
+    clearTimeout(inactivityTimer);
     showSection('admin-login');
     showNotification('Ви вийшли з системи');
 }
@@ -1893,46 +1883,29 @@ function renderAdmin(section = activeTab) {
 }
 
 function renderCategoriesAdmin() {
-    const categoryList = document.getElementById('category-list-admin');
-    if (!categoryList) {
-        console.error('Елемент #category-list-admin не знайдено');
-        return;
-    }
-
-    categoryList.innerHTML = categories.map((category, index) => `
-        <div class="category-item">
-            <div class="category-order-controls">
-                <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-            </div>
-            ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
-            <div class="category-details">
-                <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
-                <div class="category-actions">
-                    <button class="edit-btn" data-id="${category._id}">Редагувати</button>
-                    <button class="delete-btn" data-id="${category._id}">Видалити</button>
+    const catList = document.getElementById('cat-list');
+    if (catList) {
+        catList.innerHTML = categories.map((cat, index) => `
+            <div class="category-item">
+                ${cat.name} (Порядок: ${cat.order})
+                <button class="move-up" onclick="moveCategoryUp(${index})">↑</button>
+                <button class="move-down" onclick="moveCategoryDown(${index})">↓</button>
+                <button onclick="openEditCategoryModal('${cat._id}')">Редагувати</button>
+                <button onclick="deleteCategory('${cat._id}')">Видалити</button>
+                <div class="subcategories">
+                    ${cat.subcategories?.map(sub => `
+                        <div>
+                            ${sub.name} (Порядок: ${sub.order})
+                            <button onclick="openEditSubcategoryModal('${cat._id}', '${sub._id}')">Редагувати</button>
+                            <button onclick="deleteSubcategory('${cat._id}', '${sub._id}')">Видалити</button>
+                        </div>
+                    `).join('') || ''}
                 </div>
             </div>
-            <div class="subcategories">
-                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
-                    <div class="subcategory-item">
-                        <div class="subcategory-order-controls">
-                            <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
-                        </div>
-                        ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
-                        <div class="subcategory-details">
-                            ${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
-                            <div class="subcategory-actions">
-                                <button class="sub-edit" data-cat-id="${category._id}" data-sub-id="${sub._id}">Редагувати</button>
-                                <button class="sub-delete" data-cat-id="${category._id}" data-sub-id="${sub._id}">Видалити</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('') : '<p>Підкатегорії відсутні</p>'}
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
+    resetInactivityTimer();
+}
 
     // Видаляємо попередні слухачі подій
     const newCategoryList = categoryList.cloneNode(true);
@@ -2601,7 +2574,7 @@ async function saveCategoryEdit(categoryId) {
 }
 
 async function moveCategoryUp(index) {
-    if (index === 0) return;
+    if (index <= 0) return;
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2610,40 +2583,30 @@ async function moveCategoryUp(index) {
             return;
         }
 
-        // Локально змінюємо порядок
-        const [category] = categories.splice(index, 1);
-        categories.splice(index - 1, 0, category);
-
-        // Оновлюємо поле order для всіх категорій
-        const updatedCategories = categories.map((cat, i) => ({
-            _id: cat._id,
-            name: cat.name,
-            slug: cat.slug,
-            order: i,
-            subcategories: cat.subcategories.map(sub => ({
-                _id: sub._id,
-                name: sub.name,
-                slug: sub.slug,
-                order: sub.order
-            }))
-        }));
+        const categoriesCopy = [...categories];
+        [categoriesCopy[index], categoriesCopy[index - 1]] = [categoriesCopy[index - 1], categoriesCopy[index]];
+        categoriesCopy.forEach((cat, i) => {
+            cat.order = i;
+            if (!cat.name) {
+                throw new Error(`Категорія з індексом ${i} не має поля name`);
+            }
+        });
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
-            body: JSON.stringify({ categories: updatedCategories })
+            body: JSON.stringify({ categories: categoriesCopy })
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити порядок категорій: ' + await response.text());
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити порядок категорій: ${JSON.stringify(errorData)}`);
         }
 
-        await loadCategories(); // Перезавантажуємо категорії після оновлення
-        showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
+        categories = categoriesCopy;
+        renderCategoriesAdmin();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
-        await loadCategories(); // Відновлюємо категорії у разі помилки
+        showNotification('Помилка зміни порядку категорій: ' + err.message);
     }
 }
 
@@ -2684,13 +2647,11 @@ async function moveCategoryDown(index) {
             throw new Error('Не вдалося оновити порядок категорій: ' + await response.text());
         }
 
-        await loadCategories();
-        showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
+        categories = categoriesCopy;
+        renderCategoriesAdmin();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
-        await loadCategories();
+        showNotification('Помилка зміни порядку категорій: ' + err.message);
     }
 }
 
@@ -2913,27 +2874,38 @@ async function addSubcategory() {
     }
 }
 
-function openEditSubcategoryModal(categoryIndex, subIndex) {
-    const category = categories[categoryIndex];
-    const subcategory = category.subcategories[subIndex];
-    if (subcategory) {
-        const modal = document.getElementById('modal');
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Редагувати підкатегорію</h3>
-                <input type="text" id="subcategory-name" value="${subcategory.name.replace(/"/g, '&quot;')}"><br/>
-                <label for="subcategory-name">Назва підкатегорії</label>
-                <input type="text" id="subcategory-slug" value="${subcategory.slug.replace(/"/g, '&quot;')}"><br/>
-                <label for="subcategory-slug">Шлях підкатегорії</label>
-                <div class="modal-actions">
-                    <button onclick="saveEditedSubcategory('${category._id}', ${subIndex})">Зберегти</button>
-                    <button onclick="closeModal()">Скасувати</button>
-                </div>
-            </div>
-        `;
-        modal.classList.add('active');
-        resetInactivityTimer();
+function openEditSubcategoryModal(categoryId, subcategoryId) {
+    const category = categories.find(c => c._id === categoryId);
+    if (!category) {
+        showNotification('Категорію не знайдено!');
+        console.error(`Категорія з ID ${categoryId} не знайдена`);
+        return;
     }
+
+    const subcategory = category.subcategories?.find(s => s._id === subcategoryId);
+    if (!subcategory) {
+        showNotification('Підкатегорію не знайдено!');
+        console.error(`Підкатегорія з ID ${subcategoryId} не знайдена в категорії ${categoryId}`);
+        return;
+    }
+
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати підкатегорію</h3>
+            <input type="text" id="subcategory-name" value="${subcategory.name}"><br/>
+            <label for="subcategory-name">Назва підкатегорії</label>
+            <input type="text" id="subcategory-slug" value="${subcategory.slug}"><br/>
+            <label for="subcategory-slug">Шлях підкатегорії</label>
+            <div class="modal-actions">
+                <button onclick="saveSubcategory('${categoryId}', '${subcategoryId}')">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    console.log('Модальне вікно для редагування підкатегорії відкрито:', categoryId, subcategoryId);
+    resetInactivityTimer();
 }
 
 async function saveSubcategoryEdit(categoryId, originalSubcatName) {
@@ -5535,6 +5507,10 @@ document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
 function connectAdminWebSocket(attempt = 1) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket уже відкрито, пропускаємо підключення');
+        return;
+    }
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
         : 'wss://mebli.onrender.com';
