@@ -353,15 +353,19 @@ async function loadOrders() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити замовлення: ${text}`);
+            throw new Error(`Не вдалося завантажити замовлення: ${response.status} ${text}`);
         }
 
         orders = await response.json();
+        if (!Array.isArray(orders)) {
+            console.error('Отримано некоректні дані замовлень:', orders);
+            orders = [];
+        }
         sortOrders('date-desc');
         renderAdmin('orders');
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження замовлень: ' + e.message);
         orders = [];
         renderAdmin('orders');
     }
@@ -395,14 +399,18 @@ async function loadSlides() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити слайди: ${text}`);
+            throw new Error(`Не вдалося завантажити слайди: ${response.status} ${text}`);
         }
 
         slides = await response.json();
+        if (!Array.isArray(slides)) {
+            console.error('Отримано некоректні дані слайдів:', slides);
+            slides = [];
+        }
         renderSlidesAdmin();
     } catch (e) {
         console.error('Помилка завантаження слайдів:', e);
-        showNotification('Помилка: ' + e.message);
+        showNotification('Помилка завантаження слайдів: ' + e.message);
         slides = [];
         renderSlidesAdmin();
     }
@@ -1749,90 +1757,90 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #social-list не знайдено');
         }
 
-        // Рендеринг категорій і підкатегорій
-        const catList = document.getElementById('cat-list');
-        if (catList) {
-            catList.innerHTML = categories && Array.isArray(categories)
-                ? categories.map((c, index) => `
-                    <div class="category-item">
-                        <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                        <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-                        ${c.name} (${c.slug}) 
-                        <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
-                    </div>
-                    <div class="subcat-list">
-                        ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
-                            <p>
-                                <button class="move-btn sub-move-up" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                                <button class="move-btn sub-move-down" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
-                                ${sub.name} (${sub.slug}) 
-                                <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-name="${sub.name}">Редагувати</button> 
-                                <button class="delete-btn sub-delete" data-cat-id="${c._id}" data-sub-name="${sub.name}">Видалити</button>
-                            </p>
-                        `).join('')}
-                    </div>
-                `).join('')
-                : '';
-            // Додаємо делегування подій (залишаємо як є, оскільки воно працює)
-            catList.addEventListener('click', (event) => {
-                const target = event.target;
-                if (target.classList.contains('move-up')) {
-                    const index = parseInt(target.dataset.index);
-                    moveCategoryUp(index);
-                } else if (target.classList.contains('move-down')) {
-                    const index = parseInt(target.dataset.index);
-                    moveCategoryDown(index);
-                } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit')) {
-                    const id = target.dataset.id;
-                    openEditCategoryModal(id);
-                } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete')) {
-                    const id = target.dataset.id;
-                    deleteCategory(id);
-                } else if (target.classList.contains('sub-move-up')) {
-                    const catId = target.dataset.catId;
-                    const subIndex = parseInt(target.dataset.subIndex);
-                    moveSubcategoryUp(catId, subIndex);
-                } else if (target.classList.contains('sub-move-down')) {
-                    const catId = target.dataset.catId;
-                    const subIndex = parseInt(target.dataset.subIndex);
-                    moveSubcategoryDown(catId, subIndex);
-                } else if (target.classList.contains('sub-edit')) {
-                    const catId = target.dataset.catId;
-                    const subName = target.dataset.subName;
-                    openEditSubcategoryModal(catId, subName);
-                } else if (target.classList.contains('sub-delete')) {
-                    const catId = target.dataset.catId;
-                    const subName = target.dataset.subName;
-                    deleteSubcategory(catId, subName);
-                }
-            }, { once: true }); // Додаємо { once: true }, щоб уникнути повторного додавання слухача
-        } else {
-            console.warn('Елемент #cat-list не знайдено');
+// Рендеринг категорій і підкатегорій
+const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
+if (catList) {
+    catList.innerHTML = categories && Array.isArray(categories)
+        ? categories.map((c, index) => `
+            <div class="category-item">
+                <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
+                ${c.name} (${c.slug}) 
+                <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
+                <button class="delete-btn" data-id="${c._id}">Видалити</button>
+            </div>
+            <div class="subcat-list">
+                ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
+                    <p>
+                        <button class="move-btn sub-move-up" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="move-btn sub-move-down" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
+                        ${sub.name} (${sub.slug}) 
+                        <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-name="${sub.name}">Редагувати</button> 
+                        <button class="delete-btn sub-delete" data-cat-id="${c._id}" data-sub-name="${sub.name}">Видалити</button>
+                    </p>
+                `).join('')}
+            </div>
+        `).join('')
+        : '';
+    // Додаємо делегування подій
+    catList.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.classList.contains('move-up')) {
+            const index = parseInt(target.dataset.index);
+            moveCategoryUp(index);
+        } else if (target.classList.contains('move-down')) {
+            const index = parseInt(target.dataset.index);
+            moveCategoryDown(index);
+        } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit')) {
+            const id = target.dataset.id;
+            openEditCategoryModal(id);
+        } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete')) {
+            const id = target.dataset.id;
+            deleteCategory(id);
+        } else if (target.classList.contains('sub-move-up')) {
+            const catId = target.dataset.catId;
+            const subIndex = parseInt(target.dataset.subIndex);
+            moveSubcategoryUp(catId, subIndex);
+        } else if (target.classList.contains('sub-move-down')) {
+            const catId = target.dataset.catId;
+            const subIndex = parseInt(target.dataset.subIndex);
+            moveSubcategoryDown(catId, subIndex);
+        } else if (target.classList.contains('sub-edit')) {
+            const catId = target.dataset.catId;
+            const subName = target.dataset.subName;
+            openEditSubcategoryModal(catId, subName);
+        } else if (target.classList.contains('sub-delete')) {
+            const catId = target.dataset.catId;
+            const subName = target.dataset.subName;
+            deleteSubcategory(catId, subName);
         }
+    }, { once: true });
+} else {
+    console.warn('Елемент #category-list-admin не знайдено');
+}
 
-        // Рендеринг вкладок
-        if (section === 'products') {
-            const productList = document.getElementById('product-list');
-            if (productList) {
-                const start = (currentPage - 1) * productsPerPage;
-                const end = start + productsPerPage;
-                productList.innerHTML = products && Array.isArray(products)
-                    ? products.slice(start, end).map(p => `
-                        <div class="product-item">
-                            <span>#${p.id} ${p.name} (${p.brand || 'Без бренду'})</span>
-                            <span>${p.price || (p.sizes ? Math.min(...p.sizes.map(s => s.price)) : 'N/A')} грн</span>
-                            ${renderCountdown(p)}
-                            <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
-                            <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                            <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
-                        </div>
-                    `).join('')
-                    : '';
-                renderPagination(products.length, productsPerPage, 'product-pagination', currentPage);
-            } else {
-                console.warn('Елемент #product-list не знайдено');
-            }
+// Рендеринг вкладок
+if (section === 'products') {
+    const productList = document.getElementById('product-list-admin'); // Змінено з product-list
+    if (productList) {
+        const start = (currentPage - 1) * productsPerPage;
+        const end = start + productsPerPage;
+        productList.innerHTML = products && Array.isArray(products)
+            ? products.slice(start, end).map(p => `
+                <div class="product-item">
+                    <span>#${p.id} ${p.name} (${p.brand || 'Без бренду'})</span>
+                    <span>${p.price || (p.sizes ? Math.min(...p.sizes.map(s => s.price)) : 'N/A')} грн</span>
+                    ${renderCountdown(p)}
+                    <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
+                    <button onclick="deleteProduct('${p._id}')">Видалити</button>
+                    <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                </div>
+            `).join('')
+            : '';
+        renderPagination(products.length, productsPerPage, 'pagination', currentPage);
+    } else {
+        console.warn('Елемент #product-list-admin не знайдено');
+    }
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
@@ -2079,20 +2087,25 @@ function renderSlidesAdmin() {
     }
     slidesList.innerHTML = slides.map((s, index) => `
         <div class="slide">
-            <img src="${s.image}" alt="Слайд ${index + 1}" width="100">
+            <img src="${s.photo || s.image}" alt="Слайд ${index + 1}" width="100">
             <button onclick="deleteSlide(${index})">Видалити</button>
         </div>
     `).join('');
 
-    const addSlideBtn = document.getElementById('add-slide-btn');
-    if (addSlideBtn) {
-        // Видаляємо попередні слухачі, щоб уникнути дублювання
-        addSlideBtn.removeEventListener('click', openNewSlideModal);
-        addSlideBtn.addEventListener('click', openNewSlideModal);
+    const slideForm = document.getElementById('slide-form');
+    if (slideForm) {
+        // Видаляємо попередні слухачі
+        slideForm.removeEventListener('submit', handleSlideFormSubmit);
+        slideForm.addEventListener('submit', handleSlideFormSubmit);
     } else {
-        console.warn('Елемент #add-slide-btn не знайдено');
+        console.warn('Елемент #slide-form не знайдено');
     }
     resetInactivityTimer();
+}
+
+function handleSlideFormSubmit(e) {
+    e.preventDefault();
+    addSlide();
 }
 
     function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
@@ -3564,13 +3577,19 @@ async function addFilter() {
             return;
         }
 
+        const siteEditingTab = document.getElementById('site-editing');
+        if (!siteEditingTab || !siteEditingTab.classList.contains('active')) {
+            showNotification('Перейдіть до вкладки "Редагування сайту", щоб додати фільтр.');
+            return;
+        }
+
         const labelInput = document.getElementById('filter-label');
         const nameInput = document.getElementById('filter-name');
         const typeSelect = document.getElementById('filter-type');
         const optionsInput = document.getElementById('filter-options');
 
         if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
-            showNotification('Елементи форми для фільтра не знайдено');
+            showNotification('Елементи форми для фільтра не знайдено. Перевірте вкладку "Редагування сайту".');
             return;
         }
 
@@ -3878,23 +3897,23 @@ async function addSlide() {
             return;
         }
 
-        const photoUrlInput = document.getElementById('slide-photo-url');
-        const photoFileInput = document.getElementById('slide-photo-file');
+        const photoUrlInput = document.getElementById('slide-img-url');
+        const photoFileInput = document.getElementById('slide-img-file');
         const linkInput = document.getElementById('slide-link');
-        const positionInput = document.getElementById('slide-position');
-        const activeCheckbox = document.getElementById('slide-active');
+        const positionInput = document.getElementById('slide-order');
+        const activeCheckbox = document.getElementById('slide-toggle'); // Якщо є чекбокс активності
 
-        if (!photoUrlInput || !photoFileInput || !positionInput || !activeCheckbox) {
+        if (!photoUrlInput || !photoFileInput || !positionInput) {
             showNotification('Елементи форми для слайду не знайдено');
             return;
         }
 
-        let photo = photoUrlInput.value.trim();
+        let image = photoUrlInput.value.trim(); // Змінено з photo на image
         const link = linkInput ? linkInput.value.trim() : '';
         const position = parseInt(positionInput.value) || slides.length + 1;
-        const active = activeCheckbox.checked;
+        const active = activeCheckbox ? activeCheckbox.checked : true;
 
-        if (!photo && !photoFileInput.files[0]) {
+        if (!image && !photoFileInput.files[0]) {
             showNotification('Виберіть фото або вкажіть URL!');
             return;
         }
@@ -3913,12 +3932,12 @@ async function addSlide() {
                 body: formData
             });
             const data = await response.json();
-            photo = data.url;
+            image = data.url; // Змінено з photo на image
         }
 
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify({ photo, link, position, active }) // Змінено img на photo
+            body: JSON.stringify({ image, link, position, active }) // Змінено photo на image
         });
 
         const newSlide = await response.json();
@@ -3928,7 +3947,7 @@ async function addSlide() {
         photoUrlInput.value = '';
         if (linkInput) linkInput.value = '';
         positionInput.value = '';
-        activeCheckbox.checked = true;
+        if (activeCheckbox) activeCheckbox.checked = true;
         photoFileInput.value = '';
         resetInactivityTimer();
     } catch (err) {
