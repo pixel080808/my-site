@@ -61,13 +61,11 @@ const settingsSchema = new mongoose.Schema({
     filters: [{
         name: { type: String, required: true },
         label: { type: String, required: true },
-        type: { type: String, required: true },
         options: [{ type: String, minLength: 1 }]
     }],
     orderFields: [{
         name: { type: String, required: true },
         label: { type: String, required: true },
-        type: { type: String, required: true },
         options: [{ type: String, minLength: 1 }]
     }],
     slideWidth: { type: Number, default: 0 },

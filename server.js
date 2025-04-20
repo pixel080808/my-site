@@ -340,14 +340,13 @@ const settingsSchemaValidation = Joi.object({
     categoryHeight: Joi.number().min(0).allow(null),
     productWidth: Joi.number().min(0).allow(null),
     productHeight: Joi.number().min(0).allow(null),
-    filters: Joi.array().items(
-        Joi.object({
-            name: Joi.string().required(),
-            label: Joi.string().required(),
-            type: Joi.string().required(),
-            options: Joi.array().items(Joi.string().min(1)).default([])
-        })
-    ).default([]),
+filters: Joi.array().items(
+    Joi.object({
+        name: Joi.string().required(),
+        label: Joi.string().required(),
+        options: Joi.array().items(Joi.string().min(1)).default([]) // Прибираємо type
+    })
+).default([]),
     orderFields: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
