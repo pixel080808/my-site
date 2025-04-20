@@ -3598,12 +3598,42 @@ async function addFilter() {
         const type = typeSelect.value;
         const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
 
-        if (!label || !name || !type || options.length === 0) {
+        // Validation checks
+        if (!label || !name || !type) {
             showNotification('Заповніть усі поля фільтра!');
             return;
         }
 
-        filters.push({ label, name, type, options });
+        // Check for duplicate filter name
+        if (filters.some(f => f.name === name)) {
+            showNotification('Фільтр з такою назвою вже існує! Виберіть іншу назву.');
+            return;
+        }
+
+        // Validate options based on filter type
+        if (type === 'select' && options.length === 0) {
+            showNotification('Для типу "Вибір" потрібно вказати хоча б одну опцію!');
+            return;
+        }
+
+        if (type === 'text' && options.length > 0) {
+            showNotification('Для типу "Текст" опції не потрібні!');
+            return;
+        }
+
+        if (type === 'range') {
+            // Ensure options are valid ranges (e.g., "0-2000", "2000-5000")
+            const rangePattern = /^\d+-\d+$/;
+            if (!options.every(opt => rangePattern.test(opt))) {
+                showNotification('Для типу "Діапазон" опції мають бути у форматі "число-число" (наприклад, 0-2000)!');
+                return;
+            }
+        }
+
+        // If type is 'text', set options to an empty array
+        const finalOptions = type === 'text' ? [] : options;
+
+        filters.push({ label, name, type, options: finalOptions });
 
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
@@ -3613,7 +3643,8 @@ async function addFilter() {
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити фільтри');
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити фільтри: ${errorData.error}`);
         }
 
         renderFilters();
@@ -3629,52 +3660,99 @@ async function addFilter() {
     }
 }
 
-    function editFilter(name) {
-        const filter = filters.find(f => f.name === name);
-        if (filter) {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Редагувати фільтр</h3>
-                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
-                    <label for="edit-filter-name">Назва фільтру</label>
-                    <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
-                    <label for="edit-filter-label">Відображувана назва</label>
-                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
-                    <label for="edit-filter-options">Опції (через кому)</label>
-                    <div class="modal-actions">
-                        <button id="save-filter-btn">Зберегти</button>
-                        <button id="cancel-filter-btn">Скасувати</button>
-                    </div>
+function editFilter(name) {
+    const filter = filters.find(f => f.name === name);
+    if (filter) {
+        const modal = document.getElementById('modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Редагувати фільтр</h3>
+                <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
+                <label for="edit-filter-name">Назва фільтру</label>
+                <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
+                <label for="edit-filter-label">Відображувана назва</label>
+                <select id="edit-filter-type">
+                    <option value="select" ${filter.type === 'select' ? 'selected' : ''}>Вибір</option>
+                    <option value="text" ${filter.type === 'text' ? 'selected' : ''}>Текст</option>
+                    <option value="range" ${filter.type === 'range' ? 'selected' : ''}>Діапазон</option>
+                </select><br/>
+                <label for="edit-filter-type">Тип фільтру</label>
+                <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
+                <label for="edit-filter-options">Опції (через кому)</label>
+                <div class="modal-actions">
+                    <button id="save-filter-btn">Зберегти</button>
+                    <button id="cancel-filter-btn">Скасувати</button>
                 </div>
-            `;
-            modal.classList.add('active');
-            document.getElementById('save-filter-btn').addEventListener('click', () => saveFilterEdit(name));
-            document.getElementById('cancel-filter-btn').addEventListener('click', closeModal);
-            resetInactivityTimer();
-        }
+            </div>
+        `;
+        modal.classList.add('active');
+        document.getElementById('save-filter-btn').addEventListener('click', () => saveFilterEdit(name));
+        document.getElementById('cancel-filter-btn').addEventListener('click', closeModal);
+        resetInactivityTimer();
     }
+}
 
-    function saveFilterEdit(name) {
-        const filter = filters.find(f => f.name === name);
-        if (filter) {
-            const newLabel = document.getElementById('edit-filter-label').value;
-            const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
+async function saveFilterEdit(name) {
+    const filter = filters.find(f => f.name === name);
+    if (filter) {
+        const newLabel = document.getElementById('edit-filter-label').value;
+        const newType = document.getElementById('edit-filter-type').value;
+        const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
 
-            if (newLabel && newOptions.length > 0) {
-                filter.label = newLabel;
-                filter.options = newOptions;
-                localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-                closeModal();
-                renderAdmin();
-                showNotification('Фільтр відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } else {
-                alert('Введіть підпис та опції!');
+        if (!newLabel) {
+            alert('Введіть відображувану назву!');
+            return;
+        }
+
+        // Validate options based on filter type
+        if (newType === 'select' && newOptions.length === 0) {
+            alert('Для типу "Вибір" потрібно вказати хоча б одну опцію!');
+            return;
+        }
+
+        if (newType === 'text' && newOptions.length > 0) {
+            alert('Для типу "Текст" опції не потрібні!');
+            return;
+        }
+
+        if (newType === 'range') {
+            const rangePattern = /^\d+-\d+$/;
+            if (!newOptions.every(opt => rangePattern.test(opt))) {
+                alert('Для типу "Діапазон" опції мають бути у форматі "число-число" (наприклад, 0-2000)!');
+                return;
             }
         }
+
+        const finalOptions = newType === 'text' ? [] : newOptions;
+
+        filter.label = newLabel;
+        filter.type = newType;
+        filter.options = finalOptions;
+
+        try {
+            const token = localStorage.getItem('adminToken');
+            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+                method: 'PUT',
+                body: JSON.stringify({ ...settings, filters })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Не вдалося оновити фільтри: ${errorData.error}`);
+            }
+
+            closeModal();
+            renderFilters();
+            showNotification('Фільтр відредаговано!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка оновлення фільтру:', err);
+            showNotification('Помилка: ' + err.message);
+        }
     }
+}
 
     function deleteFilter(name) {
         if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
