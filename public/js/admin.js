@@ -513,36 +513,27 @@ function renderFilters() {
     resetInactivityTimer();
 }
 
-async function deleteFilter(index) {
+async function deleteFilter(name) {
     if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
         try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
-            filters.splice(index, 1);
+            filters = filters.filter(f => f.name !== name);
 
             const token = localStorage.getItem('adminToken');
             const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetch(`${baseUrl}/api/settings`, {
+            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
                 body: JSON.stringify({ ...settings, filters })
             });
 
             if (!response.ok) {
-                throw new Error('Не вдалося оновити фільтри');
+                const errorData = await response.json();
+                throw new Error(`Не вдалося оновити фільтри: ${errorData.error}`);
             }
 
             renderFilters();
             showNotification('Фільтр видалено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
         } catch (err) {
             console.error('Помилка видалення фільтру:', err);
             showNotification('Помилка: ' + err.message);
@@ -3585,22 +3576,20 @@ async function addFilter() {
 
         const labelInput = document.getElementById('filter-label');
         const nameInput = document.getElementById('filter-name');
-        const typeSelect = document.getElementById('filter-type');
         const optionsInput = document.getElementById('filter-options');
 
-        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
+        if (!labelInput || !nameInput || !optionsInput) {
             showNotification('Елементи форми для фільтра не знайдено. Перевірте вкладку "Редагування сайту".');
             return;
         }
 
         const label = labelInput.value.trim();
         const name = nameInput.value.trim();
-        const type = typeSelect.value;
         const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
 
         // Validation checks
-        if (!label || !name || !type) {
-            showNotification('Заповніть усі поля фільтра!');
+        if (!label || !name) {
+            showNotification('Заповніть поля "Відображувана назва" та "Назва фільтру"!');
             return;
         }
 
@@ -3610,30 +3599,8 @@ async function addFilter() {
             return;
         }
 
-        // Validate options based on filter type
-        if (type === 'select' && options.length === 0) {
-            showNotification('Для типу "Вибір" потрібно вказати хоча б одну опцію!');
-            return;
-        }
-
-        if (type === 'text' && options.length > 0) {
-            showNotification('Для типу "Текст" опції не потрібні!');
-            return;
-        }
-
-        if (type === 'range') {
-            // Ensure options are valid ranges (e.g., "0-2000", "2000-5000")
-            const rangePattern = /^\d+-\d+$/;
-            if (!options.every(opt => rangePattern.test(opt))) {
-                showNotification('Для типу "Діапазон" опції мають бути у форматі "число-число" (наприклад, 0-2000)!');
-                return;
-            }
-        }
-
-        // If type is 'text', set options to an empty array
-        const finalOptions = type === 'text' ? [] : options;
-
-        filters.push({ label, name, type, options: finalOptions });
+        // Додаємо фільтр без поля type
+        filters.push({ label, name, options });
 
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
@@ -3651,7 +3618,6 @@ async function addFilter() {
         showNotification('Фільтр додано!');
         labelInput.value = '';
         nameInput.value = '';
-        typeSelect.value = 'select';
         optionsInput.value = '';
         resetInactivityTimer();
     } catch (err) {
@@ -3671,12 +3637,6 @@ function editFilter(name) {
                 <label for="edit-filter-name">Назва фільтру</label>
                 <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
                 <label for="edit-filter-label">Відображувана назва</label>
-                <select id="edit-filter-type">
-                    <option value="select" ${filter.type === 'select' ? 'selected' : ''}>Вибір</option>
-                    <option value="text" ${filter.type === 'text' ? 'selected' : ''}>Текст</option>
-                    <option value="range" ${filter.type === 'range' ? 'selected' : ''}>Діапазон</option>
-                </select><br/>
-                <label for="edit-filter-type">Тип фільтру</label>
                 <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
                 <label for="edit-filter-options">Опції (через кому)</label>
                 <div class="modal-actions">
@@ -3695,8 +3655,7 @@ function editFilter(name) {
 async function saveFilterEdit(name) {
     const filter = filters.find(f => f.name === name);
     if (filter) {
-        const newLabel = document.getElementById('edit-filter-label').value;
-        const newType = document.getElementById('edit-filter-type').value;
+        const newLabel = document.getElementById('edit-filter-label').value.trim();
         const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
 
         if (!newLabel) {
@@ -3704,30 +3663,8 @@ async function saveFilterEdit(name) {
             return;
         }
 
-        // Validate options based on filter type
-        if (newType === 'select' && newOptions.length === 0) {
-            alert('Для типу "Вибір" потрібно вказати хоча б одну опцію!');
-            return;
-        }
-
-        if (newType === 'text' && newOptions.length > 0) {
-            alert('Для типу "Текст" опції не потрібні!');
-            return;
-        }
-
-        if (newType === 'range') {
-            const rangePattern = /^\d+-\d+$/;
-            if (!newOptions.every(opt => rangePattern.test(opt))) {
-                alert('Для типу "Діапазон" опції мають бути у форматі "число-число" (наприклад, 0-2000)!');
-                return;
-            }
-        }
-
-        const finalOptions = newType === 'text' ? [] : newOptions;
-
         filter.label = newLabel;
-        filter.type = newType;
-        filter.options = finalOptions;
+        filter.options = newOptions;
 
         try {
             const token = localStorage.getItem('adminToken');
