@@ -703,17 +703,23 @@ function openResizeModal(media) {
     resetInactivityTimer();
 }
 
-    function closeResizeModal() {
-        const resizeModal = document.getElementById('resize-modal');
+function closeResizeModal() {
+    const resizeModal = document.getElementById('resize-modal');
+    if (resizeModal) {
         resizeModal.classList.remove('active');
-
-        // Знітаємо виділення
-        if (selectedMedia) {
-            selectedMedia.classList.remove('quill-media-selected');
-            selectedMedia = null;
-        }
-        resetInactivityTimer();
+    } else {
+        console.warn('Елемент #resize-modal не знайдено');
     }
+
+    // Знімаємо виділення
+    if (window.selectedMedia) {
+        window.selectedMedia.classList.remove('quill-media-selected');
+        window.selectedMedia = null;
+        console.log('Очищено selectedMedia');
+    }
+    resetInactivityTimer();
+    console.log('Модальне вікно закрито');
+}
 
 function saveMediaSize() {
     if (!selectedMedia) return;
@@ -1138,12 +1144,15 @@ function showSection(sectionId) {
     console.log('Показуємо секцію:', sectionId);
     const sections = document.querySelectorAll('.section');
     sections.forEach(el => el.classList.remove('active'));
-    
+
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
-        if (sectionId === 'admin-panel') {
-            renderAdmin();
+        if (sectionId === 'admin-panel' && typeof renderAdmin === 'function') {
+            // Використовуємо поточну вкладку, якщо вона визначена
+            const currentTab = localStorage.getItem('currentAdminTab') || 'products';
+            renderAdmin(currentTab);
+            console.log('Викликано renderAdmin для вкладки:', currentTab);
         }
     } else {
         console.error('Секція не знайдена:', sectionId);
@@ -1414,22 +1423,43 @@ function startTokenRefreshTimer() {
     }, 25 * 60 * 1000); // 25 хвилин
 }
 
-    function showNotification(message) {
-        const notification = document.getElementById('notification');
-        if (notification) {
-            notification.textContent = message;
-            notification.classList.add('active');
-            setTimeout(() => notification.classList.remove('active'), 5000);
+function showNotification(message) {
+    const notification = document.getElementById('notification');
+    if (notification) {
+        // Очищаємо попередній тайм-аут
+        if (window.notificationTimeout) {
+            clearTimeout(window.notificationTimeout);
         }
+        notification.textContent = message;
+        notification.classList.add('active');
+        window.notificationTimeout = setTimeout(() => {
+            notification.classList.remove('active');
+            console.log('Сповіщення приховано:', message);
+        }, 5000);
+        console.log('Сповіщення показано:', message);
+    } else {
+        console.warn('Елемент #notification не знайдено');
+    }
+}
+
+function resetInactivityTimer() {
+    if (typeof sessionTimeout !== 'number' || sessionTimeout <= 0) {
+        console.warn('sessionTimeout не визначений або некоректний:', sessionTimeout);
+        return;
     }
 
-    function resetInactivityTimer() {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
+    clearTimeout(window.inactivityTimer);
+    window.inactivityTimer = setTimeout(() => {
+        if (typeof logout === 'function') {
             logout();
             showNotification('Сесію завершено через 30 хвилин бездіяльності');
-        }, sessionTimeout);
-    }
+            console.log('Сесію завершено через неактивність');
+        } else {
+            console.warn('Функція logout не визначена');
+        }
+    }, sessionTimeout);
+    console.log('Таймер неактивності скинуто, sessionTimeout:', sessionTimeout);
+}
 
 function showAdminTab(tabId) {
     document.querySelectorAll('.admin-tab').forEach(tab => {
