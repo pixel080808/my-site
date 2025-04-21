@@ -57,13 +57,14 @@ async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
+            console.warn('Токен відсутній. Використовуються локальні продукти.');
+            renderAdmin('products');
             return;
         }
 
         const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/products', {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/products`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -81,17 +82,16 @@ async function loadProducts() {
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити товари: ${text}`);
+            throw new Error(`Не вдалося завантажити продукти: ${text}`);
         }
 
         products = await response.json();
-        console.log('Товари завантажено:', products);
+        console.log('Продукти успішно завантажено:', products.length); // Додано логування
         renderAdmin('products');
-    } catch (e) {
-        console.error('Помилка завантаження товарів:', e);
-        showNotification(e.message);
-        products = [];
-        renderAdmin('products');
+    } catch (err) {
+        console.error('Помилка завантаження продуктів:', err);
+        showNotification('Помилка завантаження продуктів: ' + err.message);
+        renderAdmin('products'); // Рендеримо локальні дані при помилці
     }
 }
 
@@ -327,15 +327,14 @@ async function loadOrders() {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            orders = [];
-            sortOrders('date-desc');
+            console.warn('Токен відсутній. Використовуються локальні замовлення.');
             renderAdmin('orders');
             return;
         }
 
         const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/orders', {
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/orders`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -357,13 +356,12 @@ async function loadOrders() {
         }
 
         orders = await response.json();
-        sortOrders('date-desc');
+        console.log('Замовлення успішно завантажено:', orders.length); // Додано логування
         renderAdmin('orders');
-    } catch (e) {
-        console.error('Помилка завантаження замовлень:', e);
-        showNotification(e.message);
-        orders = [];
-        renderAdmin('orders');
+    } catch (err) {
+        console.error('Помилка завантаження замовлень:', err);
+        showNotification('Помилка завантаження замовлень: ' + err.message);
+        renderAdmin('orders'); // Рендеримо локальні дані при помилці
     }
 }
 
@@ -1627,12 +1625,18 @@ async function updateAbout() {
     }
 }
 
+```javascript
 function renderAdmin(section = activeTab) {
-    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings);
+    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings, 'Продукти:', products?.length || 0, 'Замовлення:', orders?.length || 0); // Зміна: додано логування продуктів і замовлень
 
     try {
-        // Переключаємо вкладку (якщо це потрібно у вашій логіці; закоментуйте, якщо не використовується)
-        // showAdminTab(section);
+        // Зміна: перевіряємо, чи існує контейнер для секції
+        const content = document.getElementById(section);
+        if (!content && ['products', 'orders', 'order-fields', 'filters'].includes(section)) {
+            console.error('Секція не знайдена:', section);
+            showNotification(`Секція ${section} не знайдена`);
+            return;
+        }
 
         // Рендеринг налаштувань магазину
         const storeName = document.getElementById('store-name');
@@ -1774,7 +1778,7 @@ function renderAdmin(section = activeTab) {
                     </div>
                 `).join('')
                 : '';
-            // Додаємо делегування подій (залишаємо як є, оскільки воно працює)
+            // Додаємо делегування подій
             catList.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.classList.contains('move-up')) {
@@ -1806,21 +1810,21 @@ function renderAdmin(section = activeTab) {
                     const subName = target.dataset.subName;
                     deleteSubcategory(catId, subName);
                 }
-            }, { once: true }); // Додаємо { once: true }, щоб уникнути повторного додавання слухача
+            }, { once: true }); // Залишаємо { once: true } для уникнення повторного додавання
         } else {
             console.warn('Елемент #cat-list не знайдено');
         }
 
-        // Рендеринг вкладок
+        // Зміна: оновлений рендеринг вкладки products
         if (section === 'products') {
             const productList = document.getElementById('product-list');
             if (productList) {
                 const start = (currentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                productList.innerHTML = products && Array.isArray(products)
+                productList.innerHTML = products && Array.isArray(products) && products.length > 0
                     ? products.slice(start, end).map(p => `
                         <div class="product-item">
-                            <span>#${p.id} ${p.name} (${p.brand || 'Без бренду'})</span>
+                            <span>#${p.id || p._id} ${p.name} (${p.brand || p.type || 'Без бренду'})</span>
                             <span>${p.price || (p.sizes ? Math.min(...p.sizes.map(s => s.price)) : 'N/A')} грн</span>
                             ${renderCountdown(p)}
                             <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
@@ -1828,12 +1832,27 @@ function renderAdmin(section = activeTab) {
                             <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
                         </div>
                     `).join('')
-                    : '';
+                    : '<p>Товари відсутні</p>'; // Зміна: додано повідомлення про порожній список
+                // Зміна: додано сортування
+                const sortSelect = document.getElementById('product-sort');
+                if (sortSelect) {
+                    sortSelect.innerHTML = `
+                        <option value="id-asc">Сортувати за ID (за зростанням)</option>
+                        <option value="id-desc">Сортувати за ID (за спаданням)</option>
+                        <option value="name-asc">Сортувати за назвою (А-Я)</option>
+                        <option value="name-desc">Сортувати за назвою (Я-А)</option>
+                        <option value="price-asc">Сортувати за ціною (за зростанням)</option>
+                        <option value="price-desc">Сортувати за ціною (за спаданням)</option>
+                    `;
+                    sortSelect.onchange = (e) => sortAdminProducts(e.target.value);
+                }
                 renderPagination(products.length, productsPerPage, 'product-pagination', currentPage);
             } else {
                 console.warn('Елемент #product-list не знайдено');
             }
-        } else if (section === 'orders') {
+        }
+        // Зміна: оновлений рендеринг вкладки orders
+        else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -1841,47 +1860,119 @@ function renderAdmin(section = activeTab) {
                 if (statusFilter) {
                     filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
                 }
-                const start = (currentPage - 1) * ordersPerPage;
-                const end = start + ordersPerPage;
+                const itemsPerPage = ordersPerPage || 10; // Зміна: використовуємо ordersPerPage або 10
+                const start = (currentPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
                 const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.map((o, index) => {
-                    const orderDate = new Date(o.date);
-                    const formattedDate = orderDate.toLocaleString('uk-UA', {
-                        timeZone: settings.timezone || 'Europe/Kyiv',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                    return `
-                        <div class="order-item">
-                            <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                            <div>
-                                <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                orderList.innerHTML = paginatedOrders.length > 0
+                    ? paginatedOrders.map((o, index) => {
+                        const orderDate = new Date(o.date);
+                        const formattedDate = orderDate.toLocaleString('uk-UA', {
+                            timeZone: settings.timezone || 'Europe/Kyiv',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        return `
+                            <div class="order-item">
+                                <span>#${start + index + 1} ${formattedDate} - ${o.total || 'N/A'} грн (${o.status || 'Н/Д'})</span>
+                                <div>
+                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                                </div>
                             </div>
-                        </div>
+                        `;
+                    }).join('')
+                    : '<p>Замовлення відсутні</p>'; // Зміна: додано повідомлення про порожній список
+                // Зміна: додано сортування
+                const sortSelect = document.getElementById('order-sort');
+                if (sortSelect) {
+                    sortSelect.innerHTML = `
+                        <option value="date-desc">Сортувати за датою (спочатку нові)</option>
+                        <option value="date-asc">Сортувати за датою (спочатку старі)</option>
+                        <option value="total-desc">Сортувати за сумою (за спаданням)</option>
+                        <option value="total-asc">Сортувати за сумою (за зростанням)</option>
+                        <option value="status-asc">Сортувати за статусом (А-Я)</option>
+                        <option value="status-desc">Сортувати за статусом (Я-А)</option>
                     `;
-                }).join('');
-                renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
+                    sortSelect.onchange = (e) => sortOrders(e.target.value);
+                }
+                renderPagination(filteredOrders.length, itemsPerPage, 'order-pagination', currentPage);
             } else {
                 console.warn('Елемент #order-list не знайдено');
             }
-        } else if (section === 'categories') {
-            // Викликаємо renderCategoriesAdmin, якщо це визначено у вашому коді
+        }
+        // Зміна: додано рендеринг вкладки order-fields
+        else if (section === 'order-fields') {
+            content.innerHTML = `
+                <h2>Поля замовлення</h2>
+                <input type="text" id="order-field-name" placeholder="Назва поля (унікальна)"><br/>
+                <input type="text" id="order-field-label" placeholder="Відображувана назва"><br/>
+                <select id="order-field-type">
+                    <option value="text">Текст</option>
+                    <option value="email">Email</option>
+                    <option value="select">Вибір</option>
+                </select><br/>
+                <input type="text" id="order-field-options" placeholder="Опції для вибору (через кому)"><br/>
+                <button onclick="addOrderField()">Додати поле</button>
+                <div id="order-fields-list">
+                    ${orderFields && Array.isArray(orderFields) && orderFields.length > 0
+                        ? orderFields.map(f => `
+                            <div class="order-field-item">
+                                ${f.label} (${f.name}, ${f.type}${f.options ? ', ' + f.options.join(', ') : ''})
+                                <button onclick="editOrderField('${f.name}')">Редагувати</button>
+                                <button onclick="deleteOrderField('${f.name}')">Видалити</button>
+                            </div>
+                        `).join('')
+                        : '<p>Поля замовлення відсутні</p>'}
+                </div>
+            `;
+        }
+        // Зміна: додано рендеринг вкладки filters
+        else if (section === 'filters') {
+            content.innerHTML = `
+                <h2>Фільтри</h2>
+                <input type="text" id="filter-label" placeholder="Відображувана назва"><br/>
+                <input type="text" id="filter-name" placeholder="Назва фільтру (унікальна)"><br/>
+                <select id="filter-type">
+                    <option value="select">Вибір</option>
+                    <option value="range">Діапазон</option>
+                </select><br/>
+                <input type="text" id="filter-options" placeholder="Опції (через кому)"><br/>
+                <button onclick="addFilter()">Додати фільтр</button>
+                <div id="filters-list">
+                    ${filters && Array.isArray(filters) && filters.length > 0
+                        ? filters.map((f, i) => `
+                            <div class="filter-item">
+                                ${f.label} (${f.name}, ${f.type}, ${f.options.join(', ')})
+                                <button onclick="editFilter('${f.name}')">Редагувати</button>
+                                <button onclick="deleteFilter('${f.name}')">Видалити</button>
+                                <button onclick="moveFilterUp(${i})" ${i === 0 ? 'disabled' : ''}>Вгору</button>
+                                <button onclick="moveFilterDown(${i})" ${i === filters.length - 1 ? 'disabled' : ''}>Вниз</button>
+                            </div>
+                        `).join('')
+                        : '<p>Фільтри відсутні</p>'}
+                </div>
+            `;
+        }
+        else if (section === 'categories') {
+            // Викликаємо renderCategoriesAdmin, якщо це визначено
             if (typeof renderCategoriesAdmin === 'function') {
                 renderCategoriesAdmin();
             } else {
                 console.warn('Функція renderCategoriesAdmin не визначена');
             }
-        } else if (section === 'site-editing') {
-            // Викликаємо функції для рендерингу налаштувань і слайдів, якщо вони є
+        }
+        else if (section === 'site-editing') {
+            // Викликаємо функції для рендерингу налаштувань і слайдів
             if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
             if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-        } else {
+        }
+        else {
             console.warn(`Невідома вкладка: ${section}`);
         }
 
@@ -2072,26 +2163,42 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-    const slidesList = document.getElementById('slides-list-admin');
-    if (!slidesList) {
-        console.warn('Елемент #slides-list-admin не знайдено');
+    const content = document.getElementById('site-editing');
+    if (!content) {
+        console.error('Секція site-editing не знайдена');
         return;
     }
-    slidesList.innerHTML = slides.map((s, index) => `
-        <div class="slide">
-            <img src="${s.image}" alt="Слайд ${index + 1}" width="100">
-            <button onclick="deleteSlide(${index})">Видалити</button>
-        </div>
-    `).join('');
 
-    const addSlideBtn = document.getElementById('add-slide-btn');
-    if (addSlideBtn) {
-        // Видаляємо попередні слухачі, щоб уникнути дублювання
-        addSlideBtn.removeEventListener('click', openNewSlideModal);
-        addSlideBtn.addEventListener('click', openNewSlideModal);
-    } else {
-        console.warn('Елемент #add-slide-btn не знайдено');
-    }
+    content.innerHTML = `
+        <h2>Редагування слайдшоу</h2>
+        <input type="number" id="slide-width" value="${settings.slideWidth || 100}" min="10" max="100"><br/>
+        <label for="slide-width">Ширина слайду (%)</label>
+        <input type="number" id="slide-height" value="${settings.slideHeight || 300}" min="100" max="500"><br/>
+        <label for="slide-height">Висота слайду (px)</label>
+        <input type="number" id="slide-interval" value="${settings.slideInterval || 5000}" min="1000"><br/>
+        <label for="slide-interval">Інтервал (мс)</label>
+        <button onclick="updateSlideshowSettings()">Зберегти налаштування</button>
+        <input type="checkbox" id="slide-toggle" ${settings.showSlides ? 'checked' : ''} onchange="toggleSlideshow()"><br/>
+        <label for="slide-toggle">Показувати слайдшоу</label>
+        <h3>Додати слайд</h3>
+        <input type="text" id="slide-photo-url" placeholder="URL фотографії"><br/>
+        <input type="file" id="slide-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+        <input type="text" id="slide-link" placeholder="Посилання (необов’язково)"><br/>
+        <input type="number" id="slide-position" placeholder="Позиція"><br/>
+        <input type="checkbox" id="slide-active" checked><br/>
+        <label for="slide-active">Активний</label>
+        <button onclick="addSlide()">Додати слайд</button>
+        <div id="slides-list">
+            ${slides.length === 0 ? '<p>Слайди відсутні</p>' : slides.map(s => `
+                <div class="slide-item">
+                    <img src="${s.photo}" style="max-width: 100px;">
+                    <p>Позиція: ${s.position}, ${s.active ? 'Активний' : 'Неактивний'}</p>
+                    <button onclick="editSlide('${s._id}')">Редагувати</button>
+                    <button onclick="deleteSlide('${s._id}')">Видалити</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
     resetInactivityTimer();
 }
 
@@ -2304,48 +2411,35 @@ async function saveEditedCategory(categoryId) {
         const visibleSelect = document.getElementById('category-visible');
 
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми відсутні:', {
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                photoUrlInput: !!photoUrlInput,
-                photoFileInput: !!photoFileInput,
-                visibleSelect: !!visibleSelect
-            });
-            showNotification('Елементи форми для редагування категорії не знайдено.');
+            showNotification('Елементи форми не знайдено.');
             return;
         }
 
-        const name = nameInput.value.trim() || '';
-        const slug = slugInput.value.trim() || (name ? name.toLowerCase().replace(/\s+/g, '-') : '');
-        const visible = visibleSelect.value === 'true';
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim();
         let photo = photoUrlInput.value.trim();
+        const visible = visibleSelect.value === 'true';
 
-        // Валідація
-        if (!name) {
-            showNotification('Назва категорії є обов’язковою!');
+        if (!name || !slug) {
+            showNotification('Назва та шлях категорії обов’язкові!');
             return;
         }
 
-        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+        if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
-        // Перевірка унікальності slug
-        if (slug) {
-            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-            if (!slugCheck.ok) {
-                const errorData = await slugCheck.json();
-                throw new Error(`Помилка перевірки унікальності шляху: ${errorData.error || slugCheck.statusText}`);
-            }
-            const existingCategories = await slugCheck.json();
-            if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-                showNotification('Шлях категорії має бути унікальним!');
-                return;
-            }
+        if (categories.some(c => c.slug === slug && c._id !== categoryId)) {
+            showNotification('Шлях категорії має бути унікальним!');
+            return;
         }
 
-        // Завантаження фото
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
         if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2363,35 +2457,18 @@ async function saveEditedCategory(categoryId) {
                 }
             });
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
+                throw new Error('Помилка завантаження зображення');
             }
             const data = await response.json();
             photo = data.url;
         }
 
-        const category = categories.find(c => c._id === categoryId);
-        if (!category) {
-            showNotification('Категорія не знайдена!');
-            return;
-        }
-
-        // Формуємо об’єкт без поля order у підкатегоріях
         const updatedCategory = {
             name,
             slug,
-            photo: photo || category.photo || '',
-            visible,
-            subcategories: (category.subcategories || []).map(sub => ({
-                _id: sub._id,
-                name: sub.name,
-                slug: sub.slug,
-                photo: sub.photo || '',
-                visible: sub.visible
-            }))
+            photo: photo || '',
+            visible
         };
-
-        console.log('Надсилаємо дані на сервер:', JSON.stringify(updatedCategory, null, 2));
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2403,25 +2480,21 @@ async function saveEditedCategory(categoryId) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити категорію: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити категорію');
         }
 
-        const updatedCategoryData = await response.json();
+        const savedCategory = await response.json();
         const index = categories.findIndex(c => c._id === categoryId);
         if (index !== -1) {
-            categories[index] = updatedCategoryData;
-        } else {
-            throw new Error('Категорія не знайдена в локальному масиві.');
+            categories[index] = savedCategory;
         }
-
+        console.log('Категорію оновлено:', savedCategory); // Додано логування
         closeModal();
         renderCategoriesAdmin();
         showNotification('Категорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оновленні категорії:', err);
+        console.error('Помилка редагування категорії:', err);
         showNotification('Не вдалося оновити категорію: ' + err.message);
     }
 }
@@ -2678,11 +2751,6 @@ async function saveCategoryEdit(categoryId) {
 }
 
 async function moveCategoryUp(index) {
-    if (index <= 0 || index >= categories.length) {
-        console.error('Невалідний індекс категорії:', index);
-        return;
-    }
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2691,23 +2759,20 @@ async function moveCategoryUp(index) {
             return;
         }
 
-        const originalCategories = [...categories];
-        [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
-
-        const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
-        };
-
-        if (categoryOrder.categories.length !== categories.length) {
-            categories = originalCategories;
-            showNotification('Помилка: не всі категорії мають валідні ID.');
+        if (index <= 0 || index >= categories.length) {
+            console.error('Невалідний індекс:', index);
             return;
         }
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
+        const originalCategories = [...categories];
+        [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
+
+        const categoriesOrder = {
+            categories: categories.map((cat, idx) => ({
+                _id: cat._id,
+                order: idx
+            }))
+        };
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -2715,18 +2780,14 @@ async function moveCategoryUp(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(categoryOrder)
+            body: JSON.stringify(categoriesOrder)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
             categories = originalCategories;
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити порядок категорій');
         }
 
-        const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
         resetInactivityTimer();
@@ -2737,11 +2798,6 @@ async function moveCategoryUp(index) {
 }
 
 async function moveCategoryDown(index) {
-    if (index < 0 || index >= categories.length - 1) {
-        console.error('Невалідний індекс категорії:', index);
-        return;
-    }
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -2750,23 +2806,20 @@ async function moveCategoryDown(index) {
             return;
         }
 
-        const originalCategories = [...categories];
-        [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
-
-        const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
-        };
-
-        if (categoryOrder.categories.length !== categories.length) {
-            categories = originalCategories;
-            showNotification('Помилка: не всі категорії мають валідні ID.');
+        if (index < 0 || index >= categories.length - 1) {
+            console.error('Невалідний індекс:', index);
             return;
         }
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
+        const originalCategories = [...categories];
+        [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
+
+        const categoriesOrder = {
+            categories: categories.map((cat, idx) => ({
+                _id: cat._id,
+                order: idx
+            }))
+        };
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -2774,18 +2827,14 @@ async function moveCategoryDown(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(categoryOrder)
+            body: JSON.stringify(categoriesOrder)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
             categories = originalCategories;
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити порядок категорій: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити порядок категорій');
         }
 
-        const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
         resetInactivityTimer();
@@ -3125,7 +3174,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     resetInactivityTimer();
 }
 
-async function saveSubcategoryEdit(categoryId, originalSubcatName) {
+async function saveSubcategoryEdit(categoryId, subcategoryId) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -3147,10 +3196,9 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
 
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
-        const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
+        const visible = visibleSelect.value === 'true';
 
-        // Клієнтська валідація
         if (!name || !slug) {
             showNotification('Назва та шлях підкатегорії обов’язкові!');
             return;
@@ -3167,13 +3215,16 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
             return;
         }
 
-        // Перевірка унікальності slug у межах категорії
-        if (category.subcategories.some(s => s.slug === slug && s.name !== originalSubcatName)) {
+        if (category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
 
-        // Завантаження нового фото, якщо вибрано
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
         if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -3185,7 +3236,10 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             if (!response.ok) {
                 throw new Error('Помилка завантаження зображення');
@@ -3194,50 +3248,33 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
             photo = data.url;
         }
 
-        const subcatIndex = category.subcategories.findIndex(s => s.name === originalSubcatName);
-        if (subcatIndex === -1) {
-            showNotification('Підкатегорія не знайдена!');
-            return;
-        }
-
-        const existingSubcat = category.subcategories[subcatIndex];
-        category.subcategories[subcatIndex] = {
-            _id: existingSubcat._id, // Зберігаємо _id
+        const updatedSubcategory = {
+            _id: subcategoryId,
             name,
             slug,
-            photo: photo || existingSubcat.photo || '',
+            photo: photo || '',
             visible
         };
 
-        const updatedData = {
-            subcategories: category.subcategories.map(subcat => ({
-                _id: subcat._id,
-                name: subcat.name,
-                slug: subcat.slug,
-                photo: subcat.photo || '',
-                visible: subcat.visible
-            }))
-        };
-        console.log('Оновлені дані для сервера:', updatedData);
-
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken')
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(updatedData)
+            body: JSON.stringify(updatedSubcategory)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити підкатегорію: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити підкатегорію');
         }
 
         const updatedCategory = await response.json();
         const index = categories.findIndex(c => c._id === categoryId);
-        categories[index] = updatedCategory;
+        if (index !== -1) {
+            categories[index] = updatedCategory;
+        }
+        console.log('Підкатегорію оновлено:', updatedSubcategory); // Додано логування
         closeModal();
         renderCategoriesAdmin();
         showNotification('Підкатегорію оновлено!');
@@ -3341,8 +3378,6 @@ async function moveSubcategoryUp(categoryId, index) {
             return;
         }
 
-        console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
-
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
@@ -3353,20 +3388,16 @@ async function moveSubcategoryUp(categoryId, index) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
             category.subcategories = originalSubcategories;
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити порядок підкатегорій');
         }
 
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
             categories[catIndex] = updatedCategory;
-        } else {
-            throw new Error('Категорія не знайдена в локальному масиві.');
         }
-
+        console.log('Порядок підкатегорій оновлено:', updatedCategory); // Додано логування
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій оновлено!');
         resetInactivityTimer();
@@ -3407,8 +3438,6 @@ async function moveSubcategoryDown(categoryId, index) {
             return;
         }
 
-        console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
-
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
@@ -3419,20 +3448,16 @@ async function moveSubcategoryDown(categoryId, index) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
             category.subcategories = originalSubcategories;
-            console.error('Деталі помилки сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити порядок підкатегорій: ${errorData.error || response.statusText}`);
+            throw new Error('Не вдалося оновити порядок підкатегорій');
         }
 
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
             categories[catIndex] = updatedCategory;
-        } else {
-            throw new Error('Категорія не знайдена в локальному масиві.');
         }
-
+        console.log('Порядок підкатегорій оновлено:', updatedCategory); // Додано логування
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій оновлено!');
         resetInactivityTimer();
@@ -3519,7 +3544,7 @@ async function loadFilters() {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFilters(); // Замінено на renderFilters
+            renderAdmin('filters');
             return;
         }
 
@@ -3547,11 +3572,12 @@ async function loadFilters() {
         }
 
         filters = await response.json();
-        renderFilters(); // Замінено на renderFilters
+        console.log('Фільтри успішно завантажено:', filters.length); // Додано логування
+        renderAdmin('filters');
     } catch (err) {
         console.error('Помилка завантаження фільтрів:', err);
         showNotification('Помилка завантаження фільтрів: ' + err.message);
-        renderFilters(); // Рендеримо локальні дані при помилці
+        renderAdmin('filters'); // Рендеримо локальні дані при помилці
     }
 }
 
@@ -3584,20 +3610,30 @@ async function addFilter() {
             return;
         }
 
-        filters.push({ label, name, type, options });
+        if (filters.some(f => f.name === name)) {
+            showNotification('Фільтр з такою назвою вже існує!');
+            return;
+        }
 
-        const token = localStorage.getItem('adminToken');
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
-            method: 'PUT',
-            body: JSON.stringify({ ...settings, filters })
+        const newFilter = { label, name, type, options };
+        filters.push(newFilter);
+        console.log('Новий фільтр додано локально:', newFilter); // Додано логування
+
+        const response = await fetchWithAuth('/api/filters', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify(newFilter)
         });
 
         if (!response.ok) {
-            throw new Error('Не вдалося оновити фільтри');
+            filters.pop(); // Відкочуємо локальні зміни
+            throw new Error('Не вдалося зберегти фільтр на сервері');
         }
 
-        renderFilters();
+        renderAdmin('filters');
         showNotification('Фільтр додано!');
         labelInput.value = '';
         nameInput.value = '';
@@ -3687,47 +3723,69 @@ async function addFilter() {
     }
 
 async function addOrderField() {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-        showSection('admin-login');
-        return;
-    }
-
-    const name = document.getElementById('order-field-name').value;
-    const label = document.getElementById('order-field-label').value;
-    const type = document.getElementById('order-field-type').value;
-    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim());
-
-    if (!name || !label) {
-        alert('Введіть назву та підпис для поля!');
-        return;
-    }
-
-    const field = { name, label, type };
-    if (type === 'select' && options.length > 0) field.options = options;
-
     try {
-        const response = await fetch('/api/order-fields', {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const nameInput = document.getElementById('order-field-name');
+        const labelInput = document.getElementById('order-field-label');
+        const typeSelect = document.getElementById('order-field-type');
+        const optionsInput = document.getElementById('order-field-options');
+
+        if (!nameInput || !labelInput || !typeSelect || !optionsInput) {
+            showNotification('Елементи форми для поля замовлення не знайдено');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const label = labelInput.value.trim();
+        const type = typeSelect.value;
+        const options = optionsInput.value.split(',').map(o => o.trim()).filter(o => o);
+
+        if (!name || !label) {
+            showNotification('Введіть назву та підпис для поля!');
+            return;
+        }
+
+        if (orderFields.some(f => f.name === name)) {
+            showNotification('Поле з такою назвою вже існує!');
+            return;
+        }
+
+        const field = { name, label, type };
+        if (type === 'select' && options.length > 0) {
+            field.options = options;
+        }
+
+        const response = await fetchWithAuth('/api/order-fields', {
             method: 'POST',
             headers: {
-                credentials: 'include',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
             body: JSON.stringify(field)
         });
 
-        if (!response.ok) throw new Error('Не вдалося додати поле замовлення');
+        if (!response.ok) {
+            throw new Error('Не вдалося додати поле замовлення');
+        }
+
         orderFields.push(field);
-        document.getElementById('order-field-name').value = '';
-        document.getElementById('order-field-label').value = '';
-        document.getElementById('order-field-options').value = '';
+        console.log('Нове поле замовлення додано:', field); // Додано логування
+        nameInput.value = '';
+        labelInput.value = '';
+        typeSelect.value = 'text';
+        optionsInput.value = '';
         renderAdmin('order-fields');
         showNotification('Поле замовлення додано!');
         resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка додавання поля замовлення:', e);
-        showNotification(e.message);
+    } catch (err) {
+        console.error('Помилка додавання поля замовлення:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
 
@@ -3899,6 +3957,11 @@ async function addSlide() {
             return;
         }
 
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
         if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -3910,19 +3973,35 @@ async function addSlide() {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
+            if (!response.ok) {
+                throw new Error('Помилка завантаження зображення');
+            }
             const data = await response.json();
             photo = data.url;
         }
 
+        const newSlide = { photo, link, position, active };
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify({ photo, link, position, active }) // Змінено img на photo
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify(newSlide)
         });
 
-        const newSlide = await response.json();
-        slides.push(newSlide);
+        if (!response.ok) {
+            throw new Error('Не вдалося додати слайд');
+        }
+
+        const savedSlide = await response.json();
+        slides.push(savedSlide);
+        console.log('Новий слайд додано:', savedSlide); // Додано логування
         renderSlidesAdmin();
         showNotification('Слайд додано!');
         photoUrlInput.value = '';
@@ -3940,91 +4019,160 @@ async function addSlide() {
 // Додаємо обробник з дебонсінгом до кнопки
 document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
 
-    function editSlide(order) {
-        const slide = slides.find(s => s.order === order);
-        if (slide) {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Редагувати слайд</h3>
-                    <input type="number" id="edit-slide-order" value="${slide.order}"><br/>
-                    <label for="edit-slide-order">Порядковий номер</label>
-                    <input type="text" id="edit-slide-img-url" value="${slide.img || ''}"><br/>
-                    <label for="edit-slide-img-url">URL зображення</label>
-                    <input type="file" id="edit-slide-img-file" accept="image/*"><br/>
-                    <label for="edit-slide-img-file">Завантажте зображення</label>
-                    ${slide.img ? `<img src="${slide.img}" style="max-width: 100px;">` : ''}
-                    <input type="text" id="edit-slide-url" value="${slide.url}"><br/>
-                    <label for="edit-slide-url">Посилання</label>
-                    <div class="modal-actions">
-                        <button id="save-slide-btn">Зберегти</button>
-                        <button id="cancel-slide-btn">Скасувати</button>
-                    </div>
-                </div>
-            `;
-            modal.classList.add('active');
-            document.getElementById('save-slide-btn').addEventListener('click', () => saveSlideEdit(order));
-            document.getElementById('cancel-slide-btn').addEventListener('click', closeModal);
-            resetInactivityTimer();
-        }
+async function editSlide(slideId) {
+    const slide = slides.find(s => s._id === slideId);
+    if (!slide) {
+        showNotification('Слайд не знайдено!');
+        return;
     }
 
-    function saveSlideEdit(oldOrder) {
-        const newOrder = parseInt(document.getElementById('edit-slide-order').value);
-        const newImgUrl = document.getElementById('edit-slide-img-url').value;
-        const newImgFile = document.getElementById('edit-slide-img-file').files[0];
-        const newUrl = document.getElementById('edit-slide-url').value;
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати слайд</h3>
+            <input type="number" id="edit-slide-position" value="${slide.position}"><br/>
+            <label for="edit-slide-position">Позиція</label>
+            <input type="text" id="edit-slide-photo-url" value="${slide.photo || ''}"><br/>
+            <label for="edit-slide-photo-url">URL зображення</label>
+            <input type="file" id="edit-slide-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <label for="edit-slide-photo-file">Завантажте зображення</label>
+            ${slide.photo ? `<img src="${slide.photo}" style="max-width: 100px;">` : ''}
+            <input type="text" id="edit-slide-link" value="${slide.link || ''}"><br/>
+            <label for="edit-slide-link">Посилання</label>
+            <input type="checkbox" id="edit-slide-active" ${slide.active ? 'checked' : ''}><br/>
+            <label for="edit-slide-active">Активний</label>
+            <div class="modal-actions">
+                <button onclick="saveSlideEdit('${slideId}')">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    resetInactivityTimer();
+}
 
-        if (isNaN(newOrder)) {
-            alert('Введіть порядковий номер слайду!');
+async function saveSlideEdit(slideId) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
             return;
         }
 
-        const slide = slides.find(s => s.order === oldOrder);
-        if (slide) {
-            slide.order = newOrder;
-            slide.url = newUrl || '#';
-            if (newImgUrl) slide.img = newImgUrl;
+        const positionInput = document.getElementById('edit-slide-position');
+        const photoUrlInput = document.getElementById('edit-slide-photo-url');
+        const photoFileInput = document.getElementById('edit-slide-photo-file');
+        const linkInput = document.getElementById('edit-slide-link');
+        const activeCheckbox = document.getElementById('edit-slide-active');
 
-            if (newImgFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    slide.img = e.target.result;
-                    slides = slides.filter(s => s.order !== oldOrder);
-                    slides.push(slide);
-                    slides.sort((a, b) => a.order - b.order);
-                    localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                    closeModal();
-                    renderAdmin();
-                    showNotification('Слайд відредаговано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(newImgFile);
-            } else {
-                slides = slides.filter(s => s.order !== oldOrder);
-                slides.push(slide);
-                slides.sort((a, b) => a.order - b.order);
-                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                closeModal();
-                renderAdmin();
-                showNotification('Слайд відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
+        if (!positionInput || !photoUrlInput || !photoFileInput || !linkInput || !activeCheckbox) {
+            showNotification('Елементи форми для слайду не знайдено');
+            return;
+        }
+
+        let photo = photoUrlInput.value.trim();
+        const link = linkInput.value.trim();
+        const position = parseInt(positionInput.value) || 1;
+        const active = activeCheckbox.checked;
+
+        if (!photo && !photoFileInput.files[0]) {
+            showNotification('Вкажіть URL або завантажте зображення!');
+            return;
+        }
+
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
+        if (photoFileInput.files[0]) {
+            const file = photoFileInput.files[0];
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
             }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Помилка завантаження зображення');
+            }
+            const data = await response.json();
+            photo = data.url;
         }
+
+        const updatedSlide = { photo, link, position, active };
+        const response = await fetchWithAuth(`/api/slides/${slideId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify(updatedSlide)
+        });
+
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити слайд');
+        }
+
+        const savedSlide = await response.json();
+        const index = slides.findIndex(s => s._id === slideId);
+        if (index !== -1) {
+            slides[index] = savedSlide;
+        }
+        console.log('Слайд оновлено:', savedSlide); // Додано логування
+        closeModal();
+        renderSlidesAdmin();
+        showNotification('Слайд оновлено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка редагування слайду:', err);
+        showNotification('Помилка: ' + err.message);
+    }
+}
+
+async function deleteSlide(slideId) {
+    if (!confirm('Ви впевнені, що хочете видалити цей слайд?')) {
+        return;
     }
 
-    function deleteSlide(order) {
-        if (confirm('Ви впевнені, що хочете видалити цей слайд?')) {
-            slides = slides.filter(s => s.order !== order);
-            localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-            renderAdmin();
-            showNotification('Слайд видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
         }
+
+        const response = await fetchWithAuth(`/api/slides/${slideId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Не вдалося видалити слайд');
+        }
+
+        slides = slides.filter(s => s._id !== slideId);
+        console.log('Слайд видалено:', slideId); // Додано логування
+        renderSlidesAdmin();
+        showNotification('Слайд видалено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка видалення слайду:', err);
+        showNotification('Помилка: ' + err.message);
     }
+}
 
     function toggleSlideshow() {
         settings.showSlides = document.getElementById('slide-toggle').checked;
