@@ -10,6 +10,9 @@ const productSchema = new mongoose.Schema({
     saleEnd: { type: Date },
     brand: { type: String, trim: true },
     material: { type: String, trim: true },
+    filters: [{
+        name: { type: String, required: true },
+        value: { type: String, required: true }
     photos: [{
         type: String,
         validate: {
