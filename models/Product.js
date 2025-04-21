@@ -13,11 +13,12 @@ const productSchema = new mongoose.Schema({
     filters: [{
         name: { type: String, required: true },
         value: { type: String, required: true }
+    }],
     photos: [{
         type: String,
         validate: {
             validator: function(v) {
-                return /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
             },
             message: 'Photo must be a valid URL'
         }
@@ -34,7 +35,7 @@ const productSchema = new mongoose.Schema({
             type: String,
             validate: {
                 validator: function(v) {
-                    return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
                 },
                 message: 'Color photo must be a valid URL or null'
             }

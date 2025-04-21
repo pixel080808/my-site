@@ -273,6 +273,8 @@ const productSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().min(1).max(100).required(),
             value: Joi.string().min(1).max(100).required()
+        })
+    ).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -299,7 +301,7 @@ const productSchemaValidation = Joi.object({
     heightCm: Joi.number().min(0).allow(null),
     lengthCm: Joi.number().min(0).allow(null),
     popularity: Joi.number().allow(null)
-});
+}).unknown(false);
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -625,34 +627,33 @@ ws.on('message', async (message) => {
         const { type, action } = parsedMessage;
         logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
 
-                if (type === 'products') {
-                    const products = ws.isAdmin
-                        ? await Product.find()
-                        : await Product.find({ visible: true, active: true });
-                    ws.send(JSON.stringify({ type: 'products', data: products }));
-                } else if (type === 'settings') {
-                    const settings = await Settings.findOne();
-                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                } else if (type === 'categories') {
-                    const categories = await Category.find();
-                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                } else if (type === 'slides') {
-                    const slides = await Slide.find().sort({ order: 1 });
-                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                } else if (type === 'orders' && ws.isAdmin) {
-                    const orders = await Order.find();
-                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                } else if (type === 'materials' && ws.isAdmin) {
-                    const materials = await Material.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                } else if (type === 'brands' && ws.isAdmin) {
-                    const brands = await Brand.find().distinct('name');
-                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
-                }
-            }
-} catch (err) {
+        if (type === 'products') {
+            const products = ws.isAdmin
+                ? await Product.find()
+                : await Product.find({ visible: true, active: true });
+            ws.send(JSON.stringify({ type: 'products', data: products }));
+        } else if (type === 'settings') {
+            const settings = await Settings.findOne();
+            ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
+        } else if (type === 'categories') {
+            const categories = await Category.find();
+            ws.send(JSON.stringify({ type: 'categories', data: categories }));
+        } else if (type === 'slides') {
+            const slides = await Slide.find().sort({ order: 1 });
+            ws.send(JSON.stringify({ type: 'slides', data: slides }));
+        } else if (type === 'orders' && ws.isAdmin) {
+            const orders = await Order.find();
+            ws.send(JSON.stringify({ type: 'orders', data: orders }));
+        } else if (type === 'materials' && ws.isAdmin) {
+            const materials = await Material.find().distinct('name');
+            ws.send(JSON.stringify({ type: 'materials', data: materials }));
+        } else if (type === 'brands' && ws.isAdmin) {
+            const brands = await Brand.find().distinct('name');
+            ws.send(JSON.stringify({ type: 'brands', data: brands }));
+        } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
+        }
+    } catch (err) {
         logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
         ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
     }
