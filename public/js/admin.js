@@ -384,13 +384,16 @@ async function loadOrders() {
             throw new Error(`Не вдалося завантажити замовлення: ${text}`);
         }
 
-        orders = await response.json();
-        console.log('Замовлення успішно завантажено:', orders.length); // Додано логування
+        const data = await response.json();
+        console.log('Сира відповідь API для замовлень:', data);
+        orders = Array.isArray(data.orders) ? data.orders : Array.isArray(data) ? data : [];
+        console.log('Замовлення успішно завантажено:', orders.length);
         renderAdmin('orders');
     } catch (err) {
         console.error('Помилка завантаження замовлень:', err);
         showNotification('Помилка завантаження замовлень: ' + err.message);
-        renderAdmin('orders'); // Рендеримо локальні дані при помилці
+        orders = Array.isArray(orders) ? orders : [];
+        renderAdmin('orders');
     }
 }
 
@@ -1461,29 +1464,32 @@ function resetInactivityTimer() {
     console.log('Таймер неактивності скинуто, sessionTimeout:', sessionTimeout);
 }
 
-function showAdminTab(tabId) {
-    document.querySelectorAll('.admin-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    const tab = document.getElementById(tabId);
-    if (tab) {
-        tab.classList.add('active');
-        document.querySelector(`.tab-btn[onclick="showAdminTab('${tabId}')"]`).classList.add('active');
+function showAdminTab(tab) {
+    console.log('Перемикання на вкладку:', tab);
+    
+    // Перевірка допустимих вкладок
+    const validTabs = ['site-editing', 'products', 'orders', 'filters'];
+    if (!validTabs.includes(tab)) {
+        console.warn('Недопустима вкладка:', tab);
+        showNotification(`Вкладка ${tab} не підтримується`);
+        return;
     }
-    if (tabId === 'products') {
-        activeTab = 'products';
-        renderCategoriesAdmin();
-        renderAdmin('products');
-    } else if (tabId === 'site-editing') {
-        activeTab = 'categories';
-        renderAdmin('categories');
-    } else if (tabId === 'orders') {
-        activeTab = 'orders';
-        renderAdmin('orders');
+
+    // Оновлення стилів вкладок
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.tab-btn[onclick="showAdminTab('${tab}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    } else {
+        console.warn('Кнопка для вкладки не знайдена:', tab);
     }
+
+    // Зберігаємо активну вкладку
+    localStorage.setItem('currentAdminTab', tab);
+
+    // Викликаємо рендеринг
+    renderAdmin(tab);
     resetInactivityTimer();
 }
 
@@ -1746,362 +1752,492 @@ async function updateAbout() {
     }
 }
 
-function renderAdmin(section = activeTab) {
+function renderAdmin(section = 'products') {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings, 'Продукти:', products?.length || 0, 'Замовлення:', orders?.length || 0);
 
+    const content = document.getElementById('admin-content');
+    if (!content) {
+        console.error('Елемент #admin-content не знайдено');
+        showNotification('Помилка: контейнер адмін-панелі не знайдено');
+        return;
+    }
+
+    // Зберігаємо поточну вкладку
+    localStorage.setItem('currentAdminTab', section);
+
+    // Очищаємо вміст лише для потрібної вкладки
+    content.innerHTML = '';
+
+    // Встановлюємо активну вкладку
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    const activeTab = document.querySelector(`.tab-btn[onclick="showAdminTab('${section}')"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    } else {
+        console.warn(`Вкладка ${section} не знайдена`);
+    }
+
+    // Створюємо контейнер для вкладки
+    const tabContent = document.createElement('div');
+    tabContent.className = `admin-tab ${section} active`;
+    tabContent.id = section;
+    content.appendChild(tabContent);
+
     try {
-        const content = document.getElementById(section);
-        if (!content && ['products', 'orders', 'order-fields', 'filters', 'categories', 'site-editing'].includes(section)) {
-            console.warn('Секція не знайдена:', section);
-            showNotification(`Секція ${section} не знайдена`);
-            return;
-        }
-
-        // Рендеринг налаштувань магазину
-        const storeName = document.getElementById('store-name');
-        if (storeName) storeName.value = settings.name || '';
-        else console.warn('Елемент #store-name не знайдено');
-
-        const baseUrl = document.getElementById('base-url');
-        if (baseUrl) baseUrl.value = settings.baseUrl || '';
-        else console.warn('Елемент #base-url не знайдено');
-
-        const logoUrl = document.getElementById('logo-url');
-        if (logoUrl) logoUrl.value = settings.logo || '';
-        else console.warn('Елемент #logo-url не знайдено');
-
-        const logoWidth = document.getElementById('logo-width');
-        if (logoWidth) logoWidth.value = settings.logoWidth || 150;
-        else console.warn('Елемент #logo-width не знайдено');
-
-        const faviconUrl = document.getElementById('favicon-url');
-        if (faviconUrl) faviconUrl.value = settings.favicon || '';
-        else console.warn('Елемент #favicon-url не знайдено');
-
-        // Рендеринг контактів
-        const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
-        const contactPhones = document.getElementById('contact-phones');
-        if (contactPhones) contactPhones.value = contacts.phones || '';
-        else console.warn('Елемент #contact-phones не знайдено');
-
-        const contactAddresses = document.getElementById('contact-addresses');
-        if (contactAddresses) contactAddresses.value = contacts.addresses || '';
-        else console.warn('Елемент #contact-addresses не знайдено');
-
-        const contactSchedule = document.getElementById('contact-schedule');
-        if (contactSchedule) contactSchedule.value = contacts.schedule || '';
-        else console.warn('Елемент #contact-schedule не знайдено');
-
-        // Ініціалізація редактора Quill для "Про нас"
-        if (document.getElementById('about-editor')) {
-            if (!aboutEditor) {
-                initializeEditors();
-            }
-            try {
-                if (settings.aboutDelta) {
-                    aboutEditor.setContents(settings.aboutDelta, 'silent');
-                } else if (settings.about) {
-                    const delta = aboutEditor.clipboard.convert(settings.about);
-                    aboutEditor.setContents(delta, 'silent');
-                } else {
-                    aboutEditor.setContents([], 'silent');
-                }
-                const aboutEdit = document.getElementById('about-edit');
-                if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
-            } catch (e) {
-                console.error('Помилка ініціалізації aboutEditor:', e);
-                showNotification('Помилка завантаження даних для сторінки "Про нас"');
-            }
-        } else if (document.getElementById('about-edit')) {
-            const aboutEdit = document.getElementById('about-edit');
-            aboutEdit.value = settings.about || '';
-        } else {
-            console.warn('Елементи #about-editor або #about-edit не знайдено');
-        }
-
-        // Рендеринг налаштувань слайдів, категорій, продуктів
-        const socialToggle = document.getElementById('social-toggle');
-        if (socialToggle) socialToggle.checked = settings.showSocials !== false;
-        else console.warn('Елемент #social-toggle не знайдено');
-
-        const slideToggle = document.getElementById('slide-toggle');
-        if (slideToggle) slideToggle.checked = settings.showSlides !== false;
-        else console.warn('Елемент #slide-toggle не знайдено');
-
-        const slideWidth = document.getElementById('slide-width');
-        if (slideWidth) slideWidth.value = settings.slideWidth || 75;
-        else console.warn('Елемент #slide-width не знайдено');
-
-        const slideHeight = document.getElementById('slide-height');
-        if (slideHeight) slideHeight.value = settings.slideHeight || 200;
-        else console.warn('Елемент #slide-height не знайдено');
-
-        const slideInterval = document.getElementById('slide-interval');
-        if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
-        else console.warn('Елемент #slide-interval не знайдено');
-
-        const categoryWidth = document.getElementById('category-width');
-        if (categoryWidth) categoryWidth.value = settings.categoryWidth || 200;
-        else console.warn('Елемент #category-width не знайдено');
-
-        const categoryHeight = document.getElementById('category-height');
-        if (categoryHeight) categoryHeight.value = settings.categoryHeight || 150;
-        else console.warn('Елемент #category-height не знайдено');
-
-        const productWidth = document.getElementById('product-width');
-        if (productWidth) productWidth.value = settings.productWidth || 300;
-        else console.warn('Елемент #product-width не знайдено');
-
-        const productHeight = document.getElementById('product-height');
-        if (productHeight) productHeight.value = settings.productHeight || 280;
-        else console.warn('Елемент #product-height не знайдено');
-
-        // Рендеринг соціальних мереж
-        const socialList = document.getElementById('social-list');
-        if (socialList) {
-            socialList.innerHTML = settings.socials && Array.isArray(settings.socials) && settings.socials.length > 0
-                ? settings.socials.map((social, index) => `
-                    <div class="social-item">
-                        <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
-                        <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                        <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-                    </div>
-                `).join('')
-                : '<p>Соціальні мережі відсутні</p>';
-        } else {
-            console.warn('Елемент #social-list не знайдено');
-        }
-
-        // Рендеринг категорій і підкатегорій
-        const catList = document.getElementById('cat-list');
-        if (catList) {
-            catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
-                ? categories.map((c, index) => `
-                    <div class="category-item">
-                        <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                        <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-                        ${c.name} (${c.slug})
-                        <button class="edit-btn" data-id="${c._id}">Редагувати</button>
-                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
-                    </div>
-                    <div class="subcat-list">
-                        ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
-                            <p>
-                                <button class="move-btn sub-move-up" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                                <button class="move-btn sub-move-down" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
-                                ${sub.name} (${sub.slug})
-                                <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-id="${sub._id}">Редагувати</button>
-                                <button class="delete-btn sub-delete" data-cat-id="${c._id}" data-sub-id="${sub._id}">Видалити</button>
-                            </p>
-                        `).join('')}
-                    </div>
-                `).join('')
-                : '<p>Категорії відсутні</p>';
-
-            catList.removeEventListener('click', handleCategoryClick);
-            catList.addEventListener('click', handleCategoryClick);
-        } else {
-            console.warn('Елемент #cat-list не знайдено');
-        }
-
-        function handleCategoryClick(event) {
-            const target = event.target;
-            if (target.classList.contains('move-up')) {
-                const index = parseInt(target.dataset.index);
-                moveCategoryUp(index);
-            } else if (target.classList.contains('move-down')) {
-                const index = parseInt(target.dataset.index);
-                moveCategoryDown(index);
-            } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit')) {
-                const id = target.dataset.id;
-                openEditCategoryModal(id);
-            } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete')) {
-                const id = target.dataset.id;
-                deleteCategory(id);
-            } else if (target.classList.contains('sub-move-up')) {
-                const catId = target.dataset.catId;
-                const subIndex = parseInt(target.dataset.subIndex);
-                moveSubcategoryUp(catId, subIndex);
-            } else if (target.classList.contains('sub-move-down')) {
-                const catId = target.dataset.catId;
-                const subIndex = parseInt(target.dataset.subIndex);
-                moveSubcategoryDown(catId, subIndex);
-            } else if (target.classList.contains('sub-edit')) {
-                const catId = target.dataset.catId;
-                const subId = target.dataset.subId;
-                openEditSubcategoryModal(catId, subId);
-            } else if (target.classList.contains('sub-delete')) {
-                const catId = target.dataset.catId;
-                const subId = target.dataset.subId;
-                deleteSubcategory(catId, subId);
-            }
-        }
-
-        // Рендеринг вкладки products
         if (section === 'products') {
+            tabContent.innerHTML = `
+                <div class="admin-section">
+                    <h3>Товари</h3>
+                    <div class="product-controls">
+                        <button onclick="openAddProductModal()">Додати товар</button>
+                        <select id="cat-list">
+                            <option value="">Виберіть категорію</option>
+                        </select>
+                        <div class="sort-menu">
+                            <button class="sort-btn">Сортування ▼</button>
+                            <div class="sort-dropdown">
+                                <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
+                                <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
+                                <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
+                                <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
+                                <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
+                                <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
+                                <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
+                                <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
+                            </div>
+                        </div>
+                        <div class="backup-group">
+                            <button onclick="exportPrices()">Експортувати ціни</button>
+                            <div class="import-group">
+                                <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
+                                <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-admin-item" id="product-list-header">
+                        <span>№</span>
+                        <span>Тип</span>
+                        <span>Назва</span>
+                        <span>Виробник</span>
+                        <span>Ціна</span>
+                        <span>Акційна ціна</span>
+                        <span>Статус</span>
+                    </div>
+                    <div id="product-list"></div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            `;
+
             const productList = document.getElementById('product-list');
             if (productList) {
-                const start = (currentPage - 1) * productsPerPage;
-                const end = start + productsPerPage;
-                productList.innerHTML = products && Array.isArray(products) && products.length > 0
-                    ? products.slice(start, end).map(p => `
-                        <div class="product-item">
-                            <span>#${p.id || p._id} ${p.name} (${p.brand || p.type || 'Без бренду'})</span>
-                            <span>${p.price || (p.sizes ? Math.min(...p.sizes.map(s => s.price)) : 'N/A')} грн</span>
-                            ${renderCountdown(p)}
-                            <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
-                            <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                            <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                productList.innerHTML = Array.isArray(products) && products.length > 0
+                    ? products.map((p, i) => `
+                        <div class="product-admin-item">
+                            <span>${i + 1}</span>
+                            <span>${p.type || 'N/A'}</span>
+                            <span>${p.name}</span>
+                            <span>${p.brand || 'N/A'}</span>
+                            <span>${p.price || '0'} грн</span>
+                            <span>${p.salePrice || '-'}</span>
+                            <span class="status-column">
+                                <button class="${p.status === 'В наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'В наявності')">В наявності</button>
+                                <button class="${p.status === 'Немає в наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Немає в наявності')">Немає</button>
+                                <button class="${p.status === 'Очікується' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Очікується')">Очікується</button>
+                                <button class="edit-btn" onclick="editProduct(${i})">Редагувати</button>
+                                <button class="delete-btn" onclick="deleteProduct(${i})">Видалити</button>
+                            </span>
                         </div>
                     `).join('')
-                    : '<p>Товари відсутні</p>';
-
-                const sortSelect = document.getElementById('product-sort');
-                if (sortSelect) {
-                    sortSelect.innerHTML = `
-                        <option value="id-asc">Сортувати за ID (за зростанням)</option>
-                        <option value="id-desc">Сортувати за ID (за спаданням)</option>
-                        <option value="name-asc">Сортувати за назвою (А-Я)</option>
-                        <option value="name-desc">Сортувати за назвою (Я-А)</option>
-                        <option value="price-asc">Сортувати за ціною (за зростанням)</option>
-                        <option value="price-desc">Сортувати за ціною (за спаданням)</option>
-                    `;
-                    sortSelect.onchange = (e) => sortAdminProducts(e.target.value);
-                }
-                renderPagination(products.length, productsPerPage, 'product-pagination', currentPage);
-            } else {
-                console.warn('Елемент #product-list не знайдено');
+                    : '<p>Продукти відсутні</p>';
+                console.log('Продукти відрендерено:', products.length);
             }
-        }
-        // Рендеринг вкладки orders
-        else if (section === 'orders') {
+
+            const catList = document.getElementById('cat-list');
+            if (catList) {
+                catList.innerHTML = Array.isArray(categories) && categories.length > 0
+                    ? `<option value="">Виберіть категорію</option>` + categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')
+                    : '<option value="">Категорії відсутні</option>';
+                console.log('Категорії відрендерено для #cat-list:', categories.length);
+            }
+
+            updateSubcategories();
+            renderPagination(products.length, 10, 'pagination', currentPage);
+
+        } else if (section === 'categories') {
+            tabContent.innerHTML = `
+                <div class="admin-section">
+                    <h3>Категорії</h3>
+                    <div id="category-list-admin"></div>
+                </div>
+            `;
+
+            const categoryList = document.getElementById('category-list-admin');
+            if (categoryList) {
+                categoryList.innerHTML = Array.isArray(categories) && categories.length > 0
+                    ? categories.map((cat, index) => `
+                        <div class="category-item">
+                            <span>${cat.name}</span>
+                            <button class="move-up" data-index="${index}">↑</button>
+                            <button class="move-down" data-index="${index}">↓</button>
+                            <button class="edit-btn" onclick="editCategory('${cat._id}')">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteCategory('${cat._id}')">Видалити</button>
+                            <div class="subcategories">
+                                ${Array.isArray(cat.subcategories) && cat.subcategories.length > 0
+                                    ? cat.subcategories.map((sub, subIndex) => `
+                                        <div class="subcategory-item">
+                                            <span>${sub.name}</span>
+                                            <button class="move-up" data-cat-id="${cat._id}" data-sub-index="${subIndex}">↑</button>
+                                            <button class="move-down" data-cat-id="${cat._id}" data-sub-index="${subIndex}">↓</button>
+                                            <button class="edit-btn" onclick="editSubcategory('${cat._id}', '${sub._id}')">Редагувати</button>
+                                            <button class="delete-btn" onclick="deleteSubcategory('${cat._id}', '${sub._id}')">Видалити</button>
+                                        </div>
+                                    `).join('')
+                                    : '<p>Підкатегорії відсутні</p>'}
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<p>Категорії відсутні</p>';
+                console.log('Категорії відрендерено:', categories.length);
+
+                // Делегування подій для кнопок
+                categoryList.removeEventListener('click', handleCategoryClick);
+                categoryList.addEventListener('click', handleCategoryClick);
+
+                function handleCategoryClick(event) {
+                    const target = event.target;
+                    const index = parseInt(target.dataset.index);
+                    const catId = target.dataset.catId;
+                    const subIndex = parseInt(target.dataset.subIndex);
+
+                    if (target.classList.contains('move-up') && !isNaN(index)) {
+                        moveCategoryUp(index);
+                    } else if (target.classList.contains('move-down') && !isNaN(index)) {
+                        moveCategoryDown(index);
+                    } else if (target.classList.contains('move-up') && catId && !isNaN(subIndex)) {
+                        moveSubcategoryUp(catId, subIndex);
+                    } else if (target.classList.contains('move-down') && catId && !isNaN(subIndex)) {
+                        moveSubcategoryDown(catId, subIndex);
+                    }
+                }
+            }
+
+        } else if (section === 'site-editing') {
+            tabContent.innerHTML = `
+                <div class="admin-tab" id="site-editing">
+                    <div class="admin-section">
+                        <h3>Логотип та назва</h3>
+                        <form id="store-info-form" onsubmit="event.preventDefault(); updateStoreInfo();">
+                            <input id="store-name" placeholder="Назва магазину" type="text"/><br/>
+                            <label for="store-name">Назва магазину</label>
+                            <input id="base-url" placeholder="Базовий URL (наприклад, https://www.yourdomain.com)" type="text"/><br/>
+                            <label for="base-url">Базовий URL сайту</label>
+                            <input class="logo-input" id="logo-url" placeholder="URL логотипу" type="text"/><br/>
+                            <label for="logo-url">URL логотипу</label>
+                            <input accept="image/*" id="logo-file" type="file"/><br/>
+                            <label for="logo-file">Завантажте логотип</label>
+                            <input id="logo-width" max="500" min="50" placeholder="Ширина логотипу (px)" type="number"/><br/>
+                            <label for="logo-width">Ширина логотипу (px)</label>
+                            <input id="favicon-url" placeholder="URL favicon" type="text"/><br/>
+                            <label for="favicon-url">URL favicon</label>
+                            <input accept="image/*" id="favicon-file" type="file"/><br/>
+                            <label for="favicon-file">Завантажте favicon</label>
+                            <button type="submit">Зберегти</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Контакти</h3>
+                        <form id="contacts-form" onsubmit="event.preventDefault(); updateContacts();">
+                            <textarea id="contact-phones" placeholder="Телефони"></textarea><br/>
+                            <label for="contact-phones">Телефони (наприклад, +38 (067) 123-45-67)</label>
+                            <textarea id="contact-addresses" placeholder="Адреси"></textarea><br/>
+                            <label for="contact-addresses">Адреси (наприклад, м. Київ, вул. Меблева, 1)</label>
+                            <textarea id="contact-schedule" placeholder="Графік роботи"></textarea><br/>
+                            <label for="contact-schedule">Графік роботи (наприклад, Пн-Пт: 9:00-18:00)</label>
+                            <button type="submit">Зберегти</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Соціальні мережі</h3>
+                        <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
+                            <input id="social-url" placeholder="Посилання" type="text"/><br/>
+                            <label for="social-url">URL соцмережі</label>
+                            <select id="social-icon">
+                                <option value="🔗">Загальний (🔗)</option>
+                                <option value="📘">Facebook (📘)</option>
+                                <option value="📸">Instagram (📸)</option>
+                                <option value="🐦">Twitter (🐦)</option>
+                                <option value="▶️">YouTube (▶️)</option>
+                                <option value="✈️">Telegram (✈️)</option>
+                            </select><br/>
+                            <label for="social-icon">Іконка соцмережі</label>
+                            <button type="submit">Додати</button>
+                        </form>
+                        <label>
+                            <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
+                            Показувати соціальні мережі
+                        </label>
+                        <div id="social-list"></div>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Про нас</h3>
+                        <form id="about-form" onsubmit="event.preventDefault(); updateAbout();">
+                            <div id="about-editor"></div>
+                            <input id="about-edit" type="hidden"/>
+                            <label for="about-edit">Опис "Про нас"</label>
+                            <button type="submit">Зберегти</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Категорії</h3>
+                        <form id="category-form" onsubmit="event.preventDefault(); addCategory();">
+                            <input id="category-name" placeholder="Назва категорії" type="text"><br/>
+                            <label for="category-name">Назва категорії</label>
+                            <input id="category-slug" placeholder="Шлях категорії (наприклад, kuhni)" type="text"><br/>
+                            <label for="category-slug">Шлях категорії</label>
+                            <input id="category-photo-url" placeholder="URL картинки (300x200)" type="text"><br/>
+                            <label for="category-photo-url">URL зображення</label>
+                            <input accept="image/*" id="category-photo-file" type="file"><br/>
+                            <label for="category-photo-file">Завантажте зображення</label>
+                            <select id="category-visible">
+                                <option value="true">Показувати</option>
+                                <option value="false">Приховати</option>
+                            </select><br/>
+                            <label for="category-visible">Видимість</label>
+                            <button type="submit">Додати категорію</button>
+                        </form>
+                        <div id="category-list-admin"></div>
+                        <h4>Підкатегорії</h4>
+                        <form id="subcategory-form" onsubmit="event.preventDefault(); addSubcategory();">
+                            <input id="subcategory-name" placeholder="Назва підкатегорії" type="text"/><br/>
+                            <label for="subcategory-name">Назва підкатегорії</label>
+                            <input id="subcategory-slug" placeholder="Шлях підкатегорії (наприклад, kuhni-naborom)" type="text"/><br/>
+                            <label for="subcategory-slug">Шлях підкатегорії</label>
+                            <input id="subcategory-photo-url" placeholder="URL картинки (150x150)" type="text"/><br/>
+                            <label for="subcategory-photo-url">URL зображення</label>
+                            <input accept="image/*" id="subcategory-photo-file" type="file"/><br/>
+                            <label for="subcategory-photo-file">Завантажте зображення</label>
+                            <select id="subcategory-category">
+                                <option value="">Виберіть категорію</option>
+                            </select><br/>
+                            <label for="subcategory-category">Категорія для підкатегорії</label>
+                            <select id="subcategory-visible">
+                                <option value="true">Показувати</option>
+                                <option value="false">Приховати</option>
+                            </select><br/>
+                            <label for="subcategory-visible">Видимість</label>
+                            <button type="submit">Додати підкатегорію</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Налаштування категорій</h3>
+                        <form id="category-settings-form" onsubmit="event.preventDefault(); updateCategorySettings();">
+                            <input id="category-width" max="500" min="100" placeholder="Ширина категорії (px, 100-500)" type="number"/><br/>
+                            <label for="category-width">Ширина категорії (px)</label>
+                            <input id="category-height" max="500" min="100" placeholder="Висота категорії (px, 100-500)" type="number"/><br/>
+                            <label for="category-height">Висота категорії (px)</label>
+                            <button type="submit">Зберегти налаштування</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Налаштування товарів</h3>
+                        <form id="product-settings-form" onsubmit="event.preventDefault(); updateProductSettings();">
+                            <input id="product-width" max="500" min="200" placeholder="Ширина товару (px, 200-500)" type="number"/><br/>
+                            <label for="product-width">Ширина товару (px)</label>
+                            <input id="product-height" max="500" min="200" placeholder="Висота товару (px, 200-500)" type="number"/><br/>
+                            <label for="product-height">Висота товару (px)</label>
+                            <button type="submit">Зберегти налаштування</button>
+                        </form>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Фільтри</h3>
+                        <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
+                            <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
+                            <label for="filter-name">Назва фільтру (наприклад, brand)</label>
+                            <input id="filter-label" placeholder="Підпис" type="text"/><br/>
+                            <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
+                            <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
+                            <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
+                            <button type="submit">Додати фільтр</button>
+                        </form>
+                        <div id="filter-list-admin"></div>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Поля замовлення</h3>
+                        <form id="order-field-form" onsubmit="event.preventDefault(); addOrderField();">
+                            <input id="order-field-name" placeholder="Назва (англ.)" type="text"/><br/>
+                            <label for="order-field-name">Назва поля (наприклад, name)</label>
+                            <input id="order-field-label" placeholder="Підпис" type="text"/><br/>
+                            <label for="order-field-label">Відображувана назва (наприклад, Ім'я)</label>
+                            <select id="order-field-type">
+                                <option value="text">Текст</option>
+                                <option value="email">Email</option>
+                                <option value="select">Вибір</option>
+                            </select><br/>
+                            <label for="order-field-type">Тип поля</label>
+                            <input id="order-field-options" placeholder="Опції (через кому, для select)" type="text"/><br/>
+                            <label for="order-field-options">Опції для вибору (наприклад, Готівкою, Карткою)</label>
+                            <button type="submit">Додати поле</button>
+                        </form>
+                        <div id="order-field-list"></div>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Слайдшоу</h3>
+                        <form id="slideshow-settings-form" onsubmit="event.preventDefault(); updateSlideshowSettings();">
+                            <input id="slide-width" max="100" min="10" placeholder="Ширина слайду (%, 10-100)" type="number"/><br/>
+                            <label for="slide-width">Ширина слайду (%)</label>
+                            <input id="slide-height" max="500" min="100" placeholder="Висота слайду (px, 100-500)" type="number"/><br/>
+                            <label for="slide-height">Висота слайду (px)</label>
+                            <input id="slide-interval" placeholder="Інтервал (мс)" type="number"/><br/>
+                            <label for="slide-interval">Інтервал слайдів (мс)</label>
+                            <button type="submit">Зберегти налаштування</button>
+                        </form>
+                        <form id="slide-form" onsubmit="event.preventDefault(); addSlide();">
+                            <input id="slide-img-url" placeholder="URL картинки" type="text"/><br/>
+                            <label for="slide-img-url">URL зображення слайду</label>
+                            <input accept="image/*" id="slide-img-file" type="file"/><br/>
+                            <label for="slide-img-file">Завантажте зображення</label>
+                            <input id="slide-title" placeholder="Заголовок слайду" type="text"/><br/>
+                            <label for="slide-title">Заголовок слайду</label>
+                            <input id="slide-text" placeholder="Текст слайду" type="text"/><br/>
+                            <label for="slide-text">Текст слайду</label>
+                            <input id="slide-link" placeholder="Посилання" type="text"/><br/>
+                            <label for="slide-link">Посилання слайду</label>
+                            <input id="slide-link-text" placeholder="Текст посилання" type="text"/><br/>
+                            <label for="slide-link-text">Текст посилання</label>
+                            <input id="slide-order" placeholder="Порядковий номер" type="number"/><br/>
+                            <label for="slide-order">Порядок слайду</label>
+                            <button type="submit">Додати слайд</button>
+                        </form>
+                        <label>
+                            <input id="slide-toggle" onchange="toggleSlideshow()" type="checkbox"/>
+                            Показати слайдшоу
+                        </label>
+                        <div id="slides-list-admin"></div>
+                    </div>
+                    <div class="admin-section">
+                        <h3>Бекап</h3>
+                        <div class="backup-group">
+                            <button onclick="exportSiteBackup()">Експортувати (Сайт)</button>
+                            <div class="import-group">
+                                <input accept=".json" id="import-site-file" style="display: none;" type="file"/>
+                                <button class="import-btn" onclick="document.getElementById('import-site-file').click()">Імпортувати файл (Сайт)</button>
+                            </div>
+                        </div>
+                        <div class="backup-group">
+                            <button onclick="exportProductsBackup()">Експортувати (Товари)</button>
+                            <div class="import-group">
+                                <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
+                                <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (Товари)</button>
+                            </div>
+                        </div>
+                        <div class="backup-group">
+                            <button onclick="exportOrdersBackup()">Експортувати (Замовлення)</button>
+                            <div class="import-group">
+                                <input accept=".json" id="import-orders-file" style="display: none;" type="file"/>
+                                <button class="import-btn" onclick="document.getElementById('import-orders-file').click()">Імпортувати файл (Замовлення)</button>
+                            </div>
+                        </div>
+                        <div class="backup-group">
+                            <button onclick="downloadSitemap()">Завантажити Sitemap</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (typeof renderSettingsAdmin === 'function') {
+                renderSettingsAdmin();
+                console.log('Викликано renderSettingsAdmin');
+            }
+            if (typeof renderSlidesAdmin === 'function') {
+                renderSlidesAdmin();
+                console.log('Викликано renderSlidesAdmin');
+            }
+            const aboutEditor = document.getElementById('about-editor');
+            if (aboutEditor && typeof initializeEditors === 'function') {
+                initializeEditors();
+                console.log('Викликано initializeEditors');
+            } else {
+                console.warn('Елемент #about-editor не знайдено, відкладено ініціалізацію редактора');
+            }
+
+        } else if (section === 'orders') {
+            tabContent.innerHTML = `
+                <div class="admin-section orders-section">
+                    <h3>Замовлення</h3>
+                    <div class="sort-menu">
+                        <button class="sort-btn">Сортування ▼</button>
+                        <div class="sort-dropdown">
+                            <button onclick="sortOrders('date-desc')">Дата (новіші)</button>
+                            <button onclick="sortOrders('date-asc')">Дата (старіші)</button>
+                            <button onclick="sortOrders('total-desc')">Сума (спадання)</button>
+                            <button onclick="sortOrders('total-asc')">Сума (зростання)</button>
+                            <button onclick="sortOrders('status-asc')">Статус (А-Я)</button>
+                            <button onclick="sortOrders('status-desc')">Статус (Я-А)</button>
+                        </div>
+                    </div>
+                    <div class="filter-options">
+                        <label>Фільтр за статусом:</label>
+                        <select id="order-status-filter" onchange="filterOrders()">
+                            <option value="">Усі статуси</option>
+                            <option value="Нове замовлення">Нове замовлення</option>
+                            <option value="В обробці">В обробці</option>
+                            <option value="Відправлено">Відправлено</option>
+                            <option value="Завершено">Завершено</option>
+                        </select>
+                    </div>
+                    <div id="order-list"></div>
+                    <div class="pagination" id="order-pagination"></div>
+                </div>
+            `;
+
             const orderList = document.getElementById('order-list');
             if (orderList) {
-                const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                let filteredOrders = Array.isArray(orders) ? [...orders] : [];
-                if (statusFilter) {
-                    filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
-                }
-                const itemsPerPage = ordersPerPage || 10;
-                const start = (currentPage - 1) * itemsPerPage;
-                const end = start + itemsPerPage;
-                const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.length > 0
-                    ? paginatedOrders.map((o, index) => {
-                        const orderDate = new Date(o.date);
-                        const formattedDate = isNaN(orderDate) ? 'Невідома дата' : orderDate.toLocaleString('uk-UA', {
-                            timeZone: settings.timezone || 'Europe/Kyiv',
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        return `
-                            <div class="order-item">
-                                <span>#${start + index + 1} ${formattedDate} - ${o.total || 'N/A'} грн (${o.status || 'Н/Д'})</span>
-                                <div>
-                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')
+                orderList.innerHTML = Array.isArray(orders) && orders.length > 0
+                    ? orders.map((order, i) => `
+                        <div class="order-item">
+                            <span>Замовлення #${order.id || i + 1}</span>
+                            <span>${new Date(order.date).toLocaleString()}</span>
+                            <span>${order.total || 0} грн</span>
+                            <button class="edit-btn" onclick="viewOrder(${i})">Переглянути</button>
+                        </div>
+                    `).join('')
                     : '<p>Замовлення відсутні</p>';
+                console.log('Замовлення відрендерено:', orders.length);
+            }
 
-                const sortSelect = document.getElementById('order-sort');
-                if (sortSelect) {
-                    sortSelect.innerHTML = `
-                        <option value="date-desc">Сортувати за датою (спочатку нові)</option>
-                        <option value="date-asc">Сортувати за датою (спочатку старі)</option>
-                        <option value="total-desc">Сортувати за сумою (за спаданням)</option>
-                        <option value="total-asc">Сортувати за сумою (за зростанням)</option>
-                        <option value="status-asc">Сортувати за статусом (А-Я)</option>
-                        <option value="status-desc">Сортувати за статусом (Я-А)</option>
-                    `;
-                    sortSelect.onchange = (e) => sortOrders(e.target.value);
-                }
-                renderPagination(filteredOrders.length, itemsPerPage, 'order-pagination', currentPage);
-            } else {
-                console.warn('Елемент #order-list не знайдено');
+            renderPagination(orders.length, 10, 'order-pagination', currentPage);
+
+        } else if (section === 'filters') {
+            tabContent.innerHTML = `
+                <div class="admin-section">
+                    <h3>Фільтри</h3>
+                    <div id="filter-list"></div>
+                </div>
+            `;
+
+            const filterList = document.getElementById('filter-list');
+            if (filterList) {
+                filterList.innerHTML = Array.isArray(filters) && filters.length > 0
+                    ? filters.map(f => `
+                        <div class="filter-item">
+                            <span>${f.label || f.name}</span>
+                            <button class="edit-btn" onclick="editFilter('${f.name}')">Редагувати</button>
+                            <button class="delete-btn" onclick="deleteFilter('${f.name}')">Видалити</button>
+                        </div>
+                    `).join('')
+                    : '<p>Фільтри відсутні</p>';
+                console.log('Фільтри відрендерено:', filters.length);
             }
-        }
-        else if (section === 'order-fields') {
-            if (content) {
-                content.innerHTML = `
-                    <h2>Поля замовлення</h2>
-                    <input type="text" id="order-field-name" placeholder="Назва поля (унікальна)"><br/>
-                    <input type="text" id="order-field-label" placeholder="Відображувана назва"><br/>
-                    <select id="order-field-type">
-                        <option value="text">Текст</option>
-                        <option value="email">Email</option>
-                        <option value="select">Вибір</option>
-                    </select><br/>
-                    <input type="text" id="order-field-options" placeholder="Опції для вибору (через кому)"><br/>
-                    <button onclick="addOrderField()">Додати поле</button>
-                    <div id="order-fields-list">
-                        ${orderFields && Array.isArray(orderFields) && orderFields.length > 0
-                            ? orderFields.map(f => `
-                                <div class="order-field-item">
-                                    ${f.label} (${f.name}, ${f.type}${f.options ? ', ' + f.options.join(', ') : ''})
-                                    <button onclick="editOrderField('${f.name}')">Редагувати</button>
-                                    <button onclick="deleteOrderField('${f.name}')">Видалити</button>
-                                </div>
-                            `).join('')
-                            : '<p>Поля замовлення відсутні</p>'}
-                    </div>
-                `;
-            }
-        }
-        else if (section === 'filters') {
-            if (content) {
-                content.innerHTML = `
-                    <h2>Фільтри</h2>
-                    <input type="text" id="filter-label" placeholder="Відображувана назва"><br/>
-                    <input type="text" id="filter-name" placeholder="Назва фільтру (унікальна)"><br/>
-                    <select id="filter-type">
-                        <option value="select">Вибір</option>
-                        <option value="range">Діапазон</option>
-                    </select><br/>
-                    <input type="text" id="filter-options" placeholder="Опції (через кому)"><br/>
-                    <button onclick="addFilter()">Додати фільтр</button>
-                    <div id="filters-list">
-                        ${filters && Array.isArray(filters) && filters.length > 0
-                            ? filters.map((f, i) => `
-                                <div class="filter-item">
-                                    ${f.label} (${f.name}, ${f.type}, ${f.options.join(', ')})
-                                    <button onclick="editFilter('${f.name}')">Редагувати</button>
-                                    <button onclick="deleteFilter('${f.name}')">Видалити</button>
-                                    <button onclick="moveFilterUp(${i})" ${i === 0 ? 'disabled' : ''}>Вгору</button>
-                                    <button onclick="moveFilterDown(${i})" ${i === filters.length - 1 ? 'disabled' : ''}>Вниз</button>
-                                </div>
-                            `).join('')
-                            : '<p>Фільтри відсутні</p>'}
-                    </div>
-                `;
-            }
-        }
-        else if (section === 'categories') {
-            if (typeof renderCategoriesAdmin === 'function') {
-                renderCategoriesAdmin();
-            } else {
-                console.warn('Функція renderCategoriesAdmin не визначена');
-            }
-        }
-        else if (section === 'site-editing') {
-            if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
-            if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-        }
-        else {
-            console.warn(`Невідома вкладка: ${section}`);
+        } else {
+            console.warn('Невідома секція:', section);
+            tabContent.innerHTML = '<p>Секція не підтримується</p>';
         }
 
         resetInactivityTimer();
-    } catch (e) {
-        console.error(`Помилка рендерингу вкладки ${section}:`, e);
-        showNotification(`Помилка рендерингу вкладки ${section}: ${e.message}`);
+    } catch (err) {
+        console.error('Помилка рендерингу адмін-панелі:', err);
+        showNotification('Помилка рендерингу: ' + err.message);
     }
 }
 
@@ -6223,50 +6359,81 @@ socket.onmessage = (event) => {
     try {
         const { type, data } = JSON.parse(event.data);
         console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-        if (type === 'settings') {
-            settings = { ...settings, ...data };
-            renderSettingsAdmin();
-        } else if (type === 'products') {
-            products = Array.isArray(data) ? data : products;
-            if (document.querySelector('#products.active')) {
-                renderAdmin('products');
+        
+        // Затримка для асинхронного оновлення DOM
+        setTimeout(() => {
+            const currentTab = localStorage.getItem('currentAdminTab') || 'products';
+
+            if (type === 'settings') {
+                settings = { ...settings, ...data };
+                if (document.getElementById('store-name') && currentTab === 'site-editing') {
+                    if (typeof renderSettingsAdmin === 'function') {
+                        renderSettingsAdmin();
+                        console.log('Оновлено settings через WebSocket');
+                    }
+                }
+            } else if (type === 'products') {
+                products = Array.isArray(data) ? data : products;
+                if (document.getElementById('product-list') && currentTab === 'products') {
+                    renderAdmin('products');
+                    console.log('Оновлено products через WebSocket:', products.length);
+                }
+            } else if (type === 'categories') {
+                if (Array.isArray(data)) {
+                    categories = data;
+                    if (document.getElementById('category-list-admin') && currentTab === 'categories') {
+                        if (typeof renderCategoriesAdmin === 'function') {
+                            renderCategoriesAdmin();
+                            console.log('Оновлено categories через WebSocket:', categories.length);
+                        }
+                    }
+                } else {
+                    console.warn('Некоректні дані категорій:', data);
+                    loadCategories(); // Резервне завантаження
+                }
+            } else if (type === 'orders') {
+                orders = Array.isArray(data) ? data : orders;
+                if (document.getElementById('order-list') && currentTab === 'orders') {
+                    renderAdmin('orders');
+                    console.log('Оновлено orders через WebSocket:', orders.length);
+                }
+            } else if (type === 'slides') {
+                slides = Array.isArray(data) ? data : slides;
+                if (document.getElementById('slides-list-admin') && currentTab === 'site-editing') {
+                    if (typeof renderSlidesAdmin === 'function') {
+                        renderSlidesAdmin();
+                        console.log('Оновлено slides через WebSocket:', slides.length);
+                    }
+                }
+            } else if (type === 'materials') {
+                materials = Array.isArray(data) ? data : materials;
+                if (typeof updateMaterialOptions === 'function') {
+                    updateMaterialOptions();
+                    console.log('Оновлено materials через WebSocket:', materials.length);
+                }
+            } else if (type === 'brands') {
+                brands = Array.isArray(data) ? data : brands;
+                if (typeof updateBrandOptions === 'function') {
+                    updateBrandOptions();
+                    console.log('Оновлено brands через WebSocket:', brands.length);
+                }
+            } else if (type === 'filters') {
+                filters = Array.isArray(data) ? data : filters;
+                if (document.getElementById('filter-list') && currentTab === 'filters') {
+                    renderAdmin('filters');
+                    console.log('Оновлено filters через WebSocket:', filters.length);
+                }
+            } else if (type === 'error') {
+                console.error('WebSocket помилка від сервера:', data);
+                showNotification('Помилка WebSocket: ' + (data.error || 'Невідома помилка'));
+                if (data.error?.includes('неавторизований')) {
+                    localStorage.removeItem('adminToken');
+                    localStorage.removeItem('adminSession');
+                    showSection('admin-login');
+                    showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                }
             }
-        } else if (type === 'categories') {
-            if (Array.isArray(data)) {
-                categories = data;
-                renderCategoriesAdmin();
-            } else {
-                console.warn('Некоректні дані категорій:', data);
-                loadCategories(); // Резервне завантаження
-            }
-        } else if (type === 'orders') {
-            orders = Array.isArray(data) ? data : orders;
-            if (document.querySelector('#orders.active')) {
-                renderAdmin('orders');
-            }
-        } else if (type === 'slides') {
-            slides = Array.isArray(data) ? data : slides;
-            if (document.querySelector('#site-editing.active')) {
-                renderSlidesAdmin();
-            }
-        } else if (type === 'materials') {
-            materials = Array.isArray(data) ? data : materials;
-            updateMaterialOptions();
-        } else if (type === 'brands') {
-            brands = Array.isArray(data) ? data : brands;
-            updateBrandOptions();
-        } else if (type === 'filters') {
-            filters = Array.isArray(data) ? data : filters;
-            renderFilters();
-        } else if (type === 'error') {
-            console.error('WebSocket помилка від сервера:', data);
-            showNotification('Помилка WebSocket: ' + data.error);
-            if (data.error.includes('неавторизований')) {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('adminSession');
-                showSection('admin-login');
-            }
-        }
+        }, 100);
     } catch (e) {
         console.error('Помилка обробки WebSocket-повідомлення:', e);
         showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
