@@ -1625,7 +1625,6 @@ async function updateAbout() {
     }
 }
 
-```javascript
 function renderAdmin(section = activeTab) {
     console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings, 'Продукти:', products?.length || 0, 'Замовлення:', orders?.length || 0); // Зміна: додано логування продуктів і замовлень
 
