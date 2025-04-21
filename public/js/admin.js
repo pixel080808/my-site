@@ -257,23 +257,23 @@ async function fetchWithAuth(url, options = {}) {
         throw new Error('Токен відсутній. Увійдіть знову.');
     }
 
-async function getCsrfToken() {
+    // Отримуємо CSRF-токен для запитів, що змінюють дані
+let csrfToken = localStorage.getItem('csrfToken');
+if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
     try {
-        const response = await fetch('/api/csrf-token', {
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
+            credentials: 'include'
         });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося отримати CSRF-токен');
+        if (!csrfResponse.ok) {
+            throw new Error('Не вдалося отримати CSRF-токен');
         }
-        const data = await response.json();
-        return data.csrfToken;
-    } catch (error) {
-        console.error('Помилка при отриманні CSRF-токена:', error);
-        throw new Error('Не вдалося отримати CSRF-токен: ' + error.message);
+        const csrfData = await csrfResponse.json();
+        csrfToken = csrfData.csrfToken;
+        localStorage.setItem('csrfToken', csrfToken);
+    } catch (err) {
+        console.error('Помилка отримання CSRF-токена:', err);
+        throw err;
     }
 }
 
@@ -3555,162 +3555,86 @@ async function loadFilters() {
     }
 }
 
-async function addFilter(event) {
-    event.preventDefault();
-    
-    const filterForm = document.getElementById('filterForm');
-    const filterName = document.getElementById('filterName');
-    const filterLabel = document.getElementById('filterLabel');
-    const filterType = document.getElementById('filterType');
-    const filterOptions = document.getElementById('filterOptions');
-
-    // Перевірка наявності всіх елементів форми
-    if (!filterForm || !filterName || !filterLabel || !filterType || !filterOptions) {
-        alert('Елементи форми для фільтра не знайдено. Перевірте структуру сторінки.');
-        console.error('Missing form elements:', { filterForm, filterName, filterLabel, filterType, filterOptions });
-        return;
-    }
-
-    // Перевірка заповнення обов’язкових полів
-    if (!filterName.value.trim() || !filterLabel.value.trim() || !filterType.value) {
-        alert('Будь ласка, заповніть усі обов’язкові поля (Назва, Мітка, Тип).');
-        return;
-    }
-
-    // Обробка опцій
-    let options = [];
-    if (filterOptions.value.trim()) {
-        options = filterOptions.value.split(',').map(opt => opt.trim()).filter(opt => opt);
-        if (options.length === 0) {
-            alert('Опції фільтра некоректні. Введіть значення, розділені комами.');
-            return;
-        }
-    }
-
-    const newFilter = {
-        name: filterName.value.trim(),
-        label: filterLabel.value.trim(),
-        type: filterType.value,
-        options
-    };
-
+async function addFilter() {
     try {
-        const settings = await getSettings();
-        const updatedFilters = [...(settings.filters || []), newFilter];
-
-        const response = await fetch('/api/settings', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'X-CSRF-Token': await getCsrfToken()
-            },
-            body: JSON.stringify({ ...settings, filters: updatedFilters })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Помилка при додаванні фільтра');
-        }
-
-        alert('Фільтр успішно додано!');
-        filterForm.reset();
-        loadSettings();
-    } catch (error) {
-        console.error('Помилка при додаванні фільтра:', error);
-        alert(`Не вдалося додати фільтр: ${error.message}`);
-    }
-}
-
-async function editFilter(index) {
-    try {
-        const settings = await getSettings();
-        const filter = settings.filters[index];
-        if (!filter) {
-            alert('Фільтр не знайдено');
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
             return;
         }
 
-        document.getElementById('filterName').value = filter.name;
-        document.getElementById('filterLabel').value = filter.label;
-        document.getElementById('filterType').value = filter.type;
-        document.getElementById('filterOptions').value = filter.options.join(', ');
+        const labelInput = document.getElementById('filter-label');
+        const nameInput = document.getElementById('filter-name');
+        const typeSelect = document.getElementById('filter-type');
+        const optionsInput = document.getElementById('filter-options');
 
-        // Тимчасово змінюємо поведінку форми для збереження редагованого фільтра
-        const filterForm = document.getElementById('filterForm');
-        filterForm.onsubmit = async (event) => {
-            event.preventDefault();
-            const updatedFilter = {
-                name: document.getElementById('filterName').value.trim(),
-                label: document.getElementById('filterLabel').value.trim(),
-                type: document.getElementById('filterType').value,
-                options: document.getElementById('filterOptions').value
-                    .split(',')
-                    .map(opt => opt.trim())
-                    .filter(opt => opt)
-            };
+        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
+            showNotification('Елементи форми для фільтра не знайдено');
+            return;
+        }
 
-            if (!updatedFilter.name || !updatedFilter.label || !updatedFilter.type) {
-                alert('Заповніть усі обов’язкові поля');
-                return;
-            }
+        const label = labelInput.value.trim();
+        const name = nameInput.value.trim();
+        const type = typeSelect.value;
+        const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
 
-            settings.filters[index] = updatedFilter;
-            const response = await fetch('/api/settings', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'X-CSRF-Token': await getCsrfToken()
-                },
-                body: JSON.stringify(settings)
-            });
+        if (!label || !name || !type || options.length === 0) {
+            showNotification('Заповніть усі поля фільтра!');
+            return;
+        }
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Помилка при редагуванні фільтра');
-            }
+        filters.push({ label, name, type, options });
 
-            alert('Фільтр успішно відредаговано!');
-            filterForm.reset();
-            filterForm.onsubmit = addFilter; // Повертаємо стандартну поведінку
-            loadSettings();
-        };
-    } catch (error) {
-        console.error('Помилка при редагуванні фільтра:', error);
-        alert(`Не вдалося редагувати фільтр: ${error.message}`);
-    }
-}
-
-async function deleteFilter(index) {
-    if (!confirm('Ви впевнені, що хочете видалити цей фільтр?')) return;
-
-    try {
-        const settings = await getSettings();
-        settings.filters.splice(index, 1);
-
-        const response = await fetch('/api/settings', {
+        const token = localStorage.getItem('adminToken');
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'X-CSRF-Token': await getCsrfToken()
-            },
-            body: JSON.stringify(settings)
+            body: JSON.stringify({ ...settings, filters })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Помилка при видаленні фільтра');
+            throw new Error('Не вдалося оновити фільтри');
         }
 
-        alert('Фільтр успішно видалено!');
-        loadSettings();
-    } catch (error) {
-        console.error('Помилка при видаленні фільтра:', error);
-        alert(`Не вдалося видалити фільтр: ${error.message}`);
+        renderFilters();
+        showNotification('Фільтр додано!');
+        labelInput.value = '';
+        nameInput.value = '';
+        typeSelect.value = 'select';
+        optionsInput.value = '';
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка додавання фільтру:', err);
+        showNotification('Помилка: ' + err.message);
     }
 }
+
+    function editFilter(name) {
+        const filter = filters.find(f => f.name === name);
+        if (filter) {
+            const modal = document.getElementById('modal');
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Редагувати фільтр</h3>
+                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
+                    <label for="edit-filter-name">Назва фільтру</label>
+                    <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
+                    <label for="edit-filter-label">Відображувана назва</label>
+                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
+                    <label for="edit-filter-options">Опції (через кому)</label>
+                    <div class="modal-actions">
+                        <button id="save-filter-btn">Зберегти</button>
+                        <button id="cancel-filter-btn">Скасувати</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+            document.getElementById('save-filter-btn').addEventListener('click', () => saveFilterEdit(name));
+            document.getElementById('cancel-filter-btn').addEventListener('click', closeModal);
+            resetInactivityTimer();
+        }
+    }
 
     function saveFilterEdit(name) {
         const filter = filters.find(f => f.name === name);

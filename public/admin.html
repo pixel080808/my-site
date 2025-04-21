@@ -741,29 +741,16 @@ button:hover {
         <!-- Фільтри -->
         <div class="admin-section">
             <h3>Фільтри</h3>
-<form id="filterForm" onsubmit="addFilter(event)">
-    <div>
-        <label for="filterName">Назва фільтра (внутрішня):</label>
-        <input type="text" id="filterName" required>
-    </div>
-    <div>
-        <label for="filterLabel">Мітка фільтра (для відображення):</label>
-        <input type="text" id="filterLabel" required>
-    </div>
-    <div>
-        <label for="filterType">Тип фільтра:</label>
-        <select id="filterType" required>
-            <option value="select">Вибір зі списку</option>
-            <option value="checkbox">Чекбокс</option>
-            <option value="range">Діапазон</option>
-        </select>
-    </div>
-    <div>
-        <label for="filterOptions">Опції (через кому):</label>
-        <input type="text" id="filterOptions" placeholder="опція1, опція2, опція3">
-    </div>
-    <button type="submit">Додати фільтр</button>
-</form>
+            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
+                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
+                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
+                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
+                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
+                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
+                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
+                <button type="submit">Додати фільтр</button>
+            </form>
+            <div id="filter-list-admin"></div>
         </div>
         <!-- Поля замовлення -->
         <div class="admin-section">
