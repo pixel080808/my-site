@@ -1626,11 +1626,16 @@ async function updateAbout() {
 }
 
 function renderAdmin(section = activeTab) {
-    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings);
+    console.log('Рендеринг адмін-панелі з activeTab:', activeTab, 'settings:', settings, 'Продукти:', products?.length || 0, 'Замовлення:', orders?.length || 0); // Зміна: додано логування продуктів і замовлень
 
     try {
-        // Переключаємо вкладку (якщо це потрібно у вашій логіці; закоментуйте, якщо не використовується)
-        // showAdminTab(section);
+        // Зміна: перевіряємо, чи існує контейнер для секції
+        const content = document.getElementById(section);
+        if (!content && ['products', 'orders', 'order-fields', 'filters'].includes(section)) {
+            console.error('Секція не знайдена:', section);
+            showNotification(`Секція ${section} не знайдена`);
+            return;
+        }
 
         // Рендеринг налаштувань магазину
         const storeName = document.getElementById('store-name');
@@ -1772,7 +1777,7 @@ function renderAdmin(section = activeTab) {
                     </div>
                 `).join('')
                 : '';
-            // Додаємо делегування подій (залишаємо як є, оскільки воно працює)
+            // Додаємо делегування подій
             catList.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.classList.contains('move-up')) {
@@ -1804,21 +1809,21 @@ function renderAdmin(section = activeTab) {
                     const subName = target.dataset.subName;
                     deleteSubcategory(catId, subName);
                 }
-            }, { once: true }); // Додаємо { once: true }, щоб уникнути повторного додавання слухача
+            }, { once: true }); // Залишаємо { once: true } для уникнення повторного додавання
         } else {
             console.warn('Елемент #cat-list не знайдено');
         }
 
-        // Рендеринг вкладок
+        // Зміна: оновлений рендеринг вкладки products
         if (section === 'products') {
             const productList = document.getElementById('product-list');
             if (productList) {
                 const start = (currentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                productList.innerHTML = products && Array.isArray(products)
+                productList.innerHTML = products && Array.isArray(products) && products.length > 0
                     ? products.slice(start, end).map(p => `
                         <div class="product-item">
-                            <span>#${p.id} ${p.name} (${p.brand || 'Без бренду'})</span>
+                            <span>#${p.id || p._id} ${p.name} (${p.brand || p.type || 'Без бренду'})</span>
                             <span>${p.price || (p.sizes ? Math.min(...p.sizes.map(s => s.price)) : 'N/A')} грн</span>
                             ${renderCountdown(p)}
                             <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
@@ -1826,12 +1831,27 @@ function renderAdmin(section = activeTab) {
                             <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
                         </div>
                     `).join('')
-                    : '';
+                    : '<p>Товари відсутні</p>'; // Зміна: додано повідомлення про порожній список
+                // Зміна: додано сортування
+                const sortSelect = document.getElementById('product-sort');
+                if (sortSelect) {
+                    sortSelect.innerHTML = `
+                        <option value="id-asc">Сортувати за ID (за зростанням)</option>
+                        <option value="id-desc">Сортувати за ID (за спаданням)</option>
+                        <option value="name-asc">Сортувати за назвою (А-Я)</option>
+                        <option value="name-desc">Сортувати за назвою (Я-А)</option>
+                        <option value="price-asc">Сортувати за ціною (за зростанням)</option>
+                        <option value="price-desc">Сортувати за ціною (за спаданням)</option>
+                    `;
+                    sortSelect.onchange = (e) => sortAdminProducts(e.target.value);
+                }
                 renderPagination(products.length, productsPerPage, 'product-pagination', currentPage);
             } else {
                 console.warn('Елемент #product-list не знайдено');
             }
-        } else if (section === 'orders') {
+        }
+        // Зміна: оновлений рендеринг вкладки orders
+        else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -1839,47 +1859,119 @@ function renderAdmin(section = activeTab) {
                 if (statusFilter) {
                     filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
                 }
-                const start = (currentPage - 1) * ordersPerPage;
-                const end = start + ordersPerPage;
+                const itemsPerPage = ordersPerPage || 10; // Зміна: використовуємо ordersPerPage або 10
+                const start = (currentPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
                 const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.map((o, index) => {
-                    const orderDate = new Date(o.date);
-                    const formattedDate = orderDate.toLocaleString('uk-UA', {
-                        timeZone: settings.timezone || 'Europe/Kyiv',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                    return `
-                        <div class="order-item">
-                            <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                            <div>
-                                <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                orderList.innerHTML = paginatedOrders.length > 0
+                    ? paginatedOrders.map((o, index) => {
+                        const orderDate = new Date(o.date);
+                        const formattedDate = orderDate.toLocaleString('uk-UA', {
+                            timeZone: settings.timezone || 'Europe/Kyiv',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        return `
+                            <div class="order-item">
+                                <span>#${start + index + 1} ${formattedDate} - ${o.total || 'N/A'} грн (${o.status || 'Н/Д'})</span>
+                                <div>
+                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                                </div>
                             </div>
-                        </div>
+                        `;
+                    }).join('')
+                    : '<p>Замовлення відсутні</p>'; // Зміна: додано повідомлення про порожній список
+                // Зміна: додано сортування
+                const sortSelect = document.getElementById('order-sort');
+                if (sortSelect) {
+                    sortSelect.innerHTML = `
+                        <option value="date-desc">Сортувати за датою (спочатку нові)</option>
+                        <option value="date-asc">Сортувати за датою (спочатку старі)</option>
+                        <option value="total-desc">Сортувати за сумою (за спаданням)</option>
+                        <option value="total-asc">Сортувати за сумою (за зростанням)</option>
+                        <option value="status-asc">Сортувати за статусом (А-Я)</option>
+                        <option value="status-desc">Сортувати за статусом (Я-А)</option>
                     `;
-                }).join('');
-                renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
+                    sortSelect.onchange = (e) => sortOrders(e.target.value);
+                }
+                renderPagination(filteredOrders.length, itemsPerPage, 'order-pagination', currentPage);
             } else {
                 console.warn('Елемент #order-list не знайдено');
             }
-        } else if (section === 'categories') {
-            // Викликаємо renderCategoriesAdmin, якщо це визначено у вашому коді
+        }
+        // Зміна: додано рендеринг вкладки order-fields
+        else if (section === 'order-fields') {
+            content.innerHTML = `
+                <h2>Поля замовлення</h2>
+                <input type="text" id="order-field-name" placeholder="Назва поля (унікальна)"><br/>
+                <input type="text" id="order-field-label" placeholder="Відображувана назва"><br/>
+                <select id="order-field-type">
+                    <option value="text">Текст</option>
+                    <option value="email">Email</option>
+                    <option value="select">Вибір</option>
+                </select><br/>
+                <input type="text" id="order-field-options" placeholder="Опції для вибору (через кому)"><br/>
+                <button onclick="addOrderField()">Додати поле</button>
+                <div id="order-fields-list">
+                    ${orderFields && Array.isArray(orderFields) && orderFields.length > 0
+                        ? orderFields.map(f => `
+                            <div class="order-field-item">
+                                ${f.label} (${f.name}, ${f.type}${f.options ? ', ' + f.options.join(', ') : ''})
+                                <button onclick="editOrderField('${f.name}')">Редагувати</button>
+                                <button onclick="deleteOrderField('${f.name}')">Видалити</button>
+                            </div>
+                        `).join('')
+                        : '<p>Поля замовлення відсутні</p>'}
+                </div>
+            `;
+        }
+        // Зміна: додано рендеринг вкладки filters
+        else if (section === 'filters') {
+            content.innerHTML = `
+                <h2>Фільтри</h2>
+                <input type="text" id="filter-label" placeholder="Відображувана назва"><br/>
+                <input type="text" id="filter-name" placeholder="Назва фільтру (унікальна)"><br/>
+                <select id="filter-type">
+                    <option value="select">Вибір</option>
+                    <option value="range">Діапазон</option>
+                </select><br/>
+                <input type="text" id="filter-options" placeholder="Опції (через кому)"><br/>
+                <button onclick="addFilter()">Додати фільтр</button>
+                <div id="filters-list">
+                    ${filters && Array.isArray(filters) && filters.length > 0
+                        ? filters.map((f, i) => `
+                            <div class="filter-item">
+                                ${f.label} (${f.name}, ${f.type}, ${f.options.join(', ')})
+                                <button onclick="editFilter('${f.name}')">Редагувати</button>
+                                <button onclick="deleteFilter('${f.name}')">Видалити</button>
+                                <button onclick="moveFilterUp(${i})" ${i === 0 ? 'disabled' : ''}>Вгору</button>
+                                <button onclick="moveFilterDown(${i})" ${i === filters.length - 1 ? 'disabled' : ''}>Вниз</button>
+                            </div>
+                        `).join('')
+                        : '<p>Фільтри відсутні</p>'}
+                </div>
+            `;
+        }
+        else if (section === 'categories') {
+            // Викликаємо renderCategoriesAdmin, якщо це визначено
             if (typeof renderCategoriesAdmin === 'function') {
                 renderCategoriesAdmin();
             } else {
                 console.warn('Функція renderCategoriesAdmin не визначена');
             }
-        } else if (section === 'site-editing') {
-            // Викликаємо функції для рендерингу налаштувань і слайдів, якщо вони є
+        }
+        else if (section === 'site-editing') {
+            // Викликаємо функції для рендерингу налаштувань і слайдів
             if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
             if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-        } else {
+        }
+        else {
             console.warn(`Невідома вкладка: ${section}`);
         }
 
