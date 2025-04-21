@@ -139,11 +139,7 @@ app.use(cors({
 
 // Логування всіх запитів
 app.use((req, res, next) => {
-    const user = req.user ? req.user.username : 'anonymous';
-    logger.info(`${req.method} ${req.path} - User: ${user} - ${new Date().toISOString()}`, {
-        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-        headers: req.headers
-    });
+    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
 });
 
@@ -269,12 +265,6 @@ const productSchemaValidation = Joi.object({
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
     material: Joi.string().max(100).allow(''),
-    filters: Joi.array().items(
-        Joi.object({
-            name: Joi.string().min(1).max(100).required(),
-            value: Joi.string().min(1).max(100).required()
-        })
-    ).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -301,7 +291,7 @@ const productSchemaValidation = Joi.object({
     heightCm: Joi.number().min(0).allow(null),
     lengthCm: Joi.number().min(0).allow(null),
     popularity: Joi.number().allow(null)
-}).unknown(false);
+});
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -350,25 +340,20 @@ const settingsSchemaValidation = Joi.object({
     categoryHeight: Joi.number().min(0).allow(null),
     productWidth: Joi.number().min(0).allow(null),
     productHeight: Joi.number().min(0).allow(null),
-filters: Joi.array().items(
+    filters: Joi.array().items(
         Joi.object({
-            name: Joi.string().min(1).max(100).required().messages({
-                'string.empty': 'Назва фільтра не може бути порожньою',
-                'string.min': 'Назва фільтра повинна містити щонайменше 1 символ',
-                'string.max': 'Назва фільтра не може перевищувати 100 символів'
-            }),
-            label: Joi.string().min(1).max(100).required().messages({
-                'string.empty': 'Мітка фільтра не може бути порожньою',
-                'string.min': 'Мітка фільтра повинна містити щонайменше 1 символ',
-                'string.max': 'Мітка фільтра не може перевищувати 100 символів'
-            }),
-            type: Joi.string().valid('select', 'checkbox', 'range').required().messages({
-                'any.only': 'Тип фільтра повинен бути одним із: select, checkbox, range'
-            }),
-            options: Joi.array().items(Joi.string().min(1).max(100)).default([]).messages({
-                'string.min': 'Кожна опція повинна містити щонайменше 1 символ',
-                'string.max': 'Кожна опція не може перевищувати 100 символів'
-            })
+            name: Joi.string().required(),
+            label: Joi.string().required(),
+            type: Joi.string().required(),
+            options: Joi.array().items(Joi.string().min(1)).default([])
+        })
+    ).default([]),
+    orderFields: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            label: Joi.string().required(),
+            type: Joi.string().required(),
+            options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
     slideWidth: Joi.number().min(0).allow(null),
@@ -613,51 +598,47 @@ ws.on('close', () => {
     logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
 });
 
-ws.on('message', async (message) => {
-    try {
-        let parsedMessage;
+    ws.on('message', async (message) => {
         try {
-            parsedMessage = JSON.parse(message);
-        } catch (parseErr) {
-            logger.error(`Невалідний JSON у WebSocket-повідомленні, IP: ${clientIp}:`, parseErr);
-            ws.send(JSON.stringify({ type: 'error', error: 'Невалідний формат повідомлення', details: 'Очікується валідний JSON' }));
-            return;
-        }
+            const { type, action } = JSON.parse(message);
+            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
 
-        const { type, action } = parsedMessage;
-        logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
+            if (action === 'subscribe') {
+                ws.subscriptions.add(type);
+                logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
 
-        if (type === 'products') {
-            const products = ws.isAdmin
-                ? await Product.find()
-                : await Product.find({ visible: true, active: true });
-            ws.send(JSON.stringify({ type: 'products', data: products }));
-        } else if (type === 'settings') {
-            const settings = await Settings.findOne();
-            ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-        } else if (type === 'categories') {
-            const categories = await Category.find();
-            ws.send(JSON.stringify({ type: 'categories', data: categories }));
-        } else if (type === 'slides') {
-            const slides = await Slide.find().sort({ order: 1 });
-            ws.send(JSON.stringify({ type: 'slides', data: slides }));
-        } else if (type === 'orders' && ws.isAdmin) {
-            const orders = await Order.find();
-            ws.send(JSON.stringify({ type: 'orders', data: orders }));
-        } else if (type === 'materials' && ws.isAdmin) {
-            const materials = await Material.find().distinct('name');
-            ws.send(JSON.stringify({ type: 'materials', data: materials }));
-        } else if (type === 'brands' && ws.isAdmin) {
-            const brands = await Brand.find().distinct('name');
-            ws.send(JSON.stringify({ type: 'brands', data: brands }));
-        } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-            ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
+                if (type === 'products') {
+                    const products = ws.isAdmin
+                        ? await Product.find()
+                        : await Product.find({ visible: true, active: true });
+                    ws.send(JSON.stringify({ type: 'products', data: products }));
+                } else if (type === 'settings') {
+                    const settings = await Settings.findOne();
+                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
+                } else if (type === 'categories') {
+                    const categories = await Category.find();
+                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
+                } else if (type === 'slides') {
+                    const slides = await Slide.find().sort({ order: 1 });
+                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
+                } else if (type === 'orders' && ws.isAdmin) {
+                    const orders = await Order.find();
+                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
+                } else if (type === 'materials' && ws.isAdmin) {
+                    const materials = await Material.find().distinct('name');
+                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
+                } else if (type === 'brands' && ws.isAdmin) {
+                    const brands = await Brand.find().distinct('name');
+                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
+                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+                    ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
+                }
+            }
+        } catch (err) {
+            logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
+            ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
         }
-    } catch (err) {
-        logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
-        ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
-    }
-});
+    });
 
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
@@ -706,9 +687,8 @@ app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
 
 app.get('/api/filters', authenticateToken, async (req, res) => {
     try {
-        const settings = await Settings.findOne();
-        const filters = settings ? settings.filters || [] : [];
-        res.json(filters);
+        const settings = await Settings.findOne({}, { filters: 1 });
+        res.json(settings?.filters || []);
     } catch (err) {
         logger.error('Помилка при отриманні фільтрів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1763,18 +1743,6 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         logger.info('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
 
         const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData;
-
-        // Перевірка унікальності name у фільтрах
-        if (cleanedSettingsData.filters) {
-            const filterNames = new Set();
-            for (const filter of cleanedSettingsData.filters) {
-                if (filterNames.has(filter.name)) {
-                    logger.error(`Дублювання імені фільтра: ${filter.name}`);
-                    return res.status(400).json({ error: `Фільтр з ім’ям "${filter.name}" уже існує` });
-                }
-                filterNames.add(filter.name);
-            }
-        }
 
         const { error } = settingsSchemaValidation.validate(cleanedSettingsData, { abortEarly: false });
         if (error) {
