@@ -1882,13 +1882,9 @@ function renderAdmin(section = 'site-editing') { // Змінено filters на 
             }
 
 } else if (section === 'site-editing') {
-    const siteEditingSection = document.getElementById('site-editing');
-    if (siteEditingSection) {
-        tabContent.innerHTML = siteEditingSection.innerHTML;
-        console.log('Використано існуючий HTML для #site-editing');
-    } else {
-        console.warn('Секція #site-editing не знайдена, створюємо нову');
-        tabContent.innerHTML = `
+    console.log('Ініціалізація site-editing');
+    tabContent.innerHTML = `
+        <div id="site-editing" class="admin-tab active">
             <div class="admin-section">
                 <h3>Логотип та назва</h3>
                 <form id="store-info-form" onsubmit="event.preventDefault(); updateStoreInfo();">
