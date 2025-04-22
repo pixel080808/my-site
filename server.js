@@ -252,14 +252,17 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
-        if (!value) return value;
-        const category = await Category.findOne({ 'subcategories.slug': value });
-        if (!category) {
-            return helpers.error('any.invalid', { message: 'Підкатегорія не існує' });
-        }
-        return value;
-    }),
+subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
+    if (!value) return value;
+    const category = await Category.findOne({
+        name: helpers.state.ancestors[0].category,
+        'subcategories.slug': value
+    });
+    if (!category) {
+        return helpers.error('any.invalid', { message: 'Підкатегорія не існує в цій категорії' });
+    }
+    return value;
+}),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
     salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
@@ -461,14 +464,20 @@ setInterval(async () => {
 }, 24 * 60 * 60 * 1000); // Раз на день
 
 function broadcast(type, data) {
-    logger.info(`Трансляція даних типу ${type}, кількість елементів: ${Array.isArray(data) ? data.length : 1}`);
+    const batchSize = 100;
+    const batches = [];
+    for (let i = 0; i < data.length; i += batchSize) {
+        batches.push(data.slice(i, i + batchSize));
+    }
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN && client.subscriptions.has(type)) {
-            let filteredData = data;
-            if (type === 'products' && !client.isAdmin) {
-                filteredData = data.filter(p => p.visible && p.active);
-            }
-            client.send(JSON.stringify({ type, data: filteredData }));
+            batches.forEach(batch => {
+                let filteredData = batch;
+                if (type === 'products' && !client.isAdmin) {
+                    filteredData = batch.filter(p => p.visible && p.active);
+                }
+                client.send(JSON.stringify({ type, data: filteredData }));
+            });
         }
     });
 }
@@ -598,9 +607,13 @@ ws.on('close', () => {
     logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
 });
 
-    ws.on('message', async (message) => {
-        try {
-            const { type, action } = JSON.parse(message);
+ws.on('message', async (message) => {
+    try {
+        if (message.length > 1024 * 1024) { // Ліміт 1 МБ
+            ws.send(JSON.stringify({ type: 'error', error: 'Повідомлення занадто велике' }));
+            return;
+        }
+        const { type, action } = JSON.parse(message);
             logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
 
             if (action === 'subscribe') {
@@ -634,11 +647,11 @@ ws.on('close', () => {
                     ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
                 }
             }
-        } catch (err) {
-            logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
-            ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки підписки', details: err.message }));
-        }
-    });
+    } catch (err) {
+        logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
+        ws.send(JSON.stringify({ type: 'error', error: 'Некоректне повідомлення', details: err.message }));
+    }
+});
 
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
@@ -712,7 +725,7 @@ app.get('/api/public/products', async (req, res) => {
 
 app.get('/api/public/settings', async (req, res) => {
     try {
-        const settings = await Settings.findOne();
+        const settings = await Settings.findOne({}, { name: 1, baseUrl: 1, logo: 1, logoWidth: 1, favicon: 1, contacts: 1, socials: 1, showSocials: 1, about: 1, categoryWidth: 1, categoryHeight: 1, productWidth: 1, productHeight: 1, slideWidth: 1, slideHeight: 1, slideInterval: 1, showSlides: 1, filters: 1 });
         res.json(settings || {});
     } catch (err) {
         logger.error('Помилка при отриманні публічних налаштувань:', err);
