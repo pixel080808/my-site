@@ -793,7 +793,7 @@ function initializeEditors() {
         return;
     }
 
-    if (aboutEditor) {
+    if (window.aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
         return;
     }
@@ -828,7 +828,7 @@ function initializeEditors() {
             };
         }, true);
 
-        aboutEditor = new Quill('#about-editor', {
+        window.aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
@@ -846,8 +846,8 @@ function initializeEditors() {
             }
         });
 
-        aboutEditor.on('text-change', () => {
-            const content = aboutEditor.root.innerHTML;
+        window.aboutEditor.on('text-change', () => {
+            const content = window.aboutEditor.root.innerHTML;
             const aboutEdit = document.getElementById('about-edit');
             if (aboutEdit) {
                 aboutEdit.value = content;
@@ -862,10 +862,10 @@ function initializeEditors() {
             const undoButton = document.querySelector('.ql-undo');
             const redoButton = document.querySelector('.ql-redo');
             if (undoButton && redoButton) {
-                aboutEditor.history.stack.undo.length > 0
+                window.aboutEditor.history.stack.undo.length > 0
                     ? undoButton.removeAttribute('disabled')
                     : undoButton.setAttribute('disabled', 'true');
-                aboutEditor.history.stack.redo.length > 0
+                window.aboutEditor.history.stack.redo.length > 0
                     ? redoButton.removeAttribute('disabled')
                     : redoButton.setAttribute('disabled', 'true');
             }
@@ -875,15 +875,15 @@ function initializeEditors() {
         const aboutEdit = document.getElementById('about-edit');
         if (typeof settings.about === 'string' && settings.about.trim()) {
             try {
-                aboutEditor.root.innerHTML = settings.about;
+                window.aboutEditor.root.innerHTML = settings.about;
                 console.log('Встановлено вміст "Про нас":', settings.about);
             } catch (e) {
                 console.error('Помилка при встановленні вмісту "Про нас":', e);
-                aboutEditor.setText(settings.about, 'silent');
+                window.aboutEditor.setText(settings.about, 'silent');
             }
         } else {
             console.log('settings.about порожній або невалідний, редактор очищено.');
-            aboutEditor.setText('', 'silent');
+            window.aboutEditor.setText('', 'silent');
         }
         if (aboutEdit) {
             aboutEdit.value = settings.about || '';
@@ -892,7 +892,7 @@ function initializeEditors() {
         }
 
         // Обробник кліків для зміни розмірів медіа
-        aboutEditor.root.addEventListener('click', (e) => {
+        window.aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
                 if (typeof openResizeModal === 'function') {
@@ -904,7 +904,7 @@ function initializeEditors() {
         });
 
         // Обробка вставки медіа
-        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+        window.aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
             if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
                 const src = node.getAttribute('src');
                 if (src) {
@@ -917,7 +917,7 @@ function initializeEditors() {
 
         // Встановлюємо розміри для відео за замовчуванням
         if (typeof setDefaultVideoSizes === 'function') {
-            setDefaultVideoSizes(aboutEditor, 'about-edit');
+            setDefaultVideoSizes(window.aboutEditor, 'about-edit');
             console.log('Викликано setDefaultVideoSizes для aboutEditor');
         } else {
             console.warn('Функція setDefaultVideoSizes не визначена');
@@ -1131,7 +1131,7 @@ function showSection(sectionId) {
         section.classList.add('active');
         console.log(`Секція ${sectionId} показана, classList:`, section.classList.toString());
         if (sectionId === 'admin-panel' && typeof renderAdmin === 'function') {
-            const currentTab = localStorage.getItem('currentAdminTab') || 'site-editing'; // Змінено на 'site-editing'
+            const currentTab = localStorage.getItem('currentAdminTab') || 'site-editing';
             renderAdmin(currentTab);
             console.log('Викликано renderAdmin для вкладки:', currentTab);
         }
@@ -1740,87 +1740,94 @@ function renderAdmin(section = 'site-editing') {
     content.appendChild(tabContent);
 
     try {
-        if (section === 'products') {
-            tabContent.innerHTML = `
-                <div class="admin-section">
-                    <h3>Товари</h3>
-                    <div class="product-controls">
-                        <button onclick="openAddProductModal()">Додати товар</button>
-                        <select id="cat-list">
-                            <option value="">Виберіть категорію</option>
-                        </select>
-                        <div class="sort-menu">
-                            <button class="sort-btn">Сортування ▼</button>
-                            <div class="sort-dropdown">
-                                <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
-                                <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
-                                <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
-                                <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
-                                <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
-                                <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
-                                <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
-                                <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
-                            </div>
-                        </div>
-                        <div class="backup-group">
-                            <button onclick="exportPrices()">Експортувати ціни</button>
-                            <div class="import-group">
-                                <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
-                                <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
-                            </div>
-                        </div>
+if (section === 'products') {
+    tabContent.innerHTML = `
+        <div class="admin-section">
+            <h3>Товари</h3>
+            <div class="product-controls">
+                <button onclick="openAddProductModal()">Додати товар</button>
+                <select id="cat-list">
+                    <option value="">Виберіть категорію</option>
+                </select>
+                <select id="product-category">
+                    <option value="">Виберіть категорію</option>
+                    ${categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                </select>
+                <select id="product-subcategory">
+                    <option value="">Без підкатегорії</option>
+                </select>
+                <div class="sort-menu">
+                    <button class="sort-btn">Сортування ▼</button>
+                    <div class="sort-dropdown">
+                        <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
+                        <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
+                        <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
+                        <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
+                        <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
+                        <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
+                        <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
+                        <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
                     </div>
-                    <div class="product-admin-item" id="product-list-header">
-                        <span>№</span>
-                        <span>Тип</span>
-                        <span>Назва</span>
-                        <span>Виробник</span>
-                        <span>Ціна</span>
-                        <span>Акційна ціна</span>
-                        <span>Статус</span>
-                    </div>
-                    <div id="product-list"></div>
-                    <div class="pagination" id="pagination"></div>
                 </div>
-            `;
+                <div class="backup-group">
+                    <button onclick="exportPrices()">Експортувати ціни</button>
+                    <div class="import-group">
+                        <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
+                        <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
+                    </div>
+                </div>
+            </div>
+            <div class="product-admin-item" id="product-list-header">
+                <span>№</span>
+                <span>Тип</span>
+                <span>Назва</span>
+                <span>Виробник</span>
+                <span>Ціна</span>
+                <span>Акційна ціна</span>
+                <span>Статус</span>
+            </div>
+            <div id="product-list"></div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    `;
 
-            const productList = document.getElementById('product-list');
-            if (productList) {
-                productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.map((p, i) => `
-                        <div class="product-admin-item">
-                            <span>${i + 1}</span>
-                            <span>${p.type || 'N/A'}</span>
-                            <span>${p.name}</span>
-                            <span>${p.brand || 'N/A'}</span>
-                            <span>${p.price || '0'} грн</span>
-                            <span>${p.salePrice || '-'}</span>
-                            <span class="status-column">
-                                <button class="${p.status === 'В наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'В наявності')">В наявності</button>
-                                <button class="${p.status === 'Немає в наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Немає в наявності')">Немає</button>
-                                <button class="${p.status === 'Очікується' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Очікується')">Очікується</button>
-                                <button class="edit-btn" onclick="editProduct(${i})">Редагувати</button>
-                                <button class="delete-btn" onclick="deleteProduct(${i})">Видалити</button>
-                            </span>
-                        </div>
-                    `).join('')
-                    : '<p>Продукти відсутні</p>';
-                console.log('Продукти відрендерено:', products.length);
-            }
+    const productList = document.getElementById('product-list');
+    if (productList) {
+        productList.innerHTML = Array.isArray(products) && products.length > 0
+            ? products.map((p, i) => `
+                <div class="product-admin-item">
+                    <span>${i + 1}</span>
+                    <span>${p.type || 'N/A'}</span>
+                    <span>${p.name}</span>
+                    <span>${p.brand || 'N/A'}</span>
+                    <span>${p.price || '0'} грн</span>
+                    <span>${p.salePrice || '-'}</span>
+                    <span class="status-column">
+                        <button class="${p.status === 'В наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'В наявності')">В наявності</button>
+                        <button class="${p.status === 'Немає в наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Немає в наявності')">Немає</button>
+                        <button class="${p.status === 'Очікується' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Очікується')">Очікується</button>
+                        <button class="edit-btn" onclick="editProduct(${i})">Редагувати</button>
+                        <button class="delete-btn" onclick="deleteProduct(${i})">Видалити</button>
+                    </span>
+                </div>
+            `).join('')
+            : '<p>Продукти відсутні</p>';
+        console.log('Продукти відрендерено:', products.length);
+    }
 
-            const catList = document.getElementById('cat-list');
-            if (catList) {
-                catList.innerHTML = Array.isArray(categories) && categories.length > 0
-                    ? `<option value="">Виберіть категорію</option>` + categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')
-                    : '<option value="">Категорії відсутні</option>';
-                console.log('Категорії відрендерено для #cat-list:', categories.length);
-            }
+    const catList = document.getElementById('cat-list');
+    if (catList) {
+        catList.innerHTML = Array.isArray(categories) && categories.length > 0
+            ? `<option value="">Виберіть категорію</option>` + categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')
+            : '<option value="">Категорії відсутні</option>';
+        console.log('Категорії відрендерено для #cat-list:', categories.length);
+    }
 
-            if (typeof updateSubcategories === 'function') {
-                updateSubcategories();
-            }
+    if (typeof updateSubcategories === 'function') {
+        updateSubcategories();
+    }
 
-            renderPagination(products.length, 10, 'pagination', currentPage);
+    renderPagination(products.length, 10, 'pagination', currentPage);
 
         } else if (section === 'categories') {
             tabContent.innerHTML = `
@@ -2104,41 +2111,45 @@ function renderAdmin(section = 'site-editing') {
                 </div>
             `;
 
-            // Ініціалізація залежних компонентів
-            if (typeof renderSettingsAdmin === 'function' && document.getElementById('store-name')) {
-                renderSettingsAdmin();
-                console.log('Викликано renderSettingsAdmin');
-            }
-            if (typeof renderSlidesAdmin === 'function' && document.getElementById('slides-list-admin')) {
-                renderSlidesAdmin();
-                console.log('Викликано renderSlidesAdmin');
-            } else {
-                console.warn('renderSlidesAdmin не викликано: slides-list-admin не знайдено або функція відсутня');
-            }
-            const aboutEditor = document.getElementById('about-editor');
-            if (aboutEditor && typeof initializeEditors === 'function') {
-                initializeEditors();
-                console.log('Викликано initializeEditors');
-            } else {
-                console.warn('Елемент #about-editor не знайдено, відкладено ініціалізацію редактора');
-            }
-            // Додаткові ініціалізації для інших секцій, якщо потрібно
-            if (document.getElementById('social-list') && typeof renderSocials === 'function') {
-                renderSocials();
-                console.log('Викликано renderSocials');
-            }
-            if (document.getElementById('category-list-admin') && typeof renderCategoriesAdmin === 'function') {
-                renderCategoriesAdmin();
-                console.log('Викликано renderCategoriesAdmin');
-            }
-            if (document.getElementById('filter-list-admin') && typeof renderFiltersAdmin === 'function') {
-                renderFiltersAdmin();
-                console.log('Викликано renderFiltersAdmin');
-            }
-            if (document.getElementById('order-field-list') && typeof renderOrderFields === 'function') {
-                renderOrderFields();
-                console.log('Викликано renderOrderFields');
-            }
+            // Використовуємо setTimeout для забезпечення оновлення DOM перед викликом залежних функцій
+            setTimeout(() => {
+                // Ініціалізація залежних компонентів
+                if (typeof renderSettingsAdmin === 'function' && document.getElementById('store-name')) {
+                    renderSettingsAdmin();
+                    console.log('Викликано renderSettingsAdmin');
+                }
+                if (typeof renderSlidesAdmin === 'function' && document.getElementById('slides-list-admin')) {
+                    renderSlidesAdmin();
+                    console.log('Викликано renderSlidesAdmin');
+                } else {
+                    console.warn('renderSlidesAdmin не викликано: slides-list-admin не знайдено або функція відсутня');
+                }
+                const aboutEditor = document.getElementById('about-editor');
+                if (aboutEditor && typeof initializeEditors === 'function') {
+                    initializeEditors();
+                    console.log('Викликано initializeEditors');
+                } else {
+                    console.warn('Елемент #about-editor не знайдено, відкладено ініціалізацію редактора');
+                }
+                // Додаткові ініціалізації для інших секцій, якщо потрібно
+                if (document.getElementById('social-list') && typeof renderSocials === 'function') {
+                    renderSocials();
+                    console.log('Викликано renderSocials');
+                }
+                if (document.getElementById('category-list-admin') && typeof renderCategoriesAdmin === 'function') {
+                    renderCategoriesAdmin();
+                    console.log('Викликано renderCategoriesAdmin');
+                }
+                if (document.getElementById('filter-list-admin') && typeof renderFiltersAdmin === 'function') {
+                    renderFiltersAdmin();
+                    console.log('Викликано renderFiltersAdmin');
+                }
+                if (document.getElementById('order-field-list') && typeof renderOrderFields === 'function') {
+                    renderOrderFields();
+                    console.log('Викликано renderOrderFields');
+                }
+            }, 0);
+
         } else if (section === 'orders') {
             tabContent.innerHTML = `
                 <div class="admin-section orders-section">
@@ -2457,44 +2468,34 @@ function renderSettingsAdmin() {
 }
 
 function renderSlidesAdmin() {
-    const content = document.getElementById('site-editing');
-    if (!content) {
-        console.warn('Секція site-editing не знайдена');
+    const slidesList = document.getElementById('slides-list-admin');
+    if (!slidesList) {
+        console.warn('Елемент #slides-list-admin не знайдено');
         return;
     }
 
-    content.innerHTML = `
-        <h2>Редагування слайдшоу</h2>
-        <input type="number" id="slide-width" value="${settings.slideWidth || 100}" min="10" max="100"><br/>
-        <label for="slide-width">Ширина слайду (%)</label>
-        <input type="number" id="slide-height" value="${settings.slideHeight || 300}" min="100" max="500"><br/>
-        <label for="slide-height">Висота слайду (px)</label>
-        <input type="number" id="slide-interval" value="${settings.slideInterval || 5000}" min="1000"><br/>
-        <label for="slide-interval">Інтервал (мс)</label>
-        <button onclick="updateSlideshowSettings()">Зберегти налаштування</button>
-        <input type="checkbox" id="slide-toggle" ${settings.showSlides !== false ? 'checked' : ''} onchange="toggleSlideshow()"><br/>
-        <label for="slide-toggle">Показувати слайдшоу</label>
-        <h3>Додати слайд</h3>
-        <input type="text" id="slide-photo-url" placeholder="URL фотографії"><br/>
-        <input type="file" id="slide-img-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-        <input type="text" id="slide-link" placeholder="Посилання (необов’язково)"><br/>
-        <input type="number" id="slide-position" placeholder="Позиція"><br/>
-        <input type="checkbox" id="slide-active" checked><br/>
-        <label for="slide-active">Активний</label>
-        <button onclick="addSlide()">Додати слайд</button>
-        <div id="slides-list">
-            ${slides && Array.isArray(slides) && slides.length > 0
-                ? slides.map(s => `
-                    <div class="slide-item">
-                        <img src="${s.photo}" style="max-width: 100px;">
-                        <p>Позиція: ${s.position}, ${s.active ? 'Активний' : 'Неактивний'}</p>
-                        <button onclick="editSlide('${s._id}')">Редагувати</button>
-                        <button onclick="deleteSlide('${s._id}')">Видалити</button>
-                    </div>
-                `).join('')
-                : '<p>Слайди відсутні</p>'}
-        </div>
-    `;
+    // Оновлюємо лише вміст списку слайдів
+    slidesList.innerHTML = slides && Array.isArray(slides) && slides.length > 0
+        ? slides.map(s => `
+            <div class="slide-item">
+                <img src="${s.photo}" style="max-width: 100px;">
+                <p>Позиція: ${s.position}, ${s.active ? 'Активний' : 'Неактивний'}</p>
+                <button onclick="editSlide('${s._id}')">Редагувати</button>
+                <button onclick="deleteSlide('${s._id}')">Видалити</button>
+            </div>
+        `).join('')
+        : '<p>Слайди відсутні</p>';
+
+    // Оновлюємо поля налаштувань слайдів
+    const slideWidth = document.getElementById('slide-width');
+    const slideHeight = document.getElementById('slide-height');
+    const slideInterval = document.getElementById('slide-interval');
+    const slideToggle = document.getElementById('slide-toggle');
+
+    if (slideWidth) slideWidth.value = settings.slideWidth || 100;
+    if (slideHeight) slideHeight.value = settings.slideHeight || 300;
+    if (slideInterval) slideInterval.value = settings.slideInterval || 5000;
+    if (slideToggle) slideToggle.checked = settings.showSlides !== false;
 
     // Призначення обробника для кнопки addSlide
     const slideImgFile = document.getElementById('slide-img-file');
