@@ -725,7 +725,7 @@ function initializeEditors() {
         return;
     }
 
-    if (aboutEditor) {
+    if (window.aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
         return;
     }
@@ -744,7 +744,7 @@ function initializeEditors() {
         [{ 'align': [] }],
         ['clean'],
         ['image', 'video'],
-        [{ 'undo': 'undo' }, { 'redo': 'redo' }] // Змінено формат
+        [{ 'undo': 'undo' }, { 'redo': 'redo' }]
     ];
 
     try {
@@ -760,7 +760,7 @@ function initializeEditors() {
             };
         }, true);
 
-        aboutEditor = new Quill('#about-editor', {
+        window.aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
@@ -778,9 +778,14 @@ function initializeEditors() {
             }
         });
 
-        aboutEditor.on('text-change', () => {
-            const content = aboutEditor.root.innerHTML;
-            document.getElementById('about-edit').value = content;
+        window.aboutEditor.on('text-change', () => {
+            const content = window.aboutEditor.root.innerHTML;
+            const aboutEdit = document.getElementById('about-edit');
+            if (aboutEdit) {
+                aboutEdit.value = content;
+            } else {
+                console.warn('Елемент #about-edit не знайдено');
+            }
             console.log('Вміст редактора змінено:', content);
             unsavedChanges = true;
             resetInactivityTimer();
@@ -789,40 +794,49 @@ function initializeEditors() {
             const undoButton = document.querySelector('.ql-undo');
             const redoButton = document.querySelector('.ql-redo');
             if (undoButton && redoButton) {
-                aboutEditor.history.stack.undo.length > 0
+                window.aboutEditor.history.stack.undo.length > 0
                     ? undoButton.removeAttribute('disabled')
                     : undoButton.setAttribute('disabled', 'true');
-                aboutEditor.history.stack.redo.length > 0
+                window.aboutEditor.history.stack.redo.length > 0
                     ? redoButton.removeAttribute('disabled')
                     : redoButton.setAttribute('disabled', 'true');
             }
         });
 
         // Завантажуємо початковий вміст
-        if (settings.about) {
+        const aboutEdit = document.getElementById('about-edit');
+        if (typeof settings.about === 'string' && settings.about.trim()) {
             try {
-                aboutEditor.root.innerHTML = settings.about;
+                window.aboutEditor.root.innerHTML = settings.about;
                 console.log('Встановлено вміст "Про нас":', settings.about);
             } catch (e) {
                 console.error('Помилка при встановленні вмісту "Про нас":', e);
-                aboutEditor.setText(settings.about || '', 'silent');
+                window.aboutEditor.setText(settings.about, 'silent');
             }
         } else {
-            console.log('settings.about порожній, редактор очищено.');
-            aboutEditor.setText('', 'silent');
+            console.log('settings.about порожній або невалідний, редактор очищено.');
+            window.aboutEditor.setText('', 'silent');
         }
-        document.getElementById('about-edit').value = settings.about || '';
+        if (aboutEdit) {
+            aboutEdit.value = settings.about || '';
+        } else {
+            console.warn('Елемент #about-edit не знайдено');
+        }
 
         // Обробник кліків для зміни розмірів медіа
-        aboutEditor.root.addEventListener('click', (e) => {
+        window.aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
-                openResizeModal(target);
+                if (typeof openResizeModal === 'function') {
+                    openResizeModal(target);
+                } else {
+                    console.warn('Функція openResizeModal не визначена');
+                }
             }
         });
 
         // Обробка вставки медіа
-        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+        window.aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
             if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
                 const src = node.getAttribute('src');
                 if (src) {
@@ -834,7 +848,12 @@ function initializeEditors() {
         });
 
         // Встановлюємо розміри для відео за замовчуванням
-        setDefaultVideoSizes(aboutEditor, 'about-edit');
+        if (typeof setDefaultVideoSizes === 'function') {
+            setDefaultVideoSizes(window.aboutEditor, 'about-edit');
+            console.log('Викликано setDefaultVideoSizes для aboutEditor');
+        } else {
+            console.warn('Функція setDefaultVideoSizes не визначена');
+        }
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
         showNotification('Не вдалося ініціалізувати редактор: ' + e.message);
@@ -1668,7 +1687,7 @@ if (section === 'products') {
                 <span>Виробник</span>
                 <span>Ціна</span>
                 <span>Акційна ціна</span>
-                <span>Статус</span>
+                <span>Дії</span>
             </div>
             <div id="product-list"></div>
             <div class="pagination" id="pagination"></div>
@@ -1686,12 +1705,10 @@ if (section === 'products') {
                     <span>${p.brand || 'N/A'}</span>
                     <span>${p.price || '0'} грн</span>
                     <span>${p.salePrice || '-'}</span>
-                    <span class="status-column">
-                        <button class="${p.status === 'В наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'В наявності')">В наявності</button>
-                        <button class="${p.status === 'Немає в наявності' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Немає в наявності')">Немає</button>
-                        <button class="${p.status === 'Очікується' ? 'edit-btn' : ''}" onclick="updateProductStatus(${i}, 'Очікується')">Очікується</button>
+                    <span class="action-column">
                         <button class="edit-btn" onclick="editProduct(${i})">Редагувати</button>
                         <button class="delete-btn" onclick="deleteProduct(${i})">Видалити</button>
+                        <button class="${p.active ? 'deactivate-btn' : 'activate-btn'}" onclick="toggleProductActive(${i})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
                     </span>
                 </div>
             `).join('')
@@ -2034,52 +2051,62 @@ if (section === 'products') {
                 }
             }, 0);
 
-        } else if (section === 'orders') {
-            tabContent.innerHTML = `
-                <div class="admin-section orders-section">
-                    <h3>Замовлення</h3>
-                    <div class="sort-menu">
-                        <button class="sort-btn">Сортування ▼</button>
-                        <div class="sort-dropdown">
-                            <button onclick="sortOrders('date-desc')">Дата (новіші)</button>
-                            <button onclick="sortOrders('date-asc')">Дата (старіші)</button>
-                            <button onclick="sortOrders('total-desc')">Сума (спадання)</button>
-                            <button onclick="sortOrders('total-asc')">Сума (зростання)</button>
-                            <button onclick="sortOrders('status-asc')">Статус (А-Я)</button>
-                            <button onclick="sortOrders('status-desc')">Статус (Я-А)</button>
-                        </div>
-                    </div>
-                    <div class="filter-options">
-                        <label>Фільтр за статусом:</label>
-                        <select id="order-status-filter" onchange="filterOrders()">
-                            <option value="">Усі статуси</option>
-                            <option value="Нове замовлення">Нове замовлення</option>
-                            <option value="В обробці">В обробці</option>
-                            <option value="Відправлено">Відправлено</option>
-                            <option value="Завершено">Завершено</option>
-                        </select>
-                    </div>
-                    <div id="order-list"></div>
-                    <div class="pagination" id="order-pagination"></div>
+if (section === 'orders') {
+    tabContent.innerHTML = `
+        <div class="admin-section orders-section">
+            <h3>Замовлення</h3>
+            <div class="sort-menu">
+                <button class="sort-btn">Сортування ▼</button>
+                <div class="sort-dropdown">
+                    <button onclick="sortOrders('date-desc')">Дата (новіші)</button>
+                    <button onclick="sortOrders('date-asc')">Дата (старіші)</button>
+                    <button onclick="sortOrders('total-desc')">Сума (спадання)</button>
+                    <button onclick="sortOrders('total-asc')">Сума (зростання)</button>
+                    <button onclick="sortOrders('status-asc')">Статус (А-Я)</button>
+                    <button onclick="sortOrders('status-desc')">Статус (Я-А)</button>
                 </div>
-            `;
+            </div>
+            <div class="filter-options">
+                <label>Фільтр за статусом:</label>
+                <select id="order-status-filter" onchange="filterOrders()">
+                    <option value="">Усі статуси</option>
+                    <option value="Нове замовлення">Нове замовлення</option>
+                    <option value="В обробці">В обробці</option>
+                    <option value="Відправлено">Відправлено</option>
+                    <option value="Завершено">Завершено</option>
+                </select>
+            </div>
+            <div id="order-list"></div>
+            <div class="pagination" id="order-pagination"></div>
+        </div>
+    `;
 
-            const orderList = document.getElementById('order-list');
-            if (orderList) {
-                orderList.innerHTML = Array.isArray(orders) && orders.length > 0
-                    ? orders.map((order, i) => `
-                        <div class="order-item">
-                            <span>Замовлення #${order.id || i + 1}</span>
-                            <span>${new Date(order.date).toLocaleString()}</span>
-                            <span>${order.total || 0} грн</span>
-                            <button class="edit-btn" onclick="viewOrder(${i})">Переглянути</button>
-                        </div>
-                    `).join('')
-                    : '<p>Замовлення відсутні</p>';
-                console.log('Замовлення відрендерено:', orders.length);
-            }
+    const orderList = document.getElementById('order-list');
+    if (orderList) {
+        orderList.innerHTML = Array.isArray(orders) && orders.length > 0
+            ? orders.map((order, i) => `
+                <div class="order-item">
+                    <span>Замовлення #${order.id || i + 1}</span>
+                    <span>${new Date(order.date).toLocaleString()}</span>
+                    <span>${order.total || 0} грн</span>
+                    <span>${order.status || 'Новий'}</span>
+                    <span class="status-column">
+                        <select onchange="updateOrderStatus(${i}, this.value)">
+                            <option value="Нове замовлення" ${order.status === 'Нове замовлення' ? 'selected' : ''}>Нове замовлення</option>
+                            <option value="В обробці" ${order.status === 'В обробці' ? 'selected' : ''}>В обробці</option>
+                            <option value="Відправлено" ${order.status === 'Відправлено' ? 'selected' : ''}>Відправлено</option>
+                            <option value="Завершено" ${order.status === 'Завершено' ? 'selected' : ''}>Завершено</option>
+                        </select>
+                        <button class="edit-btn" onclick="viewOrder(${i})">Переглянути</button>
+                    </span>
+                </div>
+            `).join('')
+            : '<p>Замовлення відсутні</p>';
+        console.log('Замовлення відрендерено:', orders?.length || 0);
+    }
 
-            renderPagination(orders.length, 10, 'order-pagination', currentPage);
+    renderPagination(orders?.length || 0, 10, 'order-pagination', currentPage);
+}
 
         } else if (section === 'filters') {
             tabContent.innerHTML = `
@@ -2334,7 +2361,6 @@ function renderSlidesAdmin() {
         return;
     }
 
-    // Оновлюємо лише вміст списку слайдів
     slidesList.innerHTML = slides && Array.isArray(slides) && slides.length > 0
         ? slides.map(s => `
             <div class="slide-item">
@@ -2346,7 +2372,6 @@ function renderSlidesAdmin() {
         `).join('')
         : '<p>Слайди відсутні</p>';
 
-    // Оновлюємо поля налаштувань слайдів
     const slideWidth = document.getElementById('slide-width');
     const slideHeight = document.getElementById('slide-height');
     const slideInterval = document.getElementById('slide-interval');
@@ -2357,18 +2382,21 @@ function renderSlidesAdmin() {
     if (slideInterval) slideInterval.value = settings.slideInterval || 5000;
     if (slideToggle) slideToggle.checked = settings.showSlides !== false;
 
-    // Призначення обробника для кнопки addSlide
-    const slideImgFile = document.getElementById('slide-img-file');
-    if (slideImgFile && slideImgFile.parentElement) {
-        const addSlideButton = slideImgFile.parentElement.querySelector('button[onclick="addSlide()"]');
-        if (addSlideButton) {
-            addSlideButton.onclick = debounce(addSlide, 300);
-            console.log('Обробник для addSlide призначено');
-        } else {
-            console.warn('Кнопка з onclick="addSlide()" не знайдена');
-        }
+    // Знаходимо форму для слайдів і додаємо обробник
+    const slideForm = document.getElementById('slide-form');
+    if (slideForm) {
+        slideForm.onsubmit = function(event) {
+            event.preventDefault();
+            if (typeof addSlide === 'function') {
+                addSlide();
+                console.log('Викликано addSlide через форму');
+            } else {
+                console.warn('Функція addSlide не визначена');
+            }
+        };
+        console.log('Обробник для slide-form призначено');
     } else {
-        console.warn('Елемент #slide-img-file або його parentElement не знайдено');
+        console.warn('Форма #slide-form не знайдена');
     }
 
     resetInactivityTimer();
@@ -5728,34 +5756,36 @@ async function deleteProduct(productId) {
     }
 }
 
-async function toggleProductActive(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product) {
-        showNotification('Товар не знайдено!');
+function toggleProductActive(index) {
+    if (!Array.isArray(products) || index < 0 || index >= products.length) {
+        console.error('Невірний індекс товару:', index);
         return;
     }
 
-    const newActiveStatus = !product.active;
+    const product = products[index];
+    product.active = !product.active;
 
-    try {
-        const response = await fetchWithAuth(`/api/products/${productId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ active: newActiveStatus })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка при оновленні статусу товару: ${errorData.error || response.statusText}`);
+    fetch(`/api/products/${product._id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({ active: product.active })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Статус товару оновлено:', product.active);
+            renderAdmin('products');
+        } else {
+            throw new Error('Не вдалося оновити статус товару');
         }
-
-        product.active = newActiveStatus;
-        renderAdmin('products');
-        showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка при оновленні статусу товару:', err);
-        showNotification('Не вдалося оновити статус товару: ' + err.message);
-    }
+    })
+    .catch(err => {
+        console.error('Помилка оновлення статусу товару:', err);
+        showNotification('Помилка: ' + err.message);
+    });
 }
 
     function sortAdminProducts(sortType) {
