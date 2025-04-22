@@ -1131,8 +1131,7 @@ function showSection(sectionId) {
         section.classList.add('active');
         console.log(`Секція ${sectionId} показана, classList:`, section.classList.toString());
         if (sectionId === 'admin-panel' && typeof renderAdmin === 'function') {
-            // Використовуємо поточну вкладку, якщо вона визначена
-            const currentTab = localStorage.getItem('currentAdminTab') || 'site-editing'; // Змінено на site-editing за замовчуванням
+            const currentTab = localStorage.getItem('currentAdminTab') || 'site-editing'; // Змінено на 'site-editing'
             renderAdmin(currentTab);
             console.log('Викликано renderAdmin для вкладки:', currentTab);
         }
@@ -1708,7 +1707,7 @@ async function updateAbout() {
     }
 }
 
-function renderAdmin(section = 'site-editing') { // Змінено filters на site-editing за замовчуванням
+function renderAdmin(section = 'site-editing') {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings, 'Продукти:', products?.length || 0, 'Замовлення:', orders?.length || 0);
 
     const content = document.getElementById('admin-content');
