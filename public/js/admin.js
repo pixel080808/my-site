@@ -258,24 +258,24 @@ async function fetchWithAuth(url, options = {}) {
     }
 
     // Отримуємо CSRF-токен для запитів, що змінюють дані
-let csrfToken = localStorage.getItem('csrfToken');
-if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
-    try {
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (!csrfResponse.ok) {
-            throw new Error('Не вдалося отримати CSRF-токен');
+    let csrfToken = localStorage.getItem('csrfToken');
+    if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
+        try {
+            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!csrfResponse.ok) {
+                throw new Error('Не вдалося отримати CSRF-токен');
+            }
+            const csrfData = await csrfResponse.json();
+            csrfToken = csrfData.csrfToken;
+            localStorage.setItem('csrfToken', csrfToken);
+        } catch (err) {
+            console.error('Помилка отримання CSRF-токена:', err);
+            throw err;
         }
-        const csrfData = await csrfResponse.json();
-        csrfToken = csrfData.csrfToken;
-        localStorage.setItem('csrfToken', csrfToken);
-    } catch (err) {
-        console.error('Помилка отримання CSRF-токена:', err);
-        throw err;
     }
-}
 
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -301,6 +301,10 @@ if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || opti
                 },
                 credentials: 'include'
             });
+            if (!newResponse.ok) {
+                const errorData = await newResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error ${newResponse.status}`);
+            }
             return newResponse;
         }
     } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
@@ -318,6 +322,11 @@ if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || opti
         } catch (err) {
             console.error('Помилка повторного отримання CSRF-токена:', err);
         }
+    }
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error ${response.status}`);
     }
 
     return response;

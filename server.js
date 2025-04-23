@@ -791,7 +791,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+        res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
     }
 });
 
