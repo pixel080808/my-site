@@ -3894,7 +3894,7 @@ async function addSlide() {
 
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify({ photo, link, position, active }) // Змінено img на photo
+            body: JSON.stringify({ photo, link, position, active })
         });
 
         const newSlide = await response.json();
@@ -3913,8 +3913,13 @@ async function addSlide() {
     }
 }
 
-// Додаємо обробник з дебонсінгом до кнопки
-document.getElementById('slide-img-file').parentElement.querySelector('button[onclick="addSlide()"]').onclick = debounce(addSlide, 300);
+// Додаємо дебонсінг
+const addSlideBtn = document.getElementById('add-slide-btn');
+if (addSlideBtn) {
+    addSlideBtn.addEventListener('click', debounce(addSlide, 300));
+} else {
+    console.warn('Кнопка #add-slide-btn не знайдена');
+}
 
 function editSlide(order) {
     const slide = slides.find(s => s.order === order);
