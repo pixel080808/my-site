@@ -343,14 +343,7 @@ async function loadOrders() {
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/orders', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+        const response = await fetchWithAuth('/api/orders');
 
         if (!response.ok) {
             const text = await response.text();
@@ -367,16 +360,18 @@ async function loadOrders() {
 
         const data = await response.json();
         if (!Array.isArray(data)) {
-            console.error('Отримано некоректні дані замовлень:', data);
+            console.error('Очікувався масив замовлень, отримано:', data);
             orders = [];
+            showNotification('Отримано некоректні дані замовлень');
         } else {
             orders = data;
         }
+
         sortOrders('date-desc');
         renderAdmin('orders');
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження замовлень: ' + e.message);
         orders = [];
         renderAdmin('orders');
     }
@@ -400,15 +395,17 @@ async function loadSlides() {
 
         const data = await response.json();
         if (!Array.isArray(data)) {
-            console.error('Отримано некоректні дані слайдів:', data);
+            console.error('Очікувався масив слайдів, отримано:', data);
             slides = [];
+            showNotification('Отримано некоректні дані слайдів');
         } else {
             slides = data;
         }
+
         renderSlidesAdmin();
     } catch (e) {
         console.error('Помилка завантаження слайдів:', e);
-        showNotification('Помилка: ' + e.message);
+        showNotification('Помилка завантаження слайдів: ' + e.message);
         slides = [];
         renderSlidesAdmin();
     }
@@ -1634,6 +1631,7 @@ function renderAdmin(section = activeTab) {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
 
     try {
+        // Оновлення полів налаштувань
         const storeName = document.getElementById('store-name');
         if (storeName) storeName.value = settings.name || '';
         else console.warn('Елемент #store-name не знайдено');
@@ -1667,6 +1665,7 @@ function renderAdmin(section = activeTab) {
         if (contactSchedule) contactSchedule.value = contacts.schedule || '';
         else console.warn('Елемент #contact-schedule не знайдено');
 
+        // Ініціалізація редактора "Про нас"
         if (document.getElementById('about-editor')) {
             if (!aboutEditor) {
                 initializeEditors();
@@ -1747,7 +1746,7 @@ function renderAdmin(section = activeTab) {
         const catList = document.getElementById('cat-list');
         if (catList) {
             console.log('Рендеринг cat-list, categories:', categories);
-            catList.innerHTML = categories && Array.isArray(categories)
+            catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
                 ? categories.map((c, index) => `
                     <div class="category-item">
                         <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
@@ -1768,8 +1767,8 @@ function renderAdmin(section = activeTab) {
                         `).join('')}
                     </div>
                 `).join('')
-                : '';
-            catList.removeEventListener('click', handleCatListClick); // Видаляємо попередній слухач
+                : '<p>Категорії відсутні</p>';
+            catList.removeEventListener('click', handleCatListClick);
             catList.addEventListener('click', handleCatListClick);
         } else {
             console.warn('Елемент #cat-list не знайдено');
@@ -1813,7 +1812,7 @@ function renderAdmin(section = activeTab) {
             if (productList) {
                 const start = (currentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                productList.innerHTML = Array.isArray(products)
+                productList.innerHTML = Array.isArray(products) && products.length > 0
                     ? products.slice(start, end).map(p => {
                         const priceInfo = p.type === 'simple'
                             ? (p.salePrice && p.salePrice < p.price
@@ -1833,7 +1832,7 @@ function renderAdmin(section = activeTab) {
                                 <div class="status-column">
                                     <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
                                     <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                                    <button onclick="toggleProductActive('${p._id}')">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                                    <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
                                 </div>
                             </div>
                         `;
@@ -1854,28 +1853,30 @@ function renderAdmin(section = activeTab) {
                 const start = (currentPage - 1) * ordersPerPage;
                 const end = start + ordersPerPage;
                 const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.map((o, index) => {
-                    const orderDate = new Date(o.date);
-                    const formattedDate = orderDate.toLocaleString('uk-UA', {
-                        timeZone: settings.timezone || 'Europe/Kyiv',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                    return `
-                        <div class="order-item">
-                            <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                            <div>
-                                <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                orderList.innerHTML = paginatedOrders.length > 0
+                    ? paginatedOrders.map((o, index) => {
+                        const orderDate = new Date(o.date);
+                        const formattedDate = orderDate.toLocaleString('uk-UA', {
+                            timeZone: settings.timezone || 'Europe/Kyiv',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        return `
+                            <div class="order-item">
+                                <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
+                                <div>
+                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('')
+                    : '<p>Замовлення відсутні</p>';
                 renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
             } else {
                 console.warn('Елемент #order-list не знайдено');
@@ -2085,13 +2086,16 @@ function renderSlidesAdmin() {
         console.warn('Елемент #slides-list-admin не знайдено');
         return;
     }
+
     console.log('Рендеринг слайдів:', slides);
-    slidesList.innerHTML = slides.map((s, index) => `
-        <div class="slide">
-            <img src="${s.image}" alt="Слайд ${index + 1}" width="100">
-            <button onclick="deleteSlide(${index})">Видалити</button>
-        </div>
-    `).join('');
+    slidesList.innerHTML = Array.isArray(slides) && slides.length > 0
+        ? slides.map((s, index) => `
+            <div class="slide">
+                <img src="${s.image || s.photo || ''}" alt="Слайд ${index + 1}" width="100">
+                <button onclick="deleteSlide(${index})">Видалити</button>
+            </div>
+        `).join('')
+        : '<p>Слайди відсутні</p>';
 
     const addSlideBtn = document.getElementById('add-slide-btn');
     if (addSlideBtn) {
@@ -2100,6 +2104,7 @@ function renderSlidesAdmin() {
     } else {
         console.warn('Елемент #add-slide-btn не знайдено');
     }
+
     resetInactivityTimer();
 }
 
@@ -2686,8 +2691,9 @@ async function saveCategoryEdit(categoryId) {
 }
 
 async function moveCategoryUp(index) {
-    if (index <= 0 || index >= categories.length) {
-        console.error('Невалідний індекс категорії:', index);
+    if (index <= 0 || index >= categories.length || !Array.isArray(categories)) {
+        console.error('Невалідний індекс категорії або categories не ініціалізований:', index);
+        showNotification('Помилка: невалідний індекс категорії');
         return;
     }
 
@@ -2734,7 +2740,12 @@ async function moveCategoryUp(index) {
         }
 
         const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
+        if (Array.isArray(updatedCategories)) {
+            categories.splice(0, categories.length, ...updatedCategories);
+        } else {
+            throw new Error('Сервер повернув некоректні дані категорій');
+        }
+
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
         resetInactivityTimer();
@@ -2745,8 +2756,9 @@ async function moveCategoryUp(index) {
 }
 
 async function moveCategoryDown(index) {
-    if (index < 0 || index >= categories.length - 1) {
-        console.error('Невалідний індекс категорії:', index);
+    if (index < 0 || index >= categories.length - 1 || !Array.isArray(categories)) {
+        console.error('Невалідний індекс категорії або categories не ініціалізований:', index);
+        showNotification('Помилка: невалідний індекс категорії');
         return;
     }
 
@@ -2793,7 +2805,12 @@ async function moveCategoryDown(index) {
         }
 
         const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
+        if (Array.isArray(updatedCategories)) {
+            categories.splice(0, categories.length, ...updatedCategories);
+        } else {
+            throw new Error('Сервер повернув некоректні дані категорій');
+        }
+
         renderCategoriesAdmin();
         showNotification('Порядок категорій оновлено!');
         resetInactivityTimer();
@@ -3327,9 +3344,16 @@ async function moveSubcategoryUp(categoryId, index) {
             return;
         }
 
+        if (!Array.isArray(categories)) {
+            console.error('Масив категорій не ініціалізований');
+            showNotification('Помилка: категорії не ініціалізовані');
+            return;
+        }
+
         const category = categories.find(c => c._id === categoryId);
-        if (!category || index <= 0 || index >= category.subcategories.length) {
+        if (!category || index <= 0 || index >= category.subcategories.length || !Array.isArray(category.subcategories)) {
             console.error('Невалідний індекс або категорія:', { categoryId, index });
+            showNotification('Помилка: невалідний індекс або категорія');
             return;
         }
 
@@ -3393,9 +3417,16 @@ async function moveSubcategoryDown(categoryId, index) {
             return;
         }
 
+        if (!Array.isArray(categories)) {
+            console.error('Масив категорій не ініціалізований');
+            showNotification('Помилка: категорії не ініціалізовані');
+            return;
+        }
+
         const category = categories.find(c => c._id === categoryId);
-        if (!category || index < 0 || index >= category.subcategories.length - 1) {
+        if (!category || index < 0 || index >= category.subcategories.length - 1 || !Array.isArray(category.subcategories)) {
             console.error('Невалідний індекс або категорія:', { categoryId, index });
+            showNotification('Помилка: невалідний індекс або категорія');
             return;
         }
 
@@ -4456,6 +4487,14 @@ function updateSubcategories() {
     console.log('Оновлення підкатегорій для categoryName:', categoryName);
     subcategorySelect.innerHTML = '<option value="">Без підкатегорії</option>';
 
+    if (!categoryName) {
+        console.log('Категорія не вибрана');
+        if (addSubcategoryBtn) {
+            addSubcategoryBtn.style.display = 'none';
+        }
+        return;
+    }
+
     const category = categories.find(c => c.name === categoryName);
     console.log('Знайдена категорія:', category);
     if (category && Array.isArray(category.subcategories)) {
@@ -4470,6 +4509,7 @@ function updateSubcategories() {
     }
 
     if (addSubcategoryBtn) {
+        addSubcategoryBtn.style.display = 'block';
         addSubcategoryBtn.onclick = () => {
             const newSubcategory = prompt('Введіть назву нової підкатегорії:');
             if (newSubcategory && categoryName) {
@@ -4477,11 +4517,20 @@ function updateSubcategories() {
                 if (category) {
                     const newSub = {
                         name: newSubcategory,
-                        slug: newSubcategory.toLowerCase().replace(/\s+/g, '-')
+                        slug: newSubcategory.toLowerCase().replace(/\s+/g, '-'),
+                        order: category.subcategories.length,
+                        visible: true
                     };
                     category.subcategories.push(newSub);
-                    updateSubcategories();
-                    saveSubcategory(category._id, newSub);
+                    saveSubcategory(category._id, newSub)
+                        .then(() => {
+                            updateSubcategories();
+                            showNotification('Підкатегорію додано!');
+                        })
+                        .catch(err => {
+                            console.error('Помилка додавання підкатегорії:', err);
+                            showNotification('Не вдалося додати підкатегорію: ' + err.message);
+                        });
                 }
             }
         };
@@ -4798,7 +4847,7 @@ async function saveNewProduct() {
         const heightCmInput = document.getElementById('product-height-cm');
         const lengthCmInput = document.getElementById('product-length-cm');
 
-        if (!nameInput || !slugInput || !visibleSelect || !descriptionInput) {
+        if (!nameInput || !slugInput || !categoryInput || !subcategoryInput || !visibleSelect || !descriptionInput) {
             showNotification('Елементи форми для товару не знайдено');
             return;
         }
@@ -4806,8 +4855,8 @@ async function saveNewProduct() {
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
         const brand = brandInput ? brandInput.value.trim() : '';
-        const category = categoryInput ? categoryInput.value.trim() : '';
-        const subcategory = subcategoryInput ? subcategoryInput.value.trim() : '';
+        const category = categoryInput.value.trim();
+        const subcategory = subcategoryInput.value.trim();
         const material = materialInput ? materialInput.value.trim() : '';
         let price = null;
         let salePrice = null;
@@ -4823,8 +4872,8 @@ async function saveNewProduct() {
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
+        if (!name || !slug || !category) {
+            showNotification('Введіть назву, шлях товару та категорію!');
             return;
         }
 
@@ -4898,7 +4947,7 @@ async function saveNewProduct() {
             name,
             slug,
             brand: brand || '',
-            category: category || '',
+            category,
             subcategory: subcategory || '',
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
@@ -4913,13 +4962,13 @@ async function saveNewProduct() {
             colors: newProduct.colors.map(color => ({
                 name: color.name,
                 value: color.value,
-                priceChange: color.priceChange,
+                priceChange: color.priceChange || 0,
                 photo: null
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts,
             active: true,
-            visible: visible
+            visible
         };
 
         const mediaUrls = [];
@@ -5018,6 +5067,11 @@ async function saveNewProduct() {
             method: 'POST',
             body: JSON.stringify(product)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
+        }
 
         const newProductData = await response.json();
         products.push(newProductData);
@@ -5202,12 +5256,24 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        const name = document.getElementById('product-name').value;
-        const slug = document.getElementById('product-slug').value;
-        const brand = document.getElementById('product-brand').value;
-        const category = document.getElementById('product-category').value;
-        const subcategory = document.getElementById('product-subcategory').value;
-        const material = document.getElementById('product-material').value;
+        if (!Array.isArray(products)) {
+            console.error('Список продуктів не ініціалізований');
+            showNotification('Помилка: список продуктів не ініціалізований');
+            return;
+        }
+
+        const productObj = products.find(p => p._id === productId);
+        if (!productObj || !productObj._id) {
+            showNotification('Товар не знайдено або відсутній ID!');
+            return;
+        }
+
+        const name = document.getElementById('product-name').value.trim();
+        const slug = document.getElementById('product-slug').value.trim();
+        const brand = document.getElementById('product-brand').value.trim();
+        const category = document.getElementById('product-category').value.trim();
+        const subcategory = document.getElementById('product-subcategory').value.trim();
+        const material = document.getElementById('product-material').value.trim();
         let price = null;
         let salePrice = null;
         if (newProduct.type === 'simple') {
@@ -5222,14 +5288,8 @@ async function saveEditedProduct(productId) {
         const heightCm = parseFloat(document.getElementById('product-height-cm').value) || null;
         const lengthCm = parseFloat(document.getElementById('product-length-cm').value) || null;
 
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
-            return;
-        }
-
-        const productObj = products.find(p => p._id === productId);
-        if (!productObj || !productObj._id) {
-            showNotification('Товар не знайдено або відсутній ID!');
+        if (!name || !slug || !category) {
+            showNotification('Введіть назву, шлях товару та категорію!');
             return;
         }
 
@@ -5303,7 +5363,7 @@ async function saveEditedProduct(productId) {
             name,
             slug,
             brand: brand || '',
-            category: category || '',
+            category,
             subcategory: subcategory || '',
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
@@ -5412,6 +5472,8 @@ async function saveEditedProduct(productId) {
                     showNotification('Не вдалося завантажити фото кольору: ' + err.message);
                     return;
                 }
+            } else if (typeof color.photo === 'string') {
+                product.colors[i].photo = color.photo;
             }
         }
 
@@ -5419,6 +5481,11 @@ async function saveEditedProduct(productId) {
             method: 'PUT',
             body: JSON.stringify(product)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
+        }
 
         const updatedProduct = await response.json();
         const index = products.findIndex(p => p._id === productId);
@@ -5443,54 +5510,83 @@ async function saveEditedProduct(productId) {
 }
 
 async function deleteProduct(productId) {
-    if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
-            const response = await fetchWithAuth(`/api/products/${productId}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) {
-                throw new Error('Помилка при видаленні товару: ' + response.statusText);
-            }
-
-            products = products.filter(p => p._id !== productId);
-            products.forEach(p => {
-                if (p.type === 'group') {
-                    p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
-                }
-            });
-            renderAdmin('products');
-            showNotification('Товар видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        } catch (err) {
-            console.error('Помилка при видаленні товару:', err);
-            showNotification('Не вдалося видалити товар: ' + err.message);
-        }
-    }
-}
-
-async function toggleProductActive(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product) {
-        showNotification('Товар не знайдено!');
+    if (!confirm('Ви впевнені, що хочете видалити цей товар?')) {
         return;
     }
 
-    const newActiveStatus = !product.active;
-
     try {
-        await fetchWithAuth(`/api/products/${productId}`, {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        if (!Array.isArray(products)) {
+            console.error('Список продуктів не ініціалізований');
+            showNotification('Помилка: список продуктів не ініціалізований');
+            return;
+        }
+
+        const response = await fetchWithAuth(`/api/products/${productId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка при видаленні товару: ${errorData.error || response.statusText}`);
+        }
+
+        products = products.filter(p => p._id !== productId);
+        products.forEach(p => {
+            if (p.type === 'group' && Array.isArray(p.groupProducts)) {
+                p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
+            }
+        });
+
+        renderAdmin('products');
+        showNotification('Товар видалено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка при видаленні товару:', err);
+        showNotification('Не вдалося видалити товар: ' + err.message);
+    }
+}
+
+async function toggleProductActive(productId, currentActive) {
+    try {
+        if (!Array.isArray(products)) {
+            console.error('Список продуктів не ініціалізований');
+            showNotification('Помилка: список продуктів не ініціалізований');
+            return;
+        }
+
+        const product = products.find(p => p._id === productId);
+        if (!product) {
+            console.error(`Продукт із ID ${productId} не знайдено`);
+            showNotification('Товар не знайдено!');
+            return;
+        }
+
+        const newActiveStatus = currentActive !== undefined ? !currentActive : !product.active;
+
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PATCH',
             body: JSON.stringify({ active: newActiveStatus })
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка при оновленні статусу: ${errorData.error || response.statusText}`);
+        }
 
         product.active = newActiveStatus;
         renderAdmin('products');
