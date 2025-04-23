@@ -9,14 +9,14 @@ const orderSchema = new mongoose.Schema({
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        color: {
+        photo: { // Змінено з color на photo
             type: String,
             default: '',
             validate: {
                 validator: function(v) {
                     return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
                 },
-                message: 'Color must be a valid URL or empty string'
+                message: 'Photo must be a valid URL or empty string'
             }
         }
     }],

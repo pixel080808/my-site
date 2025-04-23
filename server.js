@@ -311,7 +311,7 @@ const orderSchemaValidation = Joi.object({
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            color: Joi.string().allow(''),
+            photo: Joi.string().allow(''), // Змінено з color на photo
             _id: Joi.any().optional()
         })
     ).required(),
@@ -388,10 +388,9 @@ const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
-    url: Joi.string().uri().allow('').optional(),
+    link: Joi.string().uri().allow('').optional(), // Змінено з url на link
     title: Joi.string().allow(''),
     text: Joi.string().allow(''),
-    link: Joi.string().uri().allow('').optional(),
     linkText: Joi.string().allow(''),
     order: Joi.number().min(0).default(0)
 });
@@ -814,8 +813,24 @@ const getPublicIdFromUrl = (url) => {
 
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const productData = req.body;
+        let productData = req.body;
         logger.info('Отримано дані продукту:', productData);
+
+        // Мапінг img на photos
+        if (productData.img && !productData.photos) {
+            productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
+            delete productData.img;
+        }
+        // Мапінг img у colors
+        if (productData.colors) {
+            productData.colors = productData.colors.map(color => {
+                if (color.img && !color.photo) {
+                    color.photo = color.img;
+                    delete color.img;
+                }
+                return color;
+            });
+        }
 
         const { error } = productSchemaValidation.validate(productData);
         if (error) {
@@ -856,13 +871,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         }
 
         // Перевірка існування subcategory
-if (productData.subcategory) {
-    const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-    if (!subcategoryExists) {
-        logger.error('Підкатегорія не знайдено:', productData.subcategory);
-        return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-    }
-}
+        if (productData.subcategory) {
+            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+            if (!subcategoryExists) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+            }
+        }
 
         // Перевірка існування groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
@@ -910,6 +925,22 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
 
+        // Мапінг img на photos
+        if (productData.img && !productData.photos) {
+            productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
+            delete productData.img;
+        }
+        // Мапінг img у colors
+        if (productData.colors) {
+            productData.colors = productData.colors.map(color => {
+                if (color.img && !color.photo) {
+                    color.photo = color.img;
+                    delete color.img;
+                }
+                return color;
+            });
+        }
+
         delete productData._id;
         delete productData.__v;
         if (productData.colors) {
@@ -925,7 +956,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка унікальності slug (окрім поточного продукту)
+        // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
@@ -958,13 +989,13 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         // Перевірка існування subcategory
-if (productData.subcategory) {
-    const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-    if (!subcategoryExists) {
-        logger.error('Підкатегорія не знайдено:', productData.subcategory);
-        return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-    }
-}
+        if (productData.subcategory) {
+            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+            if (!subcategoryExists) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+            }
+        }
 
         // Валідація groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
@@ -1071,7 +1102,24 @@ app.get('/api/categories', async (req, res) => {
 
 app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const categoryData = req.body;
+        let categoryData = req.body;
+
+        // Мапінг img на photo для категорії
+        if (categoryData.img && !categoryData.photo) {
+            categoryData.photo = categoryData.img;
+            delete categoryData.img;
+        }
+        // Мапінг img на photo для підкатегорій
+        if (categoryData.subcategories) {
+            categoryData.subcategories = categoryData.subcategories.map(sub => {
+                if (sub.img && !sub.photo) {
+                    sub.photo = sub.img;
+                    delete sub.img;
+                }
+                return sub;
+            });
+        }
+
         const { error } = categorySchemaValidation.validate(categoryData);
         if (error) {
             logger.error('Помилка валідації категорії:', error.details);
@@ -1085,7 +1133,7 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
         res.status(201).json(category);
     } catch (err) {
         logger.error('Помилка при додаванні категорії:', err);
-        if (err.code === 11000) { // MongoDB duplicate key error
+        if (err.code === 11000) {
             return res.status(400).json({ error: 'Категорія з таким slug уже існує' });
         }
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -1094,8 +1142,24 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
 
 app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const categoryData = req.body;
+        let categoryData = req.body;
         logger.info('Отримано дані для оновлення категорії:', JSON.stringify(categoryData, null, 2));
+
+        // Мапінг img на photo для категорії
+        if (categoryData.img && !categoryData.photo) {
+            categoryData.photo = categoryData.img;
+            delete categoryData.img;
+        }
+        // Мапінг img на photo для підкатегорій
+        if (categoryData.subcategories) {
+            categoryData.subcategories = categoryData.subcategories.map(sub => {
+                if (sub.img && !sub.photo) {
+                    sub.photo = sub.img;
+                    delete sub.img;
+                }
+                return sub;
+            });
+        }
 
         const { error } = categorySchemaValidation.validate(categoryData);
         if (error) {
@@ -1153,7 +1217,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
             subSlugs.add(sub.slug);
 
-            // Видаляємо старе зображення підкатегорії, якщо воно змінилося
+            // Видаляємо старе зображення підкатегорії
             const existingSub = category.subcategories.find(s => s._id.toString() === sub._id);
             if (existingSub && existingSub.photo && sub.photo && sub.photo !== existingSub.photo) {
                 const publicId = getPublicIdFromUrl(existingSub.photo);
@@ -1351,7 +1415,13 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const categoryId = req.params.id;
-        const subcategoryData = req.body;
+        let subcategoryData = req.body;
+
+        // Мапінг img на photo
+        if (subcategoryData.img && !subcategoryData.photo) {
+            subcategoryData.photo = subcategoryData.img;
+            delete subcategoryData.img;
+        }
 
         const { error } = subcategorySchemaValidation.validate(subcategoryData);
         if (error) {
@@ -1402,9 +1472,15 @@ const subcategoryOrderSchemaValidation = Joi.object({
 app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const { categoryId, subcategoryId } = req.params;
-        const subcategoryData = req.body;
+        let subcategoryData = req.body;
 
         logger.info('Отримано дані для оновлення підкатегорії:', JSON.stringify(subcategoryData, null, 2));
+
+        // Мапінг img на photo
+        if (subcategoryData.img && !subcategoryData.photo) {
+            subcategoryData.photo = subcategoryData.img;
+            delete subcategoryData.img;
+        }
 
         const { error } = subcategorySchemaValidation.validate(subcategoryData);
         if (error) {
@@ -1449,11 +1525,11 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
-subcategory.name = subcategoryData.name || subcategory.name;
-subcategory.slug = subcategoryData.slug || subcategory.slug;
-subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
-subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
-subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order; // Додано
+        subcategory.name = subcategoryData.name || subcategory.name;
+        subcategory.slug = subcategoryData.slug || subcategory.slug;
+        subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
+        subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
+        subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order;
 
         await category.save();
 
@@ -1534,8 +1610,14 @@ app.get('/api/slides', authenticateToken, async (req, res) => {
 
 app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slideData = req.body;
+        let slideData = req.body;
         logger.info('Отримано дані слайду:', slideData);
+
+        // Мапінг img на photo
+        if (slideData.img && !slideData.photo) {
+            slideData.photo = slideData.img;
+            delete slideData.img;
+        }
 
         const { error } = slideSchemaValidation.validate(slideData);
         if (error) {
@@ -1552,10 +1634,9 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
                 id: slideData.id,
                 photo: slideData.photo,
                 name: slideData.name,
-                url: slideData.url,
+                link: slideData.link,
                 title: slideData.title,
                 text: slideData.text,
-                link: slideData.link,
                 linkText: slideData.linkText,
                 order: slideData.order
             });
@@ -1587,6 +1668,12 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Невірний формат ID слайду' });
         }
 
+        // Мапінг img на photo, якщо клієнт надсилає img
+        if (slideData.img && !slideData.photo) {
+            slideData.photo = slideData.img;
+            delete slideData.img;
+        }
+
         const { error } = slideSchemaValidation.validate(slideData);
         if (error) {
             logger.error('Помилка валідації слайду:', error.details);
@@ -1601,10 +1688,9 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
                 {
                     photo: slideData.photo,
                     name: slideData.name,
-                    url: slideData.url,
+                    link: slideData.link, // Виправлено: видалено url
                     title: slideData.title,
                     text: slideData.text,
-                    link: slideData.link,
                     linkText: slideData.linkText,
                     order: slideData.order
                 },
@@ -1752,8 +1838,18 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 
 app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const settingsData = req.body;
+        let settingsData = req.body;
         logger.info('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
+
+        // Мапінг img на logo і favicon
+        if (settingsData.img && !settingsData.logo) {
+            settingsData.logo = settingsData.img;
+            delete settingsData.img;
+        }
+        if (settingsData.faviconImg && !settingsData.favicon) {
+            settingsData.favicon = settingsData.faviconImg;
+            delete settingsData.faviconImg;
+        }
 
         const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData;
 
@@ -1855,8 +1951,19 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
 app.post('/api/orders', csrfProtection, async (req, res) => {
     try {
         logger.info('Отримано запит на створення замовлення:', req.body);
-        const orderData = req.body;
+        let orderData = req.body;
         const cartId = req.query.cartId;
+
+        // Мапінг img на photo у items
+        if (orderData.items) {
+            orderData.items = orderData.items.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
+        }
 
         if (cartId) {
             const { error } = cartIdSchema.validate(cartId);
@@ -1949,18 +2056,28 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         if (error) {
             return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
         }
-        const cartItems = req.body;
+        let cartItems = req.body;
 
-        const cartSchemaValidation = Joi.array().items(
-            Joi.object({
-                id: Joi.number().required(),
-                name: Joi.string().required(),
-                quantity: Joi.number().min(1).required(),
-                price: Joi.number().min(0).required(),
-                color: Joi.string().allow(''),
-                photo: Joi.string().uri().allow('').optional()
-            })
-        );
+        // Мапінг img на photo у items
+        if (cartItems) {
+            cartItems = cartItems.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
+        }
+
+const cartSchemaValidation = Joi.array().items(
+    Joi.object({
+        id: Joi.number().required(),
+        name: Joi.string().required(),
+        quantity: Joi.number().min(1).required(),
+        price: Joi.number().min(0).required(),
+        photo: Joi.string().uri().allow('').optional()
+    })
+);
 
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
         if (cartError) {
@@ -2032,6 +2149,17 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
         let orderData = req.body;
 
+        // Мапінг img на photo у items
+        if (orderData.items) {
+            orderData.items = orderData.items.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
+        }
+
         if (orderData.items) {
             orderData.items = orderData.items.map(item => {
                 const { _id, ...rest } = item;
@@ -2045,7 +2173,7 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка унікальності id (якщо id змінюється)
+        // Перевірка унікальності id
         if (orderData.id && orderData.id !== orderId) {
             const existingOrder = await Order.findOne({ id: orderData.id });
             if (existingOrder) {

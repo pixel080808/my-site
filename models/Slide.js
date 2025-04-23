@@ -13,19 +13,7 @@ const slideSchema = new mongoose.Schema({
         }
     },
     name: { type: String, default: '' },
-    url: {
-        type: String,
-        default: '',
-        validate: {
-            validator: function(v) {
-                return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-            },
-            message: 'URL must be a valid URL or empty string'
-        }
-    },
-    title: { type: String, default: '' },
-    text: { type: String, default: '' },
-    link: {
+    link: { // Змінено з url на link (видалено поле url)
         type: String,
         default: '',
         validate: {
@@ -35,6 +23,8 @@ const slideSchema = new mongoose.Schema({
             message: 'Link must be a valid URL or empty string'
         }
     },
+    title: { type: String, default: '' },
+    text: { type: String, default: '' },
     linkText: { type: String, default: '' },
     order: { type: Number, default: 0 }
 }, { timestamps: true });
