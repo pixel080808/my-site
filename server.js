@@ -2213,54 +2213,6 @@ if (isNaN(orderId)) {
     }
 });
 
-// Імпорт моделі OrderField
-const OrderField = require('./models/OrderField');
-
-// Схема валідації для OrderField
-const orderFieldSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required(),
-    label: Joi.string().trim().min(1).max(100).required(),
-    type: Joi.string().valid('text', 'email', 'select').required(),
-    options: Joi.array().items(Joi.string().trim().min(1)).default([])
-});
-
-// Отримання всіх полів замовлення
-app.get('/api/order-fields', authenticateToken, async (req, res) => {
-    try {
-        const fields = await OrderField.find();
-        res.json(fields);
-    } catch (err) {
-        logger.error('Помилка при отриманні полів замовлення:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// Створення нового поля замовлення
-app.post('/api/order-fields', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const { error } = orderFieldSchemaValidation.validate(req.body);
-        if (error) {
-            logger.error('Помилка валідації поля замовлення:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const { name, label, type, options } = req.body;
-        const existingField = await OrderField.findOne({ name });
-        if (existingField) {
-            logger.error('Поле замовлення з такою назвою вже існує:', name);
-            return res.status(400).json({ error: `Поле з назвою "${name}" уже існує` });
-        }
-
-        const field = new OrderField({ name, label, type, options });
-        await field.save();
-        logger.info('Поле замовлення створено:', { name, label, type });
-        res.status(201).json(field);
-    } catch (err) {
-        logger.error('Помилка при додаванні поля замовлення:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
 app.get('/api/materials', authenticateToken, async (req, res) => {
     try {
         const materials = await Material.find().distinct('name');
