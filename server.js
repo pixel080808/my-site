@@ -1276,6 +1276,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         // Валідація
         const { error } = categoryOrderSchema.validate({ categories });
         if (error) {
+            logger.error('Помилка валідації порядку категорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
@@ -1283,16 +1284,28 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         const categoryIds = categories.map(item => item._id);
         const foundCategories = await Category.find({ _id: { $in: categoryIds } });
         if (foundCategories.length !== categoryIds.length) {
+            logger.error('Не всі категорії знайдені:', {
+                requested: categoryIds,
+                found: foundCategories.map(cat => cat._id.toString())
+            });
             return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
         }
 
-        // Оновлення порядку
-        for (const { _id, order } of categories) {
-            await Category.findByIdAndUpdate(_id, { order });
-        }
+        // Формування операцій для bulkWrite
+        const bulkOps = categories.map(({ _id, order }) => ({
+            updateOne: {
+                filter: { _id },
+                update: { $set: { order } }
+            }
+        }));
 
+        // Виконання bulkWrite
+        await Category.bulkWrite(bulkOps);
+
+        // Отримання оновлених категорій
         const updatedCategories = await Category.find().sort({ order: 1 });
         broadcast('categories', updatedCategories);
+        logger.info('Порядок категорій успішно оновлено');
         res.status(200).json(updatedCategories);
     } catch (err) {
         logger.error('Помилка оновлення порядку категорій:', err);
@@ -1569,18 +1582,25 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
-            logger.error('Не всі підкатегорії знайдені:', { requested: subcategoryIds, found: existingSubcategories.map(sub => sub._id.toString()) });
+            logger.error('Не всі підкатегорії знайдені:', {
+                requested: subcategoryIds,
+                found: existingSubcategories.map(sub => sub._id.toString())
+            });
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
-        for (const { _id, order } of subcategories) {
-            const subcat = category.subcategories.id(_id);
-            if (subcat) {
-                subcat.order = order;
+        // Формування операцій для bulkWrite
+        const bulkOps = subcategories.map(({ _id, order }) => ({
+            updateOne: {
+                filter: { _id: categoryId, 'subcategories._id': _id },
+                update: { $set: { 'subcategories.$.order': order } }
             }
-        }
+        }));
 
-        await category.save({ session });
+        // Виконання bulkWrite у межах сесії
+        await Category.bulkWrite(bulkOps, { session });
+
+        // Оновлення категорій для broadcast
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
         await session.commitTransaction();
