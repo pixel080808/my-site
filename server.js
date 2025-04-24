@@ -1288,7 +1288,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
 
         // Оновлення порядку
         for (const { _id, order } of categories) {
-            await Category.findByIdAndUpdate(_id, { order });
+            await Category.findByIdAndUpdate(_id, { order }, { runValidators: true });
         }
 
         const updatedCategories = await Category.find().sort({ order: 1 });
@@ -1573,12 +1573,16 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
-        for (const { _id, order } of subcategories) {
+        // Update order for each subcategory
+        subcategories.forEach(({ _id, order }) => {
             const subcat = category.subcategories.id(_id);
             if (subcat) {
                 subcat.order = order;
             }
-        }
+        });
+
+        // Sort subcategories by order before saving
+        category.subcategories.sort((a, b) => a.order - b.order);
 
         await category.save({ session });
         const updatedCategories = await Category.find().session(session);

@@ -1,29 +1,60 @@
 const mongoose = require('mongoose');
 
+const subcategorySchema = new mongoose.Schema({
+    name: { 
+        type: String, 
+        required: true, 
+        trim: true,
+        maxlength: 255 
+    },
+    slug: { 
+        type: String, 
+        required: true, 
+        trim: true,
+        maxlength: 255 
+    },
+    photo: { 
+        type: String, 
+        default: '' 
+    },
+    visible: { 
+        type: Boolean, 
+        default: true 
+    },
+    order: { 
+        type: Number, 
+        default: 0, 
+        min: 0 
+    }
+});
+
 const categorySchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxlength: 255
     },
     slug: {
         type: String,
         required: true,
         unique: true,
-        trim: true
+        trim: true,
+        maxlength: 255
     },
-    photo: { type: String, default: '' },
-    visible: { type: Boolean, default: true },
-    subcategories: [{
-        name: { type: String, required: true, trim: true },
-        slug: { type: String, required: true, trim: true },
-        photo: { type: String, default: '' },
-        order: { type: Number, default: 0 },
-        visible: { type: Boolean, default: true }
-    }],
+    photo: { 
+        type: String, 
+        default: '' 
+    },
+    visible: { 
+        type: Boolean, 
+        default: true 
+    },
+    subcategories: [subcategorySchema],
     order: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     }
 }, { timestamps: true });
 
