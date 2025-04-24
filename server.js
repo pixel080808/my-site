@@ -2082,6 +2082,16 @@ app.get('/api/cart', async (req, res) => {
     }
 });
 
+const cartSchemaValidation = Joi.array().items(
+    Joi.object({
+        id: Joi.number().required(),
+        name: Joi.string().required(),
+        quantity: Joi.number().min(1).required(),
+        price: Joi.number().min(0).required(),
+        photo: Joi.string().uri().allow('').optional()
+    })
+);
+
 app.post('/api/cart', csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -2123,34 +2133,6 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             logger.info('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
             cart.updatedAt = Date.now();
-        }
-        await cart.save({ session });
-
-        await session.commitTransaction();
-        logger.info('Кошик успішно збережено:', { cartId });
-        res.status(200).json({ success: true });
-    } catch (err) {
-        await session.abortTransaction();
-        logger.error('Помилка при збереженні кошика:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    } finally {
-        session.endSession();
-    }
-});
-
-        const { error: cartError } = cartSchemaValidation.validate(cartItems);
-        if (cartError) {
-            logger.error('Помилка валідації кошика:', cartError.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: cartError.details });
-        }
-
-        let cart = await Cart.findOne({ cartId }).session(session);
-        if (!cart) {
-            logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: cartItems });
-        } else {
-            logger.info('Оновлюємо існуючий кошик:', { cartId });
-            cart.items = cartItems;
         }
         await cart.save({ session });
 
