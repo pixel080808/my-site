@@ -2432,18 +2432,20 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Формуємо об’єкт без поля order у підкатегоріях
+        // Формуємо об’єкт із полем order для категорії та підкатегорій
         const updatedCategory = {
             name,
             slug,
             photo: photo || category.photo || '',
             visible,
+            order: category.order || 0, // Додаємо поле order для категорії
             subcategories: (category.subcategories || []).map(sub => ({
                 _id: sub._id,
                 name: sub.name,
                 slug: sub.slug,
                 photo: sub.photo || '',
-                visible: sub.visible
+                visible: sub.visible,
+                order: sub.order || 0 // Додаємо поле order для підкатегорій
             }))
         };
 
@@ -2742,6 +2744,7 @@ async function moveCategoryUp(index) {
                 order: idx === index ? idx - 1 : idx === index - 1 ? idx : idx
             })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
         };
+        console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             body: JSON.stringify(categoryOrder)
@@ -2752,6 +2755,7 @@ async function moveCategoryUp(index) {
             showNotification('Порядок категорій змінено!');
         } else {
             const errorData = await response.json();
+            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(errorData.error || 'Помилка зміни порядку');
         }
     } catch (err) {
@@ -2759,7 +2763,6 @@ async function moveCategoryUp(index) {
         showNotification('Не вдалося змінити порядок: ' + err.message);
     }
 }
-
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
@@ -2779,6 +2782,7 @@ async function moveCategoryDown(index) {
             showNotification('Порядок категорій змінено!');
         } else {
             const errorData = await response.json();
+            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(errorData.error || 'Помилка зміни порядку');
         }
     } catch (err) {
@@ -2876,6 +2880,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
+        const subcategory = category.subcategories.find(s => s._id === subcategoryId);
+        if (!subcategory) {
+            showNotification('Підкатегорія не знайдена!');
+            return;
+        }
+
         // Перевірка унікальності slug у межах категорії
         if (category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
@@ -2907,11 +2917,13 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             photo = data.url;
         }
 
+        // Формуємо об’єкт із полем order
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || '',
-            visible
+            photo: photo || subcategory.photo || '',
+            visible,
+            order: subcategory.order || 0 // Додаємо поле order
         };
 
         console.log('Надсилаємо дані на сервер:', JSON.stringify(updatedSubcategory, null, 2));
@@ -3325,6 +3337,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
             showNotification('Порядок підкатегорій змінено!');
         } else {
             const errorData = await response.json();
+            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(errorData.error || 'Помилка зміни порядку');
         }
     } catch (err) {
@@ -3356,6 +3369,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
             showNotification('Порядок підкатегорій змінено!');
         } else {
             const errorData = await response.json();
+            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(errorData.error || 'Помилка зміни порядку');
         }
     } catch (err) {

@@ -26,6 +26,7 @@ const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
+const OrderField = require('./models/OrderField');
 
 // Налаштування логера
 const logger = winston.createLogger({
@@ -311,7 +312,7 @@ const orderSchemaValidation = Joi.object({
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            photo: Joi.string().allow(''), // Змінено з color на photo
+            photo: Joi.string().uri().allow('').optional(),
             _id: Joi.any().optional()
         })
     ).required(),
@@ -388,7 +389,7 @@ const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
-    link: Joi.string().uri().allow('').optional(), // Змінено з url на link
+    link: Joi.string().uri().allow('').optional(),
     title: Joi.string().allow(''),
     text: Joi.string().allow(''),
     linkText: Joi.string().allow(''),
@@ -1708,7 +1709,7 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
                 {
                     photo: slideData.photo,
                     name: slideData.name,
-                    link: slideData.link, // Виправлено: видалено url
+                    link: slideData.link,
                     title: slideData.title,
                     text: slideData.text,
                     linkText: slideData.linkText,
@@ -1719,6 +1720,19 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             if (!slide) {
                 await session.abortTransaction();
                 return res.status(404).json({ error: 'Слайд не знайдено' });
+            }
+
+            // Видаляємо старе зображення, якщо нове фото відрізняється
+            if (slideData.photo && slide.photo && slideData.photo !== slide.photo) {
+                const publicId = getPublicIdFromUrl(slide.photo);
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                        logger.info(`Видалено старе зображення слайду: ${publicId}`);
+                    } catch (err) {
+                        logger.error(`Не вдалося видалити старе зображення слайду: ${publicId}`, err);
+                    }
+                }
             }
 
             const slides = await Slide.find().sort({ order: 1 }).session(session);
@@ -2021,16 +2035,18 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
                 const cart = await Cart.findOne({ cartId }).session(session);
                 if (cart) {
                     cart.items = [];
+                    cart.updatedAt = Date.now();
                     await cart.save({ session });
                 } else {
                     logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
                 }
             }
 
+            const orders = await Order.find().session(session);
+            broadcast('orders', orders);
+
             await session.commitTransaction();
             logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
-            const orders = await Order.find();
-            broadcast('orders', orders);
             res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
@@ -2074,6 +2090,8 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         logger.info('POST /api/cart:', { cartId, body: req.body });
         const { error } = cartIdSchema.validate(cartId);
         if (error) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
         }
         let cartItems = req.body;
@@ -2089,15 +2107,36 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             });
         }
 
-const cartSchemaValidation = Joi.array().items(
-    Joi.object({
-        id: Joi.number().required(),
-        name: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-        price: Joi.number().min(0).required(),
-        photo: Joi.string().uri().allow('').optional()
-    })
-);
+        const { error: cartError } = cartSchemaValidation.validate(cartItems);
+        if (cartError) {
+            await session.abortTransaction();
+            session.endSession();
+            logger.error('Помилка валідації кошика:', cartError.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: cartError.details });
+        }
+
+        let cart = await Cart.findOne({ cartId }).session(session);
+        if (!cart) {
+            logger.info('Кошик не знайдено, створюємо новий:', { cartId });
+            cart = new Cart({ cartId, items: cartItems, updatedAt: Date.now() });
+        } else {
+            logger.info('Оновлюємо існуючий кошик:', { cartId });
+            cart.items = cartItems;
+            cart.updatedAt = Date.now();
+        }
+        await cart.save({ session });
+
+        await session.commitTransaction();
+        logger.info('Кошик успішно збережено:', { cartId });
+        res.status(200).json({ success: true });
+    } catch (err) {
+        await session.abortTransaction();
+        logger.error('Помилка при збереженні кошика:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } finally {
+        session.endSession();
+    }
+});
 
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
         if (cartError) {
@@ -2202,12 +2241,30 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             }
         }
 
-        const order = await Order.findOneAndUpdate({ id: orderId }, orderData, { new: true });
-        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const order = await Order.findOneAndUpdate(
+                { id: orderId },
+                orderData,
+                { new: true, session }
+            );
+            if (!order) {
+                await session.abortTransaction();
+                return res.status(404).json({ error: 'Замовлення не знайдено' });
+            }
 
-        const orders = await Order.find().sort({ date: -1 });
-        broadcast('orders', orders);
-        res.json(order);
+            const orders = await Order.find().sort({ date: -1 }).session(session);
+            broadcast('orders', orders);
+
+            await session.commitTransaction();
+            res.json(order);
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        } finally {
+            session.endSession();
+        }
     } catch (err) {
         logger.error('Помилка при оновленні замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -2278,6 +2335,72 @@ app.post('/api/order-fields', authenticateToken, csrfProtection, async (req, res
     } catch (err) {
         logger.error('Помилка при додаванні поля замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
+app.put('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
+    try {
+        const fieldId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
+            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
+            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
+        }
+
+        const fieldData = req.body;
+        const { error } = orderFieldSchemaValidation.validate(fieldData);
+        if (error) {
+            logger.error('Помилка валідації поля замовлення:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        const existingField = await OrderField.findOne({ name: fieldData.name, _id: { $ne: fieldId } });
+        if (existingField) {
+            logger.error('Поле замовлення з такою назвою вже існує:', fieldData.name);
+            return res.status(400).json({ error: `Поле з назвою "${fieldData.name}" уже існує` });
+        }
+
+        const field = await OrderField.findByIdAndUpdate(
+            fieldId,
+            {
+                name: fieldData.name,
+                label: fieldData.label,
+                type: fieldData.type,
+                options: fieldData.options || []
+            },
+            { new: true }
+        );
+        if (!field) {
+            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
+            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
+        }
+
+        logger.info('Поле замовлення оновлено:', { id: fieldId, name: fieldData.name });
+        res.json(field);
+    } catch (err) {
+        logger.error('Помилка при оновленні поля замовлення:', err);
+        res.status(400).json({ error: 'Невірні дані', details: err.message });
+    }
+});
+
+app.delete('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
+    try {
+        const fieldId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
+            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
+            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
+        }
+
+        const field = await OrderField.findByIdAndDelete(fieldId);
+        if (!field) {
+            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
+            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
+        }
+
+        logger.info('Поле замовлення видалено:', { id: fieldId, name: field.name });
+        res.json({ message: 'Поле замовлення видалено' });
+    } catch (err) {
+        logger.error('Помилка при видаленні поля замовлення:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
