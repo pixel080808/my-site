@@ -741,21 +741,15 @@ button:hover {
         <!-- Фільтри -->
         <div class="admin-section">
             <h3>Фільтри</h3>
-<form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
-    <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
-    <label for="filter-name">Назва фільтру (наприклад, brand)</label>
-    <input id="filter-label" placeholder="Підпис" type="text"/><br/>
-    <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
-    <select id="filter-type">
-        <option value="select">Вибір</option>
-        <option value="checkbox">Чекбокс</option>
-        <option value="range">Діапазон</option>
-    </select><br/>
-    <label for="filter-type">Тип фільтру</label>
-    <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
-    <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
-    <button type="submit">Додати фільтр</button>
-</form>
+            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
+                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
+                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
+                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
+                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
+                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
+                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
+                <button type="submit">Додати фільтр</button>
+            </form>
             <div id="filter-list-admin"></div>
         </div>
         <!-- Поля замовлення -->
