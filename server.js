@@ -1597,65 +1597,38 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
 
 app.get('/api/slides', authenticateToken, async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
-        const skip = (page - 1) * limit;
-        const slides = await Slide.find().sort({ order: 1 }).skip(skip).limit(parseInt(limit));
-        const total = await Slide.countDocuments();
-        res.json({ slides, total, page: parseInt(page), limit: parseInt(limit) });
+        const slides = await Slide.find().sort({ order: 1 });
+        res.json(slides);
     } catch (err) {
         logger.error('Помилка при отриманні слайдів:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+        res.status(500).json({ error: 'Не вдалося отримати слайди' });
     }
 });
 
 app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        let slideData = req.body;
-        logger.info('Отримано дані слайду:', slideData);
+        const slideData = req.body;
+        const slideSchema = Joi.object({
+            photo: Joi.string().uri().required(),
+            link: Joi.string().uri().allow('').optional(),
+            order: Joi.number().integer().min(0).optional().default(0)
+        });
 
-        // Мапінг img на photo
-        if (slideData.img && !slideData.photo) {
-            slideData.photo = slideData.img;
-            delete slideData.img;
-        }
-
-        const { error } = slideSchemaValidation.validate(slideData);
+        const { error } = slideSchema.validate(slideData);
         if (error) {
             logger.error('Помилка валідації слайду:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
         }
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        try {
-            const maxIdSlide = await Slide.findOne().sort({ id: -1 }).session(session);
-            slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1;
-            const slide = new Slide({
-                id: slideData.id,
-                photo: slideData.photo,
-                name: slideData.name,
-                link: slideData.link,
-                title: slideData.title,
-                text: slideData.text,
-                linkText: slideData.linkText,
-                order: slideData.order
-            });
-            await slide.save({ session });
-
-            const slides = await Slide.find().sort({ order: 1 }).session(session);
-            broadcast('slides', slides);
-
-            await session.commitTransaction();
-            res.status(201).json(slide);
-        } catch (err) {
-            await session.abortTransaction();
-            throw err;
-        } finally {
-            session.endSession();
-        }
+        const slide = new Slide(slideData);
+        await slide.save();
+        const updatedSlides = await Slide.find();
+        broadcast('slides', updatedSlides);
+        logger.info('Слайд додано');
+        res.json(slide);
     } catch (err) {
         logger.error('Помилка при додаванні слайду:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
+        res.status(400).json({ error: 'Не вдалося додати слайд', details: err.message });
     }
 });
 
@@ -1720,33 +1693,38 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const slideId = parseInt(req.params.id);
-        if (isNaN(slideId)) {
-            logger.error(`Невірний формат ID слайду: ${req.params.id}`);
-            return res.status(400).json({ error: 'Невірний формат ID слайду' });
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.error(`Невірний формат ID: ${id}`);
+            return res.status(400).json({ error: 'Невірний формат ID' });
         }
 
-        const slide = await Slide.findOneAndDelete({ id: slideId });
-        if (!slide) return res.status(404).json({ error: 'Слайд не знайдено' });
+        const slide = await Slide.findById(id);
+        if (!slide) {
+            logger.error(`Слайд не знайдено: ${id}`);
+            return res.status(404).json({ error: 'Слайд не знайдено' });
+        }
 
         if (slide.photo) {
             const publicId = getPublicIdFromUrl(slide.photo);
             if (publicId) {
                 try {
                     await cloudinary.uploader.destroy(publicId);
-                    logger.info(`Успішно видалено файл з Cloudinary: ${publicId}`);
+                    logger.info(`Видалено зображення слайду: ${publicId}`);
                 } catch (err) {
-                    logger.error(`Не вдалося видалити файл з Cloudinary: ${publicId}`, err);
+                    logger.error(`Не вдалося видалити зображення слайду: ${publicId}`, err);
                 }
             }
         }
 
-        const slides = await Slide.find().sort({ order: 1 });
-        broadcast('slides', slides);
+        await Slide.deleteOne({ _id: id });
+        const updatedSlides = await Slide.find();
+        broadcast('slides', updatedSlides);
+        logger.info(`Слайд видалено: ${id}`);
         res.json({ message: 'Слайд видалено' });
     } catch (err) {
         logger.error('Помилка при видаленні слайду:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+        res.status(400).json({ error: 'Не вдалося видалити слайд', details: err.message });
     }
 });
 

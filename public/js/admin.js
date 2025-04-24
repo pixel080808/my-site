@@ -385,43 +385,28 @@ async function loadOrders() {
 
 async function loadSlides() {
     try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
+        const response = await axios.get('/api/slides', getAuthHeaders());
+        const slides = response.data;
+        const slideList = document.querySelector('#slide-list');
+        if (!slideList) {
+            console.error('Елемент для відображення слайдів не знайдено');
             return;
         }
-
-        const response = await fetchWithAuth('/api/slides');
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`Не вдалося завантажити слайди: ${text}`);
-        }
-
-        const data = await response.json();
-        let slidesData = data;
-        if (!Array.isArray(data)) {
-            if (data.slides && Array.isArray(data.slides)) {
-                slidesData = data.slides;
-            } else {
-                console.error('Очікувався масив слайдів, отримано:', data);
-                slides = [];
-                showNotification('Отримано некоректні дані слайдів');
-                renderSlidesAdmin();
-                return;
-            }
-        }
-
-        slides = slidesData;
-        renderSlidesAdmin();
-    } catch (e) {
-        console.error('Помилка завантаження слайдів:', e);
-        showNotification('Помилка завантаження слайдів: ' + e.message);
-        slides = [];
-        renderSlidesAdmin();
+        slideList.innerHTML = slides.map(s => `
+            <li data-id="${s._id}">
+                <img src="${s.photo}" alt="Slide" width="100">
+                (Порядок: ${s.order})
+                <button onclick="editSlide('${s._id}')">Редагувати</button>
+                <button onclick="deleteSlide('${s._id}')">Видалити</button>
+            </li>
+        `).join('');
+    } catch (error) {
+        console.error('Помилка при завантаженні слайдів:', error.response?.data);
+        alert('Не вдалося завантажити слайди');
     }
 }
+
+document.addEventListener('DOMContentLoaded', loadSlides);
 
 async function loadMaterials() {
     try {
@@ -4043,62 +4028,58 @@ function editSlide(order) {
     resetInactivityTimer();
 }
 
-    function saveSlideEdit(oldOrder) {
-        const newOrder = parseInt(document.getElementById('edit-slide-order').value);
-        const newImgUrl = document.getElementById('edit-slide-img-url').value;
-        const newImgFile = document.getElementById('edit-slide-img-file').files[0];
-        const newUrl = document.getElementById('edit-slide-url').value;
-
-        if (isNaN(newOrder)) {
-            alert('Введіть порядковий номер слайду!');
-            return;
-        }
-
-        const slide = slides.find(s => s.order === oldOrder);
-        if (slide) {
-            slide.order = newOrder;
-            slide.url = newUrl || '#';
-            if (newImgUrl) slide.img = newImgUrl;
-
-            if (newImgFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    slide.img = e.target.result;
-                    slides = slides.filter(s => s.order !== oldOrder);
-                    slides.push(slide);
-                    slides.sort((a, b) => a.order - b.order);
-                    localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                    closeModal();
-                    renderAdmin();
-                    showNotification('Слайд відредаговано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                };
-                reader.readAsDataURL(newImgFile);
-            } else {
-                slides = slides.filter(s => s.order !== oldOrder);
-                slides.push(slide);
-                slides.sort((a, b) => a.order - b.order);
-                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                closeModal();
-                renderAdmin();
-                showNotification('Слайд відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            }
-        }
+async function saveSlide(slide) {
+    const form = document.querySelector('#slide-form');
+    if (!form) {
+        console.error('Форма для слайду не знайдена');
+        alert('Помилка: Форма для слайду не знайдена');
+        return;
     }
 
-    function deleteSlide(order) {
-        if (confirm('Ви впевнені, що хочете видалити цей слайд?')) {
-            slides = slides.filter(s => s.order !== order);
-            localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-            renderAdmin();
-            showNotification('Слайд видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        }
+    const formData = {
+        photo: slide.photo || '',
+        link: slide.link || '',
+        order: parseInt(slide.order) || 0
+    };
+
+    if (!formData.photo) {
+        alert('Зображення слайду є обов’язковим!');
+        return;
     }
+
+    try {
+        const response = slide._id
+            ? await axios.put(`/api/slides/${slide._id}`, formData, getAuthHeaders())
+            : await axios.post('/api/slides', formData, getAuthHeaders());
+        alert('Слайд збережено!');
+        loadSlides();
+        return response.data;
+    } catch (error) {
+        console.error('Помилка при збереженні слайду:', error.response?.data);
+        const errorMessage = error.response?.data?.details
+            ? error.response.data.details.map(d => d.message).join('; ')
+            : error.response?.data?.error || 'Помилка при збереженні слайду';
+        alert(`Помилка: ${errorMessage}`);
+        throw error;
+    }
+}
+
+async function deleteSlide(slideId) {
+    if (!/^[0-9a-fA-F]{24}$/.test(slideId)) {
+        alert('Невірний формат ID слайду');
+        return;
+    }
+
+    try {
+        await axios.delete(`/api/slides/${slideId}`, getAuthHeaders());
+        alert('Слайд видалено!');
+        loadSlides(); // Оновити список слайдів
+    } catch (error) {
+        console.error('Помилка при видаленні слайду:', error.response?.data);
+        const errorMessage = error.response?.data?.error || 'Не вдалося видалити слайд';
+        alert(`Помилка: ${errorMessage}`);
+    }
+}
 
     function toggleSlideshow() {
         settings.showSlides = document.getElementById('slide-toggle').checked;
