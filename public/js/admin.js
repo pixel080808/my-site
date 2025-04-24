@@ -258,12 +258,12 @@ async function fetchWithAuth(url, options = {}) {
     }
 
     let csrfToken = localStorage.getItem('csrfToken');
-    if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
+    if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
         try {
             const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}` // Додаємо заголовок
+                    'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include'
             });
@@ -282,7 +282,7 @@ async function fetchWithAuth(url, options = {}) {
     const headers = {
         'Authorization': `Bearer ${token}`,
         ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
+        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
     };
 
     const response = await fetch(url, {
@@ -309,11 +309,11 @@ async function fetchWithAuth(url, options = {}) {
             }
             return newResponse;
         }
-    } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
+    } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
         try {
             const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }, // Додаємо заголовок
+                headers: { 'Authorization': `Bearer ${token}` },
                 credentials: 'include'
             });
             if (csrfResponse.ok) {
@@ -5494,19 +5494,7 @@ async function deleteProduct(productId) {
 
 async function toggleProductActive(productId, currentActive) {
     try {
-        if (!Array.isArray(products)) {
-            console.error('Список продуктів не ініціалізований');
-            showNotification('Помилка: список продуктів не ініціалізований');
-            return;
-        }
-
-        const product = products.find(p => p._id === productId);
-        if (!product) {
-            console.error(`Продукт із ID ${productId} не знайдено`);
-            showNotification('Товар не знайдено!');
-            return;
-        }
-
+        // Перевірка наявності токена та його оновлення
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
@@ -5514,30 +5502,53 @@ async function toggleProductActive(productId, currentActive) {
             return;
         }
 
-        // Перевірка існування продукту
-        const checkResponse = await fetchWithAuth(`/api/products?slug=${product.slug}`);
-        const checkData = await checkResponse.json();
-        if (!checkData || (Array.isArray(checkData) && checkData.length === 0)) {
-            console.error(`Продукт із ID ${productId} не існує на сервері`);
-            showNotification('Товар не знайдено на сервері!');
+        // Перевірка валідності productId
+        if (!productId || typeof productId !== 'string') {
+            console.error('Невірний або відсутній productId:', productId);
+            showNotification('Помилка: невірний ID товару');
             return;
         }
 
+        // Отримання актуального списку продуктів з сервера
+        const response = await fetchWithAuth('/api/products');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка при отриманні продуктів: ${errorData.error || response.statusText}`);
+        }
+        const fetchedProducts = await response.json();
+        products = fetchedProducts.products || [];
+
+        // Пошук продукту в локальному масиві
+        const product = products.find(p => p._id === productId);
+        if (!product) {
+            console.error(`Продукт із ID ${productId} не знайдено`);
+            showNotification('Товар не знайдено!');
+            return;
+        }
+
+        // Визначення нового статусу
         const newActiveStatus = currentActive !== undefined ? !currentActive : !product.active;
 
-        const response = await fetchWithAuth(`/api/products/${productId}`, {
+        // Відправка запиту на сервер для оновлення статусу
+        const updateResponse = await fetchWithAuth(`/api/products/${productId}/toggle-active`, {
             method: 'PATCH',
             body: JSON.stringify({ active: newActiveStatus })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка при оновленні статусу: ${errorData.error || response.statusText}`);
+        if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            throw new Error(`Помилка при оновленні статусу: ${errorData.error || updateResponse.statusText}`);
         }
 
-        product.active = newActiveStatus;
+        const updatedProduct = await updateResponse.json();
+        // Оновлення локального масиву продуктів
+        const productIndex = products.findIndex(p => p._id === productId);
+        if (productIndex !== -1) {
+            products[productIndex] = updatedProduct;
+        }
+
         renderAdmin('products');
-        showNotification(`Товар ${product.active ? 'активовано' : 'деактивовано'}!`);
+        showNotification(`Товар ${newActiveStatus ? 'активовано' : 'деактивовано'}!`);
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні статусу товару:', err);

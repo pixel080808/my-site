@@ -1054,6 +1054,52 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
     }
 });
 
+app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, async (req, res) => {
+    try {
+        const productId = req.params.id;
+        logger.info(`Отримано запит на перемикання статусу активності продукту: ${productId}`);
+
+        // Перевірка валідності ObjectId
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            logger.error(`Невірний формат ID продукту: ${productId}`);
+            return res.status(400).json({ error: 'Невірний формат ID продукту' });
+        }
+
+        // Валідація вхідних даних
+        const { error } = Joi.object({
+            active: Joi.boolean().required()
+        }).validate(req.body);
+        if (error) {
+            logger.error('Помилка валідації даних для перемикання статусу:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        const { active } = req.body;
+
+        // Пошук та оновлення продукту
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            { active },
+            { new: true }
+        );
+
+        if (!product) {
+            logger.error(`Продукт не знайдено: ${productId}`);
+            return res.status(404).json({ error: 'Продукт не знайдено' });
+        }
+
+        // Трансляція оновленого списку продуктів
+        const products = await Product.find();
+        broadcast('products', products);
+
+        logger.info(`Статус активності продукту ${productId} змінено на ${active}`);
+        res.json(product);
+    } catch (err) {
+        logger.error('Помилка при перемиканні статусу продукту:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    }
+});
+
 const categorySchemaValidation = Joi.object({
     name: Joi.string().max(255).required(),
     slug: Joi.string().max(255).required(),
