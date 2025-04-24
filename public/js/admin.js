@@ -359,14 +359,20 @@ async function loadOrders() {
         }
 
         const data = await response.json();
+        let ordersData = data;
         if (!Array.isArray(data)) {
-            console.error('Очікувався масив замовлень, отримано:', data);
-            orders = [];
-            showNotification('Отримано некоректні дані замовлень');
-        } else {
-            orders = data;
+            if (data.orders && Array.isArray(data.orders)) {
+                ordersData = data.orders;
+            } else {
+                console.error('Очікувався масив замовлень, отримано:', data);
+                orders = [];
+                showNotification('Отримано некоректні дані замовлень');
+                renderAdmin('orders');
+                return;
+            }
         }
 
+        orders = ordersData;
         sortOrders('date-desc');
         renderAdmin('orders');
     } catch (e) {
@@ -394,14 +400,20 @@ async function loadSlides() {
         }
 
         const data = await response.json();
+        let slidesData = data;
         if (!Array.isArray(data)) {
-            console.error('Очікувався масив слайдів, отримано:', data);
-            slides = [];
-            showNotification('Отримано некоректні дані слайдів');
-        } else {
-            slides = data;
+            if (data.slides && Array.isArray(data.slides)) {
+                slidesData = data.slides;
+            } else {
+                console.error('Очікувався масив слайдів, отримано:', data);
+                slides = [];
+                showNotification('Отримано некоректні дані слайдів');
+                renderSlidesAdmin();
+                return;
+            }
         }
 
+        slides = slidesData;
         renderSlidesAdmin();
     } catch (e) {
         console.error('Помилка завантаження слайдів:', e);
@@ -1743,9 +1755,9 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #social-list не знайдено');
         }
 
-        const catList = document.getElementById('cat-list');
+        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
         if (catList) {
-            console.log('Рендеринг cat-list, categories:', categories);
+            console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
                 ? categories.map((c, index) => `
                     <div class="category-item">
@@ -1771,38 +1783,32 @@ function renderAdmin(section = activeTab) {
             catList.removeEventListener('click', handleCatListClick);
             catList.addEventListener('click', handleCatListClick);
         } else {
-            console.warn('Елемент #cat-list не знайдено');
+            console.warn('Елемент #category-list-admin не знайдено');
         }
 
         function handleCatListClick(event) {
             const target = event.target;
-            if (target.classList.contains('move-up')) {
-                const index = parseInt(target.dataset.index);
+            const categoryId = target.dataset.id; // Змінено для уникнення помилки
+            const subName = target.dataset.subName;
+            const catId = target.dataset.catId;
+            const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
+            const index = target.dataset.index ? parseInt(target.dataset.index) : null;
+
+            if (target.classList.contains('move-up') && index !== null) {
                 moveCategoryUp(index);
-            } else if (target.classList.contains('move-down')) {
-                const index = parseInt(target.dataset.index);
+            } else if (target.classList.contains('move-down') && index !== null) {
                 moveCategoryDown(index);
-            } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit')) {
-                const id = target.dataset.id;
-                openEditCategoryModal(id);
-            } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete')) {
-                const id = target.dataset.id;
-                deleteCategory(id);
-            } else if (target.classList.contains('sub-move-up')) {
-                const catId = target.dataset.catId;
-                const subIndex = parseInt(target.dataset.subIndex);
+            } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
+                openEditCategoryModal(categoryId);
+            } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
+                deleteCategory(categoryId);
+            } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
                 moveSubcategoryUp(catId, subIndex);
-            } else if (target.classList.contains('sub-move-down')) {
-                const catId = target.dataset.catId;
-                const subIndex = parseInt(target.dataset.subIndex);
+            } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
                 moveSubcategoryDown(catId, subIndex);
-            } else if (target.classList.contains('sub-edit')) {
-                const catId = target.dataset.catId;
-                const subName = target.dataset.subName;
+            } else if (target.classList.contains('sub-edit') && catId && subName) {
                 openEditSubcategoryModal(catId, subName);
-            } else if (target.classList.contains('sub-delete')) {
-                const catId = target.dataset.catId;
-                const subName = target.dataset.subName;
+            } else if (target.classList.contains('sub-delete') && catId && subName) {
                 deleteSubcategory(catId, subName);
             }
         }
@@ -2078,6 +2084,40 @@ function renderSettingsAdmin() {
     document.getElementById('slide-height').value = settings.slideHeight || '';
     document.getElementById('slide-interval').value = settings.slideInterval || '';
     document.getElementById('slide-toggle').checked = settings.showSlides;
+}
+
+function openNewSlideModal() {
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        console.error('Модальне вікно #modal не знайдено');
+        showNotification('Помилка: модальне вікно не знайдено');
+        return;
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h3>Додати новий слайд</h3>
+            <form id="new-slide-form" onsubmit="event.preventDefault(); addSlide();">
+                <input id="slide-photo-url" placeholder="URL картинки" type="text"/>
+                <label for="slide-photo-url">URL зображення слайду</label>
+                <input accept="image/*" id="slide-photo-file" type="file"/>
+                <label for="slide-photo-file">Завантажте зображення</label>
+                <input id="slide-title" placeholder="Заголовок слайду" type="text"/>
+                <label for="slide-title">Заголовок слайду</label>
+                <input id="slide-text" placeholder="Текст слайду" type="text"/>
+                <label for="slide-text">Текст слайду</label>
+                <input id="slide-link" placeholder="Посилання" type="text"/>
+                <label for="slide-link">Посилання слайду</label>
+                <input id="slide-link-text" placeholder="Текст посилання" type="text"/>
+                <label for="slide-link-text">Текст посилання</label>
+                <input id="slide-order" placeholder="Порядковий номер" type="number"/>
+                <label for="slide-order">Порядок слайду</label>
+                <button type="submit">Додати слайд</button>
+            </form>
+        </div>
+    `;
+    modal.style.display = 'block';
 }
 
 function renderSlidesAdmin() {
@@ -3719,7 +3759,7 @@ async function addOrderField() {
     const name = document.getElementById('order-field-name').value;
     const label = document.getElementById('order-field-label').value;
     const type = document.getElementById('order-field-type').value;
-    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim());
+    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
 
     if (!name || !label) {
         showNotification('Введіть назву та підпис для поля!');
@@ -3730,12 +3770,13 @@ async function addOrderField() {
     if (type === 'select' && options.length > 0) field.options = options;
 
     try {
-        await fetchWithAuth('/api/order-fields', {
+        const response = await fetchWithAuth('/api/order-fields', {
             method: 'POST',
             body: JSON.stringify(field)
         });
 
-        orderFields.push(field);
+        const newField = await response.json();
+        orderFields.push(newField);
         document.getElementById('order-field-name').value = '';
         document.getElementById('order-field-label').value = '';
         document.getElementById('order-field-options').value = '';
@@ -4474,12 +4515,18 @@ function renderPriceFields() {
 }
 
 function updateSubcategories() {
+    const modal = document.getElementById('modal');
+    if (!modal || modal.style.display !== 'block') {
+        console.warn('Модальне вікно #modal не відкрите, пропускаємо updateSubcategories');
+        return;
+    }
+
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено');
+        console.warn('Елементи #product-category або #product-subcategory не знайдено в модальному вікні');
         return;
     }
 
@@ -5191,15 +5238,19 @@ async function openEditProductModal(productId) {
         document.getElementById('product-category').addEventListener('change', updateSubcategories);
         updateSubcategories();
         const subcatSelect = document.getElementById('product-subcategory');
-if (product.subcategory) {
-    const category = categories.find(c => c.name === product.category);
-    if (category) {
-        const subcat = category.subcategories.find(sub => sub.name === product.subcategory);
-        if (subcat) {
-            subcatSelect.value = subcat.slug;
+        if (product.subcategory) {
+            const category = categories.find(c => c.name === product.category);
+            if (category) {
+                const subcat = category.subcategories.find(sub => sub.slug === product.subcategory);
+                if (subcat) {
+                    subcatSelect.value = subcat.slug;
+                } else {
+                    console.warn(`Підкатегорія ${product.subcategory} не знайдена в категорії ${product.category}`);
+                }
+            } else {
+                console.warn(`Категорія ${product.category} не знайдена`);
+            }
         }
-    }
-}
         renderColorsList();
         renderPhotoList();
         renderMattressSizes();
@@ -5569,14 +5620,23 @@ async function toggleProductActive(productId, currentActive) {
             return;
         }
 
-        const newActiveStatus = currentActive !== undefined ? !currentActive : !product.active;
-
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
+
+        // Перевірка існування продукту
+        const checkResponse = await fetchWithAuth(`/api/products?slug=${product.slug}`);
+        const checkData = await checkResponse.json();
+        if (!checkData || (Array.isArray(checkData) && checkData.length === 0)) {
+            console.error(`Продукт із ID ${productId} не існує на сервері`);
+            showNotification('Товар не знайдено на сервері!');
+            return;
+        }
+
+        const newActiveStatus = currentActive !== undefined ? !currentActive : !product.active;
 
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PATCH',
