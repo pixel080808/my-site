@@ -2272,9 +2272,6 @@ if (isNaN(orderId)) {
     }
 });
 
-// Імпорт моделі OrderField
-const OrderField = require('./models/OrderField');
-
 // Схема валідації для OrderField
 const orderFieldSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required(),
