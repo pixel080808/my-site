@@ -221,7 +221,7 @@ button:hover {
 .sort-dropdown {
     display: none;
     position: absolute;
-    background: #fff;
+    background W: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -300,9 +300,14 @@ button:hover {
     align-items: center;
     gap: 10px;
 }
+.category-details span {
+    flex: 1; /* Забезпечує, що текст займає доступний простір */
+    white-space: normal; /* Дозволяємо перенос тексту */
+}
 .subcategories {
     margin-left: 30px; /* Відступ для підкатегорій */
     padding: 5px 0;
+    width: 100%; /* Забезпечує коректну ширину контейнера */
 }
 .subcategory-item {
     display: flex;
@@ -348,6 +353,7 @@ button:hover {
 }
 .subcategory-details span {
     flex: 1;
+    white-space: normal; /* Дозволяємо перенос тексту */
 }
 .subcategory-details button {
     padding: 5px 10px;
@@ -705,6 +711,7 @@ button:hover {
     }
     .subcategories {
         margin-left: 15px; /* Зменшуємо відступ для підкатегорій */
+        width: 100%; /* Забезпечує коректну ширину */
     }
     .category-photo, .subcategory-photo {
         width: 25px; /* Зменшуємо розмір фото */

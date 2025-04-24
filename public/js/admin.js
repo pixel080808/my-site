@@ -1917,77 +1917,35 @@ function renderCategoriesAdmin() {
     categoryList.innerHTML = categories.map((category, index) => `
         <div class="category-item">
             <div class="category-order-controls">
-                <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
+                <button onclick="moveCategoryUp(${index})" ${index === 0 ? 'disabled' : ''}>⬆</button>
+                <button onclick="moveCategoryDown(${index})" ${index === categories.length - 1 ? 'disabled' : ''}>⬇</button>
             </div>
             ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
             <div class="category-details">
-                <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
-                <div class="category-actions">
-                    <button class="edit-btn" data-id="${category._id}">Редагувати</button>
-                    <button class="delete-btn" data-id="${category._id}">Видалити</button>
-                </div>
+                <span>${category.name} (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Прихована'})</span>
+                <button class="edit-btn" onclick="openEditCategoryModal('${category._id}')">Редагувати</button>
+                <button class="delete-btn" onclick="deleteCategory('${category._id}')">Видалити</button>
             </div>
-            <div class="subcategories">
-                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
-                    <div class="subcategory-item">
-                        <div class="subcategory-order-controls">
-                            <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
-                        </div>
-                        ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
-                        <div class="subcategory-details">
-                            ${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
-                            <div class="subcategory-actions">
-                                <button class="sub-edit" data-cat-id="${category._id}" data-sub-id="${sub._id}">Редагувати</button>
-                                <button class="sub-delete" data-cat-id="${category._id}" data-sub-id="${sub._id}">Видалити</button>
+            ${category.subcategories && category.subcategories.length > 0 ? `
+                <div class="subcategories">
+                    ${category.subcategories.map((sub, subIndex) => `
+                        <div class="subcategory-item">
+                            <div class="subcategory-order-controls">
+                                <button onclick="moveSubcategoryUp('${category._id}', ${subIndex})" ${subIndex === 0 ? 'disabled' : ''}>⬆</button>
+                                <button onclick="moveSubcategoryDown('${category._id}', ${subIndex})" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>⬇</button>
+                            </div>
+                            ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
+                            <div class="subcategory-details">
+                                <span>${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Прихована'})</span>
+                                <button class="sub-edit" onclick="openEditSubcategoryModal('${category._id}', '${sub._id}')">Редагувати</button>
+                                <button class="sub-delete" onclick="deleteSubcategory('${category._id}', '${sub._id}')">Видалити</button>
                             </div>
                         </div>
-                    </div>
-                `).join('') : '<p>Підкатегорії відсутні</p>'}
-            </div>
+                    `).join('')}
+                </div>
+            ` : ''}
         </div>
     `).join('');
-
-    // Видаляємо попередні слухачі подій
-    const newCategoryList = categoryList.cloneNode(true);
-    categoryList.parentNode.replaceChild(newCategoryList, categoryList);
-
-    // Додаємо нові слухачі подій
-    newCategoryList.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.classList.contains('move-up')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryUp(index);
-        } else if (target.classList.contains('move-down')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryDown(index);
-        } else if (target.classList.contains('edit-btn')) {
-            const id = target.dataset.id;
-            openEditCategoryModal(id);
-        } else if (target.classList.contains('delete-btn')) {
-            const id = target.dataset.id;
-            deleteCategory(id);
-        } else if (target.classList.contains('sub-move-up')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            const subIndex = category.subcategories.findIndex(s => s._id === subId);
-            moveSubcategoryUp(catId, subIndex);
-        } else if (target.classList.contains('sub-move-down')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            const subIndex = category.subcategories.findIndex(s => s._id === subId);
-            moveSubcategoryDown(catId, subIndex);
-        } else if (target.classList.contains('sub-edit')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            openEditSubcategoryModal(catId, subId);
-        } else if (target.classList.contains('sub-delete')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            deleteSubcategory(catId, subId);
-        }
-    });
 
     // Оновлюємо випадаючі списки
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2385,14 +2343,21 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const name = nameInput.value.trim() || '';
+        const name = nameInput.value.trim();
         const slug = slugInput.value.trim() || (name ? name.toLowerCase().replace(/\s+/g, '-') : '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
+        console.log('Дані форми:', { name, slug, visible, photo });
+
         // Валідація
         if (!name) {
             showNotification('Назва категорії є обов’язковою!');
+            return;
+        }
+
+        if (!slug) {
+            showNotification('Шлях категорії є обов’язковим!');
             return;
         }
 
@@ -2446,7 +2411,6 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Формуємо об’єкт без поля order у підкатегоріях
         const updatedCategory = {
             name,
             slug,
@@ -2798,6 +2762,7 @@ async function moveCategoryUp(index) {
 
         const updatedCategories = await response.json();
         if (Array.isArray(updatedCategories)) {
+            console.log('Оновлені категорії з сервера:', updatedCategories);
             categories.splice(0, categories.length, ...updatedCategories);
         } else {
             throw new Error('Сервер повернув некоректні дані категорій');
@@ -2863,6 +2828,7 @@ async function moveCategoryDown(index) {
 
         const updatedCategories = await response.json();
         if (Array.isArray(updatedCategories)) {
+            console.log('Оновлені категорії з сервера:', updatedCategories);
             categories.splice(0, categories.length, ...updatedCategories);
         } else {
             throw new Error('Сервер повернув некоректні дані категорій');
@@ -2949,9 +2915,16 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
+        console.log('Дані форми підкатегорії:', { name, slug, visible, photo });
+
         // Валідація
-        if (!name || !slug) {
-            showNotification('Назва та шлях підкатегорії обов’язкові!');
+        if (!name) {
+            showNotification('Назва підкатегорії є обов’язковою!');
+            return;
+        }
+
+        if (!slug) {
+            showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
 
@@ -3451,6 +3424,7 @@ async function moveSubcategoryUp(categoryId, index) {
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
+            console.log('Оновлена категорія з сервера:', updatedCategory); // Виправлено
             categories[catIndex] = updatedCategory;
         } else {
             throw new Error('Категорія не знайдена в локальному масиві.');
@@ -3524,6 +3498,7 @@ async function moveSubcategoryDown(categoryId, index) {
         const updatedCategory = await response.json();
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
+            console.log('Оновлена категорія з сервера:', updatedCategory); // Виправлено
             categories[catIndex] = updatedCategory;
         } else {
             throw new Error('Категорія не знайдена в локальному масиві.');
@@ -6087,6 +6062,7 @@ socket.onmessage = (event) => {
     try {
         const { type, data } = JSON.parse(event.data);
         console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+
         if (type === 'settings') {
             settings = { ...settings, ...data };
             renderSettingsAdmin();
@@ -6101,6 +6077,7 @@ socket.onmessage = (event) => {
             }
         } else if (type === 'categories') {
             if (Array.isArray(data)) {
+                console.log('Отримані категорії з WebSocket:', JSON.stringify(data, null, 2));
                 categories = data;
                 renderCategoriesAdmin();
             } else {

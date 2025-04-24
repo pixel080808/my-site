@@ -18,12 +18,11 @@ const categorySchema = new mongoose.Schema({
         name: { type: String, required: true, trim: true },
         slug: { type: String, required: true, trim: true },
         photo: { type: String, default: '' },
-        order: { type: Number, required: true, default: 0 },
+        order: { type: Number, default: 0 },
         visible: { type: Boolean, default: true }
     }],
     order: {
         type: Number,
-        required: true,
         default: 0
     }
 }, { timestamps: true });
@@ -55,29 +54,13 @@ categorySchema.pre('save', async function(next) {
     next();
 });
 
-// Нормалізація порядку перед збереженням
-categorySchema.pre('save', async function(next) {
+// Нормалізація порядку підкатегорій перед збереженням
+categorySchema.pre('save', function(next) {
     const category = this;
-    if (category.isModified('order')) {
-        const existing = await mongoose.models.Category.findOne({ order: category.order, _id: { $ne: category._id } });
-        if (existing) {
-            const maxOrder = await mongoose.models.Category.aggregate([
-                { $group: { _id: null, maxOrder: { $max: '$order' } } }
-            ]);
-            category.order = (maxOrder[0]?.maxOrder || 0) + 1;
-        }
-    }
-    // Нормалізація порядку підкатегорій
-    if (category.subcategories && category.isModified('subcategories')) {
-        const seenOrders = new Set();
-        for (let i = 0; i < category.subcategories.length; i++) {
-            const sub = category.subcategories[i];
-            if (seenOrders.has(sub.order)) {
-                let newOrder = Math.max(...seenOrders, 0) + 1;
-                sub.order = newOrder;
-            }
-            seenOrders.add(sub.order);
-        }
+    if (category.isModified('subcategories') && category.subcategories) {
+        category.subcategories.forEach((sub, idx) => {
+            sub.order = idx; // Переконуємося, що order відповідає індексу
+        });
     }
     next();
 });
