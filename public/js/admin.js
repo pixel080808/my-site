@@ -6247,26 +6247,3 @@ socket.onmessage = (event) => {
     }
 };
 }
-
-const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-};
-
-// Оновлюємо обробники подій для кнопок у формах
-document.getElementById('category-form').addEventListener('submit', debounce((e) => {
-    e.preventDefault();
-    addCategory();
-}, 300));
-
-document.getElementById('subcategory-form').addEventListener('submit', debounce((e) => {
-    e.preventDefault();
-    addSubcategory();
-}, 300));
