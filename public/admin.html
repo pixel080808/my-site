@@ -260,38 +260,98 @@ button:hover {
 .category-item {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 12px;
     border-bottom: 1px solid #ddd;
     background: #e0f7fa;
     border-left: 4px solid #3498db;
+    margin-bottom: 5px;
+    font-weight: 600; /* Жирний шрифт для категорій */
+    color: #2c3e50;
 }
-.category-photo,
+.category-order-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-right: 10px;
+}
+.category-order-controls button {
+    padding: 5px 8px;
+    font-size: 12px;
+    background: #95a5a6;
+    color: #fff;
+    border-radius: 3px;
+}
+.category-order-controls button:hover {
+    background: #7f8c8d;
+}
+.category-order-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.category-photo {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    margin-right: 10px;
+}
+.category-details {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.subcategories {
+    margin-left: 30px; /* Відступ для підкатегорій */
+    padding: 5px 0;
+}
+.subcategory-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: #f0f0f0;
+    border-left: 4px solid #27ae60;
+    margin-bottom: 3px;
+    font-weight: 400; /* Звичайний шрифт для підкатегорій */
+    color: #34495e;
+}
+.subcategory-order-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-right: 10px;
+}
+.subcategory-order-controls button {
+    padding: 5px 8px;
+    font-size: 12px;
+    background: #95a5a6;
+    color: #fff;
+    border-radius: 3px;
+}
+.subcategory-order-controls button:hover {
+    background: #7f8c8d;
+}
+.subcategory-order-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .subcategory-photo {
     width: 30px;
     height: 30px;
     object-fit: cover;
     margin-right: 10px;
 }
-.category-order-controls,
-.subcategory-order-controls {
-    display: flex;
-    flex-direction: column;
-    margin-right: 10px;
-}
-.category-details,
 .subcategory-details {
     flex: 1;
-}
-.subcategories {
-    margin-left: 20px;
-    padding: 10px 0;
-}
-.subcategory-item {
     display: flex;
     align-items: center;
-    padding: 5px 0;
-    background: #f0f0f0;
-    border-left: 4px solid #27ae60;
+    gap: 10px;
+}
+.subcategory-details span {
+    flex: 1;
+}
+.subcategory-details button {
+    padding: 5px 10px;
+    font-size: 12px;
 }
 .type-specific {
     display: none;
@@ -573,6 +633,35 @@ button:hover {
     cursor: not-allowed;
 }
 @media (max-width: 768px) {
+    body {
+        padding: 10px; /* Зменшуємо відступи на малих екранах */
+    }
+    .content {
+        max-width: 100%; /* Використовуємо всю ширину */
+    }
+    .section {
+        padding: 15px; /* Зменшуємо відступи */
+    }
+    input, textarea, select {
+        max-width: 100%; /* Поля вводу займають усю ширину */
+        font-size: 13px; /* Зменшуємо розмір шрифту */
+    }
+    button {
+        padding: 8px 15px; /* Зменшуємо розмір кнопок */
+        font-size: 13px;
+    }
+    .modal-content {
+        max-width: 90%; /* Модальне вікно займає 90% ширини екрана */
+        padding: 15px;
+        padding-bottom: 30px;
+    }
+    .modal-actions {
+        flex-direction: column; /* Кнопки в модальному вікні розташовуються вертикально */
+        gap: 8px;
+    }
+    .modal-actions button {
+        width: 100%; /* Кнопки займають усю ширину */
+    }
     .product-admin-item, #product-list-header {
         grid-template-columns: 1fr;
         text-align: left;
@@ -584,6 +673,51 @@ button:hover {
     .product-admin-item .status-column {
         flex-direction: column;
         align-items: flex-start;
+    }
+    .category-item, .subcategory-item {
+        flex-direction: column; /* Елементи розташовуються вертикально */
+        align-items: flex-start;
+        padding: 8px;
+        gap: 5px;
+    }
+    .category-details, .subcategory-details {
+        flex-direction: column; /* Деталі розташовуються вертикально */
+        align-items: flex-start;
+        width: 100%;
+    }
+    .category-details span, .subcategory-details span {
+        white-space: normal; /* Дозволяємо перенос тексту */
+        word-wrap: break-word; /* Перенос слів */
+    }
+    .category-order-controls, .subcategory-order-controls {
+        flex-direction: row; /* Кнопки сортування горизонтально */
+        margin-right: 0;
+        margin-bottom: 5px;
+        gap: 3px;
+    }
+    .category-order-controls button, .subcategory-order-controls button {
+        padding: 4px 6px; /* Зменшуємо розмір кнопок */
+        font-size: 11px;
+    }
+    .subcategory-details button {
+        padding: 4px 8px; /* Зменшуємо розмір кнопок редагування/видалення */
+        font-size: 11px;
+    }
+    .subcategories {
+        margin-left: 15px; /* Зменшуємо відступ для підкатегорій */
+    }
+    .category-photo, .subcategory-photo {
+        width: 25px; /* Зменшуємо розмір фото */
+        height: 25px;
+        margin-right: 5px;
+    }
+    .admin-tabs {
+        flex-wrap: wrap; /* Дозволяємо перенос вкладок */
+        gap: 3px;
+    }
+    .tab-btn {
+        padding: 8px 15px; /* Зменшуємо розмір вкладок */
+        font-size: 13px;
     }
 }
 </style>

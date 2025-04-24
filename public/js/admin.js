@@ -2201,34 +2201,51 @@ function validateFile(file) {
 
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
-    if (category) {
-        const modal = document.getElementById('modal');
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Редагувати категорію #${categoryId}</h3>
-                <input type="text" id="category-name" value="${category.name}"><br/>
-                <label for="category-name">Назва категорії</label>
-                <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
-                <label for="category-photo-url">URL фотографії</label>
-                <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-                <label for="category-photo-file">Завантажте фотографію</label>
-                <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="category-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
-                    <button onclick="closeModal()">Скасувати</button>
-                </div>
-            </div>
-        `;
-        modal.classList.add('active');
-        console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
-        resetInactivityTimer();
+    if (!category) {
+        console.error('Категорія не знайдена:', categoryId);
+        showNotification('Категорія не знайдена!');
+        return;
     }
+
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати категорію #${categoryId}</h3>
+            <input type="text" id="category-name" value="${category.name}"><br/>
+            <label for="category-name">Назва категорії</label>
+            <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
+            <label for="category-slug">Шлях категорії</label>
+            <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
+            <label for="category-photo-url">URL фотографії</label>
+            <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <label for="category-photo-file">Завантажте фотографію</label>
+            <select id="category-visible">
+                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+            </select><br/>
+            <label for="category-visible">Видимість</label>
+            <h4>Підкатегорії</h4>
+            <div id="subcategory-list">
+                ${category.subcategories.map((sub, index) => `
+                    <div class="subcategory-item" data-id="${sub._id}">
+                        <span>${sub.name} (${sub.slug})</span>
+                        <button onclick="openEditSubcategoryModal('${category._id}', '${sub._id}')">Редагувати</button>
+                        <button onclick="deleteSubcategory('${category._id}', '${sub.name}')">Видалити</button>
+                        <button onclick="moveSubcategoryUp('${category._id}', ${index})" ${index === 0 ? 'disabled' : ''}>⬆</button>
+                        <button onclick="moveSubcategoryDown('${category._id}', ${index})" ${index === category.subcategories.length - 1 ? 'disabled' : ''}>⬇</button>
+                    </div>
+                `).join('')}
+            </div>
+            <button onclick="openAddSubcategoryModal()">Додати підкатегорію</button>
+            <div class="modal-actions">
+                <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
+    resetInactivityTimer();
 }
 
 function openAddCategoryModal() {
