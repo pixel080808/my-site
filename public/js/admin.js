@@ -5238,15 +5238,19 @@ async function openEditProductModal(productId) {
         document.getElementById('product-category').addEventListener('change', updateSubcategories);
         updateSubcategories();
         const subcatSelect = document.getElementById('product-subcategory');
-if (product.subcategory) {
-    const category = categories.find(c => c.name === product.category);
-    if (category) {
-        const subcat = category.subcategories.find(sub => sub.name === product.subcategory);
-        if (subcat) {
-            subcatSelect.value = subcat.slug;
+        if (product.subcategory) {
+            const category = categories.find(c => c.name === product.category);
+            if (category) {
+                const subcat = category.subcategories.find(sub => sub.slug === product.subcategory);
+                if (subcat) {
+                    subcatSelect.value = subcat.slug;
+                } else {
+                    console.warn(`Підкатегорія ${product.subcategory} не знайдена в категорії ${product.category}`);
+                }
+            } else {
+                console.warn(`Категорія ${product.category} не знайдена`);
+            }
         }
-    }
-}
         renderColorsList();
         renderPhotoList();
         renderMattressSizes();
