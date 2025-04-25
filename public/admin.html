@@ -645,7 +645,7 @@ button:hover {
         <div class="admin-section">
             <h3>Соціальні мережі</h3>
             <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
-                <input id="social-url" placeholder="Посилання" type="text"/><br/>
+                <input id="social-url" placeholder="Посилання" type="text" pattern="https?://.+" title="Введіть коректний URL (наприклад, https://facebook.com)" /><br/>
                 <label for="social-url">URL соцмережі</label>
                 <select id="social-icon">
                     <option value="🔗">Загальний (🔗)</option>

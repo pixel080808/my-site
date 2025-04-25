@@ -160,43 +160,23 @@ async function loadSettings() {
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній. Використовуються локальні налаштування.');
-            renderSettingsAdmin();
-            return;
-        }
-
-        const response = await fetch('/api/settings', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+        const response = await fetchWithAuth('/api/settings');
 
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
                 localStorage.removeItem('adminToken');
+                localStorage.removeItem('csrfToken');
                 session = { isActive: false, timestamp: 0 };
                 localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
                 showSection('admin-login');
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
-            } catch {
-                throw new Error(`Не вдалося завантажити налаштування: ${response.status} ${text}`);
-            }
+            throw new Error(`Не вдалося завантажити налаштування: ${text}`);
         }
 
         const serverSettings = await response.json();
-        console.log('Дані з /api/settings:', serverSettings);
-
-        // Зберігаємо тільки визначені поля, щоб уникнути перезапису порожніми значеннями
         settings = {
             ...settings,
             name: serverSettings.name || settings.name,
@@ -211,7 +191,7 @@ async function loadSettings() {
             },
             socials: serverSettings.socials || settings.socials,
             showSocials: serverSettings.showSocials !== undefined ? serverSettings.showSocials : settings.showSocials,
-            about: serverSettings.about || settings.about, // Зберігаємо about, якщо є
+            about: serverSettings.about || settings.about,
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
             slideWidth: serverSettings.slideWidth || settings.slideWidth,
             slideHeight: serverSettings.slideHeight || settings.slideHeight,
@@ -224,28 +204,28 @@ async function loadSettings() {
 
         console.log('Оновлені settings:', settings);
 
-// Оновлюємо редактор "Про нас"
-if (aboutEditor) {
-    if (settings.about) {
-        try {
-            aboutEditor.root.innerHTML = settings.about;
-            console.log('Встановлено вміст "Про нас":', settings.about);
-        } catch (e) {
-            console.error('Помилка при встановленні вмісту "Про нас":', e);
-            aboutEditor.setText(settings.about || '', 'silent');
+        // Оновлення редактора "Про нас"
+        if (aboutEditor) {
+            if (settings.about) {
+                try {
+                    aboutEditor.root.innerHTML = settings.about;
+                    console.log('Встановлено вміст "Про нас":', settings.about);
+                } catch (e) {
+                    console.error('Помилка при встановленні вмісту "Про нас":', e);
+                    aboutEditor.setText(settings.about || '', 'silent');
+                }
+            } else {
+                console.log('settings.about порожній, редактор очищено.');
+                aboutEditor.setText('', 'silent');
+            }
+            document.getElementById('about-edit').value = settings.about || '';
         }
-    } else {
-        console.log('settings.about порожній, редактор залишається без змін.');
-        // Не очищаємо редактор, щоб уникнути втрати локальних змін
-    }
-    document.getElementById('about-edit').value = settings.about || '';
-}
 
         renderSettingsAdmin();
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification('Помилка завантаження налаштувань: ' + e.message);
-        renderSettingsAdmin(); // Рендеримо з локальними даними
+        renderSettingsAdmin();
     }
 }
 
@@ -333,6 +313,51 @@ async function fetchWithAuth(url, options = {}) {
     }
 
     return response;
+}
+
+async function updateSocials() {
+    const maxRetries = 3;
+    let retries = 0;
+
+    while (retries < maxRetries) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            console.log('Надсилаємо соціальні мережі:', {
+                socials: settings.socials,
+                showSocials: settings.showSocials
+            });
+
+            const response = await fetchWithAuth('/api/settings', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    socials: settings.socials,
+                    showSocials: settings.showSocials
+                })
+            });
+
+            const serverSettings = await response.json();
+            settings = { ...settings, ...serverSettings };
+            renderSettingsAdmin();
+            showNotification('Соціальні мережі оновлено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+            return;
+        } catch (err) {
+            retries++;
+            console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
+            if (retries === maxRetries) {
+                showNotification('Помилка оновлення соціальних мереж: ' + err.message);
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+        }
+    }
 }
 
 async function loadOrders() {
@@ -1539,54 +1564,77 @@ async function updateContacts() {
     }
 }
 
-    function addSocial() {
-        const url = document.getElementById('social-url').value;
-        const icon = document.getElementById('social-icon').value;
+async function addSocial() {
+    const url = document.getElementById('social-url').value.trim();
+    const icon = document.getElementById('social-icon').value;
 
-        if (url) {
-            settings.socials.push({ url, icon });
-            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-            document.getElementById('social-url').value = '';
-            renderAdmin();
-            showNotification('Соцмережу додано!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        } else {
-            alert('Введіть URL соцмережі!');
-        }
+    if (!url) {
+        showNotification('Введіть URL соцмережі!');
+        return;
     }
 
-    function editSocial(index) {
-        const url = prompt('Введіть новий URL соцмережі:', settings.socials[index].url);
-        if (url) {
-            settings.socials[index].url = url;
-            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-            renderAdmin();
-            showNotification('Соцмережу відредаговано!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        }
+    const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
+    if (!urlRegex.test(url)) {
+        showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
+        return;
     }
 
-    function deleteSocial(index) {
-        if (confirm('Ви впевнені, що хочете видалити цю соцмережу?')) {
-            settings.socials.splice(index, 1);
-            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-            renderAdmin();
-            showNotification('Соцмережу видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        }
+    settings.socials = settings.socials || [];
+    settings.socials.push({ url, icon, name: '' });
+    document.getElementById('social-url').value = '';
+    document.getElementById('social-icon').value = '🔗'; // Скидаємо на значення за замовчуванням
+    await updateSocials();
+}
+
+async function editSocial(index) {
+    const social = settings.socials[index];
+    const url = prompt('Введіть новий URL соцмережі:', social.url);
+    if (url === null) return; // Користувач скасував
+
+    const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
+    if (!url || !urlRegex.test(url)) {
+        showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
+        return;
     }
 
-    function toggleSocials() {
-        settings.showSocials = document.getElementById('social-toggle').checked;
-        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-        renderAdmin();
-        showNotification('Налаштування соцмереж збережено!');
-        unsavedChanges = false;
-        resetInactivityTimer();
+    // Створюємо тимчасовий select для вибору іконки
+    const iconSelect = document.createElement('select');
+    iconSelect.innerHTML = `
+        <option value="🔗" ${social.icon === '🔗' ? 'selected' : ''}>Загальний (🔗)</option>
+        <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
+        <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
+        <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
+        <option value="▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
+    `;
+    const iconPrompt = document.createElement('div');
+    iconPrompt.innerHTML = '<label>Виберіть іконку:</label>';
+    iconPrompt.appendChild(iconSelect);
+    document.body.appendChild(iconPrompt);
+
+    // Показуємо модальне вікно або чекаємо вибору
+    const confirmEdit = confirm('Підтвердіть редагування соцмережі');
+    if (confirmEdit) {
+        settings.socials[index].url = url;
+        settings.socials[index].icon = iconSelect.value;
+        await updateSocials();
     }
+
+    // Прибираємо тимчасовий елемент
+    document.body.removeChild(iconPrompt);
+}
+
+async function deleteSocial(index) {
+    if (confirm('Ви впевнені, що хочете видалити цю соцмережу?')) {
+        settings.socials.splice(index, 1);
+        await updateSocials();
+    }
+}
+
+async function toggleSocials() {
+    settings.showSocials = document.getElementById('social-toggle').checked;
+    await updateSocials();
+}
 
     function formatText(command) {
         const textarea = document.getElementById('about-edit');
