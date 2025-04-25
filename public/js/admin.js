@@ -2066,9 +2066,8 @@ function renderSocialsAdmin() {
     if (!socialList) return;
     socialList.innerHTML = settings.socials.map((social, index) => `
         <div class="social-item">
-            <span class="social-icon">${social.icon || '🔗'}</span>
-            <a href="${social.url}" target="_blank">${social.url}</a>
-            <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+            <span class="social-icon">${social.icon}</span>
+            <span>${social.url}</span>
             <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
         </div>
     `).join('');
@@ -2118,49 +2117,16 @@ async function deleteCategory(categoryId) {
 }
 
 function renderSettingsAdmin() {
-    // Оновлення полів магазину
     document.getElementById('store-name').value = settings.name || '';
     document.getElementById('base-url').value = settings.baseUrl || '';
     document.getElementById('logo-url').value = settings.logo || '';
     document.getElementById('logo-width').value = settings.logoWidth || '';
     document.getElementById('favicon-url').value = settings.favicon || '';
-
-    // Оновлення контактів
     document.getElementById('contact-phones').value = settings.contacts.phones || '';
     document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
     document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
-
-    // Оновлення соціальних мереж
-    const socialList = document.getElementById('social-list');
-    if (socialList) {
-        socialList.innerHTML = settings.socials.map((social, index) => `
-            <div class="social-item">
-                <span class="social-icon">${social.icon || '🔗'}</span>
-                <a href="${social.url}" target="_blank">${social.url}</a>
-                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
-
-    // Оновлення перемикача соціальних мереж
-    const socialToggle = document.getElementById('social-toggle');
-    if (socialToggle) {
-        socialToggle.checked = settings.showSocials !== undefined ? settings.showSocials : true;
-    }
-
-    // Оновлення редактора "Про нас"
-    if (aboutEditor && settings.about) {
-        try {
-            aboutEditor.root.innerHTML = settings.about;
-        } catch (e) {
-            console.error('Помилка оновлення редактора "Про нас":', e);
-            aboutEditor.setText(settings.about || '', 'silent');
-        }
-        document.getElementById('about-edit').value = settings.about || '';
-    }
-
-    // Оновлення інших налаштувань
+    document.getElementById('social-toggle').checked = settings.showSocials;
+    renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
     document.getElementById('category-width').value = settings.categoryWidth || '';
     document.getElementById('category-height').value = settings.categoryHeight || '';
     document.getElementById('product-width').value = settings.productWidth || '';
@@ -2168,9 +2134,7 @@ function renderSettingsAdmin() {
     document.getElementById('slide-width').value = settings.slideWidth || '';
     document.getElementById('slide-height').value = settings.slideHeight || '';
     document.getElementById('slide-interval').value = settings.slideInterval || '';
-    document.getElementById('show-slides').checked = settings.showSlides;
-
-    resetInactivityTimer();
+    document.getElementById('slide-toggle').checked = settings.showSlides;
 }
 
 function openNewSlideModal() {
