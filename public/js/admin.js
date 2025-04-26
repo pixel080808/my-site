@@ -538,12 +538,15 @@ async function loadBrands() {
 function renderFilters() {
     const filterList = document.getElementById('filter-list-admin');
     if (filterList) {
+        console.log('Рендеринг фільтрів, filters:', filters); // Додаємо лог
         filterList.innerHTML = filters.map((f, index) => `
             <div>
                 ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
                 <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
             </div>
         `).join('');
+    } else {
+        console.warn('Елемент #filter-list-admin не знайдено');
     }
     resetInactivityTimer();
 }
@@ -1806,7 +1809,7 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #social-list не знайдено');
         }
 
-        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
+        const catList = document.getElementById('category-list-admin');
         if (catList) {
             console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
@@ -1839,7 +1842,7 @@ function renderAdmin(section = activeTab) {
 
         function handleCatListClick(event) {
             const target = event.target;
-            const categoryId = target.dataset.id; // Змінено для уникнення помилки
+            const categoryId = target.dataset.id;
             const subName = target.dataset.subName;
             const catId = target.dataset.catId;
             const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
@@ -1947,6 +1950,7 @@ function renderAdmin(section = activeTab) {
         } else if (section === 'site-editing') {
             if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
             if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
+            renderFilters(); // Додаємо виклик renderFilters для вкладки site-editing
         } else {
             console.warn(`Невідома вкладка: ${section}`);
         }
@@ -3561,11 +3565,34 @@ async function addFilter() {
 
         filters.push({ label, name, type, options });
 
+        // Формуємо об’єкт із даними, які відповідають схемі Settings
+        const updatedSettings = {
+            name: settings.name,
+            baseUrl: settings.baseUrl,
+            logo: settings.logo,
+            logoWidth: settings.logoWidth,
+            favicon: settings.favicon,
+            contacts: settings.contacts,
+            socials: settings.socials,
+            showSocials: settings.showSocials,
+            about: settings.about,
+            showSlides: settings.showSlides,
+            slideWidth: settings.slideWidth,
+            slideHeight: settings.slideHeight,
+            slideInterval: settings.slideInterval,
+            categoryWidth: settings.categoryWidth,
+            categoryHeight: settings.categoryHeight,
+            productWidth: settings.productWidth,
+            productHeight: settings.productHeight,
+            filters: filters,
+            orderFields: settings.orderFields
+        };
+
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
         const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
             method: 'PUT',
-            body: JSON.stringify({ ...settings, filters })
+            body: JSON.stringify(updatedSettings)
         });
 
         if (!response.ok) {
