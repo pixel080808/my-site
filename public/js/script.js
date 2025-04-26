@@ -1,31 +1,50 @@
-        let cart = [];
-        let products = [];
-        let categories = [];
-        let orders = [];
-        let slides = [];
-        let filters = [];
-        let orderFields = [];
-        let settings = {};
-        let currentProduct = null;
-        let currentCategory = null;
-        let currentSubcategory = null;
-        let selectedMattressSizes = {};
-        let currentSlideIndex = 0;
-        let slideInterval;
-        let currentGalleryIndex = 0;
-        let currentGalleryImages = [];
-        let removeCartIndex = -1;
-        let searchResults = [];
-        let baseSearchResults = [];
-        let isSearchActive = false;
-        let isSearchPending = false;
-        let filteredProducts = [];
-        let selectedColors = {};
-        let ws
-        const activeTimers = new Map();
-        let parentGroupProduct = null; // Додаємо оголошення
-        const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
-        const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутнє';
+let cart = [];
+let products = [];
+let categories = [];
+let orders = [];
+let slides = [];
+let filters = [];
+let orderFields = [];
+let settings = {};
+let currentProduct = null;
+let currentCategory = null;
+let currentSubcategory = null;
+let selectedMattressSizes = {};
+let currentSlideIndex = 0;
+let slideInterval;
+let currentGalleryIndex = 0;
+let currentGalleryImages = [];
+let removeCartIndex = -1;
+let searchResults = [];
+let baseSearchResults = [];
+let isSearchActive = false;
+let isSearchPending = false;
+let filteredProducts = [];
+let selectedColors = {};
+let ws;
+const activeTimers = new Map();
+let parentGroupProduct = null;
+const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
+const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутнє';
+
+// Додаємо initializeCart тут
+(function initializeCart() {
+    const cartData = localStorage.getItem('cart');
+    if (cartData) {
+        try {
+            const cartItems = JSON.parse(cartData);
+            if (!Array.isArray(cartItems)) {
+                console.warn('Кошик у localStorage не є масивом, очищаємо його');
+                localStorage.setItem('cart', JSON.stringify([]));
+            }
+        } catch (error) {
+            console.error('Помилка парсингу кошика при ініціалізації:', error);
+            localStorage.setItem('cart', JSON.stringify([]));
+        }
+    } else {
+        localStorage.setItem('cart', JSON.stringify([]));
+    }
+})();
 
         function transliterate(str) {
             const uaToEn = {
@@ -97,7 +116,6 @@ async function loadCartFromServer() {
 async function saveCartToServer() {
     let cartItems = [];
     
-    // Спробуємо отримати кошик із localStorage
     const cartData = localStorage.getItem('cart');
     if (cartData) {
         try {
@@ -109,13 +127,11 @@ async function saveCartToServer() {
             }
         } catch (error) {
             console.error('Помилка парсингу кошика з localStorage:', error);
-            // Якщо JSON невалідний, очищаємо localStorage
             cartItems = [];
             localStorage.setItem('cart', JSON.stringify(cartItems));
         }
     }
 
-    // Фільтруємо елементи кошика
     const filteredCartItems = cartItems.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
@@ -125,11 +141,15 @@ async function saveCartToServer() {
     });
 
     try {
-        const response = await fetch(`${baseUrl}/api/cart?cartId=${cartId}`, {
+        const cartId = localStorage.getItem('cartId'); // Додаємо cartId
+        if (!cartId) {
+            throw new Error('cartId відсутній');
+        }
+        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, { // Змінено baseUrl на BASE_URL
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': localStorage.getItem('csrfToken') // Змінено csrfToken на localStorage.getItem('csrfToken')
             },
             body: JSON.stringify(filteredCartItems),
             credentials: 'include'
@@ -2237,7 +2257,6 @@ async function submitOrder() {
         return;
     }
 
-    // Оновлена перевірка номера телефону
     const phoneRegex = /^(0\d{9})$|^(\+?\d{10,15})$/;
     if (!phoneRegex.test(customer.phone)) {
         showNotification('Номер телефону має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX (10-15 цифр)!', 'error');
@@ -2260,6 +2279,20 @@ async function submitOrder() {
         }))
     };
 
+    // Фільтруємо items, щоб переконатися, що всі мають id
+    if (orderData.items) {
+        orderData.items = orderData.items.filter(item => {
+            const isValid = item && typeof item.id === 'number';
+            if (!isValid) {
+                console.warn('Елемент замовлення видалено через відсутність id:', item);
+            }
+            return isValid;
+        });
+    }
+
+    // Логування даних перед відправкою (для дебагу)
+    console.log('Дані замовлення перед відправкою:', orderData);
+
     try {
         const csrfToken = localStorage.getItem('csrfToken');
         if (!csrfToken) {
@@ -2268,7 +2301,7 @@ async function submitOrder() {
             if (orders.length > 5) orders = orders.slice(-5);
             saveToStorage('orders', orders);
             cart = [];
-            saveToStorage('cart', cart);
+            save”等ToStorage('cart', cart);
             localStorage.removeItem('cartId');
             selectedColors = {};
             selectedMattressSizes = {};
