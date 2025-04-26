@@ -153,11 +153,12 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// Глобальний ліміт запитів для всіх ендпоінтів
+// Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
     max: 100, // 100 запитів на IP
-    message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин'
+    message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
+    skip: (req) => req.path === '/api/csrf-token' // Пропускаємо цей ендпоінт
 });
 
 // Застосовуємо ліміт до всіх запитів
@@ -273,8 +274,8 @@ const loginLimiter = rateLimit({
 });
 
 const refreshTokenLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 30,
+    windowMs: 15 * 60 * 1000, // 15 хвилин
+    max: 100, // Збільшуємо до 100 запитів
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
         const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -288,6 +289,13 @@ const refreshTokenLimiter = rateLimit({
             details: 'Перевищено ліміт запитів на оновлення токена. Спробуйте знову через 15 хвилин'
         });
     }
+});
+
+// Додаємо новий лімітер для /api/csrf-token
+const csrfTokenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 хвилин
+    max: 500, // Дозволяємо 500 запитів за 15 хвилин
+    message: 'Занадто багато запитів на отримання CSRF-токена, спробуйте знову через 15 хвилин'
 });
 
 // Підключення до MongoDB
@@ -755,7 +763,7 @@ ws.on('message', async (message) => {
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
 
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
+app.get('/api/csrf-token', csrfTokenLimiter, csrfProtection, (req, res) => {
     try {
         const token = req.csrfToken();
         logger.info('Згенеровано CSRF-токен:', token);
