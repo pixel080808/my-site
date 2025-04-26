@@ -27,25 +27,6 @@ let parentGroupProduct = null;
 const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
 const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутнє';
 
-// Додаємо initializeCart тут
-(function initializeCart() {
-    const cartData = localStorage.getItem('cart');
-    if (cartData) {
-        try {
-            const cartItems = JSON.parse(cartData);
-            if (!Array.isArray(cartItems)) {
-                console.warn('Кошик у localStorage не є масивом, очищаємо його');
-                localStorage.setItem('cart', JSON.stringify([]));
-            }
-        } catch (error) {
-            console.error('Помилка парсингу кошика при ініціалізації:', error);
-            localStorage.setItem('cart', JSON.stringify([]));
-        }
-    } else {
-        localStorage.setItem('cart', JSON.stringify([]));
-    }
-})();
-
         function transliterate(str) {
             const uaToEn = {
                 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye',
