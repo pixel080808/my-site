@@ -1087,7 +1087,7 @@ function renderFilters() {
     const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
     const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
     const priceFilter = filters.find(f => f.name === 'price');
-    const priceRanges = priceFilter ? priceFilter.options : ['0-500', '500-1000', '1000-2000', '2000+'];
+    const priceRanges = priceFilter ? priceFilter.options : ['0-3000', '3000-5000', '5000-7000', '7000-10000', '10000+'];
 
     if (brands.length > 0) {
         filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));
