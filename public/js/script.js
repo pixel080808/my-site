@@ -1086,8 +1086,9 @@ function renderFilters() {
     const relevantProducts = filteredProducts;
     const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
     const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
-    const priceFilter = filters.find(f => f.name === 'price');
-    const priceRanges = priceFilter ? priceFilter.options : ['0-3000', '3000-5000', '5000-7000', '7000-10000', '10000+'];
+    
+    // Статичний діапазон цін (можна змінювати тут)
+    const priceRanges = ['0-2000', '2000-4000', '4000-6000', '6000-8000', '8000+'];
 
     if (brands.length > 0) {
         filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));
@@ -1098,78 +1099,94 @@ function renderFilters() {
     filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges));
 }
 
-        function createFilterBlock(title, name, options) {
-            const block = document.createElement('div');
-            block.className = 'filter-block';
+function createFilterBlock(title, name, options) {
+    const block = document.createElement('div');
+    block.className = 'filter-block';
 
-            const h4 = document.createElement('h4');
-            h4.textContent = title;
-            block.appendChild(h4);
+    const h4 = document.createElement('h4');
+    h4.textContent = title;
+    block.appendChild(h4);
 
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'filter-options';
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'filter-options';
 
-            options.forEach(opt => {
-                const label = document.createElement('label');
-                const input = document.createElement('input');
-                input.type = 'checkbox';
-                input.name = name;
-                input.value = opt;
-                input.onchange = () => filterProducts();
-                label.appendChild(input);
-                label.appendChild(document.createTextNode(opt));
-                optionsDiv.appendChild(label);
-            });
+    options.forEach(opt => {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = name;
+        input.value = opt;
+        input.onchange = () => filterProducts();
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(` ${opt}`)); // Додаємо пробіл для кращого вигляду
+        optionsDiv.appendChild(label);
+    });
 
-            block.appendChild(optionsDiv);
-            return block;
+    block.appendChild(optionsDiv);
+    return block;
+}
+
+function filterProducts() {
+    let base = isSearchActive ? [...baseSearchResults] : products.filter(p => 
+        p.category === currentCategory && 
+        (!currentSubcategory || p.subcategory === currentSubcategory) &&
+        p.visible
+    );
+    let filtered = [...base];
+    let hasActiveFilters = false;
+
+    ['brand', 'material', 'price'].forEach(name => {
+        const checked = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
+        if (checked.length > 0) {
+            hasActiveFilters = true;
+            if (name === 'price') {
+                filtered = filtered.filter(p => {
+                    const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+                    return checked.some(range => {
+                        if (range.endsWith('+')) {
+                            return price >= parseInt(range.replace('+', ''));
+                        }
+                        const [min, max] = range.split('-').map(Number);
+                        return price >= min && price <= max;
+                    });
+                });
+            } else {
+                filtered = filtered.filter(p => checked.includes(p[name]));
+            }
         }
+    });
 
-        function filterProducts() {
-            let base = isSearchActive ? [...baseSearchResults] : products.filter(p => 
-                p.category === currentCategory && 
-                (!currentSubcategory || p.subcategory === currentSubcategory) &&
-                p.visible
-            );
-            let filtered = [...base];
-            let hasActiveFilters = false;
+    if (!hasActiveFilters && isSearchActive) filtered = [...baseSearchResults];
+    filteredProducts = filtered;
+    if (isSearchActive) searchResults = filtered;
+    renderProducts(filtered);
+}
 
-            ['brand', 'material', 'price'].forEach(name => {
-                const checked = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
-                if (checked.length > 0) {
-                    hasActiveFilters = true;
-                    if (name === 'price') {
-                        filtered = filtered.filter(p => {
-                            const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
-                            return checked.some(range => {
-                                if (range.endsWith('+')) return price >= parseInt(range);
-                                const [min, max] = range.split('-').map(Number);
-                                return price >= min && price <= max;
-                            });
-                        });
-                    } else {
-                        filtered = filtered.filter(p => checked.includes(p[name]));
-                    }
-                }
-            });
-
-            if (!hasActiveFilters && isSearchActive) filtered = [...baseSearchResults];
-            filteredProducts = filtered;
-            if (isSearchActive) searchResults = filtered;
-            renderProducts(filtered);
-        }
-
-        function sortProducts(sortType = 'name-asc') {
-            let filtered = isSearchActive ? [...searchResults] : [...filteredProducts];
-            if (sortType === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
-            else if (sortType === 'name-desc') filtered.sort((a, b) => b.name.localeCompare(a.name));
-            else if (sortType === 'price-asc') filtered.sort((a, b) => ((a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0) - ((b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0));
-            else if (sortType === 'price-desc') filtered.sort((a, b) => ((b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0) - ((a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0));
-            else if (sortType === 'popularity') filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-            filteredProducts = filtered;
-            if (isSearchActive) searchResults = filtered;
-            renderProducts(filtered);
-        }
+function sortProducts(sortType = 'name-asc') {
+    let filtered = isSearchActive ? [...searchResults] : [...filteredProducts];
+    if (sortType === 'name-asc') {
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortType === 'name-desc') {
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortType === 'price-asc') {
+        filtered.sort((a, b) => {
+            const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
+            const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+            return priceA - priceB;
+        });
+    } else if (sortType === 'price-desc') {
+        filtered.sort((a, b) => {
+            const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
+            const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+            return priceB - priceA;
+        });
+    } else if (sortType === 'popularity') {
+        filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    }
+    filteredProducts = filtered;
+    if (isSearchActive) searchResults = filtered;
+    renderProducts(filtered);
+}
 
 function renderProducts(filtered) {
     const productList = document.getElementById('product-list');
