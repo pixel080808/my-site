@@ -306,7 +306,7 @@ async function fetchWithAuth(url, options = {}) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Помилка запиту:', { url, status: response.status, errorData });
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
+        throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
     }
 
     return response;
@@ -341,15 +341,34 @@ async function updateSocials() {
             const serverSettings = await response.json();
             settings = { ...settings, ...serverSettings };
             renderSettingsAdmin();
+            renderSocialsAdmin(); // Оновлюємо відображення соціальних мереж
             showNotification('Соціальні мережі оновлено!');
             unsavedChanges = false;
             resetInactivityTimer();
+
+            // Оновлюємо відображення на головній сторінці
+            if (typeof renderSocials === 'function') {
+                renderSocials();
+            }
+
             return;
         } catch (err) {
             retries++;
             console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
             if (retries === maxRetries) {
                 showNotification('Помилка оновлення соціальних мереж: ' + err.message);
+                // Завантажуємо актуальні налаштування з сервера, щоб уникнути розсинхронізації
+                try {
+                    const response = await fetchWithAuth('/api/settings', {
+                        method: 'GET'
+                    });
+                    const serverSettings = await response.json();
+                    settings = { ...settings, ...serverSettings };
+                    renderSettingsAdmin();
+                    renderSocialsAdmin();
+                } catch (fetchErr) {
+                    console.error('Помилка завантаження налаштувань після невдалого оновлення:', fetchErr);
+                }
                 return;
             }
             await new Promise(resolve => setTimeout(resolve, 1000 * retries));
@@ -1564,9 +1583,15 @@ async function updateContacts() {
 async function addSocial() {
     const url = document.getElementById('social-url').value.trim();
     const icon = document.getElementById('social-icon').value;
+    const nameInput = document.getElementById('social-name')?.value.trim() || ''; // Додаємо поле для назви
 
     if (!url) {
         showNotification('Введіть URL соцмережі!');
+        return;
+    }
+
+    if (!nameInput) {
+        showNotification('Введіть назву соцмережі!');
         return;
     }
 
@@ -1577,9 +1602,12 @@ async function addSocial() {
     }
 
     settings.socials = settings.socials || [];
-    settings.socials.push({ url, icon, name: '' });
+    settings.socials.push({ url, icon, name: nameInput });
     document.getElementById('social-url').value = '';
     document.getElementById('social-icon').value = '🔗'; // Скидаємо на значення за замовчуванням
+    if (document.getElementById('social-name')) {
+        document.getElementById('social-name').value = ''; // Скидаємо поле назви
+    }
     await updateSocials();
 }
 
@@ -1588,9 +1616,17 @@ async function editSocial(index) {
     const url = prompt('Введіть новий URL соцмережі:', social.url);
     if (url === null) return; // Користувач скасував
 
+    const name = prompt('Введіть нову назву соцмережі:', social.name || '');
+    if (name === null) return; // Користувач скасував
+
     const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
     if (!url || !urlRegex.test(url)) {
         showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
+        return;
+    }
+
+    if (!name.trim()) {
+        showNotification('Назва соцмережі не може бути порожньою!');
         return;
     }
 
@@ -1614,6 +1650,7 @@ async function editSocial(index) {
     if (confirmEdit) {
         settings.socials[index].url = url;
         settings.socials[index].icon = iconSelect.value;
+        settings.socials[index].name = name.trim();
         await updateSocials();
     }
 
@@ -2052,15 +2089,23 @@ function renderCategoriesAdmin() {
     resetInactivityTimer();
 }
 
-function renderSocialsAdmin() {
-    const socialList = document.getElementById('social-list');
-    if (!socialList) return;
-    socialList.innerHTML = settings.socials.map((social, index) => `
-        <div class="social-item">
+function renderSocials() {
+    const socialContainer = document.getElementById('contacts-socials'); // Змініть ID на той, який у вас використовується в секції "Контакти"
+    if (!socialContainer) {
+        console.warn('Елемент #contacts-socials не знайдено');
+        return;
+    }
+
+    if (!settings.showSocials || !settings.socials || settings.socials.length === 0) {
+        socialContainer.innerHTML = ''; // Очищаємо контейнер, якщо соціальні мережі відключені або їх немає
+        return;
+    }
+
+    socialContainer.innerHTML = settings.socials.map(social => `
+        <a href="${social.url}" target="_blank" class="social-link">
             <span class="social-icon">${social.icon}</span>
-            <span>${social.url}</span>
-            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-        </div>
+            <span>${social.name}</span>
+        </a>
     `).join('');
 }
 
