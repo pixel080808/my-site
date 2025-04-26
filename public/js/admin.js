@@ -315,6 +315,28 @@ async function fetchWithAuth(url, options = {}) {
     return response;
 }
 
+const cleanupImages = async () => {
+    try {
+        const response = await fetch('https://mebli.onrender.com/api/cleanup-images', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${yourAdminToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': yourCsrfToken // Отримайте CSRF-токен з /api/csrf-token
+            }
+        });
+        const result = await response.json();
+        if (response.ok) {
+            alert(result.message);
+        } else {
+            alert(`Помилка: ${result.error}\nДеталі: ${result.details}`);
+        }
+    } catch (err) {
+        console.error('Помилка при очищенні зображень:', err);
+        alert('Не вдалося виконати очищення зображень');
+    }
+};
+
 async function updateSocials() {
     const maxRetries = 3;
     let retries = 0;
