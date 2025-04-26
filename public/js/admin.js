@@ -1772,22 +1772,6 @@ function renderAdmin(section = activeTab) {
         if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
         else console.warn('Елемент #slide-interval не знайдено');
 
-        const categoryWidth = document.getElementById('category-width');
-        if (categoryWidth) categoryWidth.value = settings.categoryWidth || 200;
-        else console.warn('Елемент #category-width не знайдено');
-
-        const categoryHeight = document.getElementById('category-height');
-        if (categoryHeight) categoryHeight.value = settings.categoryHeight || 150;
-        else console.warn('Елемент #category-height не знайдено');
-
-        const productWidth = document.getElementById('product-width');
-        if (productWidth) productWidth.value = settings.productWidth || 300;
-        else console.warn('Елемент #product-width не знайдено');
-
-        const productHeight = document.getElementById('product-height');
-        if (productHeight) productHeight.value = settings.productHeight || 280;
-        else console.warn('Елемент #product-height не знайдено');
-
         const socialList = document.getElementById('social-list');
         if (socialList) {
             socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
@@ -1803,7 +1787,7 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #social-list не знайдено');
         }
 
-        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
+        const catList = document.getElementById('category-list-admin');
         if (catList) {
             console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
@@ -1813,7 +1797,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
@@ -1836,7 +1820,7 @@ function renderAdmin(section = activeTab) {
 
         function handleCatListClick(event) {
             const target = event.target;
-            const categoryId = target.dataset.id; // Змінено для уникнення помилки
+            const categoryId = target.dataset.id;
             const subName = target.dataset.subName;
             const catId = target.dataset.catId;
             const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
@@ -1977,11 +1961,11 @@ function renderCategoriesAdmin() {
                 </div>
             </div>
             <div class="subcategories">
-                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
+                ${category.subcategories && Array.isArray(category.subcategories) && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
                     <div class="subcategory-item">
                         <div class="subcategory-order-controls">
                             <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
+                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === (category.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
                         </div>
                         ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
                         <div class="subcategory-details">
@@ -2019,13 +2003,23 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const subIndex = category.subcategories.findIndex(s => s._id === subId);
-            moveSubcategoryUp(catId, subIndex);
+            const category = categories.find(c => c._id === catId);
+            if (category && category.subcategories) {
+                const subIndex = category.subcategories.findIndex(s => s._id === subId);
+                if (subIndex !== -1) {
+                    moveSubcategoryUp(catId, subIndex);
+                }
+            }
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const subIndex = category.subcategories.findIndex(s => s._id === subId);
-            moveSubcategoryDown(catId, subIndex);
+            const category = categories.find(c => c._id === catId);
+            if (category && category.subcategories) {
+                const subIndex = category.subcategories.findIndex(s => s._id === subId);
+                if (subIndex !== -1) {
+                    moveSubcategoryDown(catId, subIndex);
+                }
+            }
         } else if (target.classList.contains('sub-edit')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
