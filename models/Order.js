@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
+    cartId: { type: String, default: '' }, // Додано поле cartId
     date: { type: Date, default: Date.now },
     customer: {
         type: {
@@ -28,15 +29,15 @@ const orderSchema = new mongoose.Schema({
                 }
             },
             address: { type: String, default: '' },
-            payment: { type: String, default: '' } // Додаємо поле payment
+            payment: { type: String, default: '' }
         },
         required: true
     },
     items: [{
         id: { type: Number, required: true },
         name: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        price: { type: Number, required: true, min: 0 },
         photo: {
             type: String,
             default: '',
@@ -48,8 +49,18 @@ const orderSchema = new mongoose.Schema({
             }
         }
     }],
-    total: Number,
-    status: String
+    total: { 
+        type: Number, 
+        required: true, 
+        min: 0
+    },
+    status: { 
+        type: String, 
+        default: 'Нове замовлення',
+        enum: ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано']
+        // У server.js потрібно додати в orderSchemaValidation:
+        // status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
+    }
 }, { timestamps: true });
 
 orderSchema.index({ date: -1 });

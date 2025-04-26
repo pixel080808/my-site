@@ -42,34 +42,53 @@ const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутн�
             return str.split('').map(char => uaToEn[char] || char).join('').replace(/\s+/g, '-').toLowerCase();
         }
 
-        function loadFromStorage(key, defaultValue) {
-            try {
-                const compressed = localStorage.getItem(key);
-                return compressed ? JSON.parse(LZString.decompressFromUTF16(compressed)) : defaultValue;
-            } catch (e) {
-                console.error(`Помилка парсингу ${key}:`, e);
-                return defaultValue;
-            }
+function loadFromStorage(key, defaultValue) {
+    try {
+        const compressed = localStorage.getItem(key);
+        if (!compressed) return defaultValue;
+        const decompressed = LZString.decompressFromUTF16(compressed);
+        if (!decompressed) {
+            console.warn(`Дані для ${key} не вдалося декомпресувати, повертаємо значення за замовчуванням`);
+            localStorage.removeItem(key);
+            return defaultValue;
         }
+        return JSON.parse(decompressed) || defaultValue;
+    } catch (e) {
+        console.error(`Помилка парсингу ${key}:`, e);
+        localStorage.removeItem(key); // Очищаємо пошкоджені дані
+        return defaultValue;
+    }
+}
 
-        function saveToStorage(key, value) {
-            try {
-                localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
-            } catch (e) {
-                console.error(`Помилка збереження ${key}:`, e);
-                if (e.name === 'QuotaExceededError') {
-                    localStorage.clear();
-                    localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
-                    showNotification('Локальне сховище очищено через перевищення квоти.', 'error');
-                }
-            }
+function saveToStorage(key, value) {
+    try {
+        // Перевіряємо, чи можна серіалізувати об'єкт
+        const testStringify = JSON.stringify(value);
+        if (typeof testStringify !== 'string') {
+            console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
+            return;
         }
+        localStorage.setItem(key, LZString.compressToUTF16(testStringify));
+    } catch (e) {
+        console.error(`Помилка збереження ${key}:`, e);
+        if (e.name === 'QuotaExceededError') {
+            localStorage.clear();
+            localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
+            showNotification('Локальне сховище очищено через перевищення квоти.', 'error');
+        }
+    }
+}
 
 async function loadCartFromServer() {
     try {
         const cartId = localStorage.getItem('cartId');
         if (!cartId) {
-            throw new Error('cartId відсутній');
+            console.warn('cartId відсутній, створюємо новий');
+            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cartId', newCartId);
+            cart = [];
+            saveToStorage('cart', cart);
+            return;
         }
         const response = await fetchWithRetry(`${BASE_URL}/api/cart?cartId=${cartId}`, 3, 1000);
         if (!response.ok) {
@@ -84,6 +103,7 @@ async function loadCartFromServer() {
             throw new Error('Сервер повернув не JSON: ' + contentType);
         }
         cart = await response.json() || [];
+        saveToStorage('cart', cart); // Синхронізуємо локальний кошик із сервером
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
         cart = loadFromStorage('cart', []);
@@ -97,6 +117,7 @@ async function loadCartFromServer() {
 async function saveCartToServer() {
     let cartItems = [];
     
+    // Перевіряємо, чи є кошик у localStorage
     const cartData = localStorage.getItem('cart');
     if (cartData) {
         try {
@@ -113,6 +134,7 @@ async function saveCartToServer() {
         }
     }
 
+    // Фільтруємо некоректні елементи кошика
     const filteredCartItems = cartItems.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
@@ -121,16 +143,20 @@ async function saveCartToServer() {
         return isValid;
     });
 
+    // Перевіряємо або генеруємо cartId
+    let cartId = localStorage.getItem('cartId');
+    if (!cartId) {
+        cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('cartId', cartId);
+        console.log('Новий cartId згенеровано:', cartId);
+    }
+
     try {
-        const cartId = localStorage.getItem('cartId'); // Додаємо cartId
-        if (!cartId) {
-            throw new Error('cartId відсутній');
-        }
-        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, { // Змінено baseUrl на BASE_URL
+        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') // Змінено csrfToken на localStorage.getItem('csrfToken')
+                'X-CSRF-Token': localStorage.getItem('csrfToken')
             },
             body: JSON.stringify(filteredCartItems),
             credentials: 'include'
@@ -402,9 +428,7 @@ async function initializeData() {
         localStorage.setItem('cartId', cartId);
     }
 
-    // Отримуємо CSRF-токен перед завантаженням кошика
     await fetchCsrfToken();
-
     await loadCartFromServer();
     selectedColors = loadFromStorage('selectedColors', {});
     selectedMattressSizes = loadFromStorage('selectedMattressSizes', {});
@@ -1874,10 +1898,20 @@ async function addToCartWithColor(productId) {
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
     if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
     else cart.push(cartItem);
-    await saveCartToServer(); // Зберігаємо на сервер
+    
+    // Зберігаємо локально та оновлюємо інтерфейс
+    saveToStorage('cart', cart);
     updateCartCount();
-    showNotification(`${product.name} додано до кошика!`, 'success');
     renderCart();
+    showNotification(`${product.name} додано до кошика!`, 'success');
+    
+    // Синхронізуємо з сервером у фоновому режимі
+    try {
+        await saveCartToServer();
+    } catch (error) {
+        console.error('Помилка синхронізації кошика з сервером:', error);
+        showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+    }
 }
 
        async function addGroupToCart(productId) {
@@ -2167,11 +2201,20 @@ async function confirmRemoveFromCart() {
     if (removeCartIndex >= 0 && removeCartIndex < cart.length) {
         const removedItem = cart[removeCartIndex];
         cart.splice(removeCartIndex, 1);
+        
+        // Зберігаємо локально та оновлюємо інтерфейс
         saveToStorage('cart', cart);
-        await saveCartToServer();
         updateCartCount();
-        await renderCart(); // Додаємо await, оскільки renderCart є async
+        await renderCart();
         showNotification(`${removedItem.name} видалено з кошика!`, 'success');
+        
+        // Синхронізуємо з сервером у фоновому режимі
+        try {
+            await saveCartToServer();
+        } catch (error) {
+            console.error('Помилка синхронізації кошика з сервером:', error);
+            showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+        }
     } else {
         showNotification('Помилка при видаленні товару!', 'error');
     }
@@ -2190,9 +2233,19 @@ async function confirmRemoveFromCart() {
 async function updateCartQuantity(index, change) {
     if (cart[index]) {
         cart[index].quantity = Math.max(1, cart[index].quantity + change);
+        
+        // Зберігаємо локально та оновлюємо інтерфейс
         saveToStorage('cart', cart);
-        await saveCartToServer();
-        await renderCart(); // Додаємо await
+        updateCartCount();
+        renderCart();
+        
+        // Синхронізуємо з сервером у фоновому режимі
+        try {
+            await saveCartToServer();
+        } catch (error) {
+            console.error('Помилка синхронізації кошика з сервером:', error);
+            showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+        }
     }
 }
 
@@ -2271,7 +2324,6 @@ async function submitOrder() {
         });
     }
 
-    // Логування даних перед відправкою (для дебагу)
     console.log('Дані замовлення перед відправкою:', orderData);
 
     try {
@@ -2283,7 +2335,9 @@ async function submitOrder() {
             saveToStorage('orders', orders);
             cart = [];
             saveToStorage('cart', cart);
-            localStorage.removeItem('cartId');
+            // Генеруємо новий cartId після очищення
+            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cartId', newCartId);
             selectedColors = {};
             selectedMattressSizes = {};
             saveToStorage('selectedColors', selectedColors);
@@ -2308,13 +2362,16 @@ async function submitOrder() {
         }
 
         cart = [];
-        await saveCartToServer();
-        localStorage.removeItem('cartId');
+        saveToStorage('cart', cart);
+        // Генеруємо новий cartId після очищення
+        const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('cartId', newCartId);
         selectedColors = {};
         selectedMattressSizes = {};
         saveToStorage('selectedColors', selectedColors);
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
         updateCartCount();
+        await saveCartToServer();
         showNotification('Замовлення оформлено! Дякуємо!', 'success');
         showSection('home');
     } catch (error) {
