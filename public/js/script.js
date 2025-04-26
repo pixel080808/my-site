@@ -2301,7 +2301,7 @@ async function submitOrder() {
             if (orders.length > 5) orders = orders.slice(-5);
             saveToStorage('orders', orders);
             cart = [];
-            save”等ToStorage('cart', cart);
+            saveToStorage('cart', cart);
             localStorage.removeItem('cartId');
             selectedColors = {};
             selectedMattressSizes = {};
