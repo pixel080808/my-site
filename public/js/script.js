@@ -95,37 +95,42 @@ async function loadCartFromServer() {
 // triggerCleanupOldCarts();
 
 async function saveCartToServer() {
+    const cartItems = JSON.parse(localStorage.getItem('cart')) || [];
+    
+    // Логування для діагностики
+    console.log('Кошик перед фільтрацією:', cartItems);
+
+    // Фільтруємо елементи, у яких немає id або інших обов’язкових полів
+    const filteredCartItems = cartItems.filter(item => {
+        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        if (!isValid) {
+            console.warn('Елемент кошика видалено через некоректні дані:', item);
+        }
+        return isValid;
+    });
+
+    console.log('Кошик після фільтрації:', filteredCartItems);
+
     try {
-        const cartId = localStorage.getItem('cartId');
-        const csrfToken = localStorage.getItem('csrfToken');
-        if (!cartId) {
-            throw new Error('cartId відсутній');
-        }
-        // Якщо CSRF-токен відсутній, зберігаємо локально і виходимо
-        if (!csrfToken) {
-            console.warn('CSRF-токен відсутній, зберігаємо кошик локально');
-            saveToStorage('cart', cart);
-            showNotification('Кошик збережено локально через відсутність CSRF-токена.', 'warning');
-            return;
-        }
-        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
+        const response = await fetch(`${baseUrl}/api/cart?cartId=${cartId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify(cart)
+            body: JSON.stringify(filteredCartItems),
+            credentials: 'include'
         });
+
+        const responseBody = await response.json();
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
+            console.error(`Помилка сервера: ${response.status}, Тіло:`, responseBody);
             throw new Error(`Помилка сервера: ${response.status}`);
         }
         console.log('Кошик успішно збережено на сервері');
-    } catch (e) {
-        console.error('Помилка збереження кошика:', e);
-        saveToStorage('cart', cart);
-        showNotification('Не вдалося зберегти кошик на сервері. Дані збережено локально.', 'warning');
+    } catch (error) {
+        console.error('Помилка збереження кошика:', error);
+        throw error;
     }
 }
 

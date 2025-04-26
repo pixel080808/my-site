@@ -1,11 +1,10 @@
-const mongoose = require('mongoose');
-
 const orderSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
     date: { type: Date, default: Date.now },
     customer: {
         type: {
             name: { type: String, required: true, minlength: 1, maxlength: 255 },
+            surname: { type: String, minlength: 1, maxlength: 255 }, // Додаємо surname
             email: {
                 type: String,
                 default: '',
@@ -49,8 +48,3 @@ const orderSchema = new mongoose.Schema({
     total: Number,
     status: String
 }, { timestamps: true });
-
-// Індекси
-orderSchema.index({ date: -1 });
-
-module.exports = mongoose.model('Order', orderSchema);

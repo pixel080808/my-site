@@ -302,6 +302,7 @@ const orderSchemaValidation = Joi.object({
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
+        surname: Joi.string().min(1).max(255).optional(), // Додаємо surname
         email: Joi.string().email().allow('').optional(),
         phone: Joi.string()
             .pattern(/^(0\d{9})$|^(\+?\d{10,15})$/)
