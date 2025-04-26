@@ -3493,7 +3493,7 @@ async function loadFilters() {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFilters(); // Замінено на renderFilters
+            renderFilters();
             return;
         }
 
@@ -3521,11 +3521,12 @@ async function loadFilters() {
         }
 
         filters = await response.json();
-        renderFilters(); // Замінено на renderFilters
+        console.log('Завантажені фільтри:', filters); // Дебаг-лог
+        renderFilters();
     } catch (err) {
         console.error('Помилка завантаження фільтрів:', err);
         showNotification('Помилка завантаження фільтрів: ' + err.message);
-        renderFilters(); // Рендеримо локальні дані при помилці
+        renderFilters();
     }
 }
 
