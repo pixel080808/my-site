@@ -153,27 +153,37 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
+// Глобальний ліміт запитів для всіх ендпоінтів, окрім /api/csrf-token і GET-запитів до /api/public/*
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 100, // 100 запитів на IP
+    max: 500, // Збільшуємо до 500 запитів на IP
     message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
-    skip: (req) => req.path === '/api/csrf-token' // Пропускаємо цей ендпоінт
+    skip: (req) => {
+        // Пропускаємо /api/csrf-token і GET-запити до /api/public/*
+        return req.path === '/api/csrf-token' || (req.method === 'GET' && req.path.startsWith('/api/public/'));
+    }
 });
 
 // Застосовуємо ліміт до всіх запитів
 app.use(globalLimiter);
 
-// Ліміт для особливо чутливих публічних ендпоінтів
+// Ліміт для особливо чутливих публічних ендпоінтів (довгостроковий)
 const publicApiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 50, // 50 запитів на IP
+    max: 300, // Збільшуємо до 300 запитів на IP
     message: 'Занадто багато запитів до API, спробуйте знову через 15 хвилин'
 });
 
+// Ліміт для короткострокових сплесків (burst) до публічних ендпоінтів
+const publicApiBurstLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 хвилина
+    max: 50, // 50 запитів за хвилину
+    message: 'Занадто багато запитів до API за короткий час, зачекайте хвилину і спробуйте знову'
+});
+
 // Застосовуємо до публічних API
-app.use('/api/public', publicApiLimiter);
-app.use('/api/cart', publicApiLimiter);
+app.use('/api/public', publicApiLimiter, publicApiBurstLimiter);
+app.use('/api/cart', publicApiLimiter, publicApiBurstLimiter);
 
 // Додаємо заголовки безпеки
 app.use((req, res, next) => {
@@ -289,13 +299,6 @@ const refreshTokenLimiter = rateLimit({
             details: 'Перевищено ліміт запитів на оновлення токена. Спробуйте знову через 15 хвилин'
         });
     }
-});
-
-// Додаємо новий лімітер для /api/csrf-token
-const csrfTokenLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 500, // Дозволяємо 500 запитів за 15 хвилин
-    message: 'Занадто багато запитів на отримання CSRF-токена, спробуйте знову через 15 хвилин'
 });
 
 // Підключення до MongoDB
@@ -763,7 +766,7 @@ ws.on('message', async (message) => {
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });
 
-app.get('/api/csrf-token', csrfTokenLimiter, csrfProtection, (req, res) => {
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
     try {
         const token = req.csrfToken();
         logger.info('Згенеровано CSRF-токен:', token);
