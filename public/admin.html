@@ -738,20 +738,6 @@ button:hover {
                 <button type="submit">Зберегти налаштування</button>
             </form>
         </div>
-        <!-- Фільтри -->
-        <div class="admin-section">
-            <h3>Фільтри</h3>
-            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
-                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
-                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
-                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
-                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
-                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
-                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
-                <button type="submit">Додати фільтр</button>
-            </form>
-            <div id="filter-list-admin"></div>
-        </div>
         <!-- Поля замовлення -->
         <div class="admin-section">
             <h3>Поля замовлення</h3>
@@ -808,35 +794,39 @@ button:hover {
     </label>
     <div id="slides-list-admin"></div>
 </div>
-        <!-- Бекап -->
-        <div class="admin-section">
-            <h3>Бекап</h3>
-            <div class="backup-group">
-                <button onclick="exportSiteBackup()">Експортувати (Сайт)</button>
-                <div class="import-group">
-                    <input accept=".json" id="import-site-file" style="display: none;" type="file"/>
-                    <button class="import-btn" onclick="document.getElementById('import-site-file').click()">Імпортувати файл (Сайт)</button>
-                </div>
-            </div>
-            <div class="backup-group">
-                <button onclick="exportProductsBackup()">Експортувати (Товари)</button>
-                <div class="import-group">
-                    <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
-                    <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (Товари)</button>
-                </div>
-            </div>
-            <div class="backup-group">
-                <button onclick="exportOrdersBackup()">Експортувати (Замовлення)</button>
-                <div class="import-group">
-                    <input accept=".json" id="import-orders-file" style="display: none;" type="file"/>
-                    <button class="import-btn" onclick="document.getElementById('import-orders-file').click()">Імпортувати файл (Замовлення)</button>
-                </div>
-            </div>
-            <div class="backup-group">
-                <button onclick="downloadSitemap()">Завантажити Sitemap</button>
-            </div>
+<!-- Бекап -->
+<div class="admin-section">
+    <h3>Бекап</h3>
+    <div class="backup-group">
+        <button onclick="exportSiteBackup()">Експортувати (Сайт)</button>
+        <div class="import-group">
+            <input accept=".json" id="import-site-file" style="display: none;" type="file"/>
+            <button class="import-btn" onclick="document.getElementById('import-site-file').click()">Імпортувати файл (Сайт)</button>
         </div>
     </div>
+    <div class="backup-group">
+        <button onclick="exportProductsBackup()">Експортувати (Товари)</button>
+        <div class="import-group">
+            <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
+            <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (Товари)</button>
+        </div>
+    </div>
+    <div class="backup-group">
+        <button onclick="exportOrdersBackup()">Експортувати (Замовлення)</button>
+        <div class="import-group">
+            <input accept=".json" id="import-orders-file" style="display: none;" type="file"/>
+            <button class="import-btn" onclick="document.getElementById('import-orders-file').click()">Імпортувати файл (Замовлення)</button>
+        </div>
+    </div>
+    <div class="backup-group">
+        <button onclick="downloadSitemap()">Завантажити Sitemap</button>
+    </div>
+</div>
+<!-- Очищення всіх даних -->
+<div class="admin-section">
+    <h3>Очищення всіх даних</h3>
+    <button onclick="clearAllData()" style="background-color: #ff4444; color: white;">Очистити все</button>
+</div>
     <!-- Товари та Замовлення залишаються без змін -->
     <div class="admin-tab" id="products">
         <div class="admin-section">
