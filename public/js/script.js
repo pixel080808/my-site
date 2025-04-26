@@ -1088,7 +1088,7 @@ function renderFilters() {
     const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
     
     // Статичний діапазон цін (можна змінювати тут)
-    const priceRanges = ['0-2000', '2000-4000', '4000-6000', '6000-8000', '8000+'];
+    const priceRanges = ['0-3000', '3000-5000', '5000-7000', '7000-10000', '10000+'];
 
     if (brands.length > 0) {
         filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));

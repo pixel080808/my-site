@@ -538,20 +538,12 @@ async function loadBrands() {
 function renderFilters() {
     const filterList = document.getElementById('filter-list-admin');
     if (filterList) {
-        console.log('Рендеринг фільтрів, filters:', filters);
         filterList.innerHTML = filters.map((f, index) => `
-            <div class="filter-item">
-                <span>${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}</span>
-                <div class="filter-actions">
-                    <button class="edit-btn" onclick="editFilter('${f.name}')">Редагувати</button>
-                    <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
-                    <button class="move-up-btn" onclick="moveFilterUp(${index})" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <button class="move-down-btn" onclick="moveFilterDown(${index})" ${index === filters.length - 1 ? 'disabled' : ''}>↓</button>
-                </div>
+            <div>
+                ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
+                <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
             </div>
         `).join('');
-    } else {
-        console.warn('Елемент #filter-list-admin не знайдено');
     }
     resetInactivityTimer();
 }
@@ -568,60 +560,24 @@ async function deleteFilter(index) {
 
             filters.splice(index, 1);
 
-            const cleanedSettings = {
-                name: settings.name || '',
-                baseUrl: settings.baseUrl || '',
-                logo: settings.logo || '',
-                logoWidth: parseInt(settings.logoWidth) || 0,
-                favicon: settings.favicon || '',
-                contacts: {
-                    phones: settings.contacts?.phones || '',
-                    addresses: settings.contacts?.addresses || '',
-                    schedule: settings.contacts?.schedule || ''
-                },
-                socials: (settings.socials || []).map(social => ({
-                    name: social.name || '',
-                    url: social.url || '',
-                    icon: social.icon || ''
-                })),
-                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
-                about: settings.about || '',
-                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
-                slideWidth: parseInt(settings.slideWidth) || 0,
-                slideHeight: parseInt(settings.slideHeight) || 0,
-                slideInterval: parseInt(settings.slideInterval) || 3000,
-                categoryWidth: parseInt(settings.categoryWidth) || 0,
-                categoryHeight: parseInt(settings.categoryHeight) || 0,
-                productWidth: parseInt(settings.productWidth) || 0,
-                productHeight: parseInt(settings.productHeight) || 0,
-                filters: filters.map(filter => ({
-                    label: filter.label,
-                    name: filter.name,
-                    type: filter.type,
-                    options: filter.options
-                })),
-                orderFields: (settings.orderFields || []).map(field => ({
-                    name: field.name,
-                    label: field.label
-                }))
-            };
-
             const token = localStorage.getItem('adminToken');
             const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+            const response = await fetch(`${baseUrl}/api/settings`, {
                 method: 'PUT',
-                body: JSON.stringify(cleanedSettings)
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ ...settings, filters })
             });
 
             if (!response.ok) {
                 throw new Error('Не вдалося оновити фільтри');
             }
 
-            const updatedSettings = await response.json();
-            settings = { ...settings, ...updatedSettings };
             renderFilters();
             showNotification('Фільтр видалено!');
-            resetInactivityTimer();
         } catch (err) {
             console.error('Помилка видалення фільтру:', err);
             showNotification('Помилка: ' + err.message);
@@ -1850,7 +1806,7 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #social-list не знайдено');
         }
 
-        const catList = document.getElementById('category-list-admin');
+        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
         if (catList) {
             console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
@@ -1883,7 +1839,7 @@ function renderAdmin(section = activeTab) {
 
         function handleCatListClick(event) {
             const target = event.target;
-            const categoryId = target.dataset.id;
+            const categoryId = target.dataset.id; // Змінено для уникнення помилки
             const subName = target.dataset.subName;
             const catId = target.dataset.catId;
             const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
@@ -1991,7 +1947,6 @@ function renderAdmin(section = activeTab) {
         } else if (section === 'site-editing') {
             if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
             if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-            renderFilters(); // Додаємо виклик renderFilters для вкладки site-editing
         } else {
             console.warn(`Невідома вкладка: ${section}`);
         }
@@ -3538,7 +3493,7 @@ async function loadFilters() {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFilters();
+            renderFilters(); // Замінено на renderFilters
             return;
         }
 
@@ -3566,12 +3521,11 @@ async function loadFilters() {
         }
 
         filters = await response.json();
-        console.log('Завантажені фільтри:', filters); // Дебаг-лог
-        renderFilters();
+        renderFilters(); // Замінено на renderFilters
     } catch (err) {
         console.error('Помилка завантаження фільтрів:', err);
         showNotification('Помилка завантаження фільтрів: ' + err.message);
-        renderFilters();
+        renderFilters(); // Рендеримо локальні дані при помилці
     }
 }
 
@@ -3606,59 +3560,16 @@ async function addFilter() {
 
         filters.push({ label, name, type, options });
 
-        // Очищаємо об’єкт settings від зайвих полів і приводимо типи
-        const cleanedSettings = {
-            name: settings.name || '',
-            baseUrl: settings.baseUrl || '',
-            logo: settings.logo || '',
-            logoWidth: parseInt(settings.logoWidth) || 0, // Перетворюємо в число
-            favicon: settings.favicon || '',
-            contacts: {
-                phones: settings.contacts?.phones || '',
-                addresses: settings.contacts?.addresses || '',
-                schedule: settings.contacts?.schedule || ''
-            },
-            socials: (settings.socials || []).map(social => ({
-                name: social.name || '',
-                url: social.url || '',
-                icon: social.icon || ''
-            })), // Видаляємо _id та інші зайві поля
-            showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
-            about: settings.about || '',
-            showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
-            slideWidth: parseInt(settings.slideWidth) || 0, // Перетворюємо в число
-            slideHeight: parseInt(settings.slideHeight) || 0, // Перетворюємо в число
-            slideInterval: parseInt(settings.slideInterval) || 3000, // Перетворюємо в число
-            categoryWidth: parseInt(settings.categoryWidth) || 0, // Перетворюємо в число
-            categoryHeight: parseInt(settings.categoryHeight) || 0, // Перетворюємо в число
-            productWidth: parseInt(settings.productWidth) || 0, // Перетворюємо в число
-            productHeight: parseInt(settings.productHeight) || 0, // Перетворюємо в число
-            filters: filters.map(filter => ({
-                label: filter.label,
-                name: filter.name,
-                type: filter.type,
-                options: filter.options
-            })), // Очищаємо filters від зайвих полів
-            orderFields: (settings.orderFields || []).map(field => ({
-                name: field.name,
-                label: field.label
-            })) // Очищаємо orderFields
-        };
-
         const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
         const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
             method: 'PUT',
-            body: JSON.stringify(cleanedSettings)
+            body: JSON.stringify({ ...settings, filters })
         });
 
         if (!response.ok) {
             throw new Error('Не вдалося оновити фільтри');
         }
-
-        // Оновлюємо локальні settings після успішного запиту
-        const updatedSettings = await response.json();
-        settings = { ...settings, ...updatedSettings };
 
         renderFilters();
         showNotification('Фільтр додано!');
@@ -3699,88 +3610,26 @@ async function addFilter() {
         }
     }
 
-async function saveFilterEdit(name) {
-    const filter = filters.find(f => f.name === name);
-    if (filter) {
-        const newLabel = document.getElementById('edit-filter-label').value.trim();
-        const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
+    function saveFilterEdit(name) {
+        const filter = filters.find(f => f.name === name);
+        if (filter) {
+            const newLabel = document.getElementById('edit-filter-label').value;
+            const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
 
-        if (newLabel && newOptions.length > 0) {
-            try {
-                const tokenRefreshed = await refreshToken();
-                if (!tokenRefreshed) {
-                    showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                    showSection('admin-login');
-                    return;
-                }
-
+            if (newLabel && newOptions.length > 0) {
                 filter.label = newLabel;
                 filter.options = newOptions;
-
-                const cleanedSettings = {
-                    name: settings.name || '',
-                    baseUrl: settings.baseUrl || '',
-                    logo: settings.logo || '',
-                    logoWidth: parseInt(settings.logoWidth) || 0,
-                    favicon: settings.favicon || '',
-                    contacts: {
-                        phones: settings.contacts?.phones || '',
-                        addresses: settings.contacts?.addresses || '',
-                        schedule: settings.contacts?.schedule || ''
-                    },
-                    socials: (settings.socials || []).map(social => ({
-                        name: social.name || '',
-                        url: social.url || '',
-                        icon: social.icon || ''
-                    })),
-                    showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
-                    about: settings.about || '',
-                    showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
-                    slideWidth: parseInt(settings.slideWidth) || 0,
-                    slideHeight: parseInt(settings.slideHeight) || 0,
-                    slideInterval: parseInt(settings.slideInterval) || 3000,
-                    categoryWidth: parseInt(settings.categoryWidth) || 0,
-                    categoryHeight: parseInt(settings.categoryHeight) || 0,
-                    productWidth: parseInt(settings.productWidth) || 0,
-                    productHeight: parseInt(settings.productHeight) || 0,
-                    filters: filters.map(filter => ({
-                        label: filter.label,
-                        name: filter.name,
-                        type: filter.type,
-                        options: filter.options
-                    })),
-                    orderFields: (settings.orderFields || []).map(field => ({
-                        name: field.name,
-                        label: field.label
-                    }))
-                };
-
-                const token = localStorage.getItem('adminToken');
-                const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-                const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
-                    method: 'PUT',
-                    body: JSON.stringify(cleanedSettings)
-                });
-
-                if (!response.ok) {
-                    throw new Error('Не вдалося зберегти зміни фільтра');
-                }
-
-                const updatedSettings = await response.json();
-                settings = { ...settings, ...updatedSettings };
+                localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
                 closeModal();
-                renderFilters();
+                renderAdmin();
                 showNotification('Фільтр відредаговано!');
+                unsavedChanges = false;
                 resetInactivityTimer();
-            } catch (err) {
-                console.error('Помилка збереження фільтра:', err);
-                showNotification('Помилка: ' + err.message);
+            } else {
+                alert('Введіть підпис та опції!');
             }
-        } else {
-            showNotification('Введіть підпис та опції!');
         }
     }
-}
 
     function deleteFilter(name) {
         if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
@@ -3793,149 +3642,23 @@ async function saveFilterEdit(name) {
         }
     }
 
-async function moveFilterUp(index) {
-    if (index > 0) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
+    function moveFilterUp(index) {
+        if (index > 0) {
             [filters[index - 1], filters[index]] = [filters[index], filters[index - 1]];
-
-            const cleanedSettings = {
-                name: settings.name || '',
-                baseUrl: settings.baseUrl || '',
-                logo: settings.logo || '',
-                logoWidth: parseInt(settings.logoWidth) || 0,
-                favicon: settings.favicon || '',
-                contacts: {
-                    phones: settings.contacts?.phones || '',
-                    addresses: settings.contacts?.addresses || '',
-                    schedule: settings.contacts?.schedule || ''
-                },
-                socials: (settings.socials || []).map(social => ({
-                    name: social.name || '',
-                    url: social.url || '',
-                    icon: social.icon || ''
-                })),
-                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
-                about: settings.about || '',
-                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
-                slideWidth: parseInt(settings.slideWidth) || 0,
-                slideHeight: parseInt(settings.slideHeight) || 0,
-                slideInterval: parseInt(settings.slideInterval) || 3000,
-                categoryWidth: parseInt(settings.categoryWidth) || 0,
-                categoryHeight: parseInt(settings.categoryHeight) || 0,
-                productWidth: parseInt(settings.productWidth) || 0,
-                productHeight: parseInt(settings.productHeight) || 0,
-                filters: filters.map(filter => ({
-                    label: filter.label,
-                    name: filter.name,
-                    type: filter.type,
-                    options: filter.options
-                })),
-                orderFields: (settings.orderFields || []).map(field => ({
-                    name: field.name,
-                    label: field.label
-                }))
-            };
-
-            const token = localStorage.getItem('adminToken');
-            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
-                method: 'PUT',
-                body: JSON.stringify(cleanedSettings)
-            });
-
-            if (!response.ok) {
-                throw new Error('Не вдалося оновити порядок фільтрів');
-            }
-
-            const updatedSettings = await response.json();
-            settings = { ...settings, ...updatedSettings };
-            renderFilters();
+            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+            renderAdmin();
             resetInactivityTimer();
-        } catch (err) {
-            console.error('Помилка переміщення фільтру:', err);
-            showNotification('Помилка: ' + err.message);
         }
     }
-}
 
-async function moveFilterDown(index) {
-    if (index < filters.length - 1) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
+    function moveFilterDown(index) {
+        if (index < filters.length - 1) {
             [filters[index], filters[index + 1]] = [filters[index + 1], filters[index]];
-
-            const cleanedSettings = {
-                name: settings.name || '',
-                baseUrl: settings.baseUrl || '',
-                logo: settings.logo || '',
-                logoWidth: parseInt(settings.logoWidth) || 0,
-                favicon: settings.favicon || '',
-                contacts: {
-                    phones: settings.contacts?.phones || '',
-                    addresses: settings.contacts?.addresses || '',
-                    schedule: settings.contacts?.schedule || ''
-                },
-                socials: (settings.socials || []).map(social => ({
-                    name: social.name || '',
-                    url: social.url || '',
-                    icon: social.icon || ''
-                })),
-                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
-                about: settings.about || '',
-                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
-                slideWidth: parseInt(settings.slideWidth) || 0,
-                slideHeight: parseInt(settings.slideHeight) || 0,
-                slideInterval: parseInt(settings.slideInterval) || 3000,
-                categoryWidth: parseInt(settings.categoryWidth) || 0,
-                categoryHeight: parseInt(settings.categoryHeight) || 0,
-                productWidth: parseInt(settings.productWidth) || 0,
-                productHeight: parseInt(settings.productHeight) || 0,
-                filters: filters.map(filter => ({
-                    label: filter.label,
-                    name: filter.name,
-                    type: filter.type,
-                    options: filter.options
-                })),
-                orderFields: (settings.orderFields || []).map(field => ({
-                    name: field.name,
-                    label: field.label
-                }))
-            };
-
-            const token = localStorage.getItem('adminToken');
-            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
-                method: 'PUT',
-                body: JSON.stringify(cleanedSettings)
-            });
-
-            if (!response.ok) {
-                throw new Error('Не вдалося оновити порядок фільтрів');
-            }
-
-            const updatedSettings = await response.json();
-            settings = { ...settings, ...updatedSettings };
-            renderFilters();
+            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+            renderAdmin();
             resetInactivityTimer();
-        } catch (err) {
-            console.error('Помилка переміщення фільтру:', err);
-            showNotification('Помилка: ' + err.message);
         }
     }
-}
 
 async function addOrderField() {
     const name = document.getElementById('order-field-name').value;
