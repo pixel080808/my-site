@@ -585,6 +585,100 @@ async function deleteFilter(index) {
     }
 }
 
+async function clearAllData() {
+    // Перше підтвердження через confirm
+    if (!confirm('Ви впевнені, що хочете видалити всі продукти, категорії, слайди, матеріали, бренди та фільтри? Цю дію не можна скасувати!')) {
+        return;
+    }
+
+    // Друге підтвердження через prompt
+    const confirmation = prompt('Для підтвердження введіть слово "підтвердити":');
+    if (confirmation !== 'підтвердити') {
+        showNotification('Очищення скасовано. Ви не ввели правильне слово для підтвердження.');
+        return;
+    }
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        // Очищаємо продукти
+        const deleteProductsResponse = await fetchWithAuth('/api/products', {
+            method: 'DELETE'
+        });
+        if (!deleteProductsResponse.ok) {
+            throw new Error('Не вдалося видалити продукти');
+        }
+        products = [];
+
+        // Очищаємо категорії
+        const deleteCategoriesResponse = await fetchWithAuth('/api/categories', {
+            method: 'DELETE'
+        });
+        if (!deleteCategoriesResponse.ok) {
+            throw new Error('Не вдалося видалити категорії');
+        }
+        categories = [];
+
+        // Очищаємо слайди
+        const deleteSlidesResponse = await fetchWithAuth('/api/slides', {
+            method: 'DELETE'
+        });
+        if (!deleteSlidesResponse.ok) {
+            throw new Error('Не вдалося видалити слайди');
+        }
+        slides = [];
+
+        // Очищаємо матеріали
+        const deleteMaterialsResponse = await fetchWithAuth('/api/materials', {
+            method: 'DELETE'
+        });
+        if (!deleteMaterialsResponse.ok) {
+            throw new Error('Не вдалося видалити матеріали');
+        }
+        materials = [];
+
+        // Очищаємо бренди
+        const deleteBrandsResponse = await fetchWithAuth('/api/brands', {
+            method: 'DELETE'
+        });
+        if (!deleteBrandsResponse.ok) {
+            throw new Error('Не вдалося видалити бренди');
+        }
+        brands = [];
+
+        // Очищаємо фільтри в налаштуваннях
+        filters = [];
+        const updateSettingsResponse = await fetchWithAuth('/api/settings', {
+            method: 'PUT',
+            body: JSON.stringify({ ...settings, filters })
+        });
+        if (!updateSettingsResponse.ok) {
+            throw new Error('Не вдалося очистити фільтри');
+        }
+        const updatedSettings = await updateSettingsResponse.json();
+        settings = { ...settings, ...updatedSettings };
+
+        // Оновлюємо інтерфейс
+        renderAdmin('products');
+        renderCategoriesAdmin();
+        renderSlidesAdmin();
+        updateMaterialOptions();
+        updateBrandOptions();
+        renderFilters();
+
+        showNotification('Усі дані успішно видалено! Ви можете почати додавання заново.');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка очищення даних:', err);
+        showNotification('Помилка очищення даних: ' + err.message);
+    }
+}
+
 function updateMaterialOptions() {
     const materialInput = document.getElementById('product-material');
     if (materialInput && materialInput.tagName === 'INPUT') {
