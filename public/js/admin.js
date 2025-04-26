@@ -325,15 +325,18 @@ async function updateSocials() {
                 return;
             }
 
+            // Очищаємо socials від _id
+            const cleanedSocials = settings.socials.map(({ _id, ...rest }) => rest);
+
             console.log('Надсилаємо соціальні мережі:', {
-                socials: settings.socials,
+                socials: cleanedSocials,
                 showSocials: settings.showSocials
             });
 
             const response = await fetchWithAuth('/api/settings', {
                 method: 'PUT',
                 body: JSON.stringify({
-                    socials: settings.socials,
+                    socials: cleanedSocials,
                     showSocials: settings.showSocials
                 })
             });
@@ -341,13 +344,13 @@ async function updateSocials() {
             const serverSettings = await response.json();
             settings = { ...settings, ...serverSettings };
             renderSettingsAdmin();
-            renderSocialsAdmin(); // Оновлюємо відображення соціальних мереж
+            renderSocialsAdmin();
             showNotification('Соціальні мережі оновлено!');
             unsavedChanges = false;
             resetInactivityTimer();
 
-            // Оновлюємо відображення на головній сторінці
-            if (typeof renderSocials === 'function') {
+            // Оновлюємо відображення на головній сторінці (якщо ми не в адмін-панелі)
+            if (typeof renderSocials === 'function' && document.getElementById('contacts-socials')) {
                 renderSocials();
             }
 
@@ -357,7 +360,7 @@ async function updateSocials() {
             console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
             if (retries === maxRetries) {
                 showNotification('Помилка оновлення соціальних мереж: ' + err.message);
-                // Завантажуємо актуальні налаштування з сервера, щоб уникнути розсинхронізації
+                // Завантажуємо актуальні налаштування з сервера
                 try {
                     const response = await fetchWithAuth('/api/settings', {
                         method: 'GET'
@@ -826,6 +829,7 @@ function initializeEditors() {
     ];
 
     try {
+        // Реєстрація модулів undo/redo
         Quill.register('modules/undo', function(quill) {
             return { undo: () => quill.history.undo() };
         }, true);
@@ -833,6 +837,7 @@ function initializeEditors() {
             return { redo: () => quill.history.redo() };
         }, true);
 
+        // Ініціалізація Quill
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
@@ -851,22 +856,27 @@ function initializeEditors() {
             }
         });
 
+        // Обробка змін у редакторі
         aboutEditor.on('text-change', () => {
-            const content = aboutEditor.root.innerHTML;
-            document.getElementById('about-edit').value = content;
-            console.log('Вміст редактора змінено:', content);
-            unsavedChanges = true;
-            resetInactivityTimer();
+            const aboutEdit = document.getElementById('about-edit');
+            if (aboutEdit) {
+                const content = aboutEditor.root.innerHTML;
+                aboutEdit.value = content;
+                console.log('Вміст редактора змінено:', content);
+                unsavedChanges = true;
+                resetInactivityTimer();
 
-            const undoButton = document.querySelector('.ql-undo');
-            const redoButton = document.querySelector('.ql-redo');
-            if (undoButton && redoButton) {
-                aboutEditor.history.stack.undo.length > 0
-                    ? undoButton.removeAttribute('disabled')
-                    : undoButton.setAttribute('disabled', 'true');
-                aboutEditor.history.stack.redo.length > 0
-                    ? redoButton.removeAttribute('disabled')
-                    : redoButton.setAttribute('disabled', 'true');
+                // Оновлення стану кнопок undo/redo
+                const undoButton = document.querySelector('.ql-undo');
+                const redoButton = document.querySelector('.ql-redo');
+                if (undoButton && redoButton) {
+                    aboutEditor.history.stack.undo.length > 0
+                        ? undoButton.removeAttribute('disabled')
+                        : undoButton.setAttribute('disabled', 'true');
+                    aboutEditor.history.stack.redo.length > 0
+                        ? redoButton.removeAttribute('disabled')
+                        : redoButton.setAttribute('disabled', 'true');
+                }
             }
         });
 
@@ -877,29 +887,36 @@ function initializeEditors() {
         });
         observer.observe(aboutEditorElement, { childList: true, subtree: true });
 
+        // Ініціалізація вмісту редактора
         if (settings.about) {
             try {
-                aboutEditor.root.innerHTML = settings.about;
+                aboutEditor.setContents(aboutEditor.clipboard.convert(settings.about), 'silent');
                 console.log('Встановлено вміст "Про нас":', settings.about);
             } catch (e) {
                 console.error('Помилка при встановленні вмісту "Про нас":', e);
-                aboutEditor.setText(settings.about || '', 'silent');
+                aboutEditor.setContents([], 'silent');
             }
         } else {
             console.log('settings.about порожній, редактор очищено.');
-            aboutEditor.setText('', 'silent');
+            aboutEditor.setContents([], 'silent');
         }
-        document.getElementById('about-edit').value = settings.about || '';
 
+        const aboutEdit = document.getElementById('about-edit');
+        if (aboutEdit) {
+            aboutEdit.value = aboutEditor.root.innerHTML || '';
+        }
+
+        // Обробка кліків по медіа
         aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
-            if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+            if (target.tagName === 'IMG' || target.tagName === 'IFRAME' || target.tagName === 'VIDEO') {
                 openResizeModal(target);
             }
         });
 
+        // Обробка вставки медіа
         aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
+            if (node.tagName === 'IMG' || node.tagName === 'IFRAME' || node.tagName === 'VIDEO') {
                 const src = node.getAttribute('src');
                 if (src) {
                     const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
@@ -909,6 +926,7 @@ function initializeEditors() {
             return delta;
         });
 
+        // Встановлення розмірів для відео
         setDefaultVideoSizes(aboutEditor, 'about-edit');
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
