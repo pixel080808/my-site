@@ -345,10 +345,6 @@ const settingsSchemaValidation = Joi.object({
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
-    categoryWidth: Joi.number().min(0).allow(null),
-    categoryHeight: Joi.number().min(0).allow(null),
-    productWidth: Joi.number().min(0).allow(null),
-    productHeight: Joi.number().min(0).allow(null),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -730,7 +726,22 @@ app.get('/api/public/products', async (req, res) => {
 
 app.get('/api/public/settings', async (req, res) => {
     try {
-        const settings = await Settings.findOne({}, { name: 1, baseUrl: 1, logo: 1, logoWidth: 1, favicon: 1, contacts: 1, socials: 1, showSocials: 1, about: 1, categoryWidth: 1, categoryHeight: 1, productWidth: 1, productHeight: 1, slideWidth: 1, slideHeight: 1, slideInterval: 1, showSlides: 1, filters: 1 });
+        const settings = await Settings.findOne({}, { 
+            name: 1, 
+            baseUrl: 1, 
+            logo: 1, 
+            logoWidth: 1, 
+            favicon: 1, 
+            contacts: 1, 
+            socials: 1, 
+            showSocials: 1, 
+            about: 1, 
+            slideWidth: 1, 
+            slideHeight: 1, 
+            slideInterval: 1, 
+            showSlides: 1, 
+            filters: 1 
+        });
         res.json(settings || {});
     } catch (err) {
         logger.error('Помилка при отриманні публічних налаштувань:', err);
@@ -1895,10 +1906,6 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
                 socials: [],
                 showSocials: true,
                 about: '',
-                categoryWidth: 0,
-                categoryHeight: 0,
-                productWidth: 0,
-                productHeight: 0,
                 filters: [],
                 orderFields: [],
                 slideWidth: 0,

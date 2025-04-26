@@ -195,11 +195,7 @@ async function loadSettings() {
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
             slideWidth: serverSettings.slideWidth || settings.slideWidth,
             slideHeight: serverSettings.slideHeight || settings.slideHeight,
-            slideInterval: serverSettings.slideInterval || settings.slideInterval,
-            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth,
-            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight,
-            productWidth: serverSettings.productWidth || settings.productWidth,
-            productHeight: serverSettings.productHeight || settings.productHeight
+            slideInterval: serverSettings.slideInterval || settings.slideInterval
         };
 
         console.log('Оновлені settings:', settings);
@@ -218,7 +214,8 @@ async function loadSettings() {
                 console.log('settings.about порожній, редактор очищено.');
                 aboutEditor.setText('', 'silent');
             }
-            document.getElementById('about-edit').value = settings.about || '';
+            const aboutEdit = document.getElementById('about-edit');
+            if (aboutEdit) aboutEdit.value = settings.about || '';
         }
 
         renderSettingsAdmin();
@@ -663,7 +660,7 @@ async function checkAuth() {
             showSection('admin-panel');
             await initializeData();
             connectAdminWebSocket();
-            startTokenRefreshTimer(); // Додаємо виклик
+            startTokenRefreshTimer();
             resetInactivityTimer();
         } else {
             showSection('admin-login');
@@ -2117,24 +2114,46 @@ async function deleteCategory(categoryId) {
 }
 
 function renderSettingsAdmin() {
-    document.getElementById('store-name').value = settings.name || '';
-    document.getElementById('base-url').value = settings.baseUrl || '';
-    document.getElementById('logo-url').value = settings.logo || '';
-    document.getElementById('logo-width').value = settings.logoWidth || '';
-    document.getElementById('favicon-url').value = settings.favicon || '';
-    document.getElementById('contact-phones').value = settings.contacts.phones || '';
-    document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
-    document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
-    document.getElementById('social-toggle').checked = settings.showSocials;
+    const storeName = document.getElementById('store-name');
+    if (storeName) storeName.value = settings.name || '';
+
+    const baseUrl = document.getElementById('base-url');
+    if (baseUrl) baseUrl.value = settings.baseUrl || '';
+
+    const logoUrl = document.getElementById('logo-url');
+    if (logoUrl) logoUrl.value = settings.logo || '';
+
+    const logoWidth = document.getElementById('logo-width');
+    if (logoWidth) logoWidth.value = settings.logoWidth || '';
+
+    const faviconUrl = document.getElementById('favicon-url');
+    if (faviconUrl) faviconUrl.value = settings.favicon || '';
+
+    const contactPhones = document.getElementById('contact-phones');
+    if (contactPhones) contactPhones.value = settings.contacts.phones || '';
+
+    const contactAddresses = document.getElementById('contact-addresses');
+    if (contactAddresses) contactAddresses.value = settings.contacts.addresses || '';
+
+    const contactSchedule = document.getElementById('contact-schedule');
+    if (contactSchedule) contactSchedule.value = settings.contacts.schedule || '';
+
+    const socialToggle = document.getElementById('social-toggle');
+    if (socialToggle) socialToggle.checked = settings.showSocials;
+
     renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
-    document.getElementById('category-width').value = settings.categoryWidth || '';
-    document.getElementById('category-height').value = settings.categoryHeight || '';
-    document.getElementById('product-width').value = settings.productWidth || '';
-    document.getElementById('product-height').value = settings.productHeight || '';
-    document.getElementById('slide-width').value = settings.slideWidth || '';
-    document.getElementById('slide-height').value = settings.slideHeight || '';
-    document.getElementById('slide-interval').value = settings.slideInterval || '';
-    document.getElementById('slide-toggle').checked = settings.showSlides;
+
+    const slideWidth = document.getElementById('slide-width');
+    if (slideWidth) slideWidth.value = settings.slideWidth || '';
+
+    const slideHeight = document.getElementById('slide-height');
+    if (slideHeight) slideHeight.value = settings.slideHeight || '';
+
+    const slideInterval = document.getElementById('slide-interval');
+    if (slideInterval) slideInterval.value = settings.slideInterval || '';
+
+    const slideToggle = document.getElementById('slide-toggle');
+    if (slideToggle) slideToggle.checked = settings.showSlides;
 }
 
 function openNewSlideModal() {
@@ -6012,81 +6031,81 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-socket.onmessage = (event) => {
-    try {
-        const { type, data } = JSON.parse(event.data);
-        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-        if (type === 'settings') {
-            settings = { ...settings, ...data };
-            renderSettingsAdmin();
-        } else if (type === 'products') {
-            if (Array.isArray(data)) {
-                products = data;
-                if (document.querySelector('#products.active')) {
-                    renderAdmin('products');
+    socket.onmessage = (event) => {
+        try {
+            const { type, data } = JSON.parse(event.data);
+            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+            if (type === 'settings' && data) {
+                settings = { ...settings, ...data };
+                renderSettingsAdmin();
+            } else if (type === 'products') {
+                if (Array.isArray(data)) {
+                    products = data;
+                    if (document.querySelector('#products.active')) {
+                        renderAdmin('products');
+                    }
+                } else {
+                    console.warn('Некоректні дані продуктів:', data);
                 }
-            } else {
-                console.warn('Некоректні дані продуктів:', data);
-            }
-        } else if (type === 'categories') {
-            if (Array.isArray(data)) {
-                categories = data;
-                renderCategoriesAdmin();
-            } else {
-                console.warn('Некоректні дані категорій:', data);
-                loadCategories();
-            }
-        } else if (type === 'orders') {
-            if (Array.isArray(data)) {
-                orders = data;
-                if (document.querySelector('#orders.active')) {
-                    renderAdmin('orders');
+            } else if (type === 'categories') {
+                if (Array.isArray(data)) {
+                    categories = data;
+                    renderCategoriesAdmin();
+                } else {
+                    console.warn('Некоректні дані категорій:', data);
+                    loadCategories();
                 }
-            } else {
-                console.warn('Некоректні дані замовлень:', data);
-            }
-        } else if (type === 'slides') {
-            if (Array.isArray(data)) {
-                slides = data;
-                if (document.querySelector('#site-editing.active')) {
-                    renderSlidesAdmin();
+            } else if (type === 'orders') {
+                if (Array.isArray(data)) {
+                    orders = data;
+                    if (document.querySelector('#orders.active')) {
+                        renderAdmin('orders');
+                    }
+                } else {
+                    console.warn('Некоректні дані замовлень:', data);
                 }
-            } else {
-                console.warn('Некоректні дані слайдів:', data);
+            } else if (type === 'slides') {
+                if (Array.isArray(data)) {
+                    slides = data;
+                    if (document.querySelector('#site-editing.active')) {
+                        renderSlidesAdmin();
+                    }
+                } else {
+                    console.warn('Некоректні дані слайдів:', data);
+                }
+            } else if (type === 'materials') {
+                if (Array.isArray(data)) {
+                    materials = data;
+                    updateMaterialOptions();
+                } else {
+                    console.warn('Некоректні дані матеріалів:', data);
+                }
+            } else if (type === 'brands') {
+                if (Array.isArray(data)) {
+                    brands = data;
+                    updateBrandOptions();
+                } else {
+                    console.warn('Некоректні дані брендів:', data);
+                }
+            } else if (type === 'filters') {
+                if (Array.isArray(data)) {
+                    filters = data;
+                    renderFilters();
+                } else {
+                    console.warn('Некоректні дані фільтрів:', data);
+                }
+            } else if (type === 'error') {
+                console.error('WebSocket помилка від сервера:', data);
+                showNotification('Помилка WebSocket: ' + data.error);
+                if (data.error.includes('неавторизований')) {
+                    localStorage.removeItem('adminToken');
+                    localStorage.removeItem('adminSession');
+                    showSection('admin-login');
+                }
             }
-        } else if (type === 'materials') {
-            if (Array.isArray(data)) {
-                materials = data;
-                updateMaterialOptions();
-            } else {
-                console.warn('Некоректні дані матеріалів:', data);
-            }
-        } else if (type === 'brands') {
-            if (Array.isArray(data)) {
-                brands = data;
-                updateBrandOptions();
-            } else {
-                console.warn('Некоректні дані брендів:', data);
-            }
-        } else if (type === 'filters') {
-            if (Array.isArray(data)) {
-                filters = data;
-                renderFilters();
-            } else {
-                console.warn('Некоректні дані фільтрів:', data);
-            }
-        } else if (type === 'error') {
-            console.error('WebSocket помилка від сервера:', data);
-            showNotification('Помилка WebSocket: ' + data.error);
-            if (data.error.includes('неавторизований')) {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('adminSession');
-                showSection('admin-login');
-            }
+        } catch (e) {
+            console.error('Помилка обробки WebSocket-повідомлення:', e);
+            showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
         }
-    } catch (e) {
-        console.error('Помилка обробки WebSocket-повідомлення:', e);
-        showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
-    }
-};
+    };
 }
