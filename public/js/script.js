@@ -95,12 +95,27 @@ async function loadCartFromServer() {
 // triggerCleanupOldCarts();
 
 async function saveCartToServer() {
-    const cartItems = JSON.parse(localStorage.getItem('cart')) || [];
+    let cartItems = [];
     
-    // Логування для діагностики
-    console.log('Кошик перед фільтрацією:', cartItems);
+    // Спробуємо отримати кошик із localStorage
+    const cartData = localStorage.getItem('cart');
+    if (cartData) {
+        try {
+            cartItems = JSON.parse(cartData);
+            if (!Array.isArray(cartItems)) {
+                console.warn('Кошик у localStorage не є масивом, очищаємо його');
+                cartItems = [];
+                localStorage.setItem('cart', JSON.stringify(cartItems));
+            }
+        } catch (error) {
+            console.error('Помилка парсингу кошика з localStorage:', error);
+            // Якщо JSON невалідний, очищаємо localStorage
+            cartItems = [];
+            localStorage.setItem('cart', JSON.stringify(cartItems));
+        }
+    }
 
-    // Фільтруємо елементи, у яких немає id або інших обов’язкових полів
+    // Фільтруємо елементи кошика
     const filteredCartItems = cartItems.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
@@ -108,8 +123,6 @@ async function saveCartToServer() {
         }
         return isValid;
     });
-
-    console.log('Кошик після фільтрації:', filteredCartItems);
 
     try {
         const response = await fetch(`${baseUrl}/api/cart?cartId=${cartId}`, {

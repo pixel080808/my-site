@@ -27,7 +27,8 @@ const orderSchema = new mongoose.Schema({
                     message: 'Phone must be in format 0XXXXXXXXX or +380XXXXXXXXX (10-15 digits) or empty string'
                 }
             },
-            address: { type: String, default: '' }
+            address: { type: String, default: '' },
+            payment: { type: String, default: '' } // Додаємо поле payment
         },
         required: true
     },
