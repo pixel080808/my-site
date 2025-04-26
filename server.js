@@ -303,7 +303,10 @@ const orderSchemaValidation = Joi.object({
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
         email: Joi.string().email().allow('').optional(),
-        phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).allow('').optional(),
+        phone: Joi.string()
+            .pattern(/^(0\d{9})$|^(\+?\d{10,15})$/)
+            .allow('')
+            .optional(),
         address: Joi.string().allow('').optional()
     }).required(),
     items: Joi.array().items(

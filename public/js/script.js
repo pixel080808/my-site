@@ -2219,9 +2219,10 @@ async function submitOrder() {
         return;
     }
 
-    const phoneRegex = /^(\+380\d{9})$|^(0\d{9})$/;
+    // Оновлена перевірка номера телефону
+    const phoneRegex = /^(0\d{9})$|^(\+?\d{10,15})$/;
     if (!phoneRegex.test(customer.phone)) {
-        showNotification('Номер телефону має бути у форматі +380XXXXXXXXX або 0XXXXXXXXX!', 'error');
+        showNotification('Номер телефону має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX (10-15 цифр)!', 'error');
         return;
     }
 

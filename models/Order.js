@@ -3,13 +3,39 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
     date: { type: Date, default: Date.now },
-    customer: Object,
+    customer: {
+        type: {
+            name: { type: String, required: true, minlength: 1, maxlength: 255 },
+            email: {
+                type: String,
+                default: '',
+                validate: {
+                    validator: function(v) {
+                        return v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+                    },
+                    message: 'Email must be a valid email address or empty string'
+                }
+            },
+            phone: {
+                type: String,
+                default: '',
+                validate: {
+                    validator: function(v) {
+                        return v === '' || /^(0\d{9})$|^(\+?\d{10,15})$/.test(v);
+                    },
+                    message: 'Phone must be in format 0XXXXXXXXX or +380XXXXXXXXX (10-15 digits) or empty string'
+                }
+            },
+            address: { type: String, default: '' }
+        },
+        required: true
+    },
     items: [{
         id: { type: Number, required: true },
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        photo: { // Змінено з color на photo
+        photo: {
             type: String,
             default: '',
             validate: {
