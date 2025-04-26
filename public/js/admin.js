@@ -538,11 +538,16 @@ async function loadBrands() {
 function renderFilters() {
     const filterList = document.getElementById('filter-list-admin');
     if (filterList) {
-        console.log('Рендеринг фільтрів, filters:', filters); // Додаємо лог
+        console.log('Рендеринг фільтрів, filters:', filters);
         filterList.innerHTML = filters.map((f, index) => `
-            <div>
-                ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
-                <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
+            <div class="filter-item">
+                <span>${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}</span>
+                <div class="filter-actions">
+                    <button class="edit-btn" onclick="editFilter('${f.name}')">Редагувати</button>
+                    <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
+                    <button class="move-up-btn" onclick="moveFilterUp(${index})" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="move-down-btn" onclick="moveFilterDown(${index})" ${index === filters.length - 1 ? 'disabled' : ''}>↓</button>
+                </div>
             </div>
         `).join('');
     } else {
@@ -563,24 +568,60 @@ async function deleteFilter(index) {
 
             filters.splice(index, 1);
 
+            const cleanedSettings = {
+                name: settings.name || '',
+                baseUrl: settings.baseUrl || '',
+                logo: settings.logo || '',
+                logoWidth: parseInt(settings.logoWidth) || 0,
+                favicon: settings.favicon || '',
+                contacts: {
+                    phones: settings.contacts?.phones || '',
+                    addresses: settings.contacts?.addresses || '',
+                    schedule: settings.contacts?.schedule || ''
+                },
+                socials: (settings.socials || []).map(social => ({
+                    name: social.name || '',
+                    url: social.url || '',
+                    icon: social.icon || ''
+                })),
+                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
+                about: settings.about || '',
+                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
+                slideWidth: parseInt(settings.slideWidth) || 0,
+                slideHeight: parseInt(settings.slideHeight) || 0,
+                slideInterval: parseInt(settings.slideInterval) || 3000,
+                categoryWidth: parseInt(settings.categoryWidth) || 0,
+                categoryHeight: parseInt(settings.categoryHeight) || 0,
+                productWidth: parseInt(settings.productWidth) || 0,
+                productHeight: parseInt(settings.productHeight) || 0,
+                filters: filters.map(filter => ({
+                    label: filter.label,
+                    name: filter.name,
+                    type: filter.type,
+                    options: filter.options
+                })),
+                orderFields: (settings.orderFields || []).map(field => ({
+                    name: field.name,
+                    label: field.label
+                }))
+            };
+
             const token = localStorage.getItem('adminToken');
             const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetch(`${baseUrl}/api/settings`, {
+            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({ ...settings, filters })
+                body: JSON.stringify(cleanedSettings)
             });
 
             if (!response.ok) {
                 throw new Error('Не вдалося оновити фільтри');
             }
 
+            const updatedSettings = await response.json();
+            settings = { ...settings, ...updatedSettings };
             renderFilters();
             showNotification('Фільтр видалено!');
+            resetInactivityTimer();
         } catch (err) {
             console.error('Помилка видалення фільтру:', err);
             showNotification('Помилка: ' + err.message);
@@ -3658,26 +3699,88 @@ async function addFilter() {
         }
     }
 
-    function saveFilterEdit(name) {
-        const filter = filters.find(f => f.name === name);
-        if (filter) {
-            const newLabel = document.getElementById('edit-filter-label').value;
-            const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
+async function saveFilterEdit(name) {
+    const filter = filters.find(f => f.name === name);
+    if (filter) {
+        const newLabel = document.getElementById('edit-filter-label').value.trim();
+        const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
 
-            if (newLabel && newOptions.length > 0) {
+        if (newLabel && newOptions.length > 0) {
+            try {
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+
                 filter.label = newLabel;
                 filter.options = newOptions;
-                localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+
+                const cleanedSettings = {
+                    name: settings.name || '',
+                    baseUrl: settings.baseUrl || '',
+                    logo: settings.logo || '',
+                    logoWidth: parseInt(settings.logoWidth) || 0,
+                    favicon: settings.favicon || '',
+                    contacts: {
+                        phones: settings.contacts?.phones || '',
+                        addresses: settings.contacts?.addresses || '',
+                        schedule: settings.contacts?.schedule || ''
+                    },
+                    socials: (settings.socials || []).map(social => ({
+                        name: social.name || '',
+                        url: social.url || '',
+                        icon: social.icon || ''
+                    })),
+                    showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
+                    about: settings.about || '',
+                    showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
+                    slideWidth: parseInt(settings.slideWidth) || 0,
+                    slideHeight: parseInt(settings.slideHeight) || 0,
+                    slideInterval: parseInt(settings.slideInterval) || 3000,
+                    categoryWidth: parseInt(settings.categoryWidth) || 0,
+                    categoryHeight: parseInt(settings.categoryHeight) || 0,
+                    productWidth: parseInt(settings.productWidth) || 0,
+                    productHeight: parseInt(settings.productHeight) || 0,
+                    filters: filters.map(filter => ({
+                        label: filter.label,
+                        name: filter.name,
+                        type: filter.type,
+                        options: filter.options
+                    })),
+                    orderFields: (settings.orderFields || []).map(field => ({
+                        name: field.name,
+                        label: field.label
+                    }))
+                };
+
+                const token = localStorage.getItem('adminToken');
+                const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+                const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+                    method: 'PUT',
+                    body: JSON.stringify(cleanedSettings)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Не вдалося зберегти зміни фільтра');
+                }
+
+                const updatedSettings = await response.json();
+                settings = { ...settings, ...updatedSettings };
                 closeModal();
-                renderAdmin();
+                renderFilters();
                 showNotification('Фільтр відредаговано!');
-                unsavedChanges = false;
                 resetInactivityTimer();
-            } else {
-                alert('Введіть підпис та опції!');
+            } catch (err) {
+                console.error('Помилка збереження фільтра:', err);
+                showNotification('Помилка: ' + err.message);
             }
+        } else {
+            showNotification('Введіть підпис та опції!');
         }
     }
+}
 
     function deleteFilter(name) {
         if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
@@ -3690,23 +3793,149 @@ async function addFilter() {
         }
     }
 
-    function moveFilterUp(index) {
-        if (index > 0) {
-            [filters[index - 1], filters[index]] = [filters[index], filters[index - 1]];
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            renderAdmin();
-            resetInactivityTimer();
-        }
-    }
+async function moveFilterUp(index) {
+    if (index > 0) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
 
-    function moveFilterDown(index) {
-        if (index < filters.length - 1) {
-            [filters[index], filters[index + 1]] = [filters[index + 1], filters[index]];
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            renderAdmin();
+            [filters[index - 1], filters[index]] = [filters[index], filters[index - 1]];
+
+            const cleanedSettings = {
+                name: settings.name || '',
+                baseUrl: settings.baseUrl || '',
+                logo: settings.logo || '',
+                logoWidth: parseInt(settings.logoWidth) || 0,
+                favicon: settings.favicon || '',
+                contacts: {
+                    phones: settings.contacts?.phones || '',
+                    addresses: settings.contacts?.addresses || '',
+                    schedule: settings.contacts?.schedule || ''
+                },
+                socials: (settings.socials || []).map(social => ({
+                    name: social.name || '',
+                    url: social.url || '',
+                    icon: social.icon || ''
+                })),
+                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
+                about: settings.about || '',
+                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
+                slideWidth: parseInt(settings.slideWidth) || 0,
+                slideHeight: parseInt(settings.slideHeight) || 0,
+                slideInterval: parseInt(settings.slideInterval) || 3000,
+                categoryWidth: parseInt(settings.categoryWidth) || 0,
+                categoryHeight: parseInt(settings.categoryHeight) || 0,
+                productWidth: parseInt(settings.productWidth) || 0,
+                productHeight: parseInt(settings.productHeight) || 0,
+                filters: filters.map(filter => ({
+                    label: filter.label,
+                    name: filter.name,
+                    type: filter.type,
+                    options: filter.options
+                })),
+                orderFields: (settings.orderFields || []).map(field => ({
+                    name: field.name,
+                    label: field.label
+                }))
+            };
+
+            const token = localStorage.getItem('adminToken');
+            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+                method: 'PUT',
+                body: JSON.stringify(cleanedSettings)
+            });
+
+            if (!response.ok) {
+                throw new Error('Не вдалося оновити порядок фільтрів');
+            }
+
+            const updatedSettings = await response.json();
+            settings = { ...settings, ...updatedSettings };
+            renderFilters();
             resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка переміщення фільтру:', err);
+            showNotification('Помилка: ' + err.message);
         }
     }
+}
+
+async function moveFilterDown(index) {
+    if (index < filters.length - 1) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            [filters[index], filters[index + 1]] = [filters[index + 1], filters[index]];
+
+            const cleanedSettings = {
+                name: settings.name || '',
+                baseUrl: settings.baseUrl || '',
+                logo: settings.logo || '',
+                logoWidth: parseInt(settings.logoWidth) || 0,
+                favicon: settings.favicon || '',
+                contacts: {
+                    phones: settings.contacts?.phones || '',
+                    addresses: settings.contacts?.addresses || '',
+                    schedule: settings.contacts?.schedule || ''
+                },
+                socials: (settings.socials || []).map(social => ({
+                    name: social.name || '',
+                    url: social.url || '',
+                    icon: social.icon || ''
+                })),
+                showSocials: settings.showSocials !== undefined ? settings.showSocials : true,
+                about: settings.about || '',
+                showSlides: settings.showSlides !== undefined ? settings.showSlides : true,
+                slideWidth: parseInt(settings.slideWidth) || 0,
+                slideHeight: parseInt(settings.slideHeight) || 0,
+                slideInterval: parseInt(settings.slideInterval) || 3000,
+                categoryWidth: parseInt(settings.categoryWidth) || 0,
+                categoryHeight: parseInt(settings.categoryHeight) || 0,
+                productWidth: parseInt(settings.productWidth) || 0,
+                productHeight: parseInt(settings.productHeight) || 0,
+                filters: filters.map(filter => ({
+                    label: filter.label,
+                    name: filter.name,
+                    type: filter.type,
+                    options: filter.options
+                })),
+                orderFields: (settings.orderFields || []).map(field => ({
+                    name: field.name,
+                    label: field.label
+                }))
+            };
+
+            const token = localStorage.getItem('adminToken');
+            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+            const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+                method: 'PUT',
+                body: JSON.stringify(cleanedSettings)
+            });
+
+            if (!response.ok) {
+                throw new Error('Не вдалося оновити порядок фільтрів');
+            }
+
+            const updatedSettings = await response.json();
+            settings = { ...settings, ...updatedSettings };
+            renderFilters();
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка переміщення фільтру:', err);
+            showNotification('Помилка: ' + err.message);
+        }
+    }
+}
 
 async function addOrderField() {
     const name = document.getElementById('order-field-name').value;
