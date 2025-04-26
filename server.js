@@ -336,6 +336,7 @@ const settingsSchemaValidation = Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
             icon: Joi.string().required()
+            _id: Joi.string().optional(), // Дозволяємо _id
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
