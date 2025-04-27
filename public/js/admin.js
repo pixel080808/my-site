@@ -811,6 +811,13 @@ function initializeEditors() {
         return;
     }
 
+    // Перевірка наявності Quill
+    if (typeof Quill === 'undefined') {
+        console.error('Quill не завантажено. Перевірте підключення бібліотеки Quill.');
+        showNotification('Помилка: Quill не завантажено. Редактор недоступний.');
+        return;
+    }
+
     const aboutToolbarOptions = [
         ['bold', 'italic', 'underline', 'strike'],
         ['blockquote', 'code-block'],
@@ -958,6 +965,13 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     const editorElement = document.getElementById('product-description-editor');
     if (!editorElement) {
         console.warn('Елемент #product-description-editor не знайдено, пропускаємо ініціалізацію.');
+        return;
+    }
+
+    // Перевірка наявності Quill
+    if (typeof Quill === 'undefined') {
+        console.error('Quill не завантажено. Перевірте підключення бібліотеки Quill.');
+        showNotification('Помилка: Quill не завантажено. Редактор продуктів недоступний.');
         return;
     }
 
@@ -1289,6 +1303,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Елемент #login-btn не знайдено');
     }
 
+    // Функція для перевірки завантаження Quill і ініціалізації редакторів
+    const initializeEditorsWithCheck = () => {
+        if (typeof Quill === 'undefined') {
+            console.warn('Quill ще не завантажено, чекаємо...');
+            setTimeout(initializeEditorsWithCheck, 100); // Перевіряємо кожні 100 мс
+            return;
+        }
+        if (document.getElementById('about-editor')) {
+            initializeEditors();
+        }
+    };
+
     // Перевірка сесії
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
@@ -1319,10 +1345,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів
-    if (document.getElementById('about-editor')) {
-        initializeEditors();
-    }
+    // Ініціалізація редакторів із перевіркою
+    initializeEditorsWithCheck();
 });
 
 async function refreshToken(attempt = 1) {
@@ -1785,20 +1809,27 @@ function renderAdmin(section = activeTab) {
             if (!aboutEditor) {
                 initializeEditors();
             }
-            try {
-                if (settings.aboutDelta) {
-                    aboutEditor.setContents(settings.aboutDelta, 'silent');
-                } else if (settings.about) {
-                    const delta = aboutEditor.clipboard.convert(settings.about);
-                    aboutEditor.setContents(delta, 'silent');
-                } else {
-                    aboutEditor.setContents([], 'silent');
+            // Перевірка, чи ініціалізовано aboutEditor
+            if (aboutEditor) {
+                try {
+                    if (settings.aboutDelta) {
+                        aboutEditor.setContents(settings.aboutDelta, 'silent');
+                    } else if (settings.about) {
+                        const delta = aboutEditor.clipboard.convert(settings.about);
+                        aboutEditor.setContents(delta, 'silent');
+                    } else {
+                        aboutEditor.setContents([], 'silent');
+                    }
+                    const aboutEdit = document.getElementById('about-edit');
+                    if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
+                } catch (e) {
+                    console.error('Помилка ініціалізації aboutEditor:', e);
+                    showNotification('Помилка завантаження даних для сторінки "Про нас"');
                 }
+            } else {
+                console.warn('Редактор aboutEditor не ініціалізований');
                 const aboutEdit = document.getElementById('about-edit');
-                if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
-            } catch (e) {
-                console.error('Помилка ініціалізації aboutEditor:', e);
-                showNotification('Помилка завантаження даних для сторінки "Про нас"');
+                if (aboutEdit) aboutEdit.value = settings.about || '';
             }
         } else if (document.getElementById('about-edit')) {
             const aboutEdit = document.getElementById('about-edit');
@@ -1839,7 +1870,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
