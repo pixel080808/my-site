@@ -2235,12 +2235,19 @@ async function submitOrder() {
             return null;
         }
 
+        // Переконуємося, що id є числом
+        const itemId = Number(item.id);
+        if (isNaN(itemId)) {
+            console.error(`Некоректний ID товару: ${item.id}`);
+            return null;
+        }
+
         const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
         let itemPrice = isOnSale ? product.salePrice : product.price || 0;
 
         // Базові дані товару
         const itemData = {
-            id: item.id,
+            id: itemId, // Явно приводимо до числа
             name: product.name,
             brand: product.brand || 'Не вказано',
             color: item.color || 'Не вказано',
@@ -2270,7 +2277,7 @@ async function submitOrder() {
                 const groupIsOnSale = groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date();
                 const groupPrice = groupIsOnSale ? groupProduct.salePrice : groupProduct.price || 0;
                 return {
-                    id: groupProduct.id,
+                    id: Number(groupProduct.id), // Явно приводимо до числа
                     name: groupProduct.name,
                     brand: groupProduct.brand || 'Не вказано',
                     price: groupPrice,
