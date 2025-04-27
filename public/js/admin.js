@@ -1,4 +1,5 @@
-let activeTab = 'products';
+window.activeTab = window.activeTab || 'products';
+
 let newProduct = {
     type: 'simple', 
     photos: [],
@@ -16,7 +17,7 @@ let slides = [];
 let filters = [];
 let settings = {
     name: '',
-    baseUrl: '', // Додано для базового URL
+    baseUrl: '',
     logo: '',
     logoWidth: '',
     favicon: '',
@@ -48,11 +49,10 @@ const orderFields = [
     { name: 'comment', label: 'Коментар' }
 ];
 let unsavedChanges = false;
-let aboutEditor; // Глобальна змінна для редактора
-let productEditor; // Додаємо глобальну змінну для редактора товару
-let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
+let aboutEditor;
+let productEditor;
+let selectedMedia = null;
 let socket;
-
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -1271,6 +1271,23 @@ function logout() {
     showNotification('Ви вийшли з системи');
 }
 
+// Нова функція initializeEditorsWithCheck (вставляємо тут)
+function initializeEditorsWithCheck(attempts = 50) {
+    if (attempts <= 0) {
+        console.error('Не вдалося завантажити Quill після всіх спроб.');
+        showNotification('Помилка: Не вдалося завантажити Quill. Редактор недоступний.');
+        return;
+    }
+
+    if (typeof Quill === 'undefined') {
+        console.log('Quill ще не завантажено, чекаємо... (залишилось спроб:', attempts, ')');
+        setTimeout(() => initializeEditorsWithCheck(attempts - 1), 100);
+    } else {
+        console.log('Quill завантажено, ініціалізуємо редактори...');
+        initializeEditors();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Ініціалізація елементів форми
     const usernameInput = document.getElementById('admin-username');
@@ -2304,10 +2321,11 @@ function renderSlidesAdmin() {
 
     const addSlideBtn = document.getElementById('add-slide-btn');
     if (addSlideBtn) {
+        // Видаляємо попередній слухач, якщо він є
         addSlideBtn.removeEventListener('click', openNewSlideModal);
         addSlideBtn.addEventListener('click', openNewSlideModal);
     } else {
-        console.warn('Елемент #add-slide-btn не знайдено');
+        console.warn('Елемент #add-slide-btn не знайдено. Переконайтеся, що він присутній у DOM.');
     }
 
     resetInactivityTimer();
