@@ -2227,32 +2227,81 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
+    // Формуємо детальну інформацію про товари
+    const detailedItems = cart.map(item => {
+        const product = products.find(p => p.id === item.id);
+        if (!product) {
+            console.warn(`Товар з ID ${item.id} не знайдено`);
+            return null;
+        }
+
+        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+        let itemPrice = isOnSale ? product.salePrice : product.price || 0;
+
+        // Базові дані товару
+        const itemData = {
+            id: item.id,
+            name: product.name,
+            brand: product.brand || 'Не вказано',
+            color: item.color || 'Не вказано',
+            quantity: item.quantity,
+            price: item.price, // Використовуємо ціну з кошика, яка вже враховує знижки та вибір кольору/розміру
+            totalPrice: item.price * item.quantity
+        };
+
+        // Додаємо розмір для матраців
+        if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
+            itemData.size = selectedMattressSizes[item.id];
+            const sizeData = product.sizes.find(s => s.name === itemData.size);
+            if (sizeData) {
+                itemData.price = sizeData.price; // Оновлюємо ціну для розміру
+                itemData.totalPrice = sizeData.price * item.quantity;
+            }
+        }
+
+        // Додаємо деталі для групових товарів
+        if (product.type === 'group' && product.groupProducts?.length > 0) {
+            itemData.groupItems = product.groupProducts.map(groupProductId => {
+                const groupProduct = products.find(p => p.id === groupProductId);
+                if (!groupProduct) {
+                    console.warn(`Груповий товар з ID ${groupProductId} не знайдено`);
+                    return null;
+                }
+                const groupIsOnSale = groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date();
+                const groupPrice = groupIsOnSale ? groupProduct.salePrice : groupProduct.price || 0;
+                return {
+                    id: groupProduct.id,
+                    name: groupProduct.name,
+                    brand: groupProduct.brand || 'Не вказано',
+                    price: groupPrice,
+                    totalPrice: groupPrice * item.quantity
+                };
+            }).filter(item => item !== null);
+
+            // Оновлюємо загальну ціну для групового товару
+            itemData.price = itemData.groupItems.reduce((sum, groupItem) => sum + groupItem.price, 0);
+            itemData.totalPrice = itemData.price * item.quantity;
+        }
+
+        return itemData;
+    }).filter(item => item !== null);
+
+    // Формуємо дані замовлення
     const orderData = {
         date: new Date().toISOString(),
         status: 'Нове замовлення',
         total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            color: item.color || ''
-        }))
+        items: detailedItems
     };
 
-    // Фільтруємо items, щоб переконатися, що всі мають id
-    if (orderData.items) {
-        orderData.items = orderData.items.filter(item => {
-            const isValid = item && typeof item.id === 'number';
-            if (!isValid) {
-                console.warn('Елемент замовлення видалено через відсутність id:', item);
-            }
-            return isValid;
-        });
+    // Перевіряємо, що items не порожній
+    if (!orderData.items || orderData.items.length === 0) {
+        showNotification('Помилка: немає товарів для замовлення!', 'error');
+        return;
     }
 
-    console.log('Дані замовлення перед відправкою:', orderData);
+    console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
 
     try {
         const csrfToken = localStorage.getItem('csrfToken');
