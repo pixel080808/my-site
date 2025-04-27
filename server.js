@@ -304,41 +304,118 @@ mongoose.connect(process.env.MONGO_URI)
     });
 
 const productSchemaValidation = Joi.object({
-    name: Joi.string().min(1).max(255).required(),
-    category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).optional().allow(''),
-    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).allow(null),
-    saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
-    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Назва товару не може бути порожньою',
+        'string.min': 'Назва товару має бути хоча б 1 символ',
+        'string.max': 'Назва товару не може перевищувати 255 символів',
+        'any.required': 'Назва товару є обов’язковою'
+    }),
+    category: Joi.string().trim().max(100).required().messages({
+        'string.empty': 'Категорія не може бути порожньою',
+        'string.max': 'Категорія не може перевищувати 100 символів',
+        'any.required': 'Категорія є обов’язковою'
+    }),
+    subcategory: Joi.string().trim().max(255).allow('', null).optional().messages({
+        'string.max': 'Підкатегорія не може перевищувати 255 символів'
+    }),
+    price: Joi.number().min(0).when('type', {
+        is: 'simple',
+        then: Joi.required().messages({
+            'any.required': 'Ціна є обов’язковою для товару типу "simple"'
+        }),
+        otherwise: Joi.allow(null)
+    }).messages({
+        'number.min': 'Ціна не може бути від’ємною'
+    }),
+    salePrice: Joi.number().min(0).allow(null).messages({
+        'number.min': 'Ціна зі знижкою не може бути від’ємною'
+    }),
+    saleEnd: Joi.date().allow(null).optional(),
+    brand: Joi.string().trim().max(100).allow('', null).optional().messages({
+        'string.max': 'Бренд не може перевищувати 100 символів'
+    }),
+    material: Joi.string().trim().max(100).allow('', null).optional().messages({
+        'string.max': 'Матеріал не може перевищувати 100 символів'
+    }),
+    photos: Joi.array().items(Joi.string().uri().allow('', null).messages({
+        'string.uri': 'Фото має бути дійсним URL або порожнім'
+    })).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
-    slug: Joi.string().min(1).max(255).required(),
-    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
+    slug: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Slug не може бути порожнім',
+        'string.min': 'Slug має бути хоча б 1 символ',
+        'string.max': 'Slug не може перевищувати 255 символів',
+        'any.required': 'Slug є обов’язковим'
+    }),
+    type: Joi.string().valid('simple', 'mattresses', 'group').required().messages({
+        'any.only': 'Тип товару має бути "simple", "mattresses" або "group"',
+        'any.required': 'Тип товару є обов’язковим'
+    }),
     sizes: Joi.array().items(
         Joi.object({
-            name: Joi.string().max(100).required(),
-            price: Joi.number().min(0).required()
+            name: Joi.string().trim().max(100).required().messages({
+                'string.empty': 'Назва розміру не може бути порожньою',
+                'string.max': 'Назва розміру не може перевищувати 100 символів',
+                'any.required': 'Назва розміру є обов’язковою'
+            }),
+            price: Joi.number().min(0).required().messages({
+                'number.min': 'Ціна розміру не може бути від’ємною',
+                'any.required': 'Ціна розміру є обов’язковою'
+            })
         })
     ).default([]),
     colors: Joi.array().items(
         Joi.object({
-            name: Joi.string().max(100).required(),
-            value: Joi.string().max(100).required(),
-            priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null)
+            name: Joi.string().trim().max(100).required().messages({
+                'string.empty': 'Назва кольору не може бути порожньою',
+                'string.max': 'Назва кольору не може перевищувати 100 символів',
+                'any.required': 'Назва кольору є обов’язковою'
+            }),
+            value: Joi.string().trim().max(100).required().messages({
+                'string.empty': 'Значення кольору не може бути порожнім',
+                'string.max': 'Значення кольору не може перевищувати 100 символів',
+                'any.required': 'Значення кольору є обов’язковим'
+            }),
+            priceChange: Joi.number().default(0).messages({
+                'number.base': 'Зміна ціни має бути числом'
+            }),
+            photo: Joi.string().uri().allow('', null).optional().messages({
+                'string.uri': 'Фото кольору має бути дійсним URL або порожнім'
+            })
         })
     ).default([]),
-    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow(''),
-    widthCm: Joi.number().min(0).allow(null),
-    depthCm: Joi.number().min(0).allow(null),
-    heightCm: Joi.number().min(0).allow(null),
-    lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().allow(null)
-});
+    groupProducts: Joi.array().items(
+        Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
+            'string.pattern.base': 'Елемент groupProducts має бути дійсним ObjectId'
+        })
+    ).default([]),
+    description: Joi.string().allow('', null).optional(),
+    widthCm: Joi.number().min(0).allow(null).optional().messages({
+        'number.min': 'Ширина не може бути від’ємною'
+    }),
+    depthCm: Joi.number().min(0).allow(null).optional().messages({
+        'number.min': 'Глибина не може бути від’ємною'
+    }),
+    heightCm: Joi.number().min(0).allow(null).optional().messages({
+        'number.min': 'Висота не може бути від’ємною'
+    }),
+    lengthCm: Joi.number().min(0).allow(null).optional().messages({
+        'number.min': 'Довжина не може бути від’ємною'
+    }),
+    popularity: Joi.number().allow(null).optional(),
+    // Додаємо підтримку filters
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required().messages({
+                'any.required': 'Назва фільтра є обов’язковою'
+            }),
+            value: Joi.string().required().messages({
+                'any.required': 'Значення фільтра є обов’язковим'
+            })
+        })
+    ).default([])
+}).unknown(true); // Дозволяємо невідомі поля
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -965,7 +1042,7 @@ const getPublicIdFromUrl = (url) => {
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = req.body;
-        logger.info('Отримано дані продукту:', productData);
+        logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
@@ -982,17 +1059,21 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Валідація даних
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
-            logger.error('Помилка валідації продукту:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+            logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
+            return res.status(400).json({ 
+                error: 'Помилка валідації', 
+                details: error.details.map(detail => detail.message) 
+            });
         }
 
         // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData.slug}` });
         }
 
         // Перевірка існування brand
@@ -1043,10 +1124,18 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
             if (existingProducts.length !== productData.groupProducts.length) {
                 logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
-                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені' });
+                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені', details: productData.groupProducts });
             }
 
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
+        }
+
+        // Очищення description від небезпечного HTML
+        if (productData.description) {
+            productData.description = sanitizeHtml(productData.description, {
+                allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li'],
+                allowedAttributes: { 'a': ['href'] }
+            });
         }
 
         const session = await mongoose.startSession();
@@ -1059,15 +1148,17 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             broadcast('products', products);
 
             await session.commitTransaction();
+            logger.info('Продукт успішно створено:', productData.name);
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
+            logger.error('Помилка при збереженні продукту в базі:', err);
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', err);
+        logger.error('Помилка при додаванні товару:', err.message, err.stack);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
@@ -2294,13 +2385,32 @@ app.get('/api/cart', async (req, res) => {
 
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.number().required(),
-        name: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-        price: Joi.number().min(0).required(),
-        photo: Joi.string().uri().allow('').optional()
-    })
-);
+        id: Joi.number().required().messages({
+            'number.base': 'ID товару має бути числом',
+            'any.required': 'ID товару є обов’язковим'
+        }),
+        name: Joi.string().trim().min(1).required().messages({
+            'string.empty': 'Назва товару не може бути порожньою',
+            'any.required': 'Назва товару є обов’язковою'
+        }),
+        quantity: Joi.number().integer().min(1).required().messages({
+            'number.base': 'Кількість має бути числом',
+            'number.min': 'Кількість має бути більше 0',
+            'any.required': 'Кількість є обов’язковою'
+        }),
+        price: Joi.number().min(0).required().messages({
+            'number.base': 'Ціна має бути числом',
+            'number.min': 'Ціна не може бути від’ємною',
+            'any.required': 'Ціна є обов’язковою'
+        }),
+        photo: Joi.string().uri().allow('', null).optional().messages({
+            'string.uri': 'Фото має бути дійсним URL або порожнім'
+        }),
+        // Додаємо підтримку додаткових полів, які можуть надходити
+        size: Joi.string().allow('', null).optional(),
+        color: Joi.string().allow('', null).optional()
+    }).unknown(true) // Дозволяємо невідомі поля
+).min(0); // Дозволяємо порожній масив
 
 app.post('/api/cart', csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();

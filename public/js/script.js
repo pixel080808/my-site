@@ -91,11 +91,6 @@ async function loadCartFromServer() {
             return;
         }
         const response = await fetchWithRetry(`${BASE_URL}/api/cart?cartId=${cartId}`, 3, 1000);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Сервер повернув помилку: ${response.status}, Тіло: ${errorText}`);
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
         const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('application/json')) {
             const errorText = await response.text();
@@ -103,7 +98,6 @@ async function loadCartFromServer() {
             throw new Error('Сервер повернув не JSON: ' + contentType);
         }
         cart = await response.json() || [];
-        // Фільтруємо некоректні елементи після завантаження з сервера
         cart = cart.filter(item => {
             const isValid = item && 
                 typeof item.id === 'number' && 
@@ -116,10 +110,9 @@ async function loadCartFromServer() {
             }
             return isValid;
         });
-        saveToStorage('cart', cart); // Синхронізуємо локальний кошик із сервером
+        saveToStorage('cart', cart);
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
-        // Спробуємо завантажити з localStorage, але з очищенням у разі помилки
         try {
             cart = loadFromStorage('cart', []);
             cart = cart.filter(item => {
@@ -276,7 +269,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
             console.error(`Fetch attempt ${i + 1} failed:`, error);
             if (i === retries - 1) {
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
-                return null;
+                throw error; // Кидаємо помилку замість повернення null
             }
             console.warn(`Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -519,28 +512,31 @@ async function initializeData() {
     };
 
     connectPublicWebSocket();
-    await new Promise(resolve => {
-        let receivedData = false;
-        const checkInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                receivedData = true;
-                clearInterval(checkInterval);
-                resolve();
-            }
-        }, 100);
 
-        setTimeout(async () => {
-            if (!receivedData) {
-                console.warn('Дані від WebSocket не отримано, використовуємо HTTP');
-                await fetchPublicData();
-                updateHeader();
-                renderCategories();
-                renderCatalogDropdown();
+    try {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                console.warn('Дані від WebSocket не отримано вчасно, використовуємо HTTP');
                 clearInterval(checkInterval);
-                resolve();
-            }
-        }, 5000);
-    });
+                reject(new Error('WebSocket timeout'));
+            }, 5000);
+
+            const checkInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN && products.length > 0 && categories.length > 0 && slides.length > 0 && Object.keys(settings).length > 0) {
+                    clearTimeout(timeout);
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+        });
+    } catch (error) {
+        console.warn('Завантаження через WebSocket не вдалося, використовуємо HTTP:', error);
+        await fetchPublicData();
+    }
+
+    updateHeader();
+    renderCategories();
+    renderCatalogDropdown();
 }
 
 async function updateProducts() {
@@ -919,8 +915,8 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         productList.className = 'product-grid';
         productsDiv.appendChild(productList);
 
+        filteredProducts = [...searchResults]; // Завжди оновлюємо filteredProducts
         if (searchResults.length > 0) {
-            filteredProducts = [...searchResults];
             renderProducts(filteredProducts);
         } else {
             const p = document.createElement('p');
@@ -963,12 +959,14 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             categoryList.appendChild(itemDiv);
         });
         productsDiv.appendChild(categoryList);
+        filteredProducts = []; // Оновлюємо filteredProducts
     } else {
         const selectedCat = categories.find(c => c.name === category);
         if (!selectedCat) {
             const p = document.createElement('p');
             p.textContent = 'Категорія не знайдена';
             productsDiv.appendChild(p);
+            filteredProducts = []; // Оновлюємо filteredProducts
             return;
         }
 
@@ -1429,7 +1427,10 @@ function renderProductDetails() {
             rightDiv.appendChild(priceDiv);
             rightDiv.appendChild(sizeP);
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            // Ціну для групових товарів не відображаємо
+            const totalPriceDiv = document.createElement('div');
+            totalPriceDiv.className = 'group-total-price';
+            totalPriceDiv.textContent = 'Оберіть складові товари для розрахунку ціни';
+            rightDiv.appendChild(totalPriceDiv);
         } else {
             if (isOnSale) {
                 const saleSpan = document.createElement('span');
@@ -1686,7 +1687,6 @@ function updateSaleTimer(productId, saleEnd) {
         return;
     }
 
-    // Очищаємо попередній таймер, якщо він існує
     if (activeTimers.has(productId)) {
         clearInterval(activeTimers.get(productId));
         activeTimers.delete(productId);
@@ -2067,7 +2067,7 @@ async function renderCart() {
         return;
     }
 
-    await updateCartPrices(); // Залишаємо лише один виклик
+    await updateCartPrices(); // Оновлюємо ціни перед рендерингом
 
     cart = cart.filter(item => {
         const product = products.find(p => p.id === item.id);
@@ -2300,7 +2300,7 @@ async function submitOrder() {
         return;
     }
 
-    const phoneRegex = /^(0\d{9})$|^(\+?\d{10ised,15})$/;
+    const phoneRegex = /^(0\d{9})$|^(\+?\d{10,15})$/;
     if (!phoneRegex.test(customer.phone)) {
         showNotification('Номер телефону має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX (10-15 цифр)!', 'error');
         return;
@@ -2308,13 +2308,13 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
-    // Перевіряємо кошик перед формуванням замовлення
     if (!cart || cart.length === 0) {
         showNotification('Кошик порожній!', 'error');
         return;
     }
 
-    // Фільтруємо кошик перед обробкою
+    await updateCartPrices(); // Оновлюємо ціни перед відправкою
+
     cart = cart.filter(item => {
         const isValid = item && 
             typeof item.id === 'number' && 
@@ -2333,7 +2333,6 @@ async function submitOrder() {
         return;
     }
 
-    // Формуємо детальну інформацію про товари
     const detailedItems = cart.map(item => {
         const product = products.find(p => p.id === item.id);
         if (!product) {
@@ -2341,7 +2340,6 @@ async function submitOrder() {
             return null;
         }
 
-        // Переконуємося, що id є числом
         const itemId = Number(item.id);
         if (isNaN(itemId)) {
             console.error(`Некоректний ID товару: ${item.id}`);
@@ -2351,28 +2349,25 @@ async function submitOrder() {
         const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
         let itemPrice = isOnSale ? product.salePrice : product.price || 0;
 
-        // Базові дані товару
         const itemData = {
-            id: itemId, // Явно приводимо до числа
+            id: itemId,
             name: product.name,
             brand: product.brand || 'Не вказано',
             color: item.color || 'Не вказано',
             quantity: item.quantity,
-            price: item.price, // Використовуємо ціну з кошика, яка вже враховує знижки та вибір кольору/розміру
+            price: item.price,
             totalPrice: item.price * item.quantity
         };
 
-        // Додаємо розмір для матраців
         if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
             itemData.size = selectedMattressSizes[item.id];
             const sizeData = product.sizes.find(s => s.name === itemData.size);
             if (sizeData) {
-                itemData.price = sizeData.price; // Оновлюємо ціну для розміру
+                itemData.price = sizeData.price;
                 itemData.totalPrice = sizeData.price * item.quantity;
             }
         }
 
-        // Додаємо деталі для групових товарів
         if (product.type === 'group' && product.groupProducts?.length > 0) {
             itemData.groupItems = product.groupProducts.map(groupProductId => {
                 const groupProduct = products.find(p => p.id === groupProductId);
@@ -2383,7 +2378,7 @@ async function submitOrder() {
                 const groupIsOnSale = groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date();
                 const groupPrice = groupIsOnSale ? groupProduct.salePrice : groupProduct.price || 0;
                 return {
-                    id: Number(groupProduct.id), // Явно приводимо до числа
+                    id: Number(groupProduct.id),
                     name: groupProduct.name,
                     brand: groupProduct.brand || 'Не вказано',
                     price: groupPrice,
@@ -2391,7 +2386,6 @@ async function submitOrder() {
                 };
             }).filter(item => item !== null);
 
-            // Оновлюємо загальну ціну для групового товару
             itemData.price = itemData.groupItems.reduce((sum, groupItem) => sum + groupItem.price, 0);
             itemData.totalPrice = itemData.price * item.quantity;
         }
@@ -2399,13 +2393,11 @@ async function submitOrder() {
         return itemData;
     }).filter(item => item !== null);
 
-    // Перевіряємо, що items не порожній
     if (!detailedItems || detailedItems.length === 0) {
         showNotification('Помилка: немає товарів для замовлення!', 'error');
         return;
     }
 
-    // Формуємо дані замовлення
     const orderData = {
         date: new Date().toISOString(),
         status: 'Нове замовлення',
@@ -2425,7 +2417,6 @@ async function submitOrder() {
             saveToStorage('orders', orders);
             cart = [];
             saveToStorage('cart', cart);
-            // Генеруємо новий cartId після очищення
             const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('cartId', newCartId);
             selectedColors = {};
@@ -2453,7 +2444,6 @@ async function submitOrder() {
 
         cart = [];
         saveToStorage('cart', cart);
-        // Генеруємо новий cartId після очищення
         const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', newCartId);
         selectedColors = {};
