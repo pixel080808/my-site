@@ -1,5 +1,4 @@
-window.activeTab = window.activeTab || 'products';
-
+let activeTab = 'products';
 let newProduct = {
     type: 'simple', 
     photos: [],
@@ -17,7 +16,7 @@ let slides = [];
 let filters = [];
 let settings = {
     name: '',
-    baseUrl: '',
+    baseUrl: '', // Додано для базового URL
     logo: '',
     logoWidth: '',
     favicon: '',
@@ -49,10 +48,11 @@ const orderFields = [
     { name: 'comment', label: 'Коментар' }
 ];
 let unsavedChanges = false;
-let aboutEditor;
-let productEditor;
-let selectedMedia = null;
+let aboutEditor; // Глобальна змінна для редактора
+let productEditor; // Додаємо глобальну змінну для редактора товару
+let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
 let socket;
+
 async function loadProducts() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -306,7 +306,7 @@ async function fetchWithAuth(url, options = {}) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Помилка запиту:', { url, status: response.status, errorData });
-        throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
+        throw new Error(errorData.error || `HTTP error ${response.status}`);
     }
 
     return response;
@@ -325,18 +325,15 @@ async function updateSocials() {
                 return;
             }
 
-            // Очищаємо socials від _id
-            const cleanedSocials = settings.socials.map(({ _id, ...rest }) => rest);
-
             console.log('Надсилаємо соціальні мережі:', {
-                socials: cleanedSocials,
+                socials: settings.socials,
                 showSocials: settings.showSocials
             });
 
             const response = await fetchWithAuth('/api/settings', {
                 method: 'PUT',
                 body: JSON.stringify({
-                    socials: cleanedSocials,
+                    socials: settings.socials,
                     showSocials: settings.showSocials
                 })
             });
@@ -344,34 +341,15 @@ async function updateSocials() {
             const serverSettings = await response.json();
             settings = { ...settings, ...serverSettings };
             renderSettingsAdmin();
-            renderSocialsAdmin();
             showNotification('Соціальні мережі оновлено!');
             unsavedChanges = false;
             resetInactivityTimer();
-
-            // Оновлюємо відображення на головній сторінці (якщо ми не в адмін-панелі)
-            if (typeof renderSocials === 'function' && document.getElementById('contacts-socials')) {
-                renderSocials();
-            }
-
             return;
         } catch (err) {
             retries++;
             console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
             if (retries === maxRetries) {
                 showNotification('Помилка оновлення соціальних мереж: ' + err.message);
-                // Завантажуємо актуальні налаштування з сервера
-                try {
-                    const response = await fetchWithAuth('/api/settings', {
-                        method: 'GET'
-                    });
-                    const serverSettings = await response.json();
-                    settings = { ...settings, ...serverSettings };
-                    renderSettingsAdmin();
-                    renderSocialsAdmin();
-                } catch (fetchErr) {
-                    console.error('Помилка завантаження налаштувань після невдалого оновлення:', fetchErr);
-                }
                 return;
             }
             await new Promise(resolve => setTimeout(resolve, 1000 * retries));
@@ -811,13 +789,6 @@ function initializeEditors() {
         return;
     }
 
-    // Перевірка наявності Quill
-    if (typeof Quill === 'undefined') {
-        console.error('Quill не завантажено. Перевірте підключення бібліотеки Quill.');
-        showNotification('Помилка: Quill не завантажено. Редактор недоступний.');
-        return;
-    }
-
     const aboutToolbarOptions = [
         ['bold', 'italic', 'underline', 'strike'],
         ['blockquote', 'code-block'],
@@ -836,7 +807,6 @@ function initializeEditors() {
     ];
 
     try {
-        // Реєстрація модулів undo/redo
         Quill.register('modules/undo', function(quill) {
             return { undo: () => quill.history.undo() };
         }, true);
@@ -844,7 +814,6 @@ function initializeEditors() {
             return { redo: () => quill.history.redo() };
         }, true);
 
-        // Ініціалізація Quill
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
@@ -863,27 +832,22 @@ function initializeEditors() {
             }
         });
 
-        // Обробка змін у редакторі
         aboutEditor.on('text-change', () => {
-            const aboutEdit = document.getElementById('about-edit');
-            if (aboutEdit) {
-                const content = aboutEditor.root.innerHTML;
-                aboutEdit.value = content;
-                console.log('Вміст редактора змінено:', content);
-                unsavedChanges = true;
-                resetInactivityTimer();
+            const content = aboutEditor.root.innerHTML;
+            document.getElementById('about-edit').value = content;
+            console.log('Вміст редактора змінено:', content);
+            unsavedChanges = true;
+            resetInactivityTimer();
 
-                // Оновлення стану кнопок undo/redo
-                const undoButton = document.querySelector('.ql-undo');
-                const redoButton = document.querySelector('.ql-redo');
-                if (undoButton && redoButton) {
-                    aboutEditor.history.stack.undo.length > 0
-                        ? undoButton.removeAttribute('disabled')
-                        : undoButton.setAttribute('disabled', 'true');
-                    aboutEditor.history.stack.redo.length > 0
-                        ? redoButton.removeAttribute('disabled')
-                        : redoButton.setAttribute('disabled', 'true');
-                }
+            const undoButton = document.querySelector('.ql-undo');
+            const redoButton = document.querySelector('.ql-redo');
+            if (undoButton && redoButton) {
+                aboutEditor.history.stack.undo.length > 0
+                    ? undoButton.removeAttribute('disabled')
+                    : undoButton.setAttribute('disabled', 'true');
+                aboutEditor.history.stack.redo.length > 0
+                    ? redoButton.removeAttribute('disabled')
+                    : redoButton.setAttribute('disabled', 'true');
             }
         });
 
@@ -894,36 +858,29 @@ function initializeEditors() {
         });
         observer.observe(aboutEditorElement, { childList: true, subtree: true });
 
-        // Ініціалізація вмісту редактора
         if (settings.about) {
             try {
-                aboutEditor.setContents(aboutEditor.clipboard.convert(settings.about), 'silent');
+                aboutEditor.root.innerHTML = settings.about;
                 console.log('Встановлено вміст "Про нас":', settings.about);
             } catch (e) {
                 console.error('Помилка при встановленні вмісту "Про нас":', e);
-                aboutEditor.setContents([], 'silent');
+                aboutEditor.setText(settings.about || '', 'silent');
             }
         } else {
             console.log('settings.about порожній, редактор очищено.');
-            aboutEditor.setContents([], 'silent');
+            aboutEditor.setText('', 'silent');
         }
+        document.getElementById('about-edit').value = settings.about || '';
 
-        const aboutEdit = document.getElementById('about-edit');
-        if (aboutEdit) {
-            aboutEdit.value = aboutEditor.root.innerHTML || '';
-        }
-
-        // Обробка кліків по медіа
         aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
-            if (target.tagName === 'IMG' || target.tagName === 'IFRAME' || target.tagName === 'VIDEO') {
+            if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
                 openResizeModal(target);
             }
         });
 
-        // Обробка вставки медіа
         aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            if (node.tagName === 'IMG' || node.tagName === 'IFRAME' || node.tagName === 'VIDEO') {
+            if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
                 const src = node.getAttribute('src');
                 if (src) {
                     const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
@@ -933,7 +890,6 @@ function initializeEditors() {
             return delta;
         });
 
-        // Встановлення розмірів для відео
         setDefaultVideoSizes(aboutEditor, 'about-edit');
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
@@ -965,13 +921,6 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
     const editorElement = document.getElementById('product-description-editor');
     if (!editorElement) {
         console.warn('Елемент #product-description-editor не знайдено, пропускаємо ініціалізацію.');
-        return;
-    }
-
-    // Перевірка наявності Quill
-    if (typeof Quill === 'undefined') {
-        console.error('Quill не завантажено. Перевірте підключення бібліотеки Quill.');
-        showNotification('Помилка: Quill не завантажено. Редактор продуктів недоступний.');
         return;
     }
 
@@ -1271,23 +1220,6 @@ function logout() {
     showNotification('Ви вийшли з системи');
 }
 
-// Нова функція initializeEditorsWithCheck (вставляємо тут)
-function initializeEditorsWithCheck(attempts = 50) {
-    if (attempts <= 0) {
-        console.error('Не вдалося завантажити Quill після всіх спроб.');
-        showNotification('Помилка: Не вдалося завантажити Quill. Редактор недоступний.');
-        return;
-    }
-
-    if (typeof Quill === 'undefined') {
-        console.log('Quill ще не завантажено, чекаємо... (залишилось спроб:', attempts, ')');
-        setTimeout(() => initializeEditorsWithCheck(attempts - 1), 100);
-    } else {
-        console.log('Quill завантажено, ініціалізуємо редактори...');
-        initializeEditors();
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // Ініціалізація елементів форми
     const usernameInput = document.getElementById('admin-username');
@@ -1320,18 +1252,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Елемент #login-btn не знайдено');
     }
 
-    // Функція для перевірки завантаження Quill і ініціалізації редакторів
-    const initializeEditorsWithCheck = () => {
-        if (typeof Quill === 'undefined') {
-            console.warn('Quill ще не завантажено, чекаємо...');
-            setTimeout(initializeEditorsWithCheck, 100); // Перевіряємо кожні 100 мс
-            return;
-        }
-        if (document.getElementById('about-editor')) {
-            initializeEditors();
-        }
-    };
-
     // Перевірка сесії
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
@@ -1362,8 +1282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів із перевіркою
-    initializeEditorsWithCheck();
+    // Ініціалізація редакторів
+    if (document.getElementById('about-editor')) {
+        initializeEditors();
+    }
 });
 
 async function refreshToken(attempt = 1) {
@@ -1642,15 +1564,9 @@ async function updateContacts() {
 async function addSocial() {
     const url = document.getElementById('social-url').value.trim();
     const icon = document.getElementById('social-icon').value;
-    const nameInput = document.getElementById('social-name')?.value.trim() || '';
 
     if (!url) {
         showNotification('Введіть URL соцмережі!');
-        return;
-    }
-
-    if (!nameInput || nameInput.length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1661,12 +1577,9 @@ async function addSocial() {
     }
 
     settings.socials = settings.socials || [];
-    settings.socials.push({ url, icon, name: nameInput });
+    settings.socials.push({ url, icon, name: '' });
     document.getElementById('social-url').value = '';
-    document.getElementById('social-icon').value = '🔗';
-    if (document.getElementById('social-name')) {
-        document.getElementById('social-name').value = '';
-    }
+    document.getElementById('social-icon').value = '🔗'; // Скидаємо на значення за замовчуванням
     await updateSocials();
 }
 
@@ -1675,17 +1588,9 @@ async function editSocial(index) {
     const url = prompt('Введіть новий URL соцмережі:', social.url);
     if (url === null) return; // Користувач скасував
 
-    const name = prompt('Введіть нову назву соцмережі:', social.name || '');
-    if (name === null) return; // Користувач скасував
-
     const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
     if (!url || !urlRegex.test(url)) {
         showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
-        return;
-    }
-
-    if (!name.trim() || name.trim().length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1709,7 +1614,6 @@ async function editSocial(index) {
     if (confirmEdit) {
         settings.socials[index].url = url;
         settings.socials[index].icon = iconSelect.value;
-        settings.socials[index].name = name.trim();
         await updateSocials();
     }
 
@@ -1826,27 +1730,20 @@ function renderAdmin(section = activeTab) {
             if (!aboutEditor) {
                 initializeEditors();
             }
-            // Перевірка, чи ініціалізовано aboutEditor
-            if (aboutEditor) {
-                try {
-                    if (settings.aboutDelta) {
-                        aboutEditor.setContents(settings.aboutDelta, 'silent');
-                    } else if (settings.about) {
-                        const delta = aboutEditor.clipboard.convert(settings.about);
-                        aboutEditor.setContents(delta, 'silent');
-                    } else {
-                        aboutEditor.setContents([], 'silent');
-                    }
-                    const aboutEdit = document.getElementById('about-edit');
-                    if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
-                } catch (e) {
-                    console.error('Помилка ініціалізації aboutEditor:', e);
-                    showNotification('Помилка завантаження даних для сторінки "Про нас"');
+            try {
+                if (settings.aboutDelta) {
+                    aboutEditor.setContents(settings.aboutDelta, 'silent');
+                } else if (settings.about) {
+                    const delta = aboutEditor.clipboard.convert(settings.about);
+                    aboutEditor.setContents(delta, 'silent');
+                } else {
+                    aboutEditor.setContents([], 'silent');
                 }
-            } else {
-                console.warn('Редактор aboutEditor не ініціалізований');
                 const aboutEdit = document.getElementById('about-edit');
-                if (aboutEdit) aboutEdit.value = settings.about || '';
+                if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
+            } catch (e) {
+                console.error('Помилка ініціалізації aboutEditor:', e);
+                showNotification('Помилка завантаження даних для сторінки "Про нас"');
             }
         } else if (document.getElementById('about-edit')) {
             const aboutEdit = document.getElementById('about-edit');
@@ -1875,7 +1772,20 @@ function renderAdmin(section = activeTab) {
         if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
         else console.warn('Елемент #slide-interval не знайдено');
 
-        renderSocialsAdmin();
+        const socialList = document.getElementById('social-list');
+        if (socialList) {
+            socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
+                ? settings.socials.map((social, index) => `
+                    <div class="social-item">
+                        <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
+                        <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+                        <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+                    </div>
+                `).join('')
+                : '';
+        } else {
+            console.warn('Елемент #social-list не знайдено');
+        }
 
         const catList = document.getElementById('category-list-admin');
         if (catList) {
@@ -1887,7 +1797,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
@@ -2142,23 +2052,15 @@ function renderCategoriesAdmin() {
     resetInactivityTimer();
 }
 
-function renderSocials() {
-    const socialContainer = document.getElementById('contacts-socials'); // Змініть ID на той, який у вас використовується в секції "Контакти"
-    if (!socialContainer) {
-        console.warn('Елемент #contacts-socials не знайдено');
-        return;
-    }
-
-    if (!settings.showSocials || !settings.socials || settings.socials.length === 0) {
-        socialContainer.innerHTML = ''; // Очищаємо контейнер, якщо соціальні мережі відключені або їх немає
-        return;
-    }
-
-    socialContainer.innerHTML = settings.socials.map(social => `
-        <a href="${social.url}" target="_blank" class="social-link">
+function renderSocialsAdmin() {
+    const socialList = document.getElementById('social-list');
+    if (!socialList) return;
+    socialList.innerHTML = settings.socials.map((social, index) => `
+        <div class="social-item">
             <span class="social-icon">${social.icon}</span>
-            <span>${social.name}</span>
-        </a>
+            <span>${social.url}</span>
+            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+        </div>
     `).join('');
 }
 
@@ -2248,26 +2150,6 @@ function renderSettingsAdmin() {
     if (slideToggle) slideToggle.checked = settings.showSlides;
 }
 
-function renderSocialsAdmin() {
-    const socialList = document.getElementById('social-list');
-    if (!socialList) {
-        console.warn('Елемент #social-list не знайдено');
-        return;
-    }
-
-    socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
-        ? settings.socials.map((social, index) => `
-            <div class="social-item">
-                <span class="social-icon">${social.icon || '🔗'}</span>
-                <span class="social-name">${social.name || 'Без назви'}</span>
-                <span class="social-url">${social.url}</span>
-                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-            </div>
-        `).join('')
-        : '<p>Соцмережі відсутні</p>';
-}
-
 function openNewSlideModal() {
     const modal = document.getElementById('modal');
     if (!modal) {
@@ -2321,11 +2203,10 @@ function renderSlidesAdmin() {
 
     const addSlideBtn = document.getElementById('add-slide-btn');
     if (addSlideBtn) {
-        // Видаляємо попередній слухач, якщо він є
         addSlideBtn.removeEventListener('click', openNewSlideModal);
         addSlideBtn.addEventListener('click', openNewSlideModal);
     } else {
-        console.warn('Елемент #add-slide-btn не знайдено. Переконайтеся, що він присутній у DOM.');
+        console.warn('Елемент #add-slide-btn не знайдено');
     }
 
     resetInactivityTimer();

@@ -153,37 +153,27 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// Глобальний ліміт запитів для всіх ендпоінтів, окрім /api/csrf-token і GET-запитів до /api/public/*
+// Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 500, // Збільшуємо до 500 запитів на IP
+    max: 100, // 100 запитів на IP
     message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
-    skip: (req) => {
-        // Пропускаємо /api/csrf-token і GET-запити до /api/public/*
-        return req.path === '/api/csrf-token' || (req.method === 'GET' && req.path.startsWith('/api/public/'));
-    }
+    skip: (req) => req.path === '/api/csrf-token' // Пропускаємо цей ендпоінт
 });
 
 // Застосовуємо ліміт до всіх запитів
 app.use(globalLimiter);
 
-// Ліміт для особливо чутливих публічних ендпоінтів (довгостроковий)
+// Ліміт для особливо чутливих публічних ендпоінтів
 const publicApiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 300, // Збільшуємо до 300 запитів на IP
+    max: 50, // 50 запитів на IP
     message: 'Занадто багато запитів до API, спробуйте знову через 15 хвилин'
 });
 
-// Ліміт для короткострокових сплесків (burst) до публічних ендпоінтів
-const publicApiBurstLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 хвилина
-    max: 50, // 50 запитів за хвилину
-    message: 'Занадто багато запитів до API за короткий час, зачекайте хвилину і спробуйте знову'
-});
-
 // Застосовуємо до публічних API
-app.use('/api/public', publicApiLimiter, publicApiBurstLimiter);
-app.use('/api/cart', publicApiLimiter, publicApiBurstLimiter);
+app.use('/api/public', publicApiLimiter);
+app.use('/api/cart', publicApiLimiter);
 
 // Додаємо заголовки безпеки
 app.use((req, res, next) => {
