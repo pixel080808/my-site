@@ -325,15 +325,18 @@ async function updateSocials() {
                 return;
             }
 
+            // Очищаємо socials від _id
+            const cleanedSocials = settings.socials.map(({ _id, ...rest }) => rest);
+
             console.log('Надсилаємо соціальні мережі:', {
-                socials: settings.socials,
+                socials: cleanedSocials,
                 showSocials: settings.showSocials
             });
 
             const response = await fetchWithAuth('/api/settings', {
                 method: 'PUT',
                 body: JSON.stringify({
-                    socials: settings.socials,
+                    socials: cleanedSocials,
                     showSocials: settings.showSocials
                 })
             });
@@ -341,15 +344,34 @@ async function updateSocials() {
             const serverSettings = await response.json();
             settings = { ...settings, ...serverSettings };
             renderSettingsAdmin();
+            renderSocialsAdmin();
             showNotification('Соціальні мережі оновлено!');
             unsavedChanges = false;
             resetInactivityTimer();
+
+            // Оновлюємо відображення на головній сторінці (якщо ми не в адмін-панелі)
+            if (typeof renderSocials === 'function' && document.getElementById('contacts-socials')) {
+                renderSocials();
+            }
+
             return;
         } catch (err) {
             retries++;
             console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
             if (retries === maxRetries) {
                 showNotification('Помилка оновлення соціальних мереж: ' + err.message);
+                // Завантажуємо актуальні налаштування з сервера
+                try {
+                    const response = await fetchWithAuth('/api/settings', {
+                        method: 'GET'
+                    });
+                    const serverSettings = await response.json();
+                    settings = { ...settings, ...serverSettings };
+                    renderSettingsAdmin();
+                    renderSocialsAdmin();
+                } catch (fetchErr) {
+                    console.error('Помилка завантаження налаштувань після невдалого оновлення:', fetchErr);
+                }
                 return;
             }
             await new Promise(resolve => setTimeout(resolve, 1000 * retries));
