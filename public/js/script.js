@@ -1836,8 +1836,26 @@ async function addToCartWithColor(productId) {
         showNotification('Будь ласка, виберіть колір!', 'error');
         return;
     }
-    let price = product.price || 0;
+    let price;
     let colorName = '';
+    
+    // Обчислюємо ціну в залежності від типу товару
+    if (product.type === 'group' && product.groupProducts?.length > 0) {
+        // Для групових товарів обчислюємо ціну на основі складових
+        const groupPrices = product.groupProducts.map(id => {
+            const p = products.find(p => p.id === id);
+            if (!p) {
+                console.warn(`Груповий товар з ID ${id} не знайдено`);
+                return 0;
+            }
+            return (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) || 0;
+        });
+        price = groupPrices.reduce((sum, p) => sum + p, 0);
+    } else {
+        // Для звичайних товарів та матраців
+        price = product.price || 0;
+    }
+
     if (product.colors?.length > 0) {
         const colorIndex = selectedColors[productId] !== undefined ? selectedColors[productId] : 0;
         if (!product.colors[colorIndex]) {
@@ -1847,8 +1865,11 @@ async function addToCartWithColor(productId) {
             return;
         }
         colorName = product.colors[colorIndex].name;
-        price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
-        price += product.colors[colorIndex].priceChange || 0;
+        if (product.type !== 'group') {
+            // Для групових товарів ціна вже врахована, не додаємо зміну через колір
+            price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
+            price += product.colors[colorIndex].priceChange || 0;
+        }
     }
     if (product.type === 'mattresses') {
         const select = document.getElementById(`mattress-size-${productId}`);
@@ -1878,7 +1899,7 @@ async function addToCartWithColor(productId) {
     };
 
     // Перевіряємо коректність cartItem
-    if (!cartItem.id || isNaN(cartItem.id) || !cartItem.name || !cartItem.price || !cartItem.quantity) {
+    if (!cartItem.id || isNaN(cartItem.id) || !cartItem.name || cartItem.price === undefined || isNaN(cartItem.price) || !cartItem.quantity) {
         showNotification('Помилка: Некоректні дані товару!', 'error');
         return;
     }
