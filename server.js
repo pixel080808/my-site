@@ -460,11 +460,15 @@ const settingsSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().required()
+            icon: Joi.string().allow('') // Змінено з .required() на .allow('') відповідно до коментаря в Settings.js
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
+    categoryWidth: Joi.number().min(0).default(0), // Додано відповідно до коментаря в Settings.js
+    categoryHeight: Joi.number().min(0).default(0),
+    productWidth: Joi.number().min(0).default(0),
+    productHeight: Joi.number().min(0).default(0),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -1042,7 +1046,7 @@ const getPublicIdFromUrl = (url) => {
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = req.body;
-        logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
+        logger.info('Отримано дані продукту для створення:', JSON.stringify(productData, null, 2));
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
@@ -1057,6 +1061,16 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
                 }
                 return color;
             });
+        }
+
+        // Перевірка формату category і subcategory
+        if (typeof productData.category !== 'string') {
+            logger.error('Некоректний формат category:', productData.category);
+            return res.status(400).json({ error: 'Категорія має бути рядком' });
+        }
+        if (productData.subcategory && typeof productData.subcategory !== 'string') {
+            logger.error('Некоректний формат subcategory:', productData.subcategory);
+            return res.status(400).json({ error: 'Підкатегорія має бути рядком' });
         }
 
         // Валідація даних
@@ -1166,14 +1180,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
 app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = { ...req.body };
-        logger.info('Отримано дані для оновлення продукту:', productData);
+        logger.info('Отримано дані для оновлення продукту:', JSON.stringify(productData, null, 2));
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
             delete productData.img;
         }
-        // Мапінг img у colors
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 if (color.img && !color.photo) {
@@ -1193,10 +1206,24 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Перевірка формату category і subcategory
+        if (typeof productData.category !== 'string') {
+            logger.error('Некоректний формат category:', productData.category);
+            return res.status(400).json({ error: 'Категорія має бути рядком' });
+        }
+        if (productData.subcategory && typeof productData.subcategory !== 'string') {
+            logger.error('Некоректний формат subcategory:', productData.subcategory);
+            return res.status(400).json({ error: 'Підкатегорія має бути рядком' });
+        }
+
+        // Валідація даних
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
-            logger.error('Помилка валідації продукту:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+            logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
+            return res.status(400).json({ 
+                error: 'Помилка валідації', 
+                details: error.details.map(detail => detail.message) 
+            });
         }
 
         // Перевірка унікальності slug
@@ -1233,8 +1260,11 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
 
         // Перевірка існування subcategory
         if (productData.subcategory) {
-            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-            if (!subcategoryExists) {
+            const categoryWithSub = await Category.findOne({
+                name: productData.category,
+                'subcategories.slug': productData.subcategory
+            });
+            if (!categoryWithSub) {
                 logger.error('Підкатегорія не знайдено:', productData.subcategory);
                 return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
             }
@@ -1258,13 +1288,17 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
-        if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
+        if (!product) {
+            logger.error('Продукт не знайдено:', req.params.id);
+            return res.status(404).json({ error: 'Товар не знайдено' });
+        }
 
         const products = await Product.find();
         broadcast('products', products);
+        logger.info('Продукт успішно оновлено:', productData.name);
         res.json(product);
     } catch (err) {
-        logger.error('Помилка при оновленні товару:', err);
+        logger.error('Помилка при оновленні товару:', err.message, err.stack);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });

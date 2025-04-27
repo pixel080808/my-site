@@ -1961,11 +1961,13 @@ function openProduct(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-
-    // Перевіряємо, чи категорія та підкатегорія все ще існують
-    const categoryExists = categories.some(cat => cat.name === product.category);
-    if (!categoryExists) {
-        showNotification('Категорія товару більше не існує!', 'error');
+    if (typeof product.category !== 'string' || !product.category) {
+        showNotification('Некоректна категорія товару!', 'error');
+        showSection('home');
+        return;
+    }
+    if (product.subcategory && typeof product.subcategory !== 'string') {
+        showNotification('Некоректна підкатегорія товару!', 'error');
         showSection('home');
         return;
     }
