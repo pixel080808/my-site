@@ -642,29 +642,31 @@ button:hover {
                 <button type="submit">Зберегти</button>
             </form>
         </div>
-        <!-- Соціальні мережі -->
-        <div class="admin-section">
-            <h3>Соціальні мережі</h3>
-            <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
-                <input id="social-url" placeholder="Посилання" type="text" pattern="https?://.+" title="Введіть коректний URL (наприклад, https://facebook.com)" /><br/>
-                <label for="social-url">URL соцмережі</label>
-                <select id="social-icon">
-                    <option value="🔗">Загальний (🔗)</option>
-                    <option value="📘">Facebook (📘)</option>
-                    <option value="📸">Instagram (📸)</option>
-                    <option value="🐦">Twitter (🐦)</option>
-                    <option value=▶️">YouTube (▶️)</option>
-                    <option value="✈️">Telegram (✈️)</option>
-                </select><br/>
-                <label for="social-icon">Іконка соцмережі</label>
-                <button type="submit">Додати</button>
-            </form>
-            <label>
-                <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
-                Показувати соціальні мережі
-            </label>
-            <div id="social-list"></div>
-        </div>
+<!-- Соціальні мережі -->
+<div class="admin-section">
+    <h3>Соціальні мережі</h3>
+    <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
+        <input id="social-name" placeholder="Назва соцмережі (наприклад, Facebook)" type="text" /><br/>
+        <label for="social-name">Назва соцмережі</label>
+        <input id="social-url" placeholder="URL соцмережі" type="text" pattern="https?://.+" title="Введіть коректний URL (наприклад, https://facebook.com)" /><br/>
+        <label for="social-url">URL соцмережі</label>
+        <select id="social-icon">
+            <option value="🔗">Загальний (🔗)</option>
+            <option value="📘">Facebook (📘)</option>
+            <option value="📸">Instagram (📸)</option>
+            <option value="🐦">Twitter (🐦)</option>
+            <option value="▶️">YouTube (▶️)</option>
+            <option value="✈️">Telegram (✈️)</option>
+        </select><br/>
+        <label for="social-icon">Іконка соцмережі</label>
+        <button type="submit">Додати</button>
+    </form>
+    <label>
+        <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
+        Показувати соціальні мережі
+    </label>
+    <div id="social-list"></div>
+</div>
         <!-- Про нас -->
         <div class="admin-section">
             <h3>Про нас</h3>

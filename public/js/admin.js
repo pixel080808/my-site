@@ -1586,9 +1586,15 @@ async function updateContacts() {
 async function addSocial() {
     const url = document.getElementById('social-url').value.trim();
     const icon = document.getElementById('social-icon').value;
+    const nameInput = document.getElementById('social-name')?.value.trim() || '';
 
     if (!url) {
         showNotification('Введіть URL соцмережі!');
+        return;
+    }
+
+    if (!nameInput || nameInput.length < 2) {
+        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1599,9 +1605,12 @@ async function addSocial() {
     }
 
     settings.socials = settings.socials || [];
-    settings.socials.push({ url, icon, name: '' });
+    settings.socials.push({ url, icon, name: nameInput });
     document.getElementById('social-url').value = '';
-    document.getElementById('social-icon').value = '🔗'; // Скидаємо на значення за замовчуванням
+    document.getElementById('social-icon').value = '🔗';
+    if (document.getElementById('social-name')) {
+        document.getElementById('social-name').value = '';
+    }
     await updateSocials();
 }
 
@@ -1610,9 +1619,17 @@ async function editSocial(index) {
     const url = prompt('Введіть новий URL соцмережі:', social.url);
     if (url === null) return; // Користувач скасував
 
+    const name = prompt('Введіть нову назву соцмережі:', social.name || '');
+    if (name === null) return; // Користувач скасував
+
     const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
     if (!url || !urlRegex.test(url)) {
         showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
+        return;
+    }
+
+    if (!name.trim() || name.trim().length < 2) {
+        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1636,6 +1653,7 @@ async function editSocial(index) {
     if (confirmEdit) {
         settings.socials[index].url = url;
         settings.socials[index].icon = iconSelect.value;
+        settings.socials[index].name = name.trim();
         await updateSocials();
     }
 
@@ -1794,20 +1812,7 @@ function renderAdmin(section = activeTab) {
         if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
         else console.warn('Елемент #slide-interval не знайдено');
 
-        const socialList = document.getElementById('social-list');
-        if (socialList) {
-            socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
-                ? settings.socials.map((social, index) => `
-                    <div class="social-item">
-                        <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
-                        <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                        <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-                    </div>
-                `).join('')
-                : '';
-        } else {
-            console.warn('Елемент #social-list не знайдено');
-        }
+        renderSocialsAdmin();
 
         const catList = document.getElementById('category-list-admin');
         if (catList) {
@@ -2077,13 +2082,27 @@ function renderCategoriesAdmin() {
 function renderSocialsAdmin() {
     const socialList = document.getElementById('social-list');
     if (!socialList) return;
-    socialList.innerHTML = settings.socials.map((social, index) => `
-        <div class="social-item">
-            <span class="social-icon">${social.icon}</span>
-            <span>${social.url}</span>
-            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-        </div>
-    `).join('');
+
+    // Якщо showSocials вимкнено, показуємо повідомлення, але дозволяємо редагувати список
+    if (!settings.showSocials) {
+        socialList.innerHTML = '<p>Соціальні мережі відключені (не відображаються на сайті)</p>';
+    } else {
+        socialList.innerHTML = '';
+    }
+
+    // Завжди показуємо список соціальних мереж для редагування
+    const socialItems = settings.socials && Array.isArray(settings.socials)
+        ? settings.socials.map((social, index) => `
+            <div class="social-item">
+                <span class="social-icon">${social.icon}</span>
+                <span>${social.name} (${social.url})</span>
+                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+            </div>
+        `).join('')
+        : '<p>Соціальні мережі відсутні</p>';
+
+    socialList.innerHTML += socialItems;
 }
 
 async function deleteCategory(categoryId) {

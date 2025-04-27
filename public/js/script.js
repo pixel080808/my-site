@@ -370,15 +370,10 @@ function connectPublicWebSocket() {
                         showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                     };
                     updateHeader();
-                    if (document.getElementById('contacts').classList.contains('active')) {
-                        renderContacts();
-                    }
-                    if (document.getElementById('about').classList.contains('active')) {
-                        renderAbout();
-                    }
-                    if (document.getElementById('home').classList.contains('active')) {
-                        renderSlideshow();
-                    }
+                    // Завжди викликаємо ці функції, щоб оновити DOM незалежно від активної секції
+                    renderContacts(); // Оновлюємо контакти та соціальні мережі
+                    renderAbout();    // Оновлюємо секцію "Про нас"
+                    renderSlideshow(); // Оновлюємо слайдшоу
                     // Оновлюємо favicon
                     const oldFavicon = document.querySelector('link[rel="icon"]');
                     if (oldFavicon) oldFavicon.remove();
@@ -391,7 +386,7 @@ function connectPublicWebSocket() {
                     break;
                 case 'slides':
                     slides = data;
-                    if (settings.showSlides && slides.length > 0 && document.getElementById('home').classList.contains('active')) {
+                    if (settings.showSlides && slides.length > 0) {
                         renderSlideshow();
                     }
                     break;
@@ -476,82 +471,14 @@ async function initializeData() {
     connectPublicWebSocket();
     await new Promise(resolve => {
         let receivedData = false;
-        ws.onmessage = (event) => {
-            receivedData = true;
-            resolve();
-            ws.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data);
-                    if (!message.type || !('data' in message)) {
-                        throw new Error('Некоректний формат повідомлення WebSocket');
-                    }
-                    const { type, data } = message;
-                    console.log('Отримано повідомлення WebSocket:', { type, data });
+        const checkInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                receivedData = true;
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100);
 
-                    switch (type) {
-                        case 'products':
-                            products = data;
-                            updateCartPrices();
-                            if (document.getElementById('catalog').classList.contains('active')) {
-                                renderCatalog(currentCategory, currentSubcategory, currentProduct);
-                            } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-                                currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
-                                renderProductDetails();
-                            } else if (document.getElementById('cart').classList.contains('active')) {
-                                renderCart();
-                            }
-                            break;
-                        case 'categories':
-                            categories = data;
-                            renderCategories();
-                            renderCatalogDropdown();
-                            if (document.getElementById('catalog').classList.contains('active')) {
-                                renderCatalog(currentCategory, currentSubcategory, currentProduct);
-                            }
-                            break;
-                        case 'settings':
-                            settings = {
-                                ...settings,
-                                ...data,
-                                contacts: { ...settings.contacts, ...(data.contacts || {}) },
-                                socials: data.socials || settings.socials,
-                                showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
-                                showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
-                            };
-                            updateHeader();
-                            if (document.getElementById('contacts').classList.contains('active')) {
-                                renderContacts();
-                            }
-                            if (document.getElementById('about').classList.contains('active')) {
-                                renderAbout();
-                            }
-                            if (document.getElementById('home').classList.contains('active')) {
-                                renderSlideshow();
-                            }
-                            const oldFavicon = document.querySelector('link[rel="icon"]');
-                            if (oldFavicon) oldFavicon.remove();
-                            const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
-                            const favicon = document.createElement('link');
-                            favicon.rel = 'icon';
-                            favicon.type = 'image/x-icon';
-                            favicon.href = faviconUrl;
-                            document.head.appendChild(favicon);
-                            break;
-                        case 'slides':
-                            slides = data;
-                            if (settings.showSlides && slides.length > 0 && document.getElementById('home').classList.contains('active')) {
-                                renderSlideshow();
-                            }
-                            break;
-                        default:
-                            console.warn('Невідомий тип повідомлення:', type);
-                    }
-                } catch (e) {
-                    console.error('Помилка обробки WebSocket:', e);
-                    showNotification('Помилка синхронізації даних!', 'error');
-                }
-            };
-        };
         setTimeout(async () => {
             if (!receivedData) {
                 console.warn('Дані від WebSocket не отримано, використовуємо HTTP');
@@ -559,6 +486,7 @@ async function initializeData() {
                 updateHeader();
                 renderCategories();
                 renderCatalogDropdown();
+                clearInterval(checkInterval);
                 resolve();
             }
         }, 5000);
