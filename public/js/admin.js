@@ -3417,68 +3417,6 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     }
 }
 
-async function updateCategorySettings() {
-    const width = parseInt(document.getElementById('category-width').value) || 300;
-    const height = parseInt(document.getElementById('category-height').value) || 200;
-    const token = localStorage.getItem('adminToken');
-
-    if (width < 100 || width > 500 || height < 100 || height > 500) {
-        alert('Ширина та висота категорії мають бути в межах 100-500 px!');
-        return;
-    }
-
-    settings.categoryWidth = width;
-    settings.categoryHeight = height;
-
-    try {
-        const response = await fetch('/api/settings', {
-            method: 'PUT',
-            headers: {
-                credentials: 'include',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ categoryWidth: width, categoryHeight: height })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Не вдалося оновити налаштування категорій: ${errorData.error}`);
-        }
-
-        showNotification('Налаштування категорій оновлено!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка оновлення налаштувань категорій:', err);
-        showNotification(err.message);
-    }
-}
-
-async function updateProductSettings() {
-    const width = parseInt(document.getElementById('product-width').value) || 300;
-    const height = parseInt(document.getElementById('product-height').value) || 300;
-
-    if (width < 200 || width > 500 || height < 200 || height > 500) {
-        showNotification('Ширина та висота товару мають бути в межах 200-500 px!');
-        return;
-    }
-
-    settings.productWidth = width;
-    settings.productHeight = height;
-
-    try {
-        await fetchWithAuth('/api/settings', {
-            method: 'PUT',
-            body: JSON.stringify({ productWidth: width, productHeight: height })
-        });
-
-        showNotification('Налаштування товарів оновлено!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка оновлення налаштувань товарів:', err);
-        showNotification('Не вдалося оновити налаштування: ' + err.message);
-    }
-}
-
 async function updateSlideshowSettings() {
     const width = parseInt(document.getElementById('slide-width').value) || 100;
     const height = parseInt(document.getElementById('slide-height').value) || 300;
@@ -4121,18 +4059,12 @@ function renderPriceFields() {
 }
 
 function updateSubcategories() {
-    const modal = document.getElementById('modal');
-    if (!modal || modal.style.display !== 'block') {
-        console.warn('Модальне вікно #modal не відкрите, пропускаємо updateSubcategories');
-        return;
-    }
-
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено в модальному вікні');
+        console.warn('Елементи #product-category або #product-subcategory не знайдено');
         return;
     }
 
