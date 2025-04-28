@@ -20,65 +20,28 @@ function handleScroll() {
     }
 }
 
-// Функція для спостереження за змінами в DOM із можливістю повторного пошуку елемента
+// Використовуємо MutationObserver замість застарілого DOMNodeInserted
 function observeDOMChanges(targetSelector, callback) {
-    let observer = null;
-    let currentTarget = document.querySelector(targetSelector);
-
-    // Функція для ініціалізації спостерігача
-    const initObserver = (target) => {
-        if (!target) {
-            console.warn(`Елемент ${targetSelector} не знайдено для спостереження`);
-            return null;
-        }
-
-        observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.addedNodes.length || mutation.removedNodes.length) {
-                    callback(mutation);
-                }
-            });
-        });
-
-        observer.observe(target, {
-            childList: true,
-            subtree: true,
-        });
-
-        return observer;
-    };
-
-    // Ініціалізація спостерігача, якщо елемент існує
-    if (currentTarget) {
-        observer = initObserver(currentTarget);
+    const target = document.querySelector(targetSelector);
+    if (!target) {
+        console.warn(`Елемент ${targetSelector} не знайдено для спостереження`);
+        return;
     }
 
-    // Спостерігаємо за змінами в DOM, щоб повторно знайти елемент, якщо він з’явиться
-    const rootObserver = new MutationObserver(() => {
-        const newTarget = document.querySelector(targetSelector);
-        if (newTarget && newTarget !== currentTarget) {
-            if (observer) {
-                observer.disconnect();
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length || mutation.removedNodes.length) {
+                callback(mutation);
             }
-            currentTarget = newTarget;
-            observer = initObserver(currentTarget);
-        }
+        });
     });
 
-    rootObserver.observe(document.body, {
+    observer.observe(target, {
         childList: true,
         subtree: true,
     });
 
-    // Функція для відключення спостерігачів
-    const disconnect = () => {
-        if (observer) {
-            observer.disconnect();
-        }
-        rootObserver.disconnect();
-    };
-
-    return disconnect;
+    return observer;
 }
 
 // Ініціалізація
@@ -95,33 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Спостерігаємо за змінами в DOM (наприклад, у списку товарів)
-    let disconnectObserver = null;
-    const startObserving = () => {
-        if (disconnectObserver) {
-            disconnectObserver();
-        }
-        disconnectObserver = observeDOMChanges('#product-list-admin', (mutation) => {
-            console.log('Зміни в списку товарів:', mutation);
-            handleScroll(); // Оновлюємо видимість кнопки "вгору" при змінах
-            // Додайте тут додаткову логіку, якщо потрібно обробляти зміни в списку товарів
-            // Наприклад, оновлення стилів, підрахунок елементів тощо
-        });
-    };
-
-    startObserving();
-
-    // Додаємо обробник для повторного запуску спостерігача при зміні секції
-    // Це корисно, якщо ваш `#product-list-admin` видаляється/додається при перемиканні вкладок
-    document.addEventListener('sectionChanged', (event) => {
-        if (event.detail === 'products') {
-            startObserving();
-        }
+    observeDOMChanges('#product-list-admin', (mutation) => {
+        console.log('Зміни в списку товарів:', mutation);
+        handleScroll(); // Оновлюємо видимість кнопки "вгору" при змінах
     });
-});
-
-// Відключення спостерігачів при закритті сторінки
-window.addEventListener('beforeunload', () => {
-    if (typeof disconnectObserver === 'function') {
-        disconnectObserver();
-    }
 });
