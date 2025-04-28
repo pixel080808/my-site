@@ -4,19 +4,31 @@ const categorySchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxlength: 255 // Додано обмеження довжини
     },
     slug: {
         type: String,
         required: true,
         unique: true,
-        trim: true
+        trim: true,
+        maxlength: 255 // Додано обмеження довжини
     },
     photo: { type: String, default: '' },
     visible: { type: Boolean, default: true },
     subcategories: [{
-        name: { type: String, required: true, trim: true },
-        slug: { type: String, required: true, trim: true },
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 255 // Додано обмеження довжини
+        },
+        slug: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 255 // Додано обмеження довжини
+        },
         photo: { type: String, default: '' },
         order: { type: Number, required: true, default: 0 },
         visible: { type: Boolean, default: true }
