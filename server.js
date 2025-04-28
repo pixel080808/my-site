@@ -308,10 +308,11 @@ const productSchemaValidation = Joi.object({
     category: Joi.string().max(100).required(),
     subcategory: Joi.string().max(255).optional().allow(''),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).allow(null),
+    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
     material: Joi.string().max(100).allow(''),
+    filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -342,6 +343,7 @@ const productSchemaValidation = Joi.object({
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
+    cartId: Joi.string().default(''),
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
@@ -365,14 +367,14 @@ const orderSchemaValidation = Joi.object({
         })
     ).required(),
     total: Joi.number().min(0).required(),
-    status: Joi.string().default('Нове замовлення')
+    status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
 });
 
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
     logo: Joi.string().uri().allow(''),
-    logoWidth: Joi.number().min(0).allow(null),
+    logoWidth: Joi.number().min(0).default(150),
     favicon: Joi.string().uri().allow(''),
     contacts: Joi.object({
         phones: Joi.string().allow(''),
@@ -383,7 +385,7 @@ const settingsSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().required()
+            icon: Joi.string().allow('')
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
@@ -404,9 +406,9 @@ const settingsSchemaValidation = Joi.object({
             options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
-    slideWidth: Joi.number().min(0).allow(null),
-    slideHeight: Joi.number().min(0).allow(null),
-    slideInterval: Joi.number().min(0).allow(null),
+slideWidth: Joi.number().min(0).default(0),
+slideHeight: Joi.number().min(0).default(0),
+slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
@@ -430,7 +432,7 @@ const cartIdSchema = Joi.string()
     });
 
 const slideSchemaValidation = Joi.object({
-    id: Joi.number().optional(),
+    id: Joi.number().required(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
     link: Joi.string().uri().allow('').optional(),
@@ -1263,7 +1265,8 @@ const categorySchemaValidation = Joi.object({
             name: Joi.string().max(255).required(),
             slug: Joi.string().max(255).required(),
             photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().optional()
+            visible: Joi.boolean().optional(),
+            order: Joi.number().integer().min(0).default(0).optional()
         })
     ).default([]).optional()
 }).min(1);
@@ -1271,7 +1274,7 @@ const categorySchemaValidation = Joi.object({
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
     name: Joi.string().max(255).required(),
-    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
+    slug: Joi.string().max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
     order: Joi.number().integer().min(0).default(0).optional() 
