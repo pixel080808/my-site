@@ -1135,11 +1135,11 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         // Перевірка формату category і subcategory
         if (typeof productData.category !== 'string') {
             logger.error('Некоректний формат category:', productData.category);
-            return res.status(400).json({ error: 'Категорія має бути рядком' });
+            return res.status(400).json({ error: 'Категорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.category)}` });
         }
         if (productData.subcategory && typeof productData.subcategory !== 'string') {
             logger.error('Некоректний формат subcategory:', productData.subcategory);
-            return res.status(400).json({ error: 'Підкатегорія має бути рядком' });
+            return res.status(400).json({ error: 'Підкатегорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.subcategory)}` });
         }
 
         // Валідація даних
@@ -1147,12 +1147,12 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         if (error) {
             logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
             return res.status(400).json({ 
-                error: 'Помилка валідації', 
+                error: 'Помилка валідації даних продукту', 
                 details: error.details.map(detail => ({
                     message: detail.message,
-                    path: detail.path,
+                    path: detail.path.join('.'),
                     value: detail.context.value
-                })) 
+                }))
             });
         }
 
@@ -1168,7 +1168,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
                 logger.error('Бренд не знайдено:', productData.brand);
-                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено`, details: 'Переконайтеся, що бренд створено в системі' });
             }
         }
 
@@ -1177,7 +1177,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
                 logger.error('Матеріал не знайдено:', productData.material);
-                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено`, details: 'Переконайтеся, що матеріал створено в системі' });
             }
         }
 
@@ -1185,7 +1185,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
-            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, details: 'Переконайтеся, що категорія створена' });
         }
 
         // Перевірка існування subcategory
@@ -1196,7 +1196,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
             if (!categoryWithSub) {
                 logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`, details: 'Переконайтеся, що підкатегорія створена' });
             }
         }
 
@@ -1205,13 +1205,14 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
                 logger.error('Некоректні ObjectId у groupProducts:', invalidIds);
-                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: invalidIds });
+                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: `Невірні ID: ${invalidIds.join(', ')}` });
             }
 
             const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
             if (existingProducts.length !== productData.groupProducts.length) {
-                logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
-                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені', details: productData.groupProducts });
+                const missingIds = productData.groupProducts.filter(id => !existingProducts.some(p => p._id.toString() === id));
+                logger.error('Деякі продукти в groupProducts не знайдені:', missingIds);
+                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені', details: `Відсутні продукти з ID: ${missingIds.join(', ')}` });
             }
 
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
@@ -1245,11 +1246,11 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         }
     } catch (err) {
         if (err.code === 11000 && err.keyPattern && err.keyPattern.slug) {
-            logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData.slug}` });
+            logger.error('Продукт з таким slug вже існує:', productData?.slug || 'невідомий slug');
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData?.slug}` });
         }
-        logger.error('Помилка при додаванні товару:', err.message, err.stack);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
+        logger.error('Помилка при створенні товару:', err.message, err.stack);
+        res.status(500).json({ error: 'Помилка сервера при створенні товару', details: err.message });
     }
 });
 
@@ -1285,11 +1286,11 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         // Перевірка формату category і subcategory
         if (typeof productData.category !== 'string') {
             logger.error('Некоректний формат category:', productData.category);
-            return res.status(400).json({ error: 'Категорія має бути рядком' });
+            return res.status(400).json({ error: 'Категорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.category)}` });
         }
         if (productData.subcategory && typeof productData.subcategory !== 'string') {
             logger.error('Некоректний формат subcategory:', productData.subcategory);
-            return res.status(400).json({ error: 'Підкатегорія має бути рядком' });
+            return res.status(400).json({ error: 'Підкатегорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.subcategory)}` });
         }
 
         // Валідація даних
@@ -1297,8 +1298,12 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         if (error) {
             logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
             return res.status(400).json({ 
-                error: 'Помилка валідації', 
-                details: error.details.map(detail => detail.message) 
+                error: 'Помилка валідації даних продукту', 
+                details: error.details.map(detail => ({
+                    message: detail.message,
+                    path: detail.path.join('.'),
+                    value: detail.context.value
+                }))
             });
         }
 
@@ -1306,7 +1311,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData.slug}` });
         }
 
         // Перевірка існування brand
@@ -1314,7 +1319,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
                 logger.error('Бренд не знайдено:', productData.brand);
-                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено`, details: 'Переконайтеся, що бренд створено в системі' });
             }
         }
 
@@ -1323,7 +1328,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
                 logger.error('Матеріал не знайдено:', productData.material);
-                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено`, details: 'Переконайтеся, що матеріал створено в системі' });
             }
         }
 
@@ -1331,7 +1336,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
-            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, details: 'Переконайтеся, що категорія створена' });
         }
 
         // Перевірка існування subcategory
@@ -1342,7 +1347,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
             if (!categoryWithSub) {
                 logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`, details: 'Переконайтеся, що підкатегорія створена' });
             }
         }
 
@@ -1351,13 +1356,14 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
                 logger.error('Некоректні ObjectId у groupProducts:', invalidIds);
-                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: invalidIds });
+                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: `Невірні ID: ${invalidIds.join(', ')}` });
             }
 
             const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
             if (existingProducts.length !== productData.groupProducts.length) {
-                logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
-                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені' });
+                const missingIds = productData.groupProducts.filter(id => !existingProducts.some(p => p._id.toString() === id));
+                logger.error('Деякі продукти в groupProducts не знайдені:', missingIds);
+                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені', details: `Відсутні продукти з ID: ${missingIds.join(', ')}` });
             }
 
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
@@ -1366,7 +1372,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
         if (!product) {
             logger.error('Продукт не знайдено:', req.params.id);
-            return res.status(404).json({ error: 'Товар не знайдено' });
+            return res.status(404).json({ error: 'Товар не знайдено', details: `ID: ${req.params.id}` });
         }
 
         const products = await Product.find();
@@ -1374,8 +1380,12 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         logger.info('Продукт успішно оновлено:', productData.name);
         res.json(product);
     } catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.slug) {
+            logger.error('Продукт з таким slug вже існує:', productData?.slug || 'невідомий slug');
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData?.slug}` });
+        }
         logger.error('Помилка при оновленні товару:', err.message, err.stack);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
+        res.status(500).json({ error: 'Помилка сервера при оновленні товару', details: err.message });
     }
 });
 

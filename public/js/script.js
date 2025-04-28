@@ -1830,10 +1830,9 @@ async function addToCartWithColor(productId) {
     }
     let price;
     let colorName = '';
-    
+
     // Обчислюємо ціну в залежності від типу товару
     if (product.type === 'group' && product.groupProducts?.length > 0) {
-        // Для групових товарів обчислюємо ціну на основі складових
         const groupPrices = product.groupProducts.map(id => {
             const p = products.find(p => p.id === id);
             if (!p) {
@@ -1844,7 +1843,6 @@ async function addToCartWithColor(productId) {
         });
         price = groupPrices.reduce((sum, p) => sum + p, 0);
     } else {
-        // Для звичайних товарів та матраців
         price = product.price || 0;
     }
 
@@ -1858,7 +1856,6 @@ async function addToCartWithColor(productId) {
         }
         colorName = product.colors[colorIndex].name;
         if (product.type !== 'group') {
-            // Для групових товарів ціна вже врахована, не додаємо зміну через колір
             price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
             price += product.colors[colorIndex].priceChange || 0;
         }
@@ -1881,12 +1878,12 @@ async function addToCartWithColor(productId) {
         colorName = colorName ? `${colorName} (${size})` : size;
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
-    const cartItem = { 
-        id: productId, 
+    const cartItem = {
+        id: productId,
         name: product.name,
         color: colorName || 'Не вказано',
-        price, 
-        quantity, 
+        price,
+        quantity,
         photo: product.photos?.[0] || NO_IMAGE_URL
     };
 
@@ -1896,16 +1893,18 @@ async function addToCartWithColor(productId) {
         return;
     }
 
+    console.log('Дані для додавання в кошик:', cartItem);
+
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
     if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
     else cart.push(cartItem);
-    
+
     // Зберігаємо локально та оновлюємо інтерфейс
     saveToStorage('cart', cart);
     updateCartCount();
     renderCart();
     showNotification(`${product.name} додано до кошика!`, 'success');
-    
+
     // Синхронізуємо з сервером у фоновому режимі
     try {
         await saveCartToServer();

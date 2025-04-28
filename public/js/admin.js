@@ -1057,9 +1057,14 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
 
 function showSection(sectionId) {
     console.log('Показуємо секцію:', sectionId);
+    if (!sectionId) {
+        console.error('sectionId is null or undefined');
+        return;
+    }
+
     const sections = document.querySelectorAll('.section');
     sections.forEach(el => el.classList.remove('active'));
-    
+
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.add('active');
@@ -4508,25 +4513,26 @@ async function saveNewProduct() {
             return;
         }
 
+        const type = newProduct.type; // Беремо тип із глобального об’єкта newProduct
         const name = document.getElementById('product-name')?.value.trim();
         const slug = document.getElementById('product-slug')?.value.trim();
         const brand = document.getElementById('product-brand')?.value.trim() || '';
-        const category = document.getElementById('product-category')?.value.trim() || '';
+        const category = document.getElementById('product-category')?.value.trim();
         const subcategory = document.getElementById('product-subcategory')?.value.trim() || null;
         const material = document.getElementById('product-material')?.value.trim() || '';
         let price = null;
         let salePrice = null;
-        if (newProduct.type === 'simple') {
+        if (type === 'simple') {
             price = parseFloat(document.getElementById('product-price')?.value) || null;
             salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
         }
         const saleEnd = document.getElementById('product-sale-end')?.value || null;
         const visible = document.getElementById('product-visible')?.value === 'true';
         let description = document.getElementById('product-description')?.value || '';
-        const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || null;
-        const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
-        const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
-        const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+        const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || 0; // Замість null ставимо 0
+        const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || 0;
+        const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || 0;
+        const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || 0;
 
         // Валідація обов’язкових полів
         if (!name || !slug || !category) {
@@ -4534,7 +4540,7 @@ async function saveNewProduct() {
             return;
         }
 
-        if (newProduct.type === 'simple' && (price === null || price <= 0)) {
+        if (type === 'simple' && (price === null || price <= 0)) {
             showNotification('Введіть коректну ціну для простого товару (більше 0)!');
             return;
         }
@@ -4557,7 +4563,7 @@ async function saveNewProduct() {
         }
 
         // Валідація категорії та підкатегорії
-        let categoryName = null;
+        let categoryId = null;
         let subcategorySlug = null;
         if (category) {
             const categoryObj = categories.find(c => c.name === category);
@@ -4565,7 +4571,7 @@ async function saveNewProduct() {
                 showNotification('Обрана категорія не існує!');
                 return;
             }
-            categoryName = categoryObj.name;
+            categoryId = categoryObj._id; // Використовуємо ID категорії
             if (subcategory) {
                 const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
                 if (!subcategoryObj) {
@@ -4606,14 +4612,14 @@ async function saveNewProduct() {
         }
 
         let product = {
-            type: newProduct.type,
+            type,
             name,
             slug,
-            brand,
-            category: categoryName,
+            brand: brand || undefined, // Відправляємо undefined, якщо порожнє
+            category: categoryId, // Використовуємо ID категорії
             subcategory: subcategorySlug,
-            material,
-            price: newProduct.type === 'simple' ? price : null,
+            material: material || undefined, // Відправляємо undefined, якщо порожнє
+            price: type === 'simple' ? price : null,
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
             description: description || '',
