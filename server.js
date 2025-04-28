@@ -347,7 +347,9 @@ const productSchemaValidation = Joi.object({
         Joi.string().uri().allow('', null).optional().messages({
             'string.uri': 'Фото має бути дійсним URL або порожнім'
         })
-    ).default([]),
+    ).default([]).min(1).messages({
+        'array.min': 'Потрібно додати хоча б одну фотографію'
+    }),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
     slug: Joi.string().trim().min(1).max(255).required().messages({
@@ -411,7 +413,7 @@ const productSchemaValidation = Joi.object({
         'number.min': 'Довжина не може бути від’ємною'
     }),
     popularity: Joi.number().allow(null).optional()
-}).unknown(true); // Дозволяємо невідомі поля
+}).unknown(true);
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -925,23 +927,40 @@ app.get('/api/filters', authenticateToken, async (req, res) => {
     try {
         const settings = await Settings.findOne({}, { filters: 1 });
         const filters = settings?.filters || [];
-        
+
+        // Очищення фільтрів від системних полів Mongoose
+        const cleanedFilters = filters.map(filter => ({
+            name: filter.name,
+            label: filter.label,
+            type: filter.type,
+            options: filter.options || []
+        }));
+
         const filterSchema = Joi.array().items(
             Joi.object({
-                name: Joi.string().trim().min(1).required(),
-                label: Joi.string().trim().min(1).required(),
-                type: Joi.string().trim().min(1).required(),
+                name: Joi.string().trim().min(1).required().messages({
+                    'string.empty': 'Назва фільтра не може бути порожньою',
+                    'any.required': 'Назва фільтра є обов’язковою'
+                }),
+                label: Joi.string().trim().min(1).required().messages({
+                    'string.empty': 'Мітка фільтра не може бути порожньою',
+                    'any.required': 'Мітка фільтра є обов’язковою'
+                }),
+                type: Joi.string().trim().min(1).required().messages({
+                    'string.empty': 'Тип фільтра не може бути порожнім',
+                    'any.required': 'Тип фільтра є обов’язковим'
+                }),
                 options: Joi.array().items(Joi.string().trim().min(1)).default([])
             })
         );
-        
-        const { error } = filterSchema.validate(filters);
+
+        const { error } = filterSchema.validate(cleanedFilters);
         if (error) {
             logger.error('Помилка валідації фільтрів:', error.details);
             return res.status(500).json({ error: 'Невірний формат фільтрів', details: error.details });
         }
-        
-        res.json(filters);
+
+        res.json(cleanedFilters);
     } catch (err) {
         logger.error('Помилка при отриманні фільтрів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1129,7 +1148,11 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
             return res.status(400).json({ 
                 error: 'Помилка валідації', 
-                details: error.details.map(detail => detail.message) 
+                details: error.details.map(detail => ({
+                    message: detail.message,
+                    path: detail.path,
+                    value: detail.context.value
+                })) 
             });
         }
 
@@ -1197,8 +1220,8 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         // Очищення description від небезпечного HTML
         if (productData.description) {
             productData.description = sanitizeHtml(productData.description, {
-                allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li'],
-                allowedAttributes: { 'a': ['href'] }
+                allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li', 'img'],
+                allowedAttributes: { 'a': ['href'], 'img': ['src', 'alt', 'width', 'height'] }
             });
         }
 

@@ -13,7 +13,6 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
-let filters = [];
 let settings = {
     name: '',
     baseUrl: '', // Додано для базового URL
@@ -40,13 +39,6 @@ const sessionTimeout = 30 * 60 * 1000;
 let inactivityTimer;
 let materials = [];
 let brands = [];
-const orderFields = [
-    { name: 'name', label: 'Ім’я' },
-    { name: 'phone', label: 'Телефон' },
-    { name: 'email', label: 'Email' },
-    { name: 'address', label: 'Адреса' },
-    { name: 'comment', label: 'Коментар' }
-];
 let unsavedChanges = false;
 let aboutEditor; // Глобальна змінна для редактора
 let productEditor; // Додаємо глобальну змінну для редактора товару
@@ -556,56 +548,6 @@ async function loadBrands() {
     }
 }
 
-function renderFilters() {
-    const filterList = document.getElementById('filter-list-admin');
-    if (filterList) {
-        filterList.innerHTML = filters.map((f, index) => `
-            <div>
-                ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
-                <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
-    resetInactivityTimer();
-}
-
-async function deleteFilter(index) {
-    if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
-            filters.splice(index, 1);
-
-            const token = localStorage.getItem('adminToken');
-            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-            const response = await fetch(`${baseUrl}/api/settings`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({ ...settings, filters })
-            });
-
-            if (!response.ok) {
-                throw new Error('Не вдалося оновити фільтри');
-            }
-
-            renderFilters();
-            showNotification('Фільтр видалено!');
-        } catch (err) {
-            console.error('Помилка видалення фільтру:', err);
-            showNotification('Помилка: ' + err.message);
-        }
-    }
-}
-
 function updateMaterialOptions() {
     const materialInput = document.getElementById('product-material');
     if (materialInput && materialInput.tagName === 'INPUT') {
@@ -643,12 +585,11 @@ async function initializeData() {
             loadOrders(),
             loadSlides(),
             loadMaterials(),
-            loadBrands(),
-            loadFilters()
+            loadBrands()
         ]);
         results.forEach((result, index) => {
             if (result.status === 'rejected') {
-                console.error(`Помилка завантаження ${['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'][index]}:`, result.reason);
+                console.error(`Помилка завантаження ${['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'][index]}:`, result.reason);
                 showNotification(`Помилка завантаження даних: ${result.reason.message}`);
             }
         });
@@ -3544,290 +3485,6 @@ async function updateProductSettings() {
     }
 }
 
-async function loadFilters() {
-    try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            console.warn('Токен відсутній. Використовуються локальні фільтри.');
-            renderFilters(); // Замінено на renderFilters
-            return;
-        }
-
-        const token = localStorage.getItem('adminToken');
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetch(`${baseUrl}/api/filters`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
-            throw new Error(`Не вдалося завантажити фільтри: ${text}`);
-        }
-
-        filters = await response.json();
-        renderFilters(); // Замінено на renderFilters
-    } catch (err) {
-        console.error('Помилка завантаження фільтрів:', err);
-        showNotification('Помилка завантаження фільтрів: ' + err.message);
-        renderFilters(); // Рендеримо локальні дані при помилці
-    }
-}
-
-async function addFilter() {
-    try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
-            return;
-        }
-
-        const labelInput = document.getElementById('filter-label');
-        const nameInput = document.getElementById('filter-name');
-        const typeSelect = document.getElementById('filter-type');
-        const optionsInput = document.getElementById('filter-options');
-
-        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
-            showNotification('Елементи форми для фільтра не знайдено');
-            return;
-        }
-
-        const label = labelInput.value.trim();
-        const name = nameInput.value.trim();
-        const type = typeSelect.value;
-        const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
-
-        if (!label || !name || !type || options.length === 0) {
-            showNotification('Заповніть усі поля фільтра!');
-            return;
-        }
-
-        filters.push({ label, name, type, options });
-
-        const token = localStorage.getItem('adminToken');
-        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
-        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
-            method: 'PUT',
-            body: JSON.stringify({ ...settings, filters })
-        });
-
-        if (!response.ok) {
-            throw new Error('Не вдалося оновити фільтри');
-        }
-
-        renderFilters();
-        showNotification('Фільтр додано!');
-        labelInput.value = '';
-        nameInput.value = '';
-        typeSelect.value = 'select';
-        optionsInput.value = '';
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка додавання фільтру:', err);
-        showNotification('Помилка: ' + err.message);
-    }
-}
-
-    function editFilter(name) {
-        const filter = filters.find(f => f.name === name);
-        if (filter) {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Редагувати фільтр</h3>
-                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
-                    <label for="edit-filter-name">Назва фільтру</label>
-                    <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
-                    <label for="edit-filter-label">Відображувана назва</label>
-                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
-                    <label for="edit-filter-options">Опції (через кому)</label>
-                    <div class="modal-actions">
-                        <button id="save-filter-btn">Зберегти</button>
-                        <button id="cancel-filter-btn">Скасувати</button>
-                    </div>
-                </div>
-            `;
-            modal.classList.add('active');
-            document.getElementById('save-filter-btn').addEventListener('click', () => saveFilterEdit(name));
-            document.getElementById('cancel-filter-btn').addEventListener('click', closeModal);
-            resetInactivityTimer();
-        }
-    }
-
-    function saveFilterEdit(name) {
-        const filter = filters.find(f => f.name === name);
-        if (filter) {
-            const newLabel = document.getElementById('edit-filter-label').value;
-            const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
-
-            if (newLabel && newOptions.length > 0) {
-                filter.label = newLabel;
-                filter.options = newOptions;
-                localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-                closeModal();
-                renderAdmin();
-                showNotification('Фільтр відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } else {
-                alert('Введіть підпис та опції!');
-            }
-        }
-    }
-
-    function deleteFilter(name) {
-        if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
-            filters = filters.filter(f => f.name !== name);
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            renderAdmin();
-            showNotification('Фільтр видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        }
-    }
-
-    function moveFilterUp(index) {
-        if (index > 0) {
-            [filters[index - 1], filters[index]] = [filters[index], filters[index - 1]];
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            renderAdmin();
-            resetInactivityTimer();
-        }
-    }
-
-    function moveFilterDown(index) {
-        if (index < filters.length - 1) {
-            [filters[index], filters[index + 1]] = [filters[index + 1], filters[index]];
-            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-            renderAdmin();
-            resetInactivityTimer();
-        }
-    }
-
-async function addOrderField() {
-    const name = document.getElementById('order-field-name').value;
-    const label = document.getElementById('order-field-label').value;
-    const type = document.getElementById('order-field-type').value;
-    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
-
-    if (!name || !label) {
-        showNotification('Введіть назву та підпис для поля!');
-        return;
-    }
-
-    const field = { name, label, type };
-    if (type === 'select' && options.length > 0) field.options = options;
-
-    try {
-        const response = await fetchWithAuth('/api/order-fields', {
-            method: 'POST',
-            body: JSON.stringify(field)
-        });
-
-        const newField = await response.json();
-        orderFields.push(newField);
-        document.getElementById('order-field-name').value = '';
-        document.getElementById('order-field-label').value = '';
-        document.getElementById('order-field-options').value = '';
-        renderAdmin('order-fields');
-        showNotification('Поле замовлення додано!');
-        resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка додавання поля замовлення:', e);
-        showNotification('Не вдалося додати поле: ' + e.message);
-    }
-}
-
-    function editOrderField(name) {
-        const field = orderFields.find(f => f.name === name);
-        if (field) {
-            const modal = document.getElementById('modal');
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Редагувати поле замовлення</h3>
-                    <input type="text" id="edit-order-field-name" value="${field.name}" readonly><br/>
-                    <label for="edit-order-field-name">Назва поля</label>
-                    <input type="text" id="edit-order-field-label" value="${field.label}"><br/>
-                    <label for="edit-order-field-label">Відображувана назва</label>
-                    <select id="edit-order-field-type">
-                        <option value="text" ${field.type === 'text' ? 'selected' : ''}>Текст</option>
-                        <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
-                        <option value="select" ${field.type === 'select' ? 'selected' : ''}>Вибір</option>
-                    </select><br/>
-                    <label for="edit-order-field-type">Тип поля</label>
-                    <input type="text" id="edit-order-field-options" value="${field.options ? field.options.join(', ') : ''}" ${field.type !== 'select' ? 'disabled' : ''}><br/>
-                    <label for="edit-order-field-options">Опції (через кому, для select)</label>
-                    <div class="modal-actions">
-                        <button id="save-order-field-btn">Зберегти</button>
-                        <button id="cancel-order-field-btn">Скасувати</button>
-                    </div>
-                </div>
-            `;
-            modal.classList.add('active');
-            document.getElementById('edit-order-field-type').addEventListener('change', (e) => {
-                document.getElementById('edit-order-field-options').disabled = e.target.value !== 'select';
-            });
-            document.getElementById('save-order-field-btn').addEventListener('click', () => saveOrderFieldEdit(name));
-            document.getElementById('cancel-order-field-btn').addEventListener('click', closeModal);
-            resetInactivityTimer();
-        }
-    }
-
-    function saveOrderFieldEdit(name) {
-        const field = orderFields.find(f => f.name === name);
-        if (field) {
-            const newLabel = document.getElementById('edit-order-field-label').value;
-            const newType = document.getElementById('edit-order-field-type').value;
-            const newOptions = document.getElementById('edit-order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
-
-            if (newLabel) {
-                field.label = newLabel;
-                field.type = newType;
-                if (newType === 'select') {
-                    if (newOptions.length > 0) {
-                        field.options = newOptions;
-                    } else {
-                        alert('Введіть опції для типу "Вибір"!');
-                        return;
-                    }
-                } else {
-                    delete field.options;
-                }
-                localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
-                closeModal();
-                renderAdmin();
-                showNotification('Поле замовлення відредаговано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } else {
-                alert('Введіть відображувану назву!');
-            }
-        }
-    }
-
-    function deleteOrderField(name) {
-        if (confirm('Ви впевнені, що хочете видалити це поле?')) {
-            orderFields = orderFields.filter(f => f.name !== name);
-            localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
-            renderAdmin();
-            showNotification('Поле замовлення видалено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-        }
-    }
-
 async function updateSlideshowSettings() {
     const width = parseInt(document.getElementById('slide-width').value) || 100;
     const height = parseInt(document.getElementById('slide-height').value) || 300;
@@ -4070,24 +3727,22 @@ function editSlide(order) {
         resetInactivityTimer();
     }
 
-    function exportSiteBackup() {
-        const data = {
-            settings,
-            categories,
-            filters,
-            orderFields,
-            slides
-        };
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'site-backup.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Бекап сайту експортовано!');
-        resetInactivityTimer();
-    }
+function exportSiteBackup() {
+    const data = {
+        settings,
+        categories,
+        slides
+    };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'site-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Бекап сайту експортовано!');
+    resetInactivityTimer();
+}
 
     function exportProductsBackup() {
         const blob = new Blob([JSON.stringify(products)], { type: 'application/json' });
@@ -4113,36 +3768,32 @@ function editSlide(order) {
         resetInactivityTimer();
     }
 
-    function importSiteBackup() {
-        const file = document.getElementById('import-site-file').files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    settings = data.settings || settings;
-                    categories = data.categories || categories;
-                    filters = data.filters || filters;
-                    orderFields = data.orderFields || orderFields;
-                    slides = data.slides || slides;
-                    localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                    localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
-                    localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
-                    localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                    renderAdmin();
-                    showNotification('Бекап сайту імпортовано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                } catch (err) {
-                    alert('Помилка імпорту: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        } else {
-            alert('Виберіть файл для імпорту!');
-        }
+function importSiteBackup() {
+    const file = document.getElementById('import-site-file').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                settings = data.settings || settings;
+                categories = data.categories || categories;
+                slides = data.slides || slides;
+                localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+                localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
+                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
+                renderAdmin();
+                showNotification('Бекап сайту імпортовано!');
+                unsavedChanges = false;
+                resetInactivityTimer();
+            } catch (err) {
+                alert('Помилка імпорту: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    } else {
+        alert('Виберіть файл для імпорту!');
     }
+}
 
     function importProductsBackup() {
         const file = document.getElementById('import-products-file').files[0];
@@ -4861,7 +4512,7 @@ async function saveNewProduct() {
         const slug = document.getElementById('product-slug')?.value.trim();
         const brand = document.getElementById('product-brand')?.value.trim() || '';
         const category = document.getElementById('product-category')?.value.trim() || '';
-        const subcategory = document.getElementById('product-subcategory')?.value.trim() || '';
+        const subcategory = document.getElementById('product-subcategory')?.value.trim() || null;
         const material = document.getElementById('product-material')?.value.trim() || '';
         let price = null;
         let salePrice = null;
@@ -4878,8 +4529,8 @@ async function saveNewProduct() {
         const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
 
         // Валідація обов’язкових полів
-        if (!name || !slug) {
-            showNotification('Введіть назву та шлях товару!');
+        if (!name || !slug || !category) {
+            showNotification('Введіть назву, шлях та категорію товару!');
             return;
         }
 
@@ -4907,7 +4558,7 @@ async function saveNewProduct() {
 
         // Валідація категорії та підкатегорії
         let categoryName = null;
-        let subcategorySlug = null; // Змінено на slug замість name
+        let subcategorySlug = null;
         if (category) {
             const categoryObj = categories.find(c => c.name === category);
             if (!categoryObj) {
@@ -4921,7 +4572,7 @@ async function saveNewProduct() {
                     showNotification('Обрана підкатегорія не існує в цій категорії!');
                     return;
                 }
-                subcategorySlug = subcategoryObj.slug; // Використовуємо slug
+                subcategorySlug = subcategoryObj.slug;
             }
         }
 
@@ -4960,7 +4611,7 @@ async function saveNewProduct() {
             slug,
             brand,
             category: categoryName,
-            subcategory: subcategorySlug, // Використовуємо slug
+            subcategory: subcategorySlug,
             material,
             price: newProduct.type === 'simple' ? price : null,
             salePrice: salePrice || null,
@@ -4975,7 +4626,7 @@ async function saveNewProduct() {
                 name: color.name,
                 value: color.value,
                 priceChange: color.priceChange || 0,
-                photo: null // Буде заповнено після завантаження
+                photo: null
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts,
@@ -5074,22 +4725,30 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
-        // Логування детальної інформації про помилку
+        let errorMessage = 'Не вдалося додати товар: ';
         if (err.message.includes('HTTP error 400')) {
             try {
-                const errorResponse = await fetchWithAuth('/api/products', {
+                const errorResponse = await (await fetchWithAuth('/api/products', {
                     method: 'POST',
                     body: JSON.stringify(product)
-                }).catch(e => e);
-                const errorData = await errorResponse.json().catch(() => ({}));
-                console.error('Деталі помилки від сервера:', errorData);
-                showNotification('Не вдалося додати товар: ' + (errorData.error || err.message));
+                }).catch(e => ({ ok: false, json: async () => ({}) }))).json();
+                console.error('Деталі помилки від сервера:', errorResponse);
+                if (errorResponse.details) {
+                    if (Array.isArray(errorResponse.details)) {
+                        errorMessage += errorResponse.details.map(d => `${d.path.join('.')} - ${d.message}`).join('; ');
+                    } else {
+                        errorMessage += errorResponse.details;
+                    }
+                } else {
+                    errorMessage += errorResponse.error || err.message;
+                }
             } catch (e) {
-                showNotification('Не вдалося додати товар: ' + (err.message || 'Невідома помилка'));
+                errorMessage += err.message || 'Невідома помилка';
             }
         } else {
-            showNotification('Не вдалося додати товар: ' + (err.message || 'Невідома помилка'));
+            errorMessage += err.message || 'Невідома помилка';
         }
+        showNotification(errorMessage);
     } finally {
         if (saveButton) saveButton.disabled = false;
     }
@@ -5761,18 +5420,27 @@ async function uploadBulkPrices() {
 function viewOrder(index) {
     const order = orders[index];
     if (order) {
-        // Форматуємо дату в локальний часовий пояс
-const orderDate = new Date(order.date);
-const formattedDate = isNaN(orderDate.getTime())
-    ? 'Невідома дата'
-    : orderDate.toLocaleString('uk-UA', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-      });
+        const orderDate = new Date(order.date);
+        const formattedDate = isNaN(orderDate.getTime())
+            ? 'Невідома дата'
+            : orderDate.toLocaleString('uk-UA', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+              });
+
+        // Статичні мітки для полів клієнта
+        const fieldLabels = {
+            name: 'Ім’я',
+            surname: 'Прізвище',
+            phone: 'Телефон',
+            email: 'Email',
+            address: 'Адреса доставки',
+            payment: 'Оплата'
+        };
 
         const modal = document.getElementById('modal');
         modal.innerHTML = `
@@ -5784,10 +5452,7 @@ const formattedDate = isNaN(orderDate.getTime())
                 <h4>Дані клієнта:</h4>
                 ${
                     order.customer && typeof order.customer === 'object'
-                        ? Object.entries(order.customer).map(([key, value]) => {
-                              const field = orderFields.find(f => f.name === key);
-                              return `<p>${field ? field.label : key}: ${value}</p>`;
-                          }).join('')
+                        ? Object.entries(order.customer).map(([key, value]) => `<p>${fieldLabels[key] || key}: ${value}</p>`).join('')
                         : '<p>Дані клієнта відсутні.</p>'
                 }
                 <h4>Товари:</h4>
@@ -5995,7 +5660,7 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onopen = () => {
         console.log('Адмін підключено до WebSocket');
-        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
+        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type, action: 'subscribe' }));
             }
@@ -6057,13 +5722,6 @@ function connectAdminWebSocket(attempt = 1) {
                     updateBrandOptions();
                 } else {
                     console.warn('Некоректні дані брендів:', data);
-                }
-            } else if (type === 'filters') {
-                if (Array.isArray(data)) {
-                    filters = data;
-                    renderFilters();
-                } else {
-                    console.warn('Некоректні дані фільтрів:', data);
                 }
             } else if (type === 'error') {
                 console.error('WebSocket помилка від сервера:', data);

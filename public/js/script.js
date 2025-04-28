@@ -3,7 +3,6 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
-let filters = [];
 let orderFields = [];
 let settings = {};
 let currentProduct = null;
@@ -483,13 +482,6 @@ async function initializeData() {
         { name: 'payment', label: 'Оплата', type: 'select', options: ['Готівкою', 'Безготівковий розрахунок'], required: true }
     ]);
     if (!localStorage.getItem('orderFields')) saveToStorage('orderFields', orderFields);
-
-    filters = loadFromStorage('filters', [
-        { name: 'brand', label: 'Виробник', type: 'checkbox', options: ['Дубок', 'Matroluxe', 'Сокме', 'Еверест'] },
-        { name: 'price', label: 'Ціна', type: 'checkbox', options: ['0-2000', '2000-5000', '5000-10000', '10000+'] },
-        { name: 'material', label: 'Матеріал', type: 'checkbox', options: ['Дерево', 'Пружинний блок', 'Метал', 'Тканина'] }
-    ]);
-    if (!localStorage.getItem('filters')) saveToStorage('filters', filters);
 
     orders = loadFromStorage('orders', []);
     if (orders.length > 5) orders = orders.slice(-5);
