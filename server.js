@@ -2326,15 +2326,12 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         }
         let cartItems = req.body;
 
-        // Мапінг img на photo у items
-        if (cartItems) {
-            cartItems = cartItems.map(item => {
-                if (item.img && !item.photo) {
-                    item.photo = item.img;
-                    delete item.img;
-                }
-                return item;
-            });
+        // Перевірка, що всі товари мають id
+        if (cartItems.some(item => !item.id)) {
+            await session.abortTransaction();
+            session.endSession();
+            logger.error('Один або більше товарів у кошику не мають id:', cartItems);
+            return res.status(400).json({ error: 'Один або більше товарів у кошику не мають id' });
         }
 
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
