@@ -35,6 +35,14 @@ const sessionTimeout = 30 * 60 * 1000;
 let inactivityTimer;
 let materials = [];
 let brands = [];
+const orderFields = [
+    { name: 'name', label: "Ім'я" },
+    { name: 'surname', label: 'Прізвище' },
+    { name: 'phone', label: 'Телефон' },
+    { name: 'email', label: 'Електронна пошта' },
+    { name: 'address', label: 'Адреса доставки' },
+    { name: 'payment', label: 'Спосіб оплати' }
+];
 let unsavedChanges = false;
 let aboutEditor; // Глобальна змінна для редактора
 let productEditor; // Додаємо глобальну змінну для редактора товару
@@ -5500,16 +5508,30 @@ async function saveOrderStatus(index) {
             return;
         }
 
-        // Очищаємо items від системних полів
+        // Нормалізуємо items
         const cleanedItems = order.items.map(item => {
             const { _id, ...cleanedItem } = item;
-            return cleanedItem;
+            return {
+                id: cleanedItem.id,
+                name: cleanedItem.name || 'Невідомий товар',
+                quantity: parseInt(cleanedItem.quantity) || 1,
+                price: parseFloat(cleanedItem.price) || 0,
+                color: cleanedItem.color || '',
+                photo: cleanedItem.photo && typeof cleanedItem.photo === 'string' && cleanedItem.photo.trim() !== '' ? cleanedItem.photo : null
+            };
         });
+
+        // Перевіряємо, чи ціни в межах розумного
+        const hasInvalidPrice = cleanedItems.some(item => item.price < 0 || item.price > 1000000);
+        if (hasInvalidPrice) {
+            showNotification('Одна або кілька цін у замовленні мають некоректне значення (занадто велике або від’ємне).');
+            return;
+        }
 
         const updatedOrder = {
             status: newStatus,
             date: order.date,
-            total: order.total,
+            total: parseFloat(order.total) || 0,
             customer: order.customer,
             items: cleanedItems
         };
@@ -5529,7 +5551,6 @@ async function saveOrderStatus(index) {
         showNotification('Не вдалося оновити статус замовлення: ' + err.message);
     }
 }
-
 async function deleteOrder(index) {
     const order = orders[index];
     if (!order) {
@@ -5546,15 +5567,32 @@ async function deleteOrder(index) {
                 return;
             }
 
-            const response = await fetchWithAuth(`/api/orders/${order._id}`, {
+            // Оновлюємо список замовлень перед видаленням
+            const response = await fetchWithAuth('/api/orders');
+            if (!response.ok) {
+                throw new Error('Не вдалося отримати список замовлень');
+            }
+            const fetchedOrders = await response.json();
+            orders = fetchedOrders.orders || [];
+
+            // Перевіряємо, чи замовлення ще існує
+            const orderToDelete = orders.find(o => o._id === order._id);
+            if (!orderToDelete) {
+                showNotification('Замовлення вже видалено або не існує!');
+                renderAdmin('orders');
+                return;
+            }
+
+            const deleteResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
                 method: 'DELETE'
             });
 
-            if (!response.ok) {
-                throw new Error('Не вдалося видалити замовлення');
+            if (!deleteResponse.ok) {
+                const errorData = await deleteResponse.json();
+                throw new Error(errorData.error || 'Не вдалося видалити замовлення');
             }
 
-            orders.splice(index, 1);
+            orders.splice(orders.findIndex(o => o._id === order._id), 1);
             renderAdmin('orders');
             showNotification('Замовлення видалено!');
             unsavedChanges = false;
