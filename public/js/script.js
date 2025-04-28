@@ -114,7 +114,25 @@ async function loadCartFromServer() {
         saveToStorage('cart', cart);
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
-        cart = loadFromStorage('cart', []);
+        // Спробуємо завантажити з локального сховища, але перевіримо на валідність
+        const localCart = loadFromStorage('cart', []);
+        cart = localCart.filter(item => {
+            const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            if (!isValid) {
+                console.warn('Елемент кошика з localStorage видалено через некоректні дані:', item);
+            }
+            return isValid;
+        });
+        if (localCart.length !== cart.length) {
+            // Якщо були видалені невалідні елементи, оновлюємо localStorage
+            saveToStorage('cart', cart);
+        }
+        if (cart.length === 0 && localCart.length > 0) {
+            // Якщо кошик порожній через помилку, очищаємо cartId і створюємо новий
+            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cartId', newCartId);
+            console.warn('Кошик очищено через некоректні дані, створено новий cartId:', newCartId);
+        }
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
     }
 }
@@ -2237,18 +2255,34 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
-    // Validate cart items before processing
+    // Validate cart items and ensure they exist in products
     const validCartItems = cart.filter(item => {
-        const isValid = item && typeof item.id === 'number';
-        if (!isValid) {
-            console.warn('Елемент замовлення видалено через відсутність id:', item);
+        const product = products.find(p => p.id === item.id);
+        if (!product) {
+            console.warn('Товар не знайдено в products, видаляємо з кошика:', item);
+            return false;
         }
-        return isValid;
+        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        if (!isValid) {
+            console.warn('Елемент замовлення видалено через некоректні дані:', item);
+            return false;
+        }
+        return true;
     });
 
     // Update cart with valid items
-    cart = validCartItems;
-    saveToStorage('cart', cart);
+    if (cart.length !== validCartItems.length) {
+        cart = validCartItems;
+        saveToStorage('cart', cart);
+        await saveCartToServer();
+        showNotification('Деякі товари були видалені з кошика через некоректні дані.', 'warning');
+    }
+
+    // Перевіряємо, чи є товари в кошику після валідації
+    if (validCartItems.length === 0) {
+        showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
+        return;
+    }
 
     // Формуємо деталізовані дані про товари
     const detailedItems = validCartItems.map(item => {
@@ -2299,7 +2333,7 @@ async function submitOrder() {
     }).filter(item => item !== null);
 
     if (!detailedItems || detailedItems.length === 0) {
-        showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
+        showNotification('Кошик порожній після перевірки! Додайте товари перед оформленням замовлення.', 'error');
         return;
     }
 
