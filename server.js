@@ -26,7 +26,6 @@ const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
-const OrderField = require('./models/OrderField');
 
 // Налаштування логера
 const logger = winston.createLogger({
@@ -312,7 +311,7 @@ const orderSchemaValidation = Joi.object({
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            photo: Joi.string().uri().allow('').optional(),
+            photo: Joi.string().allow(''), // Змінено з color на photo
             _id: Joi.any().optional()
         })
     ).required(),
@@ -389,7 +388,7 @@ const slideSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
-    link: Joi.string().uri().allow('').optional(),
+    link: Joi.string().uri().allow('').optional(), // Змінено з url на link
     title: Joi.string().allow(''),
     text: Joi.string().allow(''),
     linkText: Joi.string().allow(''),
@@ -1054,52 +1053,6 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
     }
 });
 
-app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const productId = req.params.id;
-        logger.info(`Отримано запит на перемикання статусу активності продукту: ${productId}`);
-
-        // Перевірка валідності ObjectId
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            logger.error(`Невірний формат ID продукту: ${productId}`);
-            return res.status(400).json({ error: 'Невірний формат ID продукту' });
-        }
-
-        // Валідація вхідних даних
-        const { error } = Joi.object({
-            active: Joi.boolean().required()
-        }).validate(req.body);
-        if (error) {
-            logger.error('Помилка валідації даних для перемикання статусу:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const { active } = req.body;
-
-        // Пошук та оновлення продукту
-        const product = await Product.findByIdAndUpdate(
-            productId,
-            { active },
-            { new: true }
-        );
-
-        if (!product) {
-            logger.error(`Продукт не знайдено: ${productId}`);
-            return res.status(404).json({ error: 'Продукт не знайдено' });
-        }
-
-        // Трансляція оновленого списку продуктів
-        const products = await Product.find();
-        broadcast('products', products);
-
-        logger.info(`Статус активності продукту ${productId} змінено на ${active}`);
-        res.json(product);
-    } catch (err) {
-        logger.error('Помилка при перемиканні статусу продукту:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
 const categorySchemaValidation = Joi.object({
     name: Joi.string().max(255).required(),
     slug: Joi.string().max(255).required(),
@@ -1323,7 +1276,6 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         // Валідація
         const { error } = categoryOrderSchema.validate({ categories });
         if (error) {
-            logger.error('Помилка валідації порядку категорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
@@ -1331,28 +1283,16 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         const categoryIds = categories.map(item => item._id);
         const foundCategories = await Category.find({ _id: { $in: categoryIds } });
         if (foundCategories.length !== categoryIds.length) {
-            logger.error('Не всі категорії знайдені:', {
-                requested: categoryIds,
-                found: foundCategories.map(cat => cat._id.toString())
-            });
             return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = categories.map(({ _id, order }) => ({
-            updateOne: {
-                filter: { _id },
-                update: { $set: { order } }
-            }
-        }));
+        // Оновлення порядку
+        for (const { _id, order } of categories) {
+            await Category.findByIdAndUpdate(_id, { order });
+        }
 
-        // Виконання bulkWrite
-        await Category.bulkWrite(bulkOps);
-
-        // Отримання оновлених категорій
         const updatedCategories = await Category.find().sort({ order: 1 });
         broadcast('categories', updatedCategories);
-        logger.info('Порядок категорій успішно оновлено');
         res.status(200).json(updatedCategories);
     } catch (err) {
         logger.error('Помилка оновлення порядку категорій:', err);
@@ -1629,25 +1569,18 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
-            logger.error('Не всі підкатегорії знайдені:', {
-                requested: subcategoryIds,
-                found: existingSubcategories.map(sub => sub._id.toString())
-            });
+            logger.error('Не всі підкатегорії знайдені:', { requested: subcategoryIds, found: existingSubcategories.map(sub => sub._id.toString()) });
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = subcategories.map(({ _id, order }) => ({
-            updateOne: {
-                filter: { _id: categoryId, 'subcategories._id': _id },
-                update: { $set: { 'subcategories.$.order': order } }
+        for (const { _id, order } of subcategories) {
+            const subcat = category.subcategories.id(_id);
+            if (subcat) {
+                subcat.order = order;
             }
-        }));
+        }
 
-        // Виконання bulkWrite у межах сесії
-        await Category.bulkWrite(bulkOps, { session });
-
-        // Оновлення категорій для broadcast
+        await category.save({ session });
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
         await session.commitTransaction();
@@ -1755,7 +1688,7 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
                 {
                     photo: slideData.photo,
                     name: slideData.name,
-                    link: slideData.link,
+                    link: slideData.link, // Виправлено: видалено url
                     title: slideData.title,
                     text: slideData.text,
                     linkText: slideData.linkText,
@@ -1766,19 +1699,6 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             if (!slide) {
                 await session.abortTransaction();
                 return res.status(404).json({ error: 'Слайд не знайдено' });
-            }
-
-            // Видаляємо старе зображення, якщо нове фото відрізняється
-            if (slideData.photo && slide.photo && slideData.photo !== slide.photo) {
-                const publicId = getPublicIdFromUrl(slide.photo);
-                if (publicId) {
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Видалено старе зображення слайду: ${publicId}`);
-                    } catch (err) {
-                        logger.error(`Не вдалося видалити старе зображення слайду: ${publicId}`, err);
-                    }
-                }
             }
 
             const slides = await Slide.find().sort({ order: 1 }).session(session);
@@ -2081,18 +2001,16 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
                 const cart = await Cart.findOne({ cartId }).session(session);
                 if (cart) {
                     cart.items = [];
-                    cart.updatedAt = Date.now();
                     await cart.save({ session });
                 } else {
                     logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
                 }
             }
 
-            const orders = await Order.find().session(session);
-            broadcast('orders', orders);
-
             await session.commitTransaction();
             logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
+            const orders = await Order.find();
+            broadcast('orders', orders);
             res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
@@ -2128,16 +2046,6 @@ app.get('/api/cart', async (req, res) => {
     }
 });
 
-const cartSchemaValidation = Joi.array().items(
-    Joi.object({
-        id: Joi.number().required(),
-        name: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-        price: Joi.number().min(0).required(),
-        photo: Joi.string().uri().allow('').optional()
-    })
-);
-
 app.post('/api/cart', csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -2146,8 +2054,6 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         logger.info('POST /api/cart:', { cartId, body: req.body });
         const { error } = cartIdSchema.validate(cartId);
         if (error) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
         }
         let cartItems = req.body;
@@ -2163,10 +2069,18 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             });
         }
 
+const cartSchemaValidation = Joi.array().items(
+    Joi.object({
+        id: Joi.number().required(),
+        name: Joi.string().required(),
+        quantity: Joi.number().min(1).required(),
+        price: Joi.number().min(0).required(),
+        photo: Joi.string().uri().allow('').optional()
+    })
+);
+
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
         if (cartError) {
-            await session.abortTransaction();
-            session.endSession();
             logger.error('Помилка валідації кошика:', cartError.details);
             return res.status(400).json({ error: 'Помилка валідації', details: cartError.details });
         }
@@ -2174,11 +2088,10 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         let cart = await Cart.findOne({ cartId }).session(session);
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: cartItems, updatedAt: Date.now() });
+            cart = new Cart({ cartId, items: cartItems });
         } else {
             logger.info('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
-            cart.updatedAt = Date.now();
         }
         await cart.save({ session });
 
@@ -2269,30 +2182,12 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             }
         }
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        try {
-            const order = await Order.findOneAndUpdate(
-                { id: orderId },
-                orderData,
-                { new: true, session }
-            );
-            if (!order) {
-                await session.abortTransaction();
-                return res.status(404).json({ error: 'Замовлення не знайдено' });
-            }
+        const order = await Order.findOneAndUpdate({ id: orderId }, orderData, { new: true });
+        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
-            const orders = await Order.find().sort({ date: -1 }).session(session);
-            broadcast('orders', orders);
-
-            await session.commitTransaction();
-            res.json(order);
-        } catch (err) {
-            await session.abortTransaction();
-            throw err;
-        } finally {
-            session.endSession();
-        }
+        const orders = await Order.find().sort({ date: -1 });
+        broadcast('orders', orders);
+        res.json(order);
     } catch (err) {
         logger.error('Помилка при оновленні замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -2314,117 +2209,6 @@ if (isNaN(orderId)) {
         res.json({ message: 'Замовлення видалено' });
     } catch (err) {
         logger.error('Помилка при видаленні замовлення:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// Схема валідації для OrderField
-const orderFieldSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required(),
-    label: Joi.string().trim().min(1).max(100).required(),
-    type: Joi.string().valid('text', 'email', 'select').required(),
-    options: Joi.array().items(Joi.string().trim().min(1)).default([])
-});
-
-// Отримання всіх полів замовлення
-app.get('/api/order-fields', authenticateToken, async (req, res) => {
-    try {
-        const fields = await OrderField.find();
-        res.json(fields);
-    } catch (err) {
-        logger.error('Помилка при отриманні полів замовлення:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// Створення нового поля замовлення
-app.post('/api/order-fields', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const { error } = orderFieldSchemaValidation.validate(req.body);
-        if (error) {
-            logger.error('Помилка валідації поля замовлення:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const { name, label, type, options } = req.body;
-        const existingField = await OrderField.findOne({ name });
-        if (existingField) {
-            logger.error('Поле замовлення з такою назвою вже існує:', name);
-            return res.status(400).json({ error: `Поле з назвою "${name}" уже існує` });
-        }
-
-        const field = new OrderField({ name, label, type, options });
-        await field.save();
-        logger.info('Поле замовлення створено:', { name, label, type });
-        res.status(201).json(field);
-    } catch (err) {
-        logger.error('Помилка при додаванні поля замовлення:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
-app.put('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const fieldId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
-            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
-            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
-        }
-
-        const fieldData = req.body;
-        const { error } = orderFieldSchemaValidation.validate(fieldData);
-        if (error) {
-            logger.error('Помилка валідації поля замовлення:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const existingField = await OrderField.findOne({ name: fieldData.name, _id: { $ne: fieldId } });
-        if (existingField) {
-            logger.error('Поле замовлення з такою назвою вже існує:', fieldData.name);
-            return res.status(400).json({ error: `Поле з назвою "${fieldData.name}" уже існує` });
-        }
-
-        const field = await OrderField.findByIdAndUpdate(
-            fieldId,
-            {
-                name: fieldData.name,
-                label: fieldData.label,
-                type: fieldData.type,
-                options: fieldData.options || []
-            },
-            { new: true }
-        );
-        if (!field) {
-            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
-            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
-        }
-
-        logger.info('Поле замовлення оновлено:', { id: fieldId, name: fieldData.name });
-        res.json(field);
-    } catch (err) {
-        logger.error('Помилка при оновленні поля замовлення:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
-app.delete('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const fieldId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
-            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
-            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
-        }
-
-        const field = await OrderField.findByIdAndDelete(fieldId);
-        if (!field) {
-            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
-            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
-        }
-
-        logger.info('Поле замовлення видалено:', { id: fieldId, name: field.name });
-        res.json({ message: 'Поле замовлення видалено' });
-    } catch (err) {
-        logger.error('Помилка при видаленні поля замовлення:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
