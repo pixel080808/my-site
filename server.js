@@ -310,36 +310,44 @@ const productSchemaValidation = Joi.object({
         'string.max': 'Назва товару не може перевищувати 255 символів',
         'any.required': 'Назва товару є обов’язковою'
     }),
-    category: Joi.string().trim().max(100).required().messages({
+    category: Joi.string().trim().max(255).required().messages({
         'string.empty': 'Категорія не може бути порожньою',
-        'string.max': 'Категорія не може перевищувати 100 символів',
+        'string.max': 'Категорія не може перевищувати 255 символів',
         'any.required': 'Категорія є обов’язковою'
     }),
     subcategory: Joi.string().trim().max(255).allow('', null).optional().messages({
         'string.max': 'Підкатегорія не може перевищувати 255 символів'
     }),
-    price: Joi.number().min(0).when('type', {
-        is: 'simple',
-        then: Joi.required().messages({
-            'any.required': 'Ціна є обов’язковою для товару типу "simple"'
-        }),
-        otherwise: Joi.allow(null)
-    }).messages({
+    price: Joi.number().min(0).allow(null).optional().messages({
         'number.min': 'Ціна не може бути від’ємною'
     }),
-    salePrice: Joi.number().min(0).allow(null).messages({
+    salePrice: Joi.number().min(0).allow(null).optional().messages({
         'number.min': 'Ціна зі знижкою не може бути від’ємною'
     }),
     saleEnd: Joi.date().allow(null).optional(),
-    brand: Joi.string().trim().max(100).allow('', null).optional().messages({
-        'string.max': 'Бренд не може перевищувати 100 символів'
+    brand: Joi.string().trim().max(255).allow('', null).optional().messages({
+        'string.max': 'Бренд не може перевищувати 255 символів'
     }),
-    material: Joi.string().trim().max(100).allow('', null).optional().messages({
-        'string.max': 'Матеріал не може перевищувати 100 символів'
+    material: Joi.string().trim().max(255).allow('', null).optional().messages({
+        'string.max': 'Матеріал не може перевищувати 255 символів'
     }),
-    photos: Joi.array().items(Joi.string().uri().allow('', null).messages({
-        'string.uri': 'Фото має бути дійсним URL або порожнім'
-    })).default([]),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().trim().max(255).required().messages({
+                'string.empty': 'Назва фільтра не може бути порожньою',
+                'any.required': 'Назва фільтра є обов’язковою'
+            }),
+            value: Joi.string().trim().max(255).required().messages({
+                'string.empty': 'Значення фільтра не може бути порожнім',
+                'any.required': 'Значення фільтра є обов’язковим'
+            })
+        })
+    ).default([]),
+    photos: Joi.array().items(
+        Joi.string().uri().allow('', null).optional().messages({
+            'string.uri': 'Фото має бути дійсним URL або порожнім'
+        })
+    ).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
     slug: Joi.string().trim().min(1).max(255).required().messages({
@@ -354,34 +362,33 @@ const productSchemaValidation = Joi.object({
     }),
     sizes: Joi.array().items(
         Joi.object({
-            name: Joi.string().trim().max(100).required().messages({
+            name: Joi.string().trim().max(255).required().messages({
                 'string.empty': 'Назва розміру не може бути порожньою',
-                'string.max': 'Назва розміру не може перевищувати 100 символів',
+                'string.max': 'Назва розміру не може перевищувати 255 символів',
                 'any.required': 'Назва розміру є обов’язковою'
             }),
-            price: Joi.number().min(0).required().messages({
-                'number.min': 'Ціна розміру не може бути від’ємною',
-                'any.required': 'Ціна розміру є обов’язковою'
+            price: Joi.number().min(0).allow(null).optional().messages({
+                'number.min': 'Ціна розміру не може бути від’ємною'
             })
         })
     ).default([]),
     colors: Joi.array().items(
         Joi.object({
-            name: Joi.string().trim().max(100).required().messages({
+            name: Joi.string().trim().max(255).required().messages({
                 'string.empty': 'Назва кольору не може бути порожньою',
-                'string.max': 'Назва кольору не може перевищувати 100 символів',
+                'string.max': 'Назва кольору не може перевищувати 255 символів',
                 'any.required': 'Назва кольору є обов’язковою'
             }),
-            value: Joi.string().trim().max(100).required().messages({
+            value: Joi.string().trim().max(255).required().messages({
                 'string.empty': 'Значення кольору не може бути порожнім',
-                'string.max': 'Значення кольору не може перевищувати 100 символів',
+                'string.max': 'Значення кольору не може перевищувати 255 символів',
                 'any.required': 'Значення кольору є обов’язковим'
-            }),
-            priceChange: Joi.number().default(0).messages({
-                'number.base': 'Зміна ціни має бути числом'
             }),
             photo: Joi.string().uri().allow('', null).optional().messages({
                 'string.uri': 'Фото кольору має бути дійсним URL або порожнім'
+            }),
+            priceChange: Joi.number().allow(null).optional().messages({
+                'number.base': 'Зміна ціни має бути числом'
             })
         })
     ).default([]),
@@ -403,18 +410,7 @@ const productSchemaValidation = Joi.object({
     lengthCm: Joi.number().min(0).allow(null).optional().messages({
         'number.min': 'Довжина не може бути від’ємною'
     }),
-    popularity: Joi.number().allow(null).optional(),
-    // Додаємо підтримку filters
-    filters: Joi.array().items(
-        Joi.object({
-            name: Joi.string().required().messages({
-                'any.required': 'Назва фільтра є обов’язковою'
-            }),
-            value: Joi.string().required().messages({
-                'any.required': 'Значення фільтра є обов’язковим'
-            })
-        })
-    ).default([])
+    popularity: Joi.number().allow(null).optional()
 }).unknown(true); // Дозволяємо невідомі поля
 
 const orderSchemaValidation = Joi.object({
@@ -429,7 +425,7 @@ const orderSchemaValidation = Joi.object({
             .allow('')
             .optional(),
         address: Joi.string().allow('').optional(),
-        payment: Joi.string().optional() // Додаємо поле payment
+        payment: Joi.string().optional()
     }).required(),
     items: Joi.array().items(
         Joi.object({
@@ -437,7 +433,7 @@ const orderSchemaValidation = Joi.object({
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            photo: Joi.string().uri().allow('').optional(),
+            photo: Joi.string().uri().allow('', null).optional(),
             _id: Joi.any().optional()
         })
     ).required(),
@@ -446,48 +442,75 @@ const orderSchemaValidation = Joi.object({
 });
 
 const settingsSchemaValidation = Joi.object({
-    name: Joi.string().allow(''),
-    baseUrl: Joi.string().uri().allow(''),
-    logo: Joi.string().uri().allow(''),
-    logoWidth: Joi.number().min(0).allow(null),
-    favicon: Joi.string().uri().allow(''),
+    name: Joi.string().allow('').optional(),
+    baseUrl: Joi.string().uri().allow('').optional().messages({
+        'string.uri': 'Base URL має бути дійсним URL або порожнім'
+    }),
+    logo: Joi.string().uri().allow('').optional().messages({
+        'string.uri': 'Logo має бути дійсним URL або порожнім'
+    }),
+    logoWidth: Joi.number().min(0).default(150),
+    favicon: Joi.string().uri().allow('').optional().messages({
+        'string.uri': 'Favicon має бути дійсним URL або порожнім'
+    }),
     contacts: Joi.object({
-        phones: Joi.string().allow(''),
-        addresses: Joi.string().allow(''),
-        schedule: Joi.string().allow('')
+        phones: Joi.string().allow('').optional(),
+        addresses: Joi.string().allow('').optional(),
+        schedule: Joi.string().allow('').optional()
     }).default({ phones: '', addresses: '', schedule: '' }),
     socials: Joi.array().items(
         Joi.object({
-            name: Joi.string().allow(''),
-            url: Joi.string().uri().required(),
-            icon: Joi.string().allow('') // Змінено з .required() на .allow('') відповідно до коментаря в Settings.js
+            name: Joi.string().allow('').optional(),
+            url: Joi.string().uri().required().messages({
+                'string.uri': 'URL соціальної мережі має бути дійсним',
+                'any.required': 'URL соціальної мережі є обов’язковим'
+            }),
+            icon: Joi.string().allow('').optional()
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
-    about: Joi.string().allow(''),
-    categoryWidth: Joi.number().min(0).default(0), // Додано відповідно до коментаря в Settings.js
+    about: Joi.string().allow('').optional(),
+    categoryWidth: Joi.number().min(0).default(0),
     categoryHeight: Joi.number().min(0).default(0),
     productWidth: Joi.number().min(0).default(0),
     productHeight: Joi.number().min(0).default(0),
     filters: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            label: Joi.string().required(),
-            type: Joi.string().required(),
-            options: Joi.array().items(Joi.string().min(1)).default([])
+            name: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Назва фільтра не може бути порожньою',
+                'any.required': 'Назва фільтра є обов’язковою'
+            }),
+            label: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Мітка фільтра не може бути порожньою',
+                'any.required': 'Мітка фільтра є обов’язковою'
+            }),
+            type: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Тип фільтра не може бути порожнім',
+                'any.required': 'Тип фільтра є обов’язковим'
+            }),
+            options: Joi.array().items(Joi.string().trim().min(1)).default([])
         })
     ).default([]),
     orderFields: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            label: Joi.string().required(),
-            type: Joi.string().required(),
-            options: Joi.array().items(Joi.string().min(1)).default([])
+            name: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Назва поля замовлення не може бути порожньою',
+                'any.required': 'Назва поля замовлення є обов’язковою'
+            }),
+            label: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Мітка поля замовлення не може бути порожньою',
+                'any.required': 'Мітка поля замовлення є обов’язковою'
+            }),
+            type: Joi.string().trim().min(1).required().messages({
+                'string.empty': 'Тип поля замовлення не може бути порожнім',
+                'any.required': 'Тип поля замовлення є обов’язковим'
+            }),
+            options: Joi.array().items(Joi.string().trim().min(1)).default([])
         })
     ).default([]),
-    slideWidth: Joi.number().min(0).allow(null),
-    slideHeight: Joi.number().min(0).allow(null),
-    slideInterval: Joi.number().min(0).allow(null),
+    slideWidth: Joi.number().min(0).default(0),
+    slideHeight: Joi.number().min(0).default(0),
+    slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
@@ -496,11 +519,21 @@ const settingsSchemaValidation = Joi.object({
 }).unknown(false);
 
 const materialSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required()
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Назва матеріалу не може бути порожньою',
+        'string.min': 'Назва матеріалу має бути хоча б 1 символ',
+        'string.max': 'Назва матеріалу не може перевищувати 255 символів',
+        'any.required': 'Назва матеріалу є обов’язковою'
+    })
 });
 
 const brandSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required()
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Назва бренду не може бути порожньою',
+        'string.min': 'Назва бренду має бути хоча б 1 символ',
+        'string.max': 'Назва бренду не може перевищувати 255 символів',
+        'any.required': 'Назва бренду є обов’язковою'
+    })
 });
 
 const cartIdSchema = Joi.string()
@@ -891,7 +924,24 @@ app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
 app.get('/api/filters', authenticateToken, async (req, res) => {
     try {
         const settings = await Settings.findOne({}, { filters: 1 });
-        res.json(settings?.filters || []);
+        const filters = settings?.filters || [];
+        
+        const filterSchema = Joi.array().items(
+            Joi.object({
+                name: Joi.string().trim().min(1).required(),
+                label: Joi.string().trim().min(1).required(),
+                type: Joi.string().trim().min(1).required(),
+                options: Joi.array().items(Joi.string().trim().min(1)).default([])
+            })
+        );
+        
+        const { error } = filterSchema.validate(filters);
+        if (error) {
+            logger.error('Помилка валідації фільтрів:', error.details);
+            return res.status(500).json({ error: 'Невірний формат фільтрів', details: error.details });
+        }
+        
+        res.json(filters);
     } catch (err) {
         logger.error('Помилка при отриманні фільтрів:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -1166,12 +1216,15 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
-            logger.error('Помилка при збереженні продукту в базі:', err);
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.slug) {
+            logger.error('Продукт з таким slug вже існує:', productData.slug);
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', details: `Slug: ${productData.slug}` });
+        }
         logger.error('Помилка при додаванні товару:', err.message, err.stack);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
@@ -1377,29 +1430,66 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
 });
 
 const categorySchemaValidation = Joi.object({
-    name: Joi.string().max(255).required(),
-    slug: Joi.string().max(255).required(),
-    photo: Joi.string().allow('').optional(),
-    visible: Joi.boolean().optional(),
-    order: Joi.number().integer().min(0).default(0).optional(),
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Назва категорії не може бути порожньою',
+        'string.min': 'Назва категорії має бути хоча б 1 символ',
+        'string.max': 'Назва категорії не може перевищувати 255 символів',
+        'any.required': 'Назва категорії є обов’язковою'
+    }),
+    slug: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Slug категорії не може бути порожнім',
+        'string.min': 'Slug категорії має бути хоча б 1 символ',
+        'string.max': 'Slug категорії не може перевищувати 255 символів',
+        'any.required': 'Slug категорії є обов’язковим'
+    }),
+    photo: Joi.string().uri().allow('').optional().messages({
+        'string.uri': 'Фото категорії має бути дійсним URL або порожнім'
+    }),
+    visible: Joi.boolean().default(true),
+    order: Joi.number().integer().min(0).default(0),
     subcategories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-            name: Joi.string().max(255).required(),
-            slug: Joi.string().max(255).required(),
-            photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().optional()
+            name: Joi.string().trim().min(1).max(255).required().messages({
+                'string.empty': 'Назва підкатегорії не може бути порожньою',
+                'string.min': 'Назва підкатегорії має бути хоча б 1 символ',
+                'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
+                'any.required': 'Назва підкатегорії є обов’язковою'
+            }),
+            slug: Joi.string().trim().min(1).max(255).required().messages({
+                'string.empty': 'Slug підкатегорії не може бути порожнім',
+                'string.min': 'Slug підкатегорії має бути хоча б 1 символ',
+                'string.max': 'Slug підкатегорії не може перевищувати 255 символів',
+                'any.required': 'Slug підкатегорії є обов’язковим'
+            }),
+            photo: Joi.string().uri().allow('').optional().messages({
+                'string.uri': 'Фото підкатегорії має бути дійсним URL або порожнім'
+            }),
+            visible: Joi.boolean().default(true),
+            order: Joi.number().integer().min(0).default(0)
         })
-    ).default([]).optional()
+    ).default([])
 }).min(1);
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-    name: Joi.string().max(255).required(),
-    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
-    photo: Joi.string().allow('').optional(),
-    visible: Joi.boolean().optional(),
-    order: Joi.number().integer().min(0).default(0).optional() 
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Назва підкатегорії не може бути порожньою',
+        'string.min': 'Назва підкатегорії має бути хоча б 1 символ',
+        'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
+        'any.required': 'Назва підкатегорії є обов’язковою'
+    }),
+    slug: Joi.string().trim().min(1).max(255).required().messages({
+        'string.empty': 'Slug підкатегорії не може бути порожнім',
+        'string.min': 'Slug підкатегорії має бути хоча б 1 символ',
+        'string.max': 'Slug підкатегорії не може перевищувати 255 символів',
+        'any.required': 'Slug підкатегорії є обов’язковим'
+    }),
+    photo: Joi.string().uri().allow('').optional().messages({
+        'string.uri': 'Фото підкатегорії має бути дійсним URL або порожнім'
+    }),
+    visible: Joi.boolean().default(true),
+    order: Joi.number().integer().min(0).default(0)
 });
 
 app.get('/api/categories', async (req, res) => {
@@ -2172,32 +2262,36 @@ app.post('/api/auth/refresh', refreshTokenLimiter, csrfProtection, (req, res, ne
 app.get('/api/settings', authenticateToken, async (req, res) => {
     try {
         let settings = await Settings.findOne();
-        if (!settings) {
-            settings = new Settings({
-                name: '',
-                baseUrl: '',
-                logo: '',
-                logoWidth: 150,
-                favicon: '',
-                contacts: { phones: '', addresses: '', schedule: '' },
-                socials: [],
-                showSocials: true,
-                about: '',
-                filters: [],
-                orderFields: [],
-                slideWidth: 0,
-                slideHeight: 0,
-                slideInterval: 3000,
-                showSlides: true
-            });
-            try {
-                await settings.save();
-                logger.info('Створено початкові налаштування');
-            } catch (saveErr) {
-                logger.error('Помилка при збереженні початкових налаштувань:', saveErr);
-                return res.status(500).json({ error: 'Не вдалося створити початкові налаштування', details: saveErr.message });
-            }
-        }
+if (!settings) {
+    settings = new Settings({
+        name: '',
+        baseUrl: '',
+        logo: '',
+        logoWidth: 150,
+        favicon: '',
+        contacts: { phones: '', addresses: '', schedule: '' },
+        socials: [],
+        showSocials: true,
+        about: '',
+        categoryWidth: 0,
+        categoryHeight: 0,
+        productWidth: 0,
+        productHeight: 0,
+        filters: [],
+        orderFields: [],
+        slideWidth: 0,
+        slideHeight: 0,
+        slideInterval: 3000,
+        showSlides: true
+    });
+    try {
+        await settings.save();
+        logger.info('Створено початкові налаштування');
+    } catch (saveErr) {
+        logger.error('Помилка при збереженні початкових налаштувань:', saveErr);
+        return res.status(500).json({ error: 'Не вдалося створити початкові налаштування', details: saveErr.message });
+    }
+}
         res.json(settings);
     } catch (err) {
         logger.error('Помилка при отриманні налаштувань:', err);
@@ -2251,29 +2345,29 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         }
 
         let settings = await Settings.findOne();
-        if (!settings) {
-            settings = new Settings({
-                name: '',
-                baseUrl: '',
-                logo: '',
-                logoWidth: 150,
-                favicon: '',
-                contacts: { phones: '', addresses: '', schedule: '' },
-                socials: [],
-                showSocials: true,
-                about: '',
-                categoryWidth: 0,
-                categoryHeight: 0,
-                productWidth: 0,
-                productHeight: 0,
-                filters: [],
-                orderFields: [],
-                slideWidth: 0,
-                slideHeight: 0,
-                slideInterval: 3000,
-                showSlides: true
-            });
-        }
+if (!settings) {
+    settings = new Settings({
+        name: '',
+        baseUrl: '',
+        logo: '',
+        logoWidth: 150,
+        favicon: '',
+        contacts: { phones: '', addresses: '', schedule: '' },
+        socials: [],
+        showSocials: true,
+        about: '',
+        categoryWidth: 0,
+        categoryHeight: 0,
+        productWidth: 0,
+        productHeight: 0,
+        filters: [],
+        orderFields: [],
+        slideWidth: 0,
+        slideHeight: 0,
+        slideInterval: 3000,
+        showSlides: true
+    });
+}
 
         const updatedData = {
             ...settings.toObject(),
@@ -2440,11 +2534,10 @@ const cartSchemaValidation = Joi.array().items(
         photo: Joi.string().uri().allow('', null).optional().messages({
             'string.uri': 'Фото має бути дійсним URL або порожнім'
         }),
-        // Додаємо підтримку додаткових полів, які можуть надходити
         size: Joi.string().allow('', null).optional(),
         color: Joi.string().allow('', null).optional()
-    }).unknown(true) // Дозволяємо невідомі поля
-).min(0); // Дозволяємо порожній масив
+    }).unknown(true)
+).min(0);
 
 app.post('/api/cart', csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();

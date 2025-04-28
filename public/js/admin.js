@@ -307,7 +307,8 @@ async function fetchWithAuth(url, options = {}) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Помилка запиту:', { url, status: response.status, errorData, body: options.body });
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
+        // Додаємо детальне логування помилки
+        throw new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
     }
 
     return response;
@@ -4502,15 +4503,25 @@ async function updateSubcategories() {
     // Додаємо підкатегорії, якщо вони є
     if (category && Array.isArray(category.subcategories) && category.subcategories.length > 0) {
         category.subcategories
-            .filter(sub => sub.name && sub.slug) // Фільтруємо некоректні підкатегорії
+            .filter(sub => sub.name && sub.slug)
             .forEach(sub => {
                 const option = document.createElement('option');
-                option.value = sub.slug;
+                option.value = sub.slug; // Використовуємо slug як value
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             });
     } else {
         console.log('Підкатегорії відсутні або категорія не знайдена');
+    }
+
+    // Встановлюємо значення підкатегорії, якщо воно є в newProduct
+    if (newProduct.subcategory) {
+        const subcategoryObj = category?.subcategories.find(sub => sub.name === newProduct.subcategory || sub.slug === newProduct.subcategory);
+        if (subcategoryObj) {
+            subcategorySelect.value = subcategoryObj.slug;
+        } else {
+            console.warn(`Підкатегорія ${newProduct.subcategory} не знайдена в категорії ${categoryName}`);
+        }
     }
 
     // Налаштування кнопки додавання підкатегорії
@@ -4896,7 +4907,7 @@ async function saveNewProduct() {
 
         // Валідація категорії та підкатегорії
         let categoryName = null;
-        let subcategoryName = null;
+        let subcategorySlug = null; // Змінено на slug замість name
         if (category) {
             const categoryObj = categories.find(c => c.name === category);
             if (!categoryObj) {
@@ -4910,7 +4921,7 @@ async function saveNewProduct() {
                     showNotification('Обрана підкатегорія не існує в цій категорії!');
                     return;
                 }
-                subcategoryName = subcategoryObj.name;
+                subcategorySlug = subcategoryObj.slug; // Використовуємо slug
             }
         }
 
@@ -4949,7 +4960,7 @@ async function saveNewProduct() {
             slug,
             brand,
             category: categoryName,
-            subcategory: subcategoryName,
+            subcategory: subcategorySlug, // Використовуємо slug
             material,
             price: newProduct.type === 'simple' ? price : null,
             salePrice: salePrice || null,
@@ -4964,7 +4975,7 @@ async function saveNewProduct() {
                 name: color.name,
                 value: color.value,
                 priceChange: color.priceChange || 0,
-                photo: null
+                photo: null // Буде заповнено після завантаження
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts,
@@ -5063,7 +5074,22 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
-        showNotification('Не вдалося додати товар: ' + (err.message || 'Невідома помилка'));
+        // Логування детальної інформації про помилку
+        if (err.message.includes('HTTP error 400')) {
+            try {
+                const errorResponse = await fetchWithAuth('/api/products', {
+                    method: 'POST',
+                    body: JSON.stringify(product)
+                }).catch(e => e);
+                const errorData = await errorResponse.json().catch(() => ({}));
+                console.error('Деталі помилки від сервера:', errorData);
+                showNotification('Не вдалося додати товар: ' + (errorData.error || err.message));
+            } catch (e) {
+                showNotification('Не вдалося додати товар: ' + (err.message || 'Невідома помилка'));
+            }
+        } else {
+            showNotification('Не вдалося додати товар: ' + (err.message || 'Невідома помилка'));
+        }
     } finally {
         if (saveButton) saveButton.disabled = false;
     }
@@ -5073,7 +5099,7 @@ async function openEditProductModal(productId) {
     const product = products.find(p => p._id === productId);
     if (product) {
         newProduct = { ...product, colors: [...product.colors], photos: [...product.photos], sizes: [...product.sizes], groupProducts: [...product.groupProducts] };
-        const escapedName = product.name.replace(/"/g, '&quot;');
+        const escapedName = product.name.replace(/"/g, '"');
         const modal = document.getElementById('modal');
         modal.innerHTML = `
             <div class="modal-content">
@@ -5168,12 +5194,12 @@ async function openEditProductModal(productId) {
         updateProductType();
         initializeProductEditor(product.description || '', product.descriptionDelta || null);
         document.getElementById('product-category').addEventListener('change', updateSubcategories);
-        updateSubcategories();
+        await updateSubcategories(); // Очікуємо завершення оновлення підкатегорій
         const subcatSelect = document.getElementById('product-subcategory');
-        if (product.subcategory) {
+        if (product.subcategory && product.category) {
             const category = categories.find(c => c.name === product.category);
             if (category) {
-                const subcat = category.subcategories.find(sub => sub.slug === product.subcategory);
+                const subcat = category.subcategories.find(sub => sub.name === product.subcategory || sub.slug === product.subcategory);
                 if (subcat) {
                     subcatSelect.value = subcat.slug;
                 } else {
