@@ -559,77 +559,80 @@ async function updateProducts() {
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.add('active');
-        let newPath = '/';
-        if (sectionId === 'home') {
+    if (!section) {
+        console.error(`Section with ID "${sectionId}" not found in DOM`);
+        showNotification('Секція не знайдена!', 'error');
+        return; // Зупиняємо виконання, якщо секція не знайдена
+    }
+    section.classList.add('active');
+    let newPath = '/';
+    if (sectionId === 'home') {
+        currentProduct = null;
+        currentCategory = null;
+        currentSubcategory = null;
+        parentGroupProduct = null;
+        saveToStorage('parentGroupProduct', null);
+        isSearchActive = false;
+        searchResults = [];
+        baseSearchResults = [];
+        renderCategories();
+        updateCartCount();
+        newPath = '/';
+    } else if (sectionId === 'catalog') {
+        if (!isSearchActive && !currentCategory) {
             currentProduct = null;
-            currentCategory = null;
             currentSubcategory = null;
             parentGroupProduct = null;
             saveToStorage('parentGroupProduct', null);
-            isSearchActive = false;
-            searchResults = [];
-            baseSearchResults = [];
-            renderCategories();
-            updateCartCount();
-            newPath = '/';
-        } else if (sectionId === 'catalog') {
-            if (!isSearchActive && !currentCategory) {
-                currentProduct = null;
-                currentSubcategory = null;
-                parentGroupProduct = null;
-                saveToStorage('parentGroupProduct', null);
-                newPath = '/catalog';
-            } else if (currentProduct) {
-                showSection('product-details');
-                return;
-            } else if (currentSubcategory) {
-                const catSlug = transliterate(currentCategory.replace('ь', ''));
-                const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
-                newPath = `/${catSlug}/${subCatSlug}`;
-            } else if (currentCategory) {
-                const catSlug = transliterate(currentCategory.replace('ь', ''));
-                newPath = `/${catSlug}`;
-            }
-            renderCatalog(currentCategory, currentSubcategory, currentProduct);
-        } else if (sectionId === 'cart') {
-            parentGroupProduct = null;
-            saveToStorage('parentGroupProduct', null);
-            renderCart();
-            newPath = '/cart';
-        } else if (sectionId === 'contacts') {
-            parentGroupProduct = null;
-            saveToStorage('parentGroupProduct', null);
-            renderContacts();
-            newPath = '/contacts';
-        } else if (sectionId === 'about') {
-            parentGroupProduct = null;
-            saveToStorage('parentGroupProduct', null);
-            renderAbout();
-            newPath = '/about';
-        } else if (sectionId === 'product-details') {
-            if (!currentProduct) {
-                showNotification('Товар не знайдено!', 'error');
-                showSection('catalog');
-                return;
-            }
-            renderProductDetails();
+            newPath = '/catalog';
+        } else if (currentProduct) {
+            showSection('product-details');
+            return;
+        } else if (currentSubcategory) {
             const catSlug = transliterate(currentCategory.replace('ь', ''));
             const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
-            newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
+            newPath = `/${catSlug}/${subCatSlug}`;
+        } else if (currentCategory) {
+            const catSlug = transliterate(currentCategory.replace('ь', ''));
+            newPath = `/${catSlug}`;
         }
-        saveToStorage('currentCategory', currentCategory);
-        saveToStorage('currentSubcategory', currentSubcategory);
-        history.pushState({ sectionId }, '', newPath);
-        updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
-        renderBreadcrumbs();
-        window.scrollTo(0, 0);
-
-        // Очищаємо таймери після перемикання секції
-        activeTimers.forEach((id) => clearInterval(id));
-        activeTimers.clear();
+        renderCatalog(currentCategory, currentSubcategory, currentProduct);
+    } else if (sectionId === 'cart') {
+        parentGroupProduct = null;
+        saveToStorage('parentGroupProduct', null);
+        renderCart();
+        newPath = '/cart';
+    } else if (sectionId === 'contacts') {
+        parentGroupProduct = null;
+        saveToStorage('parentGroupProduct', null);
+        renderContacts();
+        newPath = '/contacts';
+    } else if (sectionId === 'about') {
+        parentGroupProduct = null;
+        saveToStorage('parentGroupProduct', null);
+        renderAbout();
+        newPath = '/about';
+    } else if (sectionId === 'product-details') {
+        if (!currentProduct) {
+            showNotification('Товар не знайдено!', 'error');
+            showSection('catalog');
+            return;
+        }
+        renderProductDetails();
+        const catSlug = transliterate(currentCategory.replace('ь', ''));
+        const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
+        newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
     }
+    saveToStorage('currentCategory', currentCategory);
+    saveToStorage('currentSubcategory', currentSubcategory);
+    history.pushState({ sectionId }, '', newPath);
+    updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
+    renderBreadcrumbs();
+    window.scrollTo(0, 0);
+
+    // Очищаємо таймери після перемикання секції
+    activeTimers.forEach((id) => clearInterval(id));
+    activeTimers.clear();
 }
 
 function updateMetaTags(product) {
@@ -1831,7 +1834,6 @@ async function addToCartWithColor(productId) {
     let price;
     let colorName = '';
 
-    // Обчислюємо ціну в залежності від типу товару
     if (product.type === 'group' && product.groupProducts?.length > 0) {
         const groupPrices = product.groupProducts.map(id => {
             const p = products.find(p => p.id === id);
@@ -1839,11 +1841,16 @@ async function addToCartWithColor(productId) {
                 console.warn(`Груповий товар з ID ${id} не знайдено`);
                 return 0;
             }
-            return (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) || 0;
+            const pPrice = (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) || 0;
+            if (pPrice === undefined || isNaN(pPrice)) {
+                console.error(`Некоректна ціна для товару ID ${id}:`, p);
+                return 0;
+            }
+            return pPrice;
         });
         price = groupPrices.reduce((sum, p) => sum + p, 0);
     } else {
-        price = product.price || 0;
+        price = (product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price) || 0;
     }
 
     if (product.colors?.length > 0) {
@@ -1856,7 +1863,7 @@ async function addToCartWithColor(productId) {
         }
         colorName = product.colors[colorIndex].name;
         if (product.type !== 'group') {
-            price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
+            price = (product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price) || 0;
             price += product.colors[colorIndex].priceChange || 0;
         }
     }
@@ -1874,6 +1881,11 @@ async function addToCartWithColor(productId) {
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             return;
         }
+        if (sizeData.price === undefined || isNaN(sizeData.price)) {
+            console.error(`Некоректна ціна для розміру ${size} товару ID ${productId}:`, sizeData);
+            showNotification('Помилка: Некоректна ціна розміру товару!', 'error');
+            return;
+        }
         price = sizeData.price;
         colorName = colorName ? `${colorName} (${size})` : size;
     }
@@ -1887,8 +1899,8 @@ async function addToCartWithColor(productId) {
         photo: product.photos?.[0] || NO_IMAGE_URL
     };
 
-    // Перевіряємо коректність cartItem
-    if (!cartItem.id || isNaN(cartItem.id) || !cartItem.name || cartItem.price === undefined || isNaN(cartItem.price) || !cartItem.quantity) {
+    if (!cartItem.id || !cartItem.name || cartItem.price === undefined || isNaN(cartItem.price) || !cartItem.quantity) {
+        console.error('Некоректні дані товару:', cartItem);
         showNotification('Помилка: Некоректні дані товару!', 'error');
         return;
     }
@@ -1899,13 +1911,11 @@ async function addToCartWithColor(productId) {
     if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
     else cart.push(cartItem);
 
-    // Зберігаємо локально та оновлюємо інтерфейс
     saveToStorage('cart', cart);
     updateCartCount();
     renderCart();
     showNotification(`${product.name} додано до кошика!`, 'success');
 
-    // Синхронізуємо з сервером у фоновому режимі
     try {
         await saveCartToServer();
     } catch (error) {
@@ -1963,9 +1973,20 @@ function openProduct(productId) {
         return;
     }
 
-    const subCategoryExists = product.subcategory ? categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : true;
+    const subCategoryExists = product.subcategory
+        ? categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory)
+        : true;
     if (!subCategoryExists) {
         showNotification('Підкатегорія товару більше не існує!', 'error');
+        showSection('home');
+        return;
+    }
+
+    // Перевіряємо, чи існує елемент product-details
+    const productDetailsSection = document.getElementById('product-details');
+    if (!productDetailsSection) {
+        console.error('Element with ID "product-details" not found in DOM');
+        showNotification('Помилка: секція товару не знайдена!', 'error');
         showSection('home');
         return;
     }

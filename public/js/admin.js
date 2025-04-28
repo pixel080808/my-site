@@ -1588,7 +1588,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value="▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option value=▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -4513,7 +4513,7 @@ async function saveNewProduct() {
             return;
         }
 
-        const type = newProduct.type; // Беремо тип із глобального об’єкта newProduct
+        const type = newProduct.type;
         const name = document.getElementById('product-name')?.value.trim();
         const slug = document.getElementById('product-slug')?.value.trim();
         const brand = document.getElementById('product-brand')?.value.trim() || '';
@@ -4529,7 +4529,7 @@ async function saveNewProduct() {
         const saleEnd = document.getElementById('product-sale-end')?.value || null;
         const visible = document.getElementById('product-visible')?.value === 'true';
         let description = document.getElementById('product-description')?.value || '';
-        const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || 0; // Замість null ставимо 0
+        const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || 0;
         const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || 0;
         const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || 0;
         const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || 0;
@@ -4563,7 +4563,7 @@ async function saveNewProduct() {
         }
 
         // Валідація категорії та підкатегорії
-        let categoryId = null;
+        let categoryName = null;
         let subcategorySlug = null;
         if (category) {
             const categoryObj = categories.find(c => c.name === category);
@@ -4571,7 +4571,7 @@ async function saveNewProduct() {
                 showNotification('Обрана категорія не існує!');
                 return;
             }
-            categoryId = categoryObj._id; // Використовуємо ID категорії
+            categoryName = categoryObj.name; // Використовуємо назву категорії
             if (subcategory) {
                 const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
                 if (!subcategoryObj) {
@@ -4615,10 +4615,10 @@ async function saveNewProduct() {
             type,
             name,
             slug,
-            brand: brand || undefined, // Відправляємо undefined, якщо порожнє
-            category: categoryId, // Використовуємо ID категорії
+            brand: brand || undefined,
+            category: categoryName, // Використовуємо назву категорії
             subcategory: subcategorySlug,
-            material: material || undefined, // Відправляємо undefined, якщо порожнє
+            material: material || undefined,
             price: type === 'simple' ? price : null,
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
