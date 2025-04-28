@@ -195,7 +195,11 @@ async function loadSettings() {
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
             slideWidth: serverSettings.slideWidth || settings.slideWidth,
             slideHeight: serverSettings.slideHeight || settings.slideHeight,
-            slideInterval: serverSettings.slideInterval || settings.slideInterval
+            slideInterval: serverSettings.slideInterval || settings.slideInterval,
+            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth,
+            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight,
+            productWidth: serverSettings.productWidth || settings.productWidth,
+            productHeight: serverSettings.productHeight || settings.productHeight
         };
 
         console.log('Оновлені settings:', settings);
@@ -214,8 +218,7 @@ async function loadSettings() {
                 console.log('settings.about порожній, редактор очищено.');
                 aboutEditor.setText('', 'silent');
             }
-            const aboutEdit = document.getElementById('about-edit');
-            if (aboutEdit) aboutEdit.value = settings.about || '';
+            document.getElementById('about-edit').value = settings.about || '';
         }
 
         renderSettingsAdmin();
@@ -325,18 +328,15 @@ async function updateSocials() {
                 return;
             }
 
-            // Очищаємо socials від _id
-            const cleanedSocials = settings.socials.map(({ _id, ...rest }) => rest);
-
             console.log('Надсилаємо соціальні мережі:', {
-                socials: cleanedSocials,
+                socials: settings.socials,
                 showSocials: settings.showSocials
             });
 
             const response = await fetchWithAuth('/api/settings', {
                 method: 'PUT',
                 body: JSON.stringify({
-                    socials: cleanedSocials,
+                    socials: settings.socials,
                     showSocials: settings.showSocials
                 })
             });
@@ -344,34 +344,15 @@ async function updateSocials() {
             const serverSettings = await response.json();
             settings = { ...settings, ...serverSettings };
             renderSettingsAdmin();
-            renderSocialsAdmin();
             showNotification('Соціальні мережі оновлено!');
             unsavedChanges = false;
             resetInactivityTimer();
-
-            // Оновлюємо відображення на головній сторінці (якщо ми не в адмін-панелі)
-            if (typeof renderSocials === 'function' && document.getElementById('contacts-socials')) {
-                renderSocials();
-            }
-
             return;
         } catch (err) {
             retries++;
             console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
             if (retries === maxRetries) {
                 showNotification('Помилка оновлення соціальних мереж: ' + err.message);
-                // Завантажуємо актуальні налаштування з сервера
-                try {
-                    const response = await fetchWithAuth('/api/settings', {
-                        method: 'GET'
-                    });
-                    const serverSettings = await response.json();
-                    settings = { ...settings, ...serverSettings };
-                    renderSettingsAdmin();
-                    renderSocialsAdmin();
-                } catch (fetchErr) {
-                    console.error('Помилка завантаження налаштувань після невдалого оновлення:', fetchErr);
-                }
                 return;
             }
             await new Promise(resolve => setTimeout(resolve, 1000 * retries));
@@ -682,7 +663,7 @@ async function checkAuth() {
             showSection('admin-panel');
             await initializeData();
             connectAdminWebSocket();
-            startTokenRefreshTimer();
+            startTokenRefreshTimer(); // Додаємо виклик
             resetInactivityTimer();
         } else {
             showSection('admin-login');
@@ -1586,15 +1567,9 @@ async function updateContacts() {
 async function addSocial() {
     const url = document.getElementById('social-url').value.trim();
     const icon = document.getElementById('social-icon').value;
-    const nameInput = document.getElementById('social-name')?.value.trim() || '';
 
     if (!url) {
         showNotification('Введіть URL соцмережі!');
-        return;
-    }
-
-    if (!nameInput || nameInput.length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1605,12 +1580,9 @@ async function addSocial() {
     }
 
     settings.socials = settings.socials || [];
-    settings.socials.push({ url, icon, name: nameInput });
+    settings.socials.push({ url, icon, name: '' });
     document.getElementById('social-url').value = '';
-    document.getElementById('social-icon').value = '🔗';
-    if (document.getElementById('social-name')) {
-        document.getElementById('social-name').value = '';
-    }
+    document.getElementById('social-icon').value = '🔗'; // Скидаємо на значення за замовчуванням
     await updateSocials();
 }
 
@@ -1619,17 +1591,9 @@ async function editSocial(index) {
     const url = prompt('Введіть новий URL соцмережі:', social.url);
     if (url === null) return; // Користувач скасував
 
-    const name = prompt('Введіть нову назву соцмережі:', social.name || '');
-    if (name === null) return; // Користувач скасував
-
     const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
     if (!url || !urlRegex.test(url)) {
         showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
-        return;
-    }
-
-    if (!name.trim() || name.trim().length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
         return;
     }
 
@@ -1653,7 +1617,6 @@ async function editSocial(index) {
     if (confirmEdit) {
         settings.socials[index].url = url;
         settings.socials[index].icon = iconSelect.value;
-        settings.socials[index].name = name.trim();
         await updateSocials();
     }
 
@@ -1812,9 +1775,38 @@ function renderAdmin(section = activeTab) {
         if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
         else console.warn('Елемент #slide-interval не знайдено');
 
-        renderSocialsAdmin();
+        const categoryWidth = document.getElementById('category-width');
+        if (categoryWidth) categoryWidth.value = settings.categoryWidth || 200;
+        else console.warn('Елемент #category-width не знайдено');
 
-        const catList = document.getElementById('category-list-admin');
+        const categoryHeight = document.getElementById('category-height');
+        if (categoryHeight) categoryHeight.value = settings.categoryHeight || 150;
+        else console.warn('Елемент #category-height не знайдено');
+
+        const productWidth = document.getElementById('product-width');
+        if (productWidth) productWidth.value = settings.productWidth || 300;
+        else console.warn('Елемент #product-width не знайдено');
+
+        const productHeight = document.getElementById('product-height');
+        if (productHeight) productHeight.value = settings.productHeight || 280;
+        else console.warn('Елемент #product-height не знайдено');
+
+        const socialList = document.getElementById('social-list');
+        if (socialList) {
+            socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
+                ? settings.socials.map((social, index) => `
+                    <div class="social-item">
+                        <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
+                        <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+                        <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+                    </div>
+                `).join('')
+                : '';
+        } else {
+            console.warn('Елемент #social-list не знайдено');
+        }
+
+        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
         if (catList) {
             console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
@@ -1824,7 +1816,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
@@ -1847,7 +1839,7 @@ function renderAdmin(section = activeTab) {
 
         function handleCatListClick(event) {
             const target = event.target;
-            const categoryId = target.dataset.id;
+            const categoryId = target.dataset.id; // Змінено для уникнення помилки
             const subName = target.dataset.subName;
             const catId = target.dataset.catId;
             const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
@@ -1988,11 +1980,11 @@ function renderCategoriesAdmin() {
                 </div>
             </div>
             <div class="subcategories">
-                ${category.subcategories && Array.isArray(category.subcategories) && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
+                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
                     <div class="subcategory-item">
                         <div class="subcategory-order-controls">
                             <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === (category.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
+                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
                         </div>
                         ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
                         <div class="subcategory-details">
@@ -2030,23 +2022,13 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryUp(catId, subIndex);
-                }
-            }
+            const subIndex = category.subcategories.findIndex(s => s._id === subId);
+            moveSubcategoryUp(catId, subIndex);
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryDown(catId, subIndex);
-                }
-            }
+            const subIndex = category.subcategories.findIndex(s => s._id === subId);
+            moveSubcategoryDown(catId, subIndex);
         } else if (target.classList.contains('sub-edit')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
@@ -2082,27 +2064,13 @@ function renderCategoriesAdmin() {
 function renderSocialsAdmin() {
     const socialList = document.getElementById('social-list');
     if (!socialList) return;
-
-    // Якщо showSocials вимкнено, показуємо повідомлення, але дозволяємо редагувати список
-    if (!settings.showSocials) {
-        socialList.innerHTML = '<p>Соціальні мережі відключені (не відображаються на сайті)</p>';
-    } else {
-        socialList.innerHTML = '';
-    }
-
-    // Завжди показуємо список соціальних мереж для редагування
-    const socialItems = settings.socials && Array.isArray(settings.socials)
-        ? settings.socials.map((social, index) => `
-            <div class="social-item">
-                <span class="social-icon">${social.icon}</span>
-                <span>${social.name} (${social.url})</span>
-                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-            </div>
-        `).join('')
-        : '<p>Соціальні мережі відсутні</p>';
-
-    socialList.innerHTML += socialItems;
+    socialList.innerHTML = settings.socials.map((social, index) => `
+        <div class="social-item">
+            <span class="social-icon">${social.icon}</span>
+            <span>${social.url}</span>
+            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+        </div>
+    `).join('');
 }
 
 async function deleteCategory(categoryId) {
@@ -2149,46 +2117,24 @@ async function deleteCategory(categoryId) {
 }
 
 function renderSettingsAdmin() {
-    const storeName = document.getElementById('store-name');
-    if (storeName) storeName.value = settings.name || '';
-
-    const baseUrl = document.getElementById('base-url');
-    if (baseUrl) baseUrl.value = settings.baseUrl || '';
-
-    const logoUrl = document.getElementById('logo-url');
-    if (logoUrl) logoUrl.value = settings.logo || '';
-
-    const logoWidth = document.getElementById('logo-width');
-    if (logoWidth) logoWidth.value = settings.logoWidth || '';
-
-    const faviconUrl = document.getElementById('favicon-url');
-    if (faviconUrl) faviconUrl.value = settings.favicon || '';
-
-    const contactPhones = document.getElementById('contact-phones');
-    if (contactPhones) contactPhones.value = settings.contacts.phones || '';
-
-    const contactAddresses = document.getElementById('contact-addresses');
-    if (contactAddresses) contactAddresses.value = settings.contacts.addresses || '';
-
-    const contactSchedule = document.getElementById('contact-schedule');
-    if (contactSchedule) contactSchedule.value = settings.contacts.schedule || '';
-
-    const socialToggle = document.getElementById('social-toggle');
-    if (socialToggle) socialToggle.checked = settings.showSocials;
-
+    document.getElementById('store-name').value = settings.name || '';
+    document.getElementById('base-url').value = settings.baseUrl || '';
+    document.getElementById('logo-url').value = settings.logo || '';
+    document.getElementById('logo-width').value = settings.logoWidth || '';
+    document.getElementById('favicon-url').value = settings.favicon || '';
+    document.getElementById('contact-phones').value = settings.contacts.phones || '';
+    document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
+    document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
+    document.getElementById('social-toggle').checked = settings.showSocials;
     renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
-
-    const slideWidth = document.getElementById('slide-width');
-    if (slideWidth) slideWidth.value = settings.slideWidth || '';
-
-    const slideHeight = document.getElementById('slide-height');
-    if (slideHeight) slideHeight.value = settings.slideHeight || '';
-
-    const slideInterval = document.getElementById('slide-interval');
-    if (slideInterval) slideInterval.value = settings.slideInterval || '';
-
-    const slideToggle = document.getElementById('slide-toggle');
-    if (slideToggle) slideToggle.checked = settings.showSlides;
+    document.getElementById('category-width').value = settings.categoryWidth || '';
+    document.getElementById('category-height').value = settings.categoryHeight || '';
+    document.getElementById('product-width').value = settings.productWidth || '';
+    document.getElementById('product-height').value = settings.productHeight || '';
+    document.getElementById('slide-width').value = settings.slideWidth || '';
+    document.getElementById('slide-height').value = settings.slideHeight || '';
+    document.getElementById('slide-interval').value = settings.slideInterval || '';
+    document.getElementById('slide-toggle').checked = settings.showSlides;
 }
 
 function openNewSlideModal() {
@@ -6066,81 +6012,81 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-            if (type === 'settings' && data) {
-                settings = { ...settings, ...data };
-                renderSettingsAdmin();
-            } else if (type === 'products') {
-                if (Array.isArray(data)) {
-                    products = data;
-                    if (document.querySelector('#products.active')) {
-                        renderAdmin('products');
-                    }
-                } else {
-                    console.warn('Некоректні дані продуктів:', data);
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+        if (type === 'settings') {
+            settings = { ...settings, ...data };
+            renderSettingsAdmin();
+        } else if (type === 'products') {
+            if (Array.isArray(data)) {
+                products = data;
+                if (document.querySelector('#products.active')) {
+                    renderAdmin('products');
                 }
-            } else if (type === 'categories') {
-                if (Array.isArray(data)) {
-                    categories = data;
-                    renderCategoriesAdmin();
-                } else {
-                    console.warn('Некоректні дані категорій:', data);
-                    loadCategories();
-                }
-            } else if (type === 'orders') {
-                if (Array.isArray(data)) {
-                    orders = data;
-                    if (document.querySelector('#orders.active')) {
-                        renderAdmin('orders');
-                    }
-                } else {
-                    console.warn('Некоректні дані замовлень:', data);
-                }
-            } else if (type === 'slides') {
-                if (Array.isArray(data)) {
-                    slides = data;
-                    if (document.querySelector('#site-editing.active')) {
-                        renderSlidesAdmin();
-                    }
-                } else {
-                    console.warn('Некоректні дані слайдів:', data);
-                }
-            } else if (type === 'materials') {
-                if (Array.isArray(data)) {
-                    materials = data;
-                    updateMaterialOptions();
-                } else {
-                    console.warn('Некоректні дані матеріалів:', data);
-                }
-            } else if (type === 'brands') {
-                if (Array.isArray(data)) {
-                    brands = data;
-                    updateBrandOptions();
-                } else {
-                    console.warn('Некоректні дані брендів:', data);
-                }
-            } else if (type === 'filters') {
-                if (Array.isArray(data)) {
-                    filters = data;
-                    renderFilters();
-                } else {
-                    console.warn('Некоректні дані фільтрів:', data);
-                }
-            } else if (type === 'error') {
-                console.error('WebSocket помилка від сервера:', data);
-                showNotification('Помилка WebSocket: ' + data.error);
-                if (data.error.includes('неавторизований')) {
-                    localStorage.removeItem('adminToken');
-                    localStorage.removeItem('adminSession');
-                    showSection('admin-login');
-                }
+            } else {
+                console.warn('Некоректні дані продуктів:', data);
             }
-        } catch (e) {
-            console.error('Помилка обробки WebSocket-повідомлення:', e);
-            showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+        } else if (type === 'categories') {
+            if (Array.isArray(data)) {
+                categories = data;
+                renderCategoriesAdmin();
+            } else {
+                console.warn('Некоректні дані категорій:', data);
+                loadCategories();
+            }
+        } else if (type === 'orders') {
+            if (Array.isArray(data)) {
+                orders = data;
+                if (document.querySelector('#orders.active')) {
+                    renderAdmin('orders');
+                }
+            } else {
+                console.warn('Некоректні дані замовлень:', data);
+            }
+        } else if (type === 'slides') {
+            if (Array.isArray(data)) {
+                slides = data;
+                if (document.querySelector('#site-editing.active')) {
+                    renderSlidesAdmin();
+                }
+            } else {
+                console.warn('Некоректні дані слайдів:', data);
+            }
+        } else if (type === 'materials') {
+            if (Array.isArray(data)) {
+                materials = data;
+                updateMaterialOptions();
+            } else {
+                console.warn('Некоректні дані матеріалів:', data);
+            }
+        } else if (type === 'brands') {
+            if (Array.isArray(data)) {
+                brands = data;
+                updateBrandOptions();
+            } else {
+                console.warn('Некоректні дані брендів:', data);
+            }
+        } else if (type === 'filters') {
+            if (Array.isArray(data)) {
+                filters = data;
+                renderFilters();
+            } else {
+                console.warn('Некоректні дані фільтрів:', data);
+            }
+        } else if (type === 'error') {
+            console.error('WebSocket помилка від сервера:', data);
+            showNotification('Помилка WebSocket: ' + data.error);
+            if (data.error.includes('неавторизований')) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminSession');
+                showSection('admin-login');
+            }
         }
-    };
+    } catch (e) {
+        console.error('Помилка обробки WebSocket-повідомлення:', e);
+        showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+    }
+};
 }
