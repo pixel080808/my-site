@@ -1137,9 +1137,9 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             logger.error('Некоректний формат category:', productData.category);
             return res.status(400).json({ error: 'Категорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.category)}` });
         }
-        if (productData.subcategory && typeof productData.subcategory !== 'string') {
+        if (productData.subcategory !== null && typeof productData.subcategory !== 'string') {
             logger.error('Некоректний формат subcategory:', productData.subcategory);
-            return res.status(400).json({ error: 'Підкатегорія має бути рядком', details: `Отримано: ${JSON.stringify(productData.subcategory)}` });
+            return res.status(400).json({ error: 'Підкатегорія має бути рядком або null', details: `Отримано: ${JSON.stringify(productData.subcategory)}` });
         }
 
         // Валідація даних
@@ -1188,7 +1188,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, details: 'Переконайтеся, що категорія створена' });
         }
 
-        // Перевірка існування subcategory
+        // Перевірка існування subcategory, якщо вона вказана
         if (productData.subcategory) {
             const categoryWithSub = await Category.findOne({
                 name: productData.category,

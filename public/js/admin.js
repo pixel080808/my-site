@@ -4123,7 +4123,8 @@ function renderPriceFields() {
 async function updateSubcategories() {
     const modal = document.getElementById('modal');
     if (!modal || modal.style.display !== 'block') {
-        console.warn('Модальне вікно #modal не відкрите, пропускаємо updateSubcategories');
+        console.warn('Модальне вікно #modal не відкрите, відкладаємо updateSubcategories');
+        setTimeout(updateSubcategories, 100); // Спробуємо знову через 100 мс
         return;
     }
 
