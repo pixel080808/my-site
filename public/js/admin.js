@@ -5477,7 +5477,8 @@ function changeOrderStatus(index) {
                     <option value="Нове замовлення" ${order.status === 'Нове замовлення' ? 'selected' : ''}>Нове замовлення</option>
                     <option value="В обробці" ${order.status === 'В обробці' ? 'selected' : ''}>В обробці</option>
                     <option value="Відправлено" ${order.status === 'Відправлено' ? 'selected' : ''}>Відправлено</option>
-                    <option value="Завершено" ${order.status === 'Завершено' ? 'selected' : ''}>Завершено</option>
+                    <option value="Доставлено" ${order.status === 'Доставлено' ? 'selected' : ''}>Доставлено</option>
+                    <option value="Скасовано" ${order.status === 'Скасовано' ? 'selected' : ''}>Скасовано</option>
                 </select><br/>
                 <label for="new-order-status">Новий статус</label>
                 <div class="modal-actions">
@@ -5547,7 +5548,14 @@ async function saveOrderStatus(index) {
             body: JSON.stringify(updatedOrder)
         });
 
-        order.status = newStatus;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Не вдалося оновити статус замовлення');
+        }
+
+        const updatedOrderFromServer = await response.json();
+        // Оновлюємо локальний масив orders
+        orders[index] = { ...order, ...updatedOrderFromServer };
         closeModal();
         renderAdmin('orders');
         showNotification('Статус замовлення змінено!');
@@ -5607,6 +5615,16 @@ async function deleteOrder(index) {
         } catch (err) {
             console.error('Помилка видалення замовлення:', err);
             showNotification('Не вдалося видалити замовлення: ' + err.message);
+            // Завантажуємо актуальний список замовлень з сервера
+            try {
+                const response = await fetchWithAuth('/api/orders', { method: 'GET' });
+                if (response.ok) {
+                    orders = await response.json();
+                    renderAdmin('orders');
+                }
+            } catch (fetchErr) {
+                console.error('Помилка завантаження замовлень після невдалого видалення:', fetchErr);
+            }
         }
     }
 }

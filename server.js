@@ -2487,14 +2487,19 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = parseInt(req.params.id);
-        if (isNaN(orderId)) {
-            logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
+        const orderId = req.params.id;
+        // Перевіряємо, чи ID є валідним MongoDB ObjectID
+        if (!orderId.match(/^[0-9a-fA-F]{24}$/)) {
+            logger.error(`Невірний формат ID замовлення: ${orderId}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
-        const order = await Order.findOneAndDelete({ id: orderId });
-        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
+        // Шукаємо за _id, а не за id
+        const order = await Order.findOneAndDelete({ _id: orderId });
+        if (!order) {
+            logger.warn(`Замовлення з _id ${orderId} не знайдено`);
+            return res.status(404).json({ error: 'Замовлення не знайдено' });
+        }
 
         const orders = await Order.find();
         broadcast('orders', orders);
