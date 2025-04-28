@@ -2227,30 +2227,69 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
+    // Формуємо деталізовані дані про товари
+    const detailedItems = cart.map(item => {
+        const product = products.find(p => p.id === item.id);
+        if (!product) {
+            console.warn(`Товар з ID ${item.id} не знайдено при формуванні замовлення`);
+            return null;
+        }
+
+        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+        let price = isOnSale ? product.salePrice : product.price || 0;
+        let colorName = item.color || 'Не вказано';
+        let size = null;
+        let brand = product.brand || 'Не вказано';
+
+        // Для матраців додаємо розмір і ціну за розміром
+        if (product.type === 'mattresses') {
+            const selectedSize = selectedMattressSizes[item.id];
+            if (selectedSize) {
+                const sizeData = product.sizes.find(s => s.name === selectedSize);
+                if (sizeData) {
+                    price = sizeData.price;
+                    size = selectedSize;
+                    colorName = colorName !== 'Не вказано' ? `${colorName} (${size})` : size;
+                } else {
+                    console.warn(`Розмір ${selectedSize} для товару ${item.id} не знайдено`);
+                }
+            }
+        }
+
+        // Для товарів з кольорами враховуємо зміну ціни через колір
+        if (product.colors?.length > 0) {
+            const colorIndex = selectedColors[item.id] !== undefined ? selectedColors[item.id] : 0;
+            if (product.colors[colorIndex]) {
+                price += product.colors[colorIndex].priceChange || 0;
+            }
+        }
+
+        return {
+            id: item.id,
+            name: product.name,
+            quantity: item.quantity,
+            price: price,
+            totalPrice: price * item.quantity,
+            color: colorName,
+            size: size,
+            brand: brand,
+            photo: item.photo || product.photos?.[0] || NO_IMAGE_URL
+        };
+    }).filter(item => item !== null); // Фільтруємо null-елементи
+
+    // Перевіряємо, чи є товари в замовленні
+    if (!detailedItems || detailedItems.length === 0) {
+        showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
+        return;
+    }
+
     const orderData = {
         date: new Date().toISOString(),
         status: 'Нове замовлення',
-        total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        total: detailedItems.reduce((sum, item) => sum + item.totalPrice, 0),
         customer,
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            color: item.color || ''
-        }))
+        items: detailedItems
     };
-
-    // Фільтруємо items, щоб переконатися, що всі мають id
-    if (orderData.items) {
-        orderData.items = orderData.items.filter(item => {
-            const isValid = item && typeof item.id === 'number';
-            if (!isValid) {
-                console.warn('Елемент замовлення видалено через відсутність id:', item);
-            }
-            return isValid;
-        });
-    }
 
     console.log('Дані замовлення перед відправкою:', orderData);
 
@@ -2263,7 +2302,6 @@ async function submitOrder() {
             saveToStorage('orders', orders);
             cart = [];
             saveToStorage('cart', cart);
-            // Генеруємо новий cartId після очищення
             const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('cartId', newCartId);
             selectedColors = {};
@@ -2291,7 +2329,6 @@ async function submitOrder() {
 
         cart = [];
         saveToStorage('cart', cart);
-        // Генеруємо новий cartId після очищення
         const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', newCartId);
         selectedColors = {};

@@ -5413,17 +5413,17 @@ function viewOrder(index) {
     const order = orders[index];
     if (order) {
         // Форматуємо дату в локальний часовий пояс
-const orderDate = new Date(order.date);
-const formattedDate = isNaN(orderDate.getTime())
-    ? 'Невідома дата'
-    : orderDate.toLocaleString('uk-UA', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-      });
+        const orderDate = new Date(order.date);
+        const formattedDate = isNaN(orderDate.getTime())
+            ? 'Невідома дата'
+            : orderDate.toLocaleString('uk-UA', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+              });
 
         const modal = document.getElementById('modal');
         modal.innerHTML = `
@@ -5446,10 +5446,12 @@ const formattedDate = isNaN(orderDate.getTime())
                     order.items && Array.isArray(order.items) && order.items.length > 0
                         ? order.items.map(item => {
                               const product = products.find(p => p.id === item.id);
-                              const colorInfo = item.color && item.color.trim() !== '' ? `, Колір: ${item.color}` : '';
+                              const colorInfo = item.color && item.color.trim() !== '' && item.color !== 'Не вказано' ? `, Колір: ${item.color}` : '';
+                              const sizeInfo = item.size ? `, Розмір: ${item.size}` : '';
+                              const brandInfo = item.brand && item.brand !== 'Не вказано' ? `, Виробник: ${item.brand}` : '';
                               return product
-                                  ? `<p>${product.name}${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`
-                                  : `<p>Товар #${item.id} (видалений)${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`;
+                                  ? `<p>${product.name}${colorInfo}${sizeInfo}${brandInfo} - ${item.quantity} шт. - ${item.price} грн (Загалом: ${item.totalPrice} грн)</p>`
+                                  : `<p>Товар #${item.id} (видалений)${colorInfo}${sizeInfo}${brandInfo} - ${item.quantity} шт. - ${item.price} грн (Загалом: ${item.totalPrice} грн)</p>`;
                           }).join('')
                         : '<p>Товари відсутні.</p>'
                 }
