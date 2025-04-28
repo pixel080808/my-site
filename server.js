@@ -156,9 +156,13 @@ app.use(cors({
 // Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 100, // 100 запитів на IP
+    max: 500, // Збільшуємо до 500 запитів на IP
     message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
-    skip: (req) => req.path === '/api/csrf-token' // Пропускаємо цей ендпоінт
+    skip: (req) => {
+        // Пропускаємо запити до статичних файлів і /api/csrf-token
+        const staticPaths = ['/admin.html', '/favicon.ico', '/index.html'];
+        return req.path === '/api/csrf-token' || staticPaths.includes(req.path);
+    }
 });
 
 // Застосовуємо ліміт до всіх запитів
@@ -167,7 +171,7 @@ app.use(globalLimiter);
 // Ліміт для особливо чутливих публічних ендпоінтів
 const publicApiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 50, // 50 запитів на IP
+    max: 200, // Збільшуємо до 200 запитів на IP
     message: 'Занадто багато запитів до API, спробуйте знову через 15 хвилин'
 });
 
@@ -238,11 +242,14 @@ app.use(express.static(publicPath, {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
-            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
         }
         if (path.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
-            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
+        }
+        if (path.endsWith('.ico') || path.endsWith('.png') || path.endsWith('.jpg')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
         }
     }
 }));
@@ -275,7 +282,7 @@ const loginLimiter = rateLimit({
 
 const refreshTokenLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 100, // Збільшуємо до 100 запитів
+    max: 300, // Збільшуємо до 300 запитів
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
         const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
