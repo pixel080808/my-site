@@ -5508,6 +5508,12 @@ async function saveOrderStatus(index) {
             return;
         }
 
+        // Перевіряємо, чи є елементи в items
+        if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
+            showNotification('Замовлення не містить товарів! Додайте товари перед зміною статусу.');
+            return;
+        }
+
         // Нормалізуємо items
         const cleanedItems = order.items.map(item => {
             const { _id, ...cleanedItem } = item;
@@ -5551,6 +5557,7 @@ async function saveOrderStatus(index) {
         showNotification('Не вдалося оновити статус замовлення: ' + err.message);
     }
 }
+
 async function deleteOrder(index) {
     const order = orders[index];
     if (!order) {
@@ -5567,20 +5574,13 @@ async function deleteOrder(index) {
                 return;
             }
 
-            // Оновлюємо список замовлень перед видаленням
-            const response = await fetchWithAuth('/api/orders');
-            if (!response.ok) {
-                throw new Error('Не вдалося отримати список замовлень');
-            }
-            const fetchedOrders = await response.json();
-            orders = fetchedOrders.orders || [];
-
-            // Перевіряємо, чи замовлення ще існує
-            const orderToDelete = orders.find(o => o._id === order._id);
-            if (!orderToDelete) {
-                showNotification('Замовлення вже видалено або не існує!');
-                renderAdmin('orders');
-                return;
+            // Перевіряємо, чи замовлення існує на сервері
+            const checkResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
+                method: 'GET'
+            });
+            if (!checkResponse.ok) {
+                const errorData = await checkResponse.json();
+                throw new Error(errorData.error || 'Замовлення не знайдено на сервері');
             }
 
             const deleteResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
@@ -5592,7 +5592,14 @@ async function deleteOrder(index) {
                 throw new Error(errorData.error || 'Не вдалося видалити замовлення');
             }
 
-            orders.splice(orders.findIndex(o => o._id === order._id), 1);
+            // Видаляємо замовлення з локального масиву
+            const orderIndex = orders.findIndex(o => o._id === order._id);
+            if (orderIndex !== -1) {
+                orders.splice(orderIndex, 1);
+            } else {
+                console.warn('Замовлення не знайдено в локальному масиві після видалення');
+            }
+
             renderAdmin('orders');
             showNotification('Замовлення видалено!');
             unsavedChanges = false;
