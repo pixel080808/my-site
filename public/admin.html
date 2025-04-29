@@ -8,6 +8,7 @@
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet"/>
     <script defer src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script defer src="/js/admin.js"></script>
+    <script defer src="/js/scroll.js"></script>
 <style>
 body {
     font-family: 'Roboto', Arial, sans-serif;
@@ -641,29 +642,31 @@ button:hover {
                 <button type="submit">Зберегти</button>
             </form>
         </div>
-        <!-- Соціальні мережі -->
-        <div class="admin-section">
-            <h3>Соціальні мережі</h3>
-            <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
-                <input id="social-url" placeholder="Посилання" type="text"/><br/>
-                <label for="social-url">URL соцмережі</label>
-                <select id="social-icon">
-                    <option value="🔗">Загальний (🔗)</option>
-                    <option value="📘">Facebook (📘)</option>
-                    <option value="📸">Instagram (📸)</option>
-                    <option value="🐦">Twitter (🐦)</option>
-                    <option value="▶️">YouTube (▶️)</option>
-                    <option value="✈️">Telegram (✈️)</option>
-                </select><br/>
-                <label for="social-icon">Іконка соцмережі</label>
-                <button type="submit">Додати</button>
-            </form>
-            <label>
-                <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
-                Показувати соціальні мережі
-            </label>
-            <div id="social-list"></div>
-        </div>
+<!-- Соціальні мережі -->
+<div class="admin-section">
+    <h3>Соціальні мережі</h3>
+    <form id="social-form" onsubmit="event.preventDefault(); addSocial();">
+        <input id="social-name" placeholder="Назва соцмережі (наприклад, Facebook)" type="text" /><br/>
+        <label for="social-name">Назва соцмережі</label>
+        <input id="social-url" placeholder="URL соцмережі" type="text" pattern="https?://.+" title="Введіть коректний URL (наприклад, https://facebook.com)" /><br/>
+        <label for="social-url">URL соцмережі</label>
+        <select id="social-icon">
+            <option value="🔗">Загальний (🔗)</option>
+            <option value="📘">Facebook (📘)</option>
+            <option value="📸">Instagram (📸)</option>
+            <option value="🐦">Twitter (🐦)</option>
+            <option value="▶️">YouTube (▶️)</option>
+            <option value="✈️">Telegram (✈️)</option>
+        </select><br/>
+        <label for="social-icon">Іконка соцмережі</label>
+        <button type="submit">Додати</button>
+    </form>
+    <label>
+        <input id="social-toggle" onchange="toggleSocials()" type="checkbox"/>
+        Показувати соціальні мережі
+    </label>
+    <div id="social-list"></div>
+</div>
         <!-- Про нас -->
         <div class="admin-section">
             <h3>Про нас</h3>
@@ -715,62 +718,6 @@ button:hover {
     <label for="subcategory-visible">Видимість</label>
                 <button type="submit">Додати підкатегорію</button>
             </form>
-        </div>
-        <!-- Налаштування категорій -->
-        <div class="admin-section">
-            <h3>Налаштування категорій</h3>
-            <form id="category-settings-form" onsubmit="event.preventDefault(); updateCategorySettings();">
-                <input id="category-width" max="500" min="100" placeholder="Ширина категорії (px, 100-500)" type="number"/><br/>
-                <label for="category-width">Ширина категорії (px)</label>
-                <input id="category-height" max="500" min="100" placeholder="Висота категорії (px, 100-500)" type="number"/><br/>
-                <label for="category-height">Висота категорії (px)</label>
-                <button type="submit">Зберегти налаштування</button>
-            </form>
-        </div>
-        <!-- Налаштування товарів -->
-        <div class="admin-section">
-            <h3>Налаштування товарів</h3>
-            <form id="product-settings-form" onsubmit="event.preventDefault(); updateProductSettings();">
-                <input id="product-width" max="500" min="200" placeholder="Ширина товару (px, 200-500)" type="number"/><br/>
-                <label for="product-width">Ширина товару (px)</label>
-                <input id="product-height" max="500" min="200" placeholder="Висота товару (px, 200-500)" type="number"/><br/>
-                <label for="product-height">Висота товару (px)</label>
-                <button type="submit">Зберегти налаштування</button>
-            </form>
-        </div>
-        <!-- Фільтри -->
-        <div class="admin-section">
-            <h3>Фільтри</h3>
-            <form id="filter-form" onsubmit="event.preventDefault(); addFilter();">
-                <input id="filter-name" placeholder="Назва (англ.)" type="text"/><br/>
-                <label for="filter-name">Назва фільтру (наприклад, brand)</label>
-                <input id="filter-label" placeholder="Підпис" type="text"/><br/>
-                <label for="filter-label">Відображувана назва (наприклад, Виробник)</label>
-                <input id="filter-options" placeholder="Опції (через кому)" type="text"/><br/>
-                <label for="filter-options">Опції (наприклад, Гербор, Matroluxe)</label>
-                <button type="submit">Додати фільтр</button>
-            </form>
-            <div id="filter-list-admin"></div>
-        </div>
-        <!-- Поля замовлення -->
-        <div class="admin-section">
-            <h3>Поля замовлення</h3>
-            <form id="order-field-form" onsubmit="event.preventDefault(); addOrderField();">
-                <input id="order-field-name" placeholder="Назва (англ.)" type="text"/><br/>
-                <label for="order-field-name">Назва поля (наприклад, name)</label>
-                <input id="order-field-label" placeholder="Підпис" type="text"/><br/>
-                <label for="order-field-label">Відображувана назва (наприклад, Ім'я)</label>
-                <select id="order-field-type">
-                    <option value="text">Текст</option>
-                    <option value="email">Email</option>
-                    <option value="select">Вибір</option>
-                </select><br/>
-                <label for="order-field-type">Тип поля</label>
-                <input id="order-field-options" placeholder="Опції (через кому, для select)" type="text"/><br/>
-                <label for="order-field-options">Опції для вибору (наприклад, Готівкою, Карткою)</label>
-                <button type="submit">Додати поле</button>
-            </form>
-            <div id="order-field-list"></div>
         </div>
 <!-- Слайдшоу -->
 <div class="admin-section">
@@ -934,5 +881,6 @@ button:hover {
    </div>
 <div class="notification" id="notification"></div>
    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9303e4c31b86daf9',t:'MTc0NDY0MDk0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<button id="scroll-top" style="display: none; position: fixed; bottom: 20px; right: 20px;">Вгору</button>
 </body>
 </html>

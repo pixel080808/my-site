@@ -6,8 +6,8 @@ const cartSchema = new mongoose.Schema({
         {
             id: { type: Number, required: true },
             name: { type: String, required: true },
-            quantity: { type: Number, required: true },
-            price: { type: Number, required: true },
+            quantity: { type: Number, required: true, min: 1 }, // Додаємо валідацію для quantity
+            price: { type: Number, required: true, min: 0 }, // Додаємо валідацію для price
             photo: {
                 type: String,
                 default: '',
