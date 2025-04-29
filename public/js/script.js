@@ -1368,26 +1368,31 @@ function renderProducts(filtered) {
             updateSaleTimer(product.id, product.saleEnd);
         }
 
-const btn = document.createElement('button');
-btn.className = 'buy-btn';
-if (product.type === 'mattresses' || product.type === 'group') {
-    btn.textContent = 'Детальніше';
-    btn.onclick = () => openProduct(product.id);
-} else {
-    btn.textContent = 'Додати в кошик';
-    btn.onclick = () => {
-        if (typeof product.id !== 'number' || product.id <= 0) {
-            console.error(`Invalid product ID in renderProducts: ${product.id}`);
-            showNotification('Невірний ідентифікатор товару!', 'error');
-            return;
+        const btn = document.createElement('button');
+        btn.className = 'buy-btn';
+        if (product.type === 'mattresses' || product.type === 'group') {
+            btn.textContent = 'Детальніше';
+            btn.onclick = () => openProduct(product.id);
+        } else {
+            btn.textContent = 'Додати в кошик';
+            btn.onclick = () => {
+                if (typeof product.id !== 'number' || product.id <= 0) {
+                    console.error(`Invalid product ID in renderProducts: ${product.id}`);
+                    showNotification('Невірний ідентифікатор товару!', 'error');
+                    return;
+                }
+                product.colors?.length > 1 
+                    ? (openProduct(product.id), showNotification('Виберіть потрібний колір', 'error')) 
+                    : addToCartWithColor(product.id);
+            };
         }
-        product.colors?.length > 1 
-            ? (openProduct(product.id), showNotification('Виберіть потрібний колір', 'error')) 
-            : addToCartWithColor(product.id);
-    };
-}
-productDiv.appendChild(btn);
+        productDiv.appendChild(btn);
 
+        productList.appendChild(productDiv);
+    }); // Додаємо закриваючу дужку для forEach
+} // Додаємо закриваючу дужку для функції renderProducts
+
+// Функція renderProductDetails має бути визначена окремо
 function renderProductDetails() {
     const productDetails = document.getElementById('product-details');
     if (!productDetails || !currentProduct) return;
@@ -1531,18 +1536,18 @@ function renderProductDetails() {
             rightDiv.appendChild(qtyDiv);
         }
 
-const buyBtn = document.createElement('button');
-buyBtn.className = 'buy-btn';
-buyBtn.textContent = 'Додати в кошик';
-buyBtn.onclick = () => {
-    if (typeof product.id !== 'number' || product.id <= 0) {
-        console.error(`Invalid product ID in renderProductDetails: ${product.id}`);
-        showNotification('Невірний ідентифікатор товару!', 'error');
-        return;
-    }
-    addToCartWithColor(product.id);
-};
-if (product.type !== 'group') rightDiv.appendChild(buyBtn);
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'buy-btn';
+        buyBtn.textContent = 'Додати в кошик';
+        buyBtn.onclick = () => {
+            if (typeof product.id !== 'number' || product.id <= 0) {
+                console.error(`Invalid product ID in renderProductDetails: ${product.id}`);
+                showNotification('Невірний ідентифікатор товару!', 'error');
+                return;
+            }
+            addToCartWithColor(product.id);
+        };
+        if (product.type !== 'group') rightDiv.appendChild(buyBtn);
 
         if (product.colors?.length >= 1) {
             const hasPhotos = product.colors.some(c => c.photo);
