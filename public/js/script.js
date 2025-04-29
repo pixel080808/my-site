@@ -1805,6 +1805,14 @@ function updateGroupSelection(productId) {
 }
 
 async function addToCartWithColor(productId) {
+    if (!products.length) {
+        console.warn('Товари ще не завантажено, чекаємо...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!products.length) {
+            showNotification('Товари недоступні, спробуйте пізніше!', 'error');
+            return;
+        }
+    }
     const product = products.find(p => p.id === productId);
     if (!product || !Number.isInteger(productId) || productId <= 0) {
         showNotification('Товар не знайдено або некоректний ID!', 'error');

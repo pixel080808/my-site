@@ -4665,23 +4665,30 @@ async function saveNewProduct() {
             }
         }
 
-        const response = await fetchWithAuth('/api/products', {
-            method: 'POST',
-            body: JSON.stringify(product)
-        });
+const response = await fetchWithAuth('/api/products', {
+        method: 'POST',
+        body: JSON.stringify(product)
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
-        }
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
+    }
 
-        const newProductData = await response.json();
-        products.push(newProductData);
-        closeModal();
-        renderAdmin('products');
-        showNotification('Товар додано!');
-        unsavedChanges = false;
-        resetInactivityTimer();
+    const newProductData = await response.json();
+    console.log('Новий продукт:', newProductData); // Для дебагу
+    if (!newProductData.id || !Number.isInteger(newProductData.id) || newProductData.id <= 0) {
+        console.error('Сервер повернув продукт без коректного id:', newProductData);
+        showNotification('Помилка: сервер не повернув коректний ID товару');
+        return;
+    }
+
+    products.push(newProductData);
+    closeModal();
+    renderAdmin('products');
+    showNotification('Товар додано!');
+    unsavedChanges = false;
+    resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
         showNotification('Не вдалося додати товар: ' + err.message);
@@ -5104,28 +5111,35 @@ async function saveEditedProduct(productId) {
         }
 
         // Відправка запиту на сервер
-        const response = await fetchWithAuth(`/api/products/${productId}`, {
-            method: 'PUT',
-            body: JSON.stringify(product)
-        });
+const response = await fetchWithAuth(`/api/products/${productId}`, {
+        method: 'PUT',
+        body: JSON.stringify(product)
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
-        }
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
+    }
 
-        const updatedProduct = await response.json();
-        const index = products.findIndex(p => p._id === productId);
-        if (index !== -1) {
-            products[index] = updatedProduct;
-        } else {
-            products.push(updatedProduct);
-        }
-        closeModal();
-        renderAdmin('products');
-        showNotification('Товар оновлено!');
-        unsavedChanges = false;
-        resetInactivityTimer();
+    const updatedProduct = await response.json();
+    console.log('Оновлений продукт:', updatedProduct); // Для дебагу
+    if (!updatedProduct.id || !Number.isInteger(updatedProduct.id) || updatedProduct.id <= 0) {
+        console.error('Сервер повернув продукт без коректного id:', updatedProduct);
+        showNotification('Помилка: сервер не повернув коректний ID товару');
+        return;
+    }
+
+    const index = products.findIndex(p => p._id === productId);
+    if (index !== -1) {
+        products[index] = updatedProduct;
+    } else {
+        products.push(updatedProduct);
+    }
+    closeModal();
+    renderAdmin('products');
+    showNotification('Товар оновлено!');
+    unsavedChanges = false;
+    resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
         showNotification('Не вдалося оновити товар: ' + err.message);
@@ -5710,22 +5724,24 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-            if (type === 'settings' && data) {
-                settings = { ...settings, ...data };
-                renderSettingsAdmin();
-            } else if (type === 'products') {
-                if (Array.isArray(data)) {
-                    products = data;
-                    if (document.querySelector('#products.active')) {
-                        renderAdmin('products');
-                    }
-                } else {
-                    console.warn('Некоректні дані продуктів:', data);
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`WebSocket: ${type}`, data);
+        if (type === 'products') {
+            if (Array.isArray(data)) {
+                const invalidProducts = data.filter(p => !p.id || !Number.isInteger(p.id) || p.id <= 0);
+                if (invalidProducts.length > 0) {
+                    console.error('Знайдено продукти з некоректним id:', invalidProducts);
+                    showNotification('Помилка: деякі продукти мають некоректний ID');
                 }
+                products = data;
+                if (document.querySelector('#products.active')) {
+                    renderAdmin('products');
+                }
+            } else {
+                console.warn('Некоректні дані продуктів:', data);
+            }
             } else if (type === 'categories') {
                 if (Array.isArray(data)) {
                     categories = data;
