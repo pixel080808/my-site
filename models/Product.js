@@ -80,4 +80,5 @@ productSchema.pre('save', function(next) {
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
 
+productSchema.index({ slug: 1 }, { unique: true });
 module.exports = mongoose.model('Product', productSchema);

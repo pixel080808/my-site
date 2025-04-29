@@ -317,13 +317,18 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).optional().allow(''),
-    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
-    saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
-    filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([]),
+    subcategory: Joi.string().max(255).allow('').optional(),
+    price: Joi.number().min(0).optional().allow(null),
+    salePrice: Joi.number().min(0).optional().allow(null),
+    saleEnd: Joi.date().allow(null).optional(),
+    brand: Joi.string().max(100).allow('').optional(),
+    material: Joi.string().max(100).allow('').optional(),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required()
+        })
+    ).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -344,13 +349,13 @@ const productSchemaValidation = Joi.object({
         })
     ).default([]),
     groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow(''),
-    widthCm: Joi.number().min(0).allow(null),
-    depthCm: Joi.number().min(0).allow(null),
-    heightCm: Joi.number().min(0).allow(null),
-    lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().allow(null)
-});
+    description: Joi.string().allow('').optional(),
+    widthCm: Joi.number().min(0).allow(null).optional(),
+    depthCm: Joi.number().min(0).allow(null).optional(),
+    heightCm: Joi.number().min(0).allow(null).optional(),
+    lengthCm: Joi.number().min(0).allow(null).optional(),
+    popularity: Joi.number().allow(null).optional()
+}).unknown(false);
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -982,8 +987,8 @@ const getPublicIdFromUrl = (url) => {
 
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        let productData = req.body;
-        logger.info('Отримано дані продукту:', productData);
+        let productData = { ...req.body };
+        logger.info('Отримано дані продукту для створення:', JSON.stringify(productData, null, 2));
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
@@ -996,11 +1001,25 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
                     color.photo = color.img;
                     delete color.img;
                 }
-                return color;
+                // Видаляємо _id з colors, якщо присутній
+                const { _id, ...rest } = color;
+                return rest;
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Видаляємо системні поля
+        delete productData._id;
+        delete productData.__v;
+
+        // Встановлюємо значення за замовчуванням для необов’язкових полів
+        productData.filters = productData.filters || [];
+        productData.photos = productData.photos || [];
+        productData.sizes = productData.sizes || [];
+        productData.colors = productData.colors || [];
+        productData.groupProducts = productData.groupProducts || [];
+        productData.subcategory = productData.subcategory || '';
+
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -1038,13 +1057,10 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
         }
 
-        // Перевірка існування subcategory
+        // Перевірка існування subcategory (якщо вказано)
         if (productData.subcategory) {
-            const categoryWithSub = await Category.findOne({
-                name: productData.category,
-                'subcategories.slug': productData.subcategory
-            });
-            if (!categoryWithSub) {
+            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+            if (!subcategoryExists) {
                 logger.error('Підкатегорія не знайдено:', productData.subcategory);
                 return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
             }
@@ -1077,15 +1093,21 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             broadcast('products', products);
 
             await session.commitTransaction();
+            logger.info('Продукт успішно створено:', product._id);
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
+            logger.error('Помилка збереження продукту в базі:', err);
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', err);
+        logger.error('Помилка при додаванні товару:', {
+            message: err.message,
+            stack: err.stack,
+            productData: req.body
+        });
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });

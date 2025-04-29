@@ -3843,6 +3843,20 @@ document.getElementById('bulk-price-file').addEventListener('change', function()
 function openAddProductModal() {
     newProduct = {
         type: 'simple',
+        name: '',
+        slug: '',
+        brand: '',
+        category: '',
+        subcategory: null,
+        material: '',
+        price: null,
+        salePrice: null,
+        saleEnd: null,
+        description: '',
+        widthCm: null,
+        depthCm: null,
+        heightCm: null,
+        lengthCm: null,
         photos: [],
         colors: [],
         sizes: [],
@@ -4433,7 +4447,7 @@ async function saveNewProduct() {
         const slug = slugInput.value.trim();
         const brand = brandInput ? brandInput.value.trim() : '';
         const category = categoryInput.value.trim();
-        const subcategory = subcategoryInput.value.trim();
+        const subcategory = subcategoryInput.value.trim() || null; // Відправляємо null, якщо порожній
         const material = materialInput ? materialInput.value.trim() : '';
         let price = null;
         let salePrice = null;
@@ -4441,9 +4455,9 @@ async function saveNewProduct() {
             price = parseFloat(priceInput.value) || null;
             salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
         }
-        const saleEnd = saleEndInput ? saleEndInput.value : null;
+        const saleEnd = saleEndInput && saleEndInput.value ? saleEndInput.value : null;
         const visible = visibleSelect.value === 'true';
-        const description = descriptionInput.value || '';
+        const description = descriptionInput.value && descriptionInput.value.trim() !== '<p><br></p>' ? descriptionInput.value : '';
         const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
         const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
@@ -4481,7 +4495,6 @@ async function saveNewProduct() {
             return;
         }
 
-        // Перевірка категорії та підкатегорії
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
@@ -4532,7 +4545,7 @@ async function saveNewProduct() {
             slug,
             brand: brand || '',
             category,
-            subcategory, // Send slug
+            subcategory: subcategory || null, // Явно відправляємо null
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
             salePrice: salePrice,
@@ -4550,10 +4563,15 @@ async function saveNewProduct() {
                 photo: null
             })),
             sizes: newProduct.sizes,
-            groupProducts: newProduct.groupProducts,
+            groupProducts: newProduct.groupProducts.map(pid => {
+                const p = products.find(pr => pr._id === pid || pr.id === pid);
+                return p ? p._id : null;
+            }).filter(id => id !== null), // Зіставлення з _id, як у saveEditedProduct
             active: true,
             visible
         };
+
+        console.log('Дані продукту перед відправкою:', product); // Дебагування
 
         const mediaUrls = [];
         const parser = new DOMParser();
