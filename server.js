@@ -392,11 +392,11 @@ const settingsSchemaValidation = Joi.object({
         addresses: Joi.string().allow(''),
         schedule: Joi.string().allow('')
     }).default({ phones: '', addresses: '', schedule: '' }),
-     socials: Joi.array().items(
+    socials: Joi.array().items(
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().allow('') // Змінено з .required() на .allow('')
+            icon: Joi.string().allow('')
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
@@ -405,7 +405,7 @@ const settingsSchemaValidation = Joi.object({
     categoryHeight: Joi.number().min(0).default(0),
     productWidth: Joi.number().min(0).default(0),
     productHeight: Joi.number().min(0).default(0),
-    timezone: Joi.string().default('Europe/Kyiv')
+    timezone: Joi.string().default('Europe/Kyiv'),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -426,7 +426,6 @@ const settingsSchemaValidation = Joi.object({
     slideHeight: Joi.number().min(0).default(0),
     slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
-    timezone: Joi.string().default('Europe/Kyiv'), // Додано поле timezone
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
     createdAt: Joi.any().optional(),
