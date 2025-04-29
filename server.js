@@ -139,17 +139,21 @@ const csrfProtection = csurf({
     }
 });
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['https://mebli.onrender.com', 'http://localhost:3000'];
+
 app.use(cors({
     origin: (origin, callback) => {
-        const allowedOrigins = ['https://mebli.onrender.com', 'http://localhost:3000'];
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            logger.warn(`CORS blocked request from origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
@@ -397,6 +401,10 @@ const settingsSchemaValidation = Joi.object({
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
+    categoryWidth: Joi.number().min(0).default(0),
+    categoryHeight: Joi.number().min(0).default(0),
+    productWidth: Joi.number().min(0).default(0),
+    productHeight: Joi.number().min(0).default(0),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -413,15 +421,15 @@ const settingsSchemaValidation = Joi.object({
             options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
-slideWidth: Joi.number().min(0).default(0),
-slideHeight: Joi.number().min(0).default(0),
-slideInterval: Joi.number().min(0).default(3000),
+    slideWidth: Joi.number().min(0).default(0),
+    slideHeight: Joi.number().min(0).default(0),
+    slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
     createdAt: Joi.any().optional(),
     updatedAt: Joi.any().optional()
-}).unknown(false);
+}).unknown(true); // Allow unknown fields to pass through to Mongoose
 
 const materialSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required()
@@ -576,12 +584,12 @@ wss.on('connection', (ws, req) => {
 
     if (!verifyToken()) return;
 
-const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
+const refreshTokenWithRetry = async (retries = 3, delay = 10000) => {
     let csrfToken;
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://mebli.onrender.com' : 'http://localhost:3000';
     try {
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+        const csrfResponse = await fetch(`${baseUrl}/api/csrf-token`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!csrfResponse.ok) {
             throw new Error(`Помилка отримання CSRF-токена: ${csrfResponse.status} ${csrfResponse.statusText}`);
@@ -598,7 +606,6 @@ const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
         return false;
     }
 
-    // Решта коду залишається без змін
     for (let i = 0; i < retries; i++) {
         try {
             const response = {};
