@@ -278,8 +278,9 @@ async function fetchWithAuth(url, options = {}) {
             });
             if (!newResponse.ok) {
                 const errorData = await newResponse.json().catch(() => ({}));
+                console.error('Деталі помилки запиту:', errorData); // Додаємо логування
                 const error = new Error(errorData.error || `HTTP error ${newResponse.status}`);
-                error.errorData = errorData; // Зберігаємо деталі помилки
+                error.errorData = errorData;
                 throw error;
             }
             return newResponse;
@@ -305,7 +306,7 @@ async function fetchWithAuth(url, options = {}) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Помилка запиту:', { url, status: response.status, errorData });
         const error = new Error(errorData.error || `HTTP error ${response.status}`);
-        error.errorData = errorData; // Зберігаємо деталі помилки
+        error.errorData = errorData;
         throw error;
     }
 
@@ -1512,6 +1513,13 @@ async function updateContacts() {
             return;
         }
 
+        // Валідація формату телефонів (наприклад, +380 або масив номерів)
+        const phoneRegex = /^\+?[0-9\s\-()]{9,}$/;
+        if (!phoneRegex.test(phones)) {
+            showNotification('Некоректний формат номеру телефону. Використовуйте формат, наприклад, +380123456789.');
+            return;
+        }
+
         // Формуємо об'єкт contacts
         const contacts = {
             phones,
@@ -1519,9 +1527,8 @@ async function updateContacts() {
             schedule
         };
 
-        // Формуємо дані для відправки (лише name і contacts)
+        // Формуємо дані для відправки (лише contacts)
         const updatedSettings = {
-            name: settings.name || 'Меблевий магазин м.Рівне', // Використовуємо settings.name або дефолтне значення
             contacts
         };
 
@@ -1534,19 +1541,21 @@ async function updateContacts() {
         });
 
         const responseData = await response.json();
-        showNotification('Контакти успішно оновлено!');
-        resetInactivityTimer();
+        console.log('Отримано відповідь від сервера:', responseData);
 
         // Оновлюємо локальні settings
-        settings.name = updatedSettings.name;
-        settings.contacts = updatedSettings.contacts;
+        settings.contacts = responseData.contacts || contacts;
+        settings.name = responseData.name || settings.name;
 
+        showNotification('Контакти успішно оновлено!');
+        renderSettingsAdmin(); // Оновлюємо UI
+        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні контактів:', err);
         let errorMessage = 'Помилка при оновленні контактів: ' + err.message;
-        // Якщо сервер повернув деталі валідації
-        if (err.message.includes('Помилка валідації') && err.errorData?.errors) {
-            errorMessage += '\nДеталі: ' + JSON.stringify(err.errorData.errors, null, 2);
+        if (err.errorData) {
+            errorMessage += '\nДеталі: ' + JSON.stringify(err.errorData, null, 2);
+            console.error('Деталі помилки сервера:', err.errorData);
         }
         showNotification(errorMessage);
     }

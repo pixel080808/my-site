@@ -319,7 +319,12 @@ const productSchemaValidation = Joi.object({
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
     material: Joi.string().max(100).allow(''),
-    filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([]),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required()
+        })
+    ).default([]), // Додано валідацію для filters
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -350,7 +355,7 @@ const productSchemaValidation = Joi.object({
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    cartId: Joi.string().default(''),
+    cartId: Joi.string().default(''), // Додано cartId
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
@@ -361,7 +366,7 @@ const orderSchemaValidation = Joi.object({
             .allow('')
             .optional(),
         address: Joi.string().allow('').optional(),
-        payment: Joi.string().optional() // Додаємо поле payment
+        payment: Joi.string().optional()
     }).required(),
     items: Joi.array().items(
         Joi.object({
@@ -374,7 +379,9 @@ const orderSchemaValidation = Joi.object({
         })
     ).required(),
     total: Joi.number().min(0).required(),
-    status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
+    status: Joi.string()
+        .valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано')
+        .default('Нове замовлення') // Додано валідацію для status
 });
 
 const settingsSchemaValidation = Joi.object({
@@ -392,11 +399,15 @@ const settingsSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().allow('')
+            icon: Joi.string().allow('') // Змінено з required на allow('')
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
+    categoryWidth: Joi.number().min(0).default(0), // Додано
+    categoryHeight: Joi.number().min(0).default(0), // Додано
+    productWidth: Joi.number().min(0).default(0), // Додано
+    productHeight: Joi.number().min(0).default(0), // Додано
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -413,9 +424,9 @@ const settingsSchemaValidation = Joi.object({
             options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
-slideWidth: Joi.number().min(0).default(0),
-slideHeight: Joi.number().min(0).default(0),
-slideInterval: Joi.number().min(0).default(3000),
+    slideWidth: Joi.number().min(0).default(0),
+    slideHeight: Joi.number().min(0).default(0),
+    slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
