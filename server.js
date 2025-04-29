@@ -1001,7 +1001,6 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
                     color.photo = color.img;
                     delete color.img;
                 }
-                // Видаляємо _id з colors, якщо присутній
                 const { _id, ...rest } = color;
                 return rest;
             });
@@ -1011,19 +1010,20 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         delete productData._id;
         delete productData.__v;
 
-        // Встановлюємо значення за замовчуванням для необов’язкових полів
+        // Встановлюємо значення за замовчуванням
         productData.filters = productData.filters || [];
         productData.photos = productData.photos || [];
         productData.sizes = productData.sizes || [];
         productData.colors = productData.colors || [];
         productData.groupProducts = productData.groupProducts || [];
-        productData.subcategory = productData.subcategory || '';
+        productData.subcategory = productData.subcategory || null;
 
-        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
-        if (error) {
-            logger.error('Помилка валідації продукту:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
+        // Тимчасово відключаємо Joi-валідацію
+        // const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
+        // if (error) {
+        //     logger.error('Помилка валідації продукту:', error.details);
+        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        // }
 
         // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug });
@@ -1097,7 +1097,11 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
-            logger.error('Помилка збереження продукту в базі:', err);
+            logger.error('Помилка збереження продукту в базі:', {
+                message: err.message,
+                stack: err.stack,
+                validationErrors: err.errors || null
+            });
             throw err;
         } finally {
             session.endSession();

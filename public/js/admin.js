@@ -4445,10 +4445,10 @@ async function saveNewProduct() {
 
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
-        const brand = brandInput ? brandInput.value.trim() : '';
+        const brand = brandInput ? brandInput.value.trim() || null : null;
         const category = categoryInput.value.trim();
-        const subcategory = subcategoryInput.value.trim() || null; // Відправляємо null, якщо порожній
-        const material = materialInput ? materialInput.value.trim() : '';
+        const subcategory = subcategoryInput.value.trim() || null;
+        const material = materialInput ? materialInput.value.trim() || null : null;
         let price = null;
         let salePrice = null;
         if (newProduct.type === 'simple' && priceInput) {
@@ -4457,7 +4457,7 @@ async function saveNewProduct() {
         }
         const saleEnd = saleEndInput && saleEndInput.value ? saleEndInput.value : null;
         const visible = visibleSelect.value === 'true';
-        const description = descriptionInput.value && descriptionInput.value.trim() !== '<p><br></p>' ? descriptionInput.value : '';
+        const description = descriptionInput.value && descriptionInput.value.trim() !== '<p><br></p>' ? descriptionInput.value : null;
         const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
         const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
@@ -4543,14 +4543,14 @@ async function saveNewProduct() {
             type: newProduct.type,
             name,
             slug,
-            brand: brand || '',
+            brand,
             category,
-            subcategory: subcategory || null, // Явно відправляємо null
-            material: material || '',
+            subcategory,
+            material,
             price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice,
-            saleEnd: saleEnd || null,
-            description: description || '',
+            salePrice,
+            saleEnd,
+            description,
             widthCm,
             depthCm,
             heightCm,
@@ -4560,22 +4560,22 @@ async function saveNewProduct() {
                 name: color.name,
                 value: color.value,
                 priceChange: color.priceChange || 0,
-                photo: null
+                photo: color.photo || '' // Використовуємо '' замість null
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts.map(pid => {
                 const p = products.find(pr => pr._id === pid || pr.id === pid);
                 return p ? p._id : null;
-            }).filter(id => id !== null), // Зіставлення з _id, як у saveEditedProduct
+            }).filter(id => id !== null),
             active: true,
             visible
         };
 
-        console.log('Дані продукту перед відправкою:', product); // Дебагування
+        console.log('Дані продукту перед відправкою:', JSON.stringify(product, null, 2));
 
         const mediaUrls = [];
         const parser = new DOMParser();
-        const doc = parser.parseFromString(description, 'text/html');
+        const doc = parser.parseFromString(description || '', 'text/html');
         const images = doc.querySelectorAll('img');
 
         for (let img of images) {
@@ -4607,7 +4607,7 @@ async function saveNewProduct() {
             }
         }
 
-        let updatedDescription = description;
+        let updatedDescription = description || '';
         mediaUrls.forEach(({ oldUrl, newUrl }) => {
             updatedDescription = updatedDescription.replace(oldUrl, newUrl);
         });
@@ -4661,7 +4661,7 @@ async function saveNewProduct() {
                     return;
                 }
             } else if (typeof color.photo === 'string') {
-                product.colors[i].photo = color.photo;
+                product.colors[i].photo = color.photo || '';
             }
         }
 
@@ -4671,7 +4671,7 @@ async function saveNewProduct() {
         });
 
         const newProductData = await response.json();
-        console.log('Новий продукт:', newProductData);
+        console.log('Відповідь сервера:', JSON.stringify(newProductData, null, 2));
         products.push(newProductData);
         closeModal();
         renderAdmin('products');
@@ -4680,6 +4680,7 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
+        console.error('Дані запиту:', JSON.stringify(product, null, 2));
         showNotification('Не вдалося додати товар: ' + err.message);
     } finally {
         if (saveButton) {
