@@ -235,9 +235,6 @@ async function fetchWithAuth(url, options = {}) {
         try {
             const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 credentials: 'include'
             });
             if (!csrfResponse.ok) {
@@ -286,7 +283,6 @@ async function fetchWithAuth(url, options = {}) {
         try {
             const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` },
                 credentials: 'include'
             });
             if (csrfResponse.ok) {
@@ -1673,45 +1669,47 @@ async function updateAbout() {
 }
 
 function renderAdmin(section = activeTab) {
-    console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
+    console.log('Рендеринг адмін-панелі:', { section, settings });
 
     try {
-        // Оновлення полів налаштувань
-        const storeName = document.getElementById('store-name');
-        if (storeName) storeName.value = settings.name || '';
-        else console.warn('Елемент #store-name не знайдено');
+        // Визначаємо поля для оновлення
+        const fields = [
+            { id: 'store-name', key: 'name', defaultValue: '' },
+            { id: 'base-url', key: 'baseUrl', defaultValue: '' },
+            { id: 'logo-url', key: 'logo', defaultValue: '' },
+            { id: 'logo-width', key: 'logoWidth', defaultValue: 150 },
+            { id: 'favicon-url', key: 'favicon', defaultValue: '' },
+            { id: 'contact-phones', key: 'contacts.phones', defaultValue: '' },
+            { id: 'contact-addresses', key: 'contacts.addresses', defaultValue: '' },
+            { id: 'contact-schedule', key: 'contacts.schedule', defaultValue: '' },
+            { id: 'social-toggle', key: 'showSocials', type: 'checkbox', defaultValue: true },
+            { id: 'slide-toggle', key: 'showSlides', type: 'checkbox', defaultValue: true },
+            { id: 'slide-width', key: 'slideWidth', defaultValue: 75 },
+            { id: 'slide-height', key: 'slideHeight', defaultValue: 200 },
+            { id: 'slide-interval', key: 'slideInterval', defaultValue: 3000 },
+        ];
 
-        const baseUrl = document.getElementById('base-url');
-        if (baseUrl) baseUrl.value = settings.baseUrl || '';
-        else console.warn('Елемент #base-url не знайдено');
-
-        const logoUrl = document.getElementById('logo-url');
-        if (logoUrl) logoUrl.value = settings.logo || '';
-        else console.warn('Елемент #logo-url не знайдено');
-
-        const logoWidth = document.getElementById('logo-width');
-        if (logoWidth) logoWidth.value = settings.logoWidth || 150;
-        else console.warn('Елемент #logo-width не знайдено');
-
-        const faviconUrl = document.getElementById('favicon-url');
-        if (faviconUrl) faviconUrl.value = settings.favicon || '';
-        else console.warn('Елемент #favicon-url не знайдено');
-
-        const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
-        const contactPhones = document.getElementById('contact-phones');
-        if (contactPhones) contactPhones.value = contacts.phones || '';
-        else console.warn('Елемент #contact-phones не знайдено');
-
-        const contactAddresses = document.getElementById('contact-addresses');
-        if (contactAddresses) contactAddresses.value = contacts.addresses || '';
-        else console.warn('Елемент #contact-addresses не знайдено');
-
-        const contactSchedule = document.getElementById('contact-schedule');
-        if (contactSchedule) contactSchedule.value = contacts.schedule || '';
-        else console.warn('Елемент #contact-schedule не знайдено');
+        // Оновлення полів
+        fields.forEach(({ id, key, type, defaultValue }) => {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`Елемент #${id} не знайдено`);
+                return;
+            }
+            const value = key.includes('.')
+                ? key.split('.').reduce((obj, k) => (obj ? obj[k] : undefined), settings) ?? defaultValue
+                : settings[key] ?? defaultValue;
+            if (type === 'checkbox') {
+                element.checked = value;
+            } else {
+                element.value = value;
+            }
+        });
 
         // Ініціалізація редактора "Про нас"
-        if (document.getElementById('about-editor')) {
+        const aboutEditorElement = document.getElementById('about-editor');
+        const aboutEditElement = document.getElementById('about-edit');
+        if (aboutEditorElement) {
             if (!aboutEditor) {
                 initializeEditors();
             }
@@ -1724,60 +1722,42 @@ function renderAdmin(section = activeTab) {
                 } else {
                     aboutEditor.setContents([], 'silent');
                 }
-                const aboutEdit = document.getElementById('about-edit');
-                if (aboutEdit) aboutEdit.value = aboutEditor.root.innerHTML;
+                if (aboutEditElement) {
+                    aboutEditElement.value = aboutEditor.root.innerHTML;
+                }
             } catch (e) {
                 console.error('Помилка ініціалізації aboutEditor:', e);
                 showNotification('Помилка завантаження даних для сторінки "Про нас"');
             }
-        } else if (document.getElementById('about-edit')) {
-            const aboutEdit = document.getElementById('about-edit');
-            aboutEdit.value = settings.about || '';
+        } else if (aboutEditElement) {
+            aboutEditElement.value = settings.about || '';
         } else {
             console.warn('Елементи #about-editor або #about-edit не знайдено');
         }
 
-        const socialToggle = document.getElementById('social-toggle');
-        if (socialToggle) socialToggle.checked = settings.showSocials !== false;
-        else console.warn('Елемент #social-toggle не знайдено');
-
-        const slideToggle = document.getElementById('slide-toggle');
-        if (slideToggle) slideToggle.checked = settings.showSlides !== false;
-        else console.warn('Елемент #slide-toggle не знайдено');
-
-        const slideWidth = document.getElementById('slide-width');
-        if (slideWidth) slideWidth.value = settings.slideWidth || 75;
-        else console.warn('Елемент #slide-width не знайдено');
-
-        const slideHeight = document.getElementById('slide-height');
-        if (slideHeight) slideHeight.value = settings.slideHeight || 200;
-        else console.warn('Елемент #slide-height не знайдено');
-
-        const slideInterval = document.getElementById('slide-interval');
-        if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
-        else console.warn('Елемент #slide-interval не знайдено');
-
+        // Рендеринг соціальних мереж
         renderSocialsAdmin();
 
+        // Рендеринг категорій
         const catList = document.getElementById('category-list-admin');
         if (catList) {
-            console.log('Рендеринг category-list-admin, categories:', categories);
-            catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
+            console.log('Рендеринг категорій:', categories);
+            catList.innerHTML = Array.isArray(categories) && categories.length > 0
                 ? categories.map((c, index) => `
                     <div class="category-item">
                         <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-                        ${c.name} (${c.slug}) 
-                        <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
+                        ${c.name} (${c.slug})
+                        <button class="edit-btn" data-id="${c._id}">Редагувати</button>
+                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
                     </div>
                     <div class="subcat-list">
-                        ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
+                        ${(Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
                             <p>
                                 <button class="move-btn sub-move-up" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
                                 <button class="move-btn sub-move-down" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
-                                ${sub.name} (${sub.slug}) 
-                                <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-name="${sub.name}">Редагувати</button> 
+                                ${sub.name} (${sub.slug})
+                                <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-name="${sub.name}">Редагувати</button>
                                 <button class="delete-btn sub-delete" data-cat-id="${c._id}" data-sub-name="${sub.name}">Видалити</button>
                             </p>
                         `).join('')}
@@ -1790,33 +1770,7 @@ function renderAdmin(section = activeTab) {
             console.warn('Елемент #category-list-admin не знайдено');
         }
 
-        function handleCatListClick(event) {
-            const target = event.target;
-            const categoryId = target.dataset.id;
-            const subName = target.dataset.subName;
-            const catId = target.dataset.catId;
-            const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
-            const index = target.dataset.index ? parseInt(target.dataset.index) : null;
-
-            if (target.classList.contains('move-up') && index !== null) {
-                moveCategoryUp(index);
-            } else if (target.classList.contains('move-down') && index !== null) {
-                moveCategoryDown(index);
-            } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
-                openEditCategoryModal(categoryId);
-            } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
-                deleteCategory(categoryId);
-            } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
-                moveSubcategoryUp(catId, subIndex);
-            } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
-                moveSubcategoryDown(catId, subIndex);
-            } else if (target.classList.contains('sub-edit') && catId && subName) {
-                openEditSubcategoryModal(catId, subName);
-            } else if (target.classList.contains('sub-delete') && catId && subName) {
-                deleteSubcategory(catId, subName);
-            }
-        }
-
+        // Рендеринг товарів
         if (section === 'products') {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
@@ -1852,7 +1806,10 @@ function renderAdmin(section = activeTab) {
             } else {
                 console.warn('Елемент #product-list-admin не знайдено');
             }
-        } else if (section === 'orders') {
+        }
+
+        // Рендеринг замовлень
+        if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -1863,44 +1820,43 @@ function renderAdmin(section = activeTab) {
                 const start = (currentPage - 1) * ordersPerPage;
                 const end = start + ordersPerPage;
                 const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.length > 0
-                    ? paginatedOrders.map((o, index) => {
-                        const orderDate = new Date(o.date);
-                        const formattedDate = orderDate.toLocaleString('uk-UA', {
-                            timeZone: settings.timezone || 'Europe/Kyiv',
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        return `
-                            <div class="order-item">
-                                <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                                <div>
-                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')
-                    : '<p>Замовлення відсутні</p>';
+orderList.innerHTML = paginatedOrders.length > 0
+    ? paginatedOrders.map((o, index) => {
+        const orderDate = new Date(o.date);
+        const formattedDate = orderDate.toLocaleString('uk-UA', {
+            timeZone: 'Europe/Kyiv',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        });
+        return `
+            <div class="order-item">
+                <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
+                <div>
+                    <button class="edit-btn" onclick="viewOrder('${o._id}')">Переглянути</button>
+                    <button class="toggle-btn" onclick="changeOrderStatus('${o._id}')">Змінити статус</button>
+                    <button class="delete-btn" onclick="deleteOrder('${o._id}')">Видалити</button>
+                </div>
+            </div>
+        `;
+    }).join('')
+    : '<p>Замовлення відсутні</p>';
                 renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
             } else {
                 console.warn('Елемент #order-list не знайдено');
             }
-        } else if (section === 'categories') {
-            if (typeof renderCategoriesAdmin === 'function') {
-                renderCategoriesAdmin();
-            } else {
-                console.warn('Функція renderCategoriesAdmin не визначена');
-            }
+        }
+
+        // Рендеринг інших вкладок
+        if (section === 'categories' && typeof renderCategoriesAdmin === 'function') {
+            renderCategoriesAdmin();
         } else if (section === 'site-editing') {
             if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
             if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-        } else {
+        } else if (!['products', 'orders', 'categories', 'site-editing'].includes(section)) {
             console.warn(`Невідома вкладка: ${section}`);
         }
 
@@ -1908,6 +1864,34 @@ function renderAdmin(section = activeTab) {
     } catch (e) {
         console.error(`Помилка рендерингу вкладки ${section}:`, e);
         showNotification(`Помилка рендерингу вкладки ${section}: ${e.message}`);
+    }
+}
+
+// Обробник кліків для категорій
+function handleCatListClick(event) {
+    const target = event.target;
+    const categoryId = target.dataset.id;
+    const subName = target.dataset.subName;
+    const catId = target.dataset.catId;
+    const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex, 10) : null;
+    const index = target.dataset.index ? parseInt(target.dataset.index, 10) : null;
+
+    if (target.classList.contains('move-up') && index !== null) {
+        moveCategoryUp(index);
+    } else if (target.classList.contains('move-down') && index !== null) {
+        moveCategoryDown(index);
+    } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
+        openEditCategoryModal(categoryId);
+    } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
+        deleteCategory(categoryId);
+    } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
+        moveSubcategoryUp(catId, subIndex);
+    } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
+        moveSubcategoryDown(catId, subIndex);
+    } else if (target.classList.contains('sub-edit') && catId && subName) {
+        openEditSubcategoryModal(catId, subName);
+    } else if (target.classList.contains('sub-delete') && catId && subName) {
+        deleteSubcategory(catId, subName);
     }
 }
 
@@ -4094,7 +4078,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.slug;
+                option.value = sub.slug; // Use slug as value
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -4345,42 +4329,48 @@ function searchGroupProducts() {
     const results = document.getElementById('group-product-results');
     const filteredProducts = products.filter(p => 
         p.active && 
-        p.type === 'simple' &&  // Змінено з p.type !== 'group' на p.type === 'simple'
-        (p.name.toLowerCase().includes(query) || p.id.toString().includes(query))
+        p.type === 'simple' && 
+        (p.name.toLowerCase().includes(query) || p._id.toString().includes(query))
     );
     results.innerHTML = filteredProducts.slice(0, 5).map(p => `
         <div>
-            #${p.id} ${p.name}
-            <button onclick="addGroupProduct(${p.id})">Додати</button>
+            #${p._id} ${p.name}
+            <button onclick="addGroupProduct('${p._id}')">Додати</button>
         </div>
     `).join('');
     resetInactivityTimer();
 }
 
-    function addGroupProduct(productId) {
-        if (!newProduct.groupProducts.includes(productId)) {
-            newProduct.groupProducts.push(productId);
-            renderGroupProducts();
-            document.getElementById('group-product-search').value = '';
-            document.getElementById('group-product-results').innerHTML = '';
-            resetInactivityTimer();
-        }
+function addGroupProduct(productId) {
+    if (!newProduct.groupProducts.includes(productId)) {
+        newProduct.groupProducts.push(productId); // Store _id
+        renderGroupProducts();
+        document.getElementById('group-product-search').value = '';
+        document.getElementById('group-product-results').innerHTML = '';
+        resetInactivityTimer();
     }
+}
 
-    function renderGroupProducts() {
-        const groupList = document.getElementById('group-product-list');
-        if (groupList) {
-            groupList.innerHTML = newProduct.groupProducts.map((pid, index) => {
-                const p = products.find(pr => pr.id === pid);
-                return p ? `
-                    <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                        #${p.id} ${p.name}
-                        <button class="delete-btn" onclick="deleteGroupProduct(${pid})">Видалити</button>
-                    </div>
-                ` : '';
-            }).join('');
-        }
+function renderGroupProducts() {
+    const groupList = document.getElementById('group-product-list');
+    if (groupList) {
+        groupList.innerHTML = newProduct.groupProducts.map((pid, index) => {
+            const p = products.find(pr => pr._id === pid);
+            return p ? `
+                <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
+                    #${p._id} ${p.name}
+                    <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
+                </div>
+            ` : '';
+        }).join('');
     }
+}
+
+function deleteGroupProduct(productId) {
+    newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
+    renderGroupProducts();
+    resetInactivityTimer();
+}
 
     function dragGroupProduct(event, index) {
         event.dataTransfer.setData('text/plain', index);
@@ -4402,12 +4392,6 @@ function searchGroupProducts() {
             resetInactivityTimer();
         }
         document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
-    }
-
-    function deleteGroupProduct(productId) {
-        newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
-        renderGroupProducts();
-        resetInactivityTimer();
     }
 
 async function saveNewProduct() {
@@ -4504,14 +4488,12 @@ async function saveNewProduct() {
             return;
         }
 
-        let subcategorySlug = '';
         if (subcategory) {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategorySlug = subcategoryObj.slug; // Використовуємо slug
         }
 
         if (brand && !brands.includes(brand)) {
@@ -4550,7 +4532,7 @@ async function saveNewProduct() {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Надсилаємо slug
+            subcategory, // Send slug
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
             salePrice: salePrice,
@@ -4665,30 +4647,19 @@ async function saveNewProduct() {
             }
         }
 
-const response = await fetchWithAuth('/api/products', {
-        method: 'POST',
-        body: JSON.stringify(product)
-    });
+        const response = await fetchWithAuth('/api/products', {
+            method: 'POST',
+            body: JSON.stringify(product)
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
-    }
-
-    const newProductData = await response.json();
-    console.log('Новий продукт:', newProductData); // Для дебагу
-    if (!newProductData.id || !Number.isInteger(newProductData.id) || newProductData.id <= 0) {
-        console.error('Сервер повернув продукт без коректного id:', newProductData);
-        showNotification('Помилка: сервер не повернув коректний ID товару');
-        return;
-    }
-
-    products.push(newProductData);
-    closeModal();
-    renderAdmin('products');
-    showNotification('Товар додано!');
-    unsavedChanges = false;
-    resetInactivityTimer();
+        const newProductData = await response.json();
+        console.log('Новий продукт:', newProductData);
+        products.push(newProductData);
+        closeModal();
+        renderAdmin('products');
+        showNotification('Товар додано!');
+        unsavedChanges = false;
+        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
         showNotification('Не вдалося додати товар: ' + err.message);
@@ -4901,7 +4872,6 @@ async function saveEditedProduct(productId) {
         const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
         const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
 
-        // Валідація
         if (!name || !slug) {
             showNotification('Введіть назву та шлях товару!');
             return;
@@ -4912,7 +4882,6 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Перевірка унікальності slug
         const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
         const existingProducts = await slugCheck.json();
         if (!existingProducts.products || !Array.isArray(existingProducts.products)) {
@@ -4924,21 +4893,18 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Перевірка категорії та під Wиборка slug для підкатегорії
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
             return;
         }
 
-        let subcategorySlug = '';
         if (subcategory) {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategorySlug = subcategoryObj.slug; // Використовуємо slug
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
@@ -4956,7 +4922,6 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Додавання бренду, якщо він новий
         if (brand && !brands.includes(brand)) {
             try {
                 const response = await fetchWithAuth('/api/brands', {
@@ -4972,7 +4937,6 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        // Додавання матеріалу, якщо він новий
         if (material && !materials.includes(material)) {
             try {
                 const response = await fetchWithAuth('/api/materials', {
@@ -4988,36 +4952,38 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        let product = {
-            type: newProduct.type,
-            name,
-            slug,
-            brand: brand || '',
-            category,
-            subcategory: subcategorySlug, // Надсилаємо slug
-            material: material || '',
-            price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice || null,
-            saleEnd: saleEnd || null,
-            description,
-            widthCm,
-            depthCm,
-            heightCm,
-            lengthCm,
-            photos: [],
-            colors: newProduct.colors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: color.photo || null
-            })),
-            sizes: newProduct.sizes,
-            groupProducts: newProduct.groupProducts,
-            active: newProduct.active,
-            visible
-        };
+let product = {
+    type: newProduct.type,
+    name,
+    slug,
+    brand: brand || '',
+    category,
+    subcategory,
+    material: material || '',
+    price: newProduct.type === 'simple' ? price : null,
+    salePrice: salePrice,
+    saleEnd: saleEnd || null,
+    description: description || '',
+    widthCm,
+    depthCm,
+    heightCm,
+    lengthCm,
+    photos: [],
+    colors: newProduct.colors.map(color => ({
+        name: color.name,
+        value: color.value,
+        priceChange: color.priceChange || 0,
+        photo: null
+    })),
+    sizes: newProduct.sizes,
+    groupProducts: newProduct.groupProducts.map(pid => {
+        const p = products.find(pr => pr.id === pid);
+        return p ? p._id : null;
+    }).filter(id => id !== null), // Map to _id and filter out nulls
+    active: true,
+    visible
+};
 
-        // Обробка зображень у описі
         const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(description, 'text/html');
@@ -5043,6 +5009,8 @@ async function saveEditedProduct(productId) {
                         mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
                     }
                 } catch (err) {
+
+
                     console.error('Помилка завантаження зображення:', err);
                     showNotification('Не вдалося завантажити зображення: ' + err.message);
                     return;
@@ -5056,7 +5024,6 @@ async function saveEditedProduct(productId) {
         });
         product.description = updatedDescription;
 
-        // Завантаження основних фото
         const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
         for (let file of photoFiles) {
             const validation = validateFile(file);
@@ -5082,7 +5049,6 @@ async function saveEditedProduct(productId) {
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        // Завантаження фото кольорів
         for (let i = 0; i < newProduct.colors.length; i++) {
             const color = newProduct.colors[i];
             if (color.photo instanceof File) {
@@ -5110,36 +5076,24 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        // Відправка запиту на сервер
-const response = await fetchWithAuth(`/api/products/${productId}`, {
-        method: 'PUT',
-        body: JSON.stringify(product)
-    });
+        const response = await fetchWithAuth(`/api/products/${productId}`, {
+            method: 'PUT',
+            body: JSON.stringify(product)
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
-    }
-
-    const updatedProduct = await response.json();
-    console.log('Оновлений продукт:', updatedProduct); // Для дебагу
-    if (!updatedProduct.id || !Number.isInteger(updatedProduct.id) || updatedProduct.id <= 0) {
-        console.error('Сервер повернув продукт без коректного id:', updatedProduct);
-        showNotification('Помилка: сервер не повернув коректний ID товару');
-        return;
-    }
-
-    const index = products.findIndex(p => p._id === productId);
-    if (index !== -1) {
-        products[index] = updatedProduct;
-    } else {
-        products.push(updatedProduct);
-    }
-    closeModal();
-    renderAdmin('products');
-    showNotification('Товар оновлено!');
-    unsavedChanges = false;
-    resetInactivityTimer();
+        const updatedProduct = await response.json();
+        console.log('Оновлений продукт:', updatedProduct);
+        const index = products.findIndex(p => p._id === productId);
+        if (index !== -1) {
+            products[index] = updatedProduct;
+        } else {
+            products.push(updatedProduct);
+        }
+        closeModal();
+        renderAdmin('products');
+        showNotification('Товар оновлено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
         showNotification('Не вдалося оновити товар: ' + err.message);
@@ -5730,11 +5684,6 @@ socket.onmessage = (event) => {
         console.log(`WebSocket: ${type}`, data);
         if (type === 'products') {
             if (Array.isArray(data)) {
-                const invalidProducts = data.filter(p => !p.id || !Number.isInteger(p.id) || p.id <= 0);
-                if (invalidProducts.length > 0) {
-                    console.error('Знайдено продукти з некоректним id:', invalidProducts);
-                    showNotification('Помилка: деякі продукти мають некоректний ID');
-                }
                 products = data;
                 if (document.querySelector('#products.active')) {
                     renderAdmin('products');
@@ -5742,58 +5691,58 @@ socket.onmessage = (event) => {
             } else {
                 console.warn('Некоректні дані продуктів:', data);
             }
-            } else if (type === 'categories') {
-                if (Array.isArray(data)) {
-                    categories = data;
-                    renderCategoriesAdmin();
-                } else {
-                    console.warn('Некоректні дані категорій:', data);
-                    loadCategories();
-                }
-            } else if (type === 'orders') {
-                if (Array.isArray(data)) {
-                    orders = data;
-                    if (document.querySelector('#orders.active')) {
-                        renderAdmin('orders');
-                    }
-                } else {
-                    console.warn('Некоректні дані замовлень:', data);
-                }
-            } else if (type === 'slides') {
-                if (Array.isArray(data)) {
-                    slides = data;
-                    if (document.querySelector('#site-editing.active')) {
-                        renderSlidesAdmin();
-                    }
-                } else {
-                    console.warn('Некоректні дані слайдів:', data);
-                }
-            } else if (type === 'materials') {
-                if (Array.isArray(data)) {
-                    materials = data;
-                    updateMaterialOptions();
-                } else {
-                    console.warn('Некоректні дані матеріалів:', data);
-                }
-            } else if (type === 'brands') {
-                if (Array.isArray(data)) {
-                    brands = data;
-                    updateBrandOptions();
-                } else {
-                    console.warn('Некоректні дані брендів:', data);
-                }
-            } else if (type === 'error') {
-                console.error('WebSocket помилка від сервера:', data);
-                showNotification('Помилка WebSocket: ' + data.error);
-                if (data.error.includes('неавторизований')) {
-                    localStorage.removeItem('adminToken');
-                    localStorage.removeItem('adminSession');
-                    showSection('admin-login');
-                }
+        } else if (type === 'categories') {
+            if (Array.isArray(data)) {
+                categories = data;
+                renderCategoriesAdmin();
+            } else {
+                console.warn('Некоректні дані категорій:', data);
+                loadCategories();
             }
-        } catch (e) {
-            console.error('Помилка обробки WebSocket-повідомлення:', e);
-            showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+        } else if (type === 'orders') {
+            if (Array.isArray(data)) {
+                orders = data;
+                if (document.querySelector('#orders.active')) {
+                    renderAdmin('orders');
+                }
+            } else {
+                console.warn('Некоректні дані замовлень:', data);
+            }
+        } else if (type === 'slides') {
+            if (Array.isArray(data)) {
+                slides = data;
+                if (document.querySelector('#site-editing.active')) {
+                    renderSlidesAdmin();
+                }
+            } else {
+                console.warn('Некоректні дані слайдів:', data);
+            }
+        } else if (type === 'materials') {
+            if (Array.isArray(data)) {
+                materials = data;
+                updateMaterialOptions();
+            } else {
+                console.warn('Некоректні дані матеріалів:', data);
+            }
+        } else if (type === 'brands') {
+            if (Array.isArray(data)) {
+                brands = data;
+                updateBrandOptions();
+            } else {
+                console.warn('Некоректні дані брендів:', data);
+            }
+        } else if (type === 'error') {
+            console.error('WebSocket помилка від сервера:', data);
+            showNotification('Помилка WebSocket: ' + data.error);
+            if (data.error.includes('неавторизований')) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminSession');
+                showSection('admin-login');
+            }
         }
-    };
+    } catch (e) {
+        console.error('Помилка обробки WebSocket-повідомлення:', e);
+        showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+    }
+};
 }

@@ -51,7 +51,6 @@ const settingsSchema = new mongoose.Schema({
             }
         },
         icon: { type: String, default: '' }
-        // У server.js у settingsSchemaValidation змінити icon: Joi.string().required() на Joi.string().allow('')
     }],
     showSocials: { type: Boolean, default: true },
     about: { type: String, default: '' },
@@ -59,11 +58,6 @@ const settingsSchema = new mongoose.Schema({
     categoryHeight: { type: Number, default: 0 },
     productWidth: { type: Number, default: 0 },
     productHeight: { type: Number, default: 0 },
-    // У server.js у settingsSchemaValidation додати:
-    // categoryWidth: Joi.number().min(0).default(0),
-    // categoryHeight: Joi.number().min(0).default(0),
-    // productWidth: Joi.number().min(0).default(0),
-    // productHeight: Joi.number().min(0).default(0),
     filters: [{
         name: { type: String, required: true },
         label: { type: String, required: true },
@@ -79,7 +73,8 @@ const settingsSchema = new mongoose.Schema({
     slideWidth: { type: Number, default: 0 },
     slideHeight: { type: Number, default: 0 },
     slideInterval: { type: Number, default: 3000 },
-    showSlides: { type: Boolean, default: true }
+    showSlides: { type: Boolean, default: true },
+    timezone: { type: String, default: 'Europe/Kyiv' } // Додано поле timezone
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

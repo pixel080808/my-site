@@ -392,11 +392,11 @@ const settingsSchemaValidation = Joi.object({
         addresses: Joi.string().allow(''),
         schedule: Joi.string().allow('')
     }).default({ phones: '', addresses: '', schedule: '' }),
-    socials: Joi.array().items(
+     socials: Joi.array().items(
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().allow('')
+            icon: Joi.string().allow('') // Змінено з .required() на .allow('')
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
@@ -405,6 +405,7 @@ const settingsSchemaValidation = Joi.object({
     categoryHeight: Joi.number().min(0).default(0),
     productWidth: Joi.number().min(0).default(0),
     productHeight: Joi.number().min(0).default(0),
+    timezone: Joi.string().default('Europe/Kyiv')
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -425,11 +426,12 @@ const settingsSchemaValidation = Joi.object({
     slideHeight: Joi.number().min(0).default(0),
     slideInterval: Joi.number().min(0).default(3000),
     showSlides: Joi.boolean().default(true),
+    timezone: Joi.string().default('Europe/Kyiv'), // Додано поле timezone
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
     createdAt: Joi.any().optional(),
     updatedAt: Joi.any().optional()
-}).unknown(true); // Allow unknown fields to pass through to Mongoose
+}).unknown(true);
 
 const materialSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required()
@@ -890,7 +892,8 @@ app.get('/api/public/settings', async (req, res) => {
             slideHeight: 1, 
             slideInterval: 1, 
             showSlides: 1, 
-            filters: 1 
+            filters: 1,
+            timezone: 1 // Додано timezone
         });
         res.json(settings || {});
     } catch (err) {
@@ -2080,15 +2083,11 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
                 slideWidth: 0,
                 slideHeight: 0,
                 slideInterval: 3000,
-                showSlides: true
+                showSlides: true,
+                timezone: 'Europe/Kyiv' // Додано timezone
             });
-            try {
-                await settings.save();
-                logger.info('Створено початкові налаштування');
-            } catch (saveErr) {
-                logger.error('Помилка при збереженні початкових налаштувань:', saveErr);
-                return res.status(500).json({ error: 'Не вдалося створити початкові налаштування', details: saveErr.message });
-            }
+            await settings.save();
+            logger.info('Створено початкові налаштування');
         }
         res.json(settings);
     } catch (err) {
@@ -2118,6 +2117,24 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         if (error) {
             logger.error('Помилка валідації налаштувань:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
+        // Перевірка унікальності імен у filters
+        if (cleanedSettingsData.filters) {
+            const filterNames = cleanedSettingsData.filters.map(f => f.name);
+            if (new Set(filterNames).size !== filterNames.length) {
+                logger.error('Дублювання імен у filters:', filterNames);
+                return res.status(400).json({ error: 'Фільтри містять дубльовані імена' });
+            }
+        }
+
+        // Перевірка унікальності імен у orderFields
+        if (cleanedSettingsData.orderFields) {
+            const fieldNames = cleanedSettingsData.orderFields.map(f => f.name);
+            if (new Set(fieldNames).size !== fieldNames.length) {
+                logger.error('Дублювання імен у orderFields:', fieldNames);
+                return res.status(400).json({ error: 'Поля замовлення містять дубльовані імена' });
+            }
         }
 
         // Санітізація текстових полів
@@ -2163,7 +2180,8 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
                 slideWidth: 0,
                 slideHeight: 0,
                 slideInterval: 3000,
-                showSlides: true
+                showSlides: true,
+                timezone: 'Europe/Kyiv'
             });
         }
 
@@ -2178,7 +2196,8 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
             filters: cleanedSettingsData.filters || settings.filters,
             orderFields: cleanedSettingsData.orderFields || settings.orderFields,
             showSlides: cleanedSettingsData.showSlides !== undefined ? cleanedSettingsData.showSlides : settings.showSlides,
-            slideInterval: cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval
+            slideInterval: cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval,
+            timezone: cleanedSettingsData.timezone || settings.timezone
         };
 
         Object.assign(settings, updatedData);
@@ -2425,9 +2444,9 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = parseInt(req.params.id);
-        if (isNaN(orderId)) {
-            logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
+        const orderId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            logger.error(`Невірний формат ID замовлення: ${orderId}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
@@ -2457,20 +2476,11 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка унікальності id
-        if (orderData.id && orderData.id !== orderId) {
-            const existingOrder = await Order.findOne({ id: orderData.id });
-            if (existingOrder) {
-                logger.error('Замовлення з таким id уже існує:', orderData.id);
-                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
-            }
-        }
-
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            const order = await Order.findOneAndUpdate(
-                { id: orderId },
+            const order = await Order.findByIdAndUpdate(
+                orderId,
                 orderData,
                 { new: true, session }
             );
