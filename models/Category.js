@@ -5,14 +5,14 @@ const categorySchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        maxlength: 255 // Додано обмеження довжини
+        maxlength: 255
     },
     slug: {
         type: String,
         required: true,
         unique: true,
         trim: true,
-        maxlength: 255 // Додано обмеження довжини
+        maxlength: 255
     },
     photo: { type: String, default: '' },
     visible: { type: Boolean, default: true },
@@ -21,13 +21,13 @@ const categorySchema = new mongoose.Schema({
             type: String,
             required: true,
             trim: true,
-            maxlength: 255 // Додано обмеження довжини
+            maxlength: 255
         },
         slug: {
             type: String,
             required: true,
             trim: true,
-            maxlength: 255 // Додано обмеження довжини
+            maxlength: 255
         },
         photo: { type: String, default: '' },
         order: { type: Number, required: true, default: 0 },
@@ -70,7 +70,9 @@ categorySchema.pre('save', async function(next) {
 // Нормалізація порядку перед збереженням
 categorySchema.pre('save', async function(next) {
     const category = this;
-    if (category.isModified('order')) {
+
+    // Нормалізація порядку категорій лише для одиночних оновлень
+    if (category.isModified('order') && !category._isBulkOrderUpdate) {
         const existing = await mongoose.models.Category.findOne({ order: category.order, _id: { $ne: category._id } });
         if (existing) {
             const maxOrder = await mongoose.models.Category.aggregate([
@@ -79,8 +81,9 @@ categorySchema.pre('save', async function(next) {
             category.order = (maxOrder[0]?.maxOrder || 0) + 1;
         }
     }
-    // Нормалізація порядку підкатегорій
-    if (category.subcategories && category.isModified('subcategories')) {
+
+    // Нормалізація порядку підкатегорій лише для одиночних оновлень
+    if (category.subcategories && category.isModified('subcategories') && !category._isBulkOrderUpdate) {
         const seenOrders = new Set();
         for (let i = 0; i < category.subcategories.length; i++) {
             const sub = category.subcategories[i];
@@ -91,6 +94,7 @@ categorySchema.pre('save', async function(next) {
             seenOrders.add(sub.order);
         }
     }
+
     next();
 });
 
