@@ -26,7 +26,6 @@ const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
-const OrderField = require('./models/OrderField');
 
 // Налаштування логера
 const logger = winston.createLogger({
@@ -84,14 +83,8 @@ const upload = multer({
 
 // Налаштування Multer для імпорту файлів (локальне збереження)
 const uploadPath = path.join(__dirname, 'uploads');
-try {
-    if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-        logger.info(`Створено директорію uploads: ${uploadPath}`);
-    }
-} catch (err) {
-    logger.error(`Не вдалося створити директорію uploads: ${uploadPath}`, err);
-    process.exit(1);
+if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath);
 }
 
 const importStorage = multer.diskStorage({
@@ -125,80 +118,28 @@ app.use(cookieParser());
 const csrfProtection = csurf({
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' ? true : false, // У продакшені лише HTTPS
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 // 24 години
-    },
-    ignoreMethods: ['GET', 'HEAD', 'OPTIONS'], // Ігноруємо безпечні методи
-    value: (req) => {
-        const token = req.headers['x-csrf-token'];
-        if (!token) {
-            logger.warn('CSRF-токен відсутній у заголовку X-CSRF-Token');
-        }
-        return token;
+        secure: process.env.NODE_ENV === 'production', // true для HTTPS у продакшені
+        sameSite: 'strict'
     }
 });
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['https://mebli.onrender.com', 'http://localhost:3000'];
-
 app.use(cors({
     origin: (origin, callback) => {
+        const allowedOrigins = ['https://mebli.onrender.com', 'http://localhost:3000'];
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            logger.warn(`CORS blocked request from origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 500, // Збільшуємо до 500 запитів на IP
-    message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
-    skip: (req) => {
-        // Пропускаємо запити до статичних файлів і /api/csrf-token
-        const staticPaths = ['/admin.html', '/favicon.ico', '/index.html'];
-        return req.path === '/api/csrf-token' || staticPaths.includes(req.path);
-    }
-});
-
-// Застосовуємо ліміт до всіх запитів
-app.use(globalLimiter);
-
-// Ліміт для особливо чутливих публічних ендпоінтів
-const publicApiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 200, // Збільшуємо до 200 запитів на IP
-    message: 'Занадто багато запитів до API, спробуйте знову через 15 хвилин'
-});
-
-// Застосовуємо до публічних API
-app.use('/api/public', publicApiLimiter);
-app.use('/api/cart', publicApiLimiter);
-
-// Додаємо заголовки безпеки
-app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    if (process.env.NODE_ENV === 'production') {
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    }
-    next();
-});
-
 // Логування всіх запитів
 app.use((req, res, next) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    logger.info(`${req.method} ${req.path} - IP: ${clientIp} - Query: ${JSON.stringify(req.query)} - Body: ${JSON.stringify(req.body)} - ${new Date().toISOString()}`);
+    logger.info(`${req.method} ${req.path} - ${new Date().toISOString()}`);
     next();
 });
 
@@ -246,14 +187,11 @@ app.use(express.static(publicPath, {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
+            res.setHeader('Cache-Control', 'no-store');
         }
         if (path.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
-        }
-        if (path.endsWith('.ico') || path.endsWith('.png') || path.endsWith('.jpg')) {
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
+            res.setHeader('Cache-Control', 'no-store');
         }
     }
 }));
@@ -285,8 +223,8 @@ const loginLimiter = rateLimit({
 });
 
 const refreshTokenLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 300, // Збільшуємо до 300 запитів
+    windowMs: 15 * 60 * 1000,
+    max: 30,
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
         const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -295,10 +233,7 @@ const refreshTokenLimiter = rateLimit({
     handler: (req, res, next) => {
         const err = new Error('Занадто багато запитів на оновлення токена');
         err.status = 429;
-        res.status(429).json({
-            error: 'Занадто багато запитів',
-            details: 'Перевищено ліміт запитів на оновлення токена. Спробуйте знову через 15 хвилин'
-        });
+        next(err);
     }
 });
 
@@ -317,18 +252,22 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).allow('').optional(),
-    price: Joi.number().min(0).optional().allow(null),
-    salePrice: Joi.number().min(0).optional().allow(null),
-    saleEnd: Joi.date().allow(null).optional(),
-    brand: Joi.string().max(100).allow('').optional(),
-    material: Joi.string().max(100).allow('').optional(),
-    filters: Joi.array().items(
-        Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required()
-        })
-    ).default([]),
+subcategory: Joi.string().max(255).optional().allow('').custom(async (value, helpers) => {
+    if (!value) return value;
+    const category = await Category.findOne({
+        name: helpers.state.ancestors[0].category,
+        'subcategories.slug': value
+    });
+    if (!category) {
+        return helpers.error('any.invalid', { message: 'Підкатегорія не існує в цій категорії' });
+    }
+    return value;
+}),
+    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
+    salePrice: Joi.number().min(0).allow(null),
+    saleEnd: Joi.date().allow(null),
+    brand: Joi.string().max(100).allow(''),
+    material: Joi.string().max(100).allow(''),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -349,28 +288,22 @@ const productSchemaValidation = Joi.object({
         })
     ).default([]),
     groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow('').optional(),
-    widthCm: Joi.number().min(0).allow(null).optional(),
-    depthCm: Joi.number().min(0).allow(null).optional(),
-    heightCm: Joi.number().min(0).allow(null).optional(),
-    lengthCm: Joi.number().min(0).allow(null).optional(),
-    popularity: Joi.number().allow(null).optional()
-}).unknown(false);
+    description: Joi.string().allow(''),
+    widthCm: Joi.number().min(0).allow(null),
+    depthCm: Joi.number().min(0).allow(null),
+    heightCm: Joi.number().min(0).allow(null),
+    lengthCm: Joi.number().min(0).allow(null),
+    popularity: Joi.number().allow(null)
+});
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    cartId: Joi.string().default(''),
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
-        surname: Joi.string().min(1).max(255).optional(),
         email: Joi.string().email().allow('').optional(),
-        phone: Joi.string()
-            .pattern(/^(0\d{9})$|^(\+?\d{10,15})$/)
-            .allow('')
-            .optional(),
-        address: Joi.string().allow('').optional(),
-        payment: Joi.string().optional() // Додаємо поле payment
+        phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).allow('').optional(),
+        address: Joi.string().allow('').optional()
     }).required(),
     items: Joi.array().items(
         Joi.object({
@@ -378,19 +311,19 @@ const orderSchemaValidation = Joi.object({
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
-            photo: Joi.string().uri().allow('').optional(),
+            photo: Joi.string().allow(''), // Змінено з color на photo
             _id: Joi.any().optional()
         })
     ).required(),
     total: Joi.number().min(0).required(),
-    status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
+    status: Joi.string().default('Нове замовлення')
 });
 
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
     logo: Joi.string().uri().allow(''),
-    logoWidth: Joi.number().min(0).default(150),
+    logoWidth: Joi.number().min(0).allow(null),
     favicon: Joi.string().uri().allow(''),
     contacts: Joi.object({
         phones: Joi.string().allow(''),
@@ -401,16 +334,15 @@ const settingsSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().allow('')
+            icon: Joi.string().required()
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
     about: Joi.string().allow(''),
-    categoryWidth: Joi.number().min(0).default(0),
-    categoryHeight: Joi.number().min(0).default(0),
-    productWidth: Joi.number().min(0).default(0),
-    productHeight: Joi.number().min(0).default(0),
-    timezone: Joi.string().default('Europe/Kyiv'),
+    categoryWidth: Joi.number().min(0).allow(null),
+    categoryHeight: Joi.number().min(0).allow(null),
+    productWidth: Joi.number().min(0).allow(null),
+    productHeight: Joi.number().min(0).allow(null),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
@@ -427,15 +359,15 @@ const settingsSchemaValidation = Joi.object({
             options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
-    slideWidth: Joi.number().min(0).default(0),
-    slideHeight: Joi.number().min(0).default(0),
-    slideInterval: Joi.number().min(0).default(3000),
+    slideWidth: Joi.number().min(0).allow(null),
+    slideHeight: Joi.number().min(0).allow(null),
+    slideInterval: Joi.number().min(0).allow(null),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
     createdAt: Joi.any().optional(),
     updatedAt: Joi.any().optional()
-}).unknown(true);
+}).unknown(false);
 
 const materialSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required()
@@ -453,10 +385,10 @@ const cartIdSchema = Joi.string()
     });
 
 const slideSchemaValidation = Joi.object({
-    id: Joi.number().required(),
+    id: Joi.number().optional(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
-    link: Joi.string().uri().allow('').optional(),
+    link: Joi.string().uri().allow('').optional(), // Змінено з url на link
     title: Joi.string().allow(''),
     text: Joi.string().allow(''),
     linkText: Joi.string().allow(''),
@@ -518,12 +450,8 @@ setInterval(async () => {
         }
 
         await Promise.all(filesToDelete.map(async (filePath) => {
-            try {
-                await fs.promises.unlink(filePath);
-                logger.info(`Видалено застарілий файл: ${filePath}`);
-            } catch (unlinkErr) {
-                logger.error(`Не вдалося видалити застарілий файл ${filePath}:`, unlinkErr);
-            }
+            await fs.promises.unlink(filePath);
+            logger.info(`Видалено застарілий файл: ${filePath}`);
         }));
 
         if (filesToDelete.length > 0) {
@@ -590,25 +518,17 @@ wss.on('connection', (ws, req) => {
 
     if (!verifyToken()) return;
 
-const refreshTokenWithRetry = async (retries = 3, delay = 10000) => {
+const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
     let csrfToken;
-    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://mebli.onrender.com' : 'http://localhost:3000';
     try {
-        const csrfResponse = await fetch(`${baseUrl}/api/csrf-token`, {
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
             method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!csrfResponse.ok) {
-            throw new Error(`Помилка отримання CSRF-токена: ${csrfResponse.status} ${csrfResponse.statusText}`);
-        }
         const csrfData = await csrfResponse.json();
-        if (!csrfData.csrfToken) {
-            throw new Error('CSRF-токен не повернуто у відповіді');
-        }
         csrfToken = csrfData.csrfToken;
     } catch (err) {
         logger.error(`WebSocket: Помилка отримання CSRF-токена, IP: ${clientIp}:`, err);
-        ws.send(JSON.stringify({ type: 'error', error: 'Не вдалося отримати CSRF-токен. З’єднання буде закрито.' }));
-        ws.close(1008, 'Помилка отримання CSRF-токена');
         return false;
     }
 
@@ -680,98 +600,55 @@ const refreshTokenWithRetry = async (retries = 3, delay = 10000) => {
         }, 25 * 60 * 1000);
     }
 
-ws.on('close', (code, reason) => {
+ws.on('close', () => {
     if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
     ws.subscriptions.clear();
-    logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}, Код: ${code}, Причина: ${reason || 'невідомо'}`);
+    logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}`);
 });
 
 ws.on('message', async (message) => {
     try {
-        if (message.length > 1024 * 1024) {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Повідомлення занадто велике' }));
-            }
+        if (message.length > 1024 * 1024) { // Ліміт 1 МБ
+            ws.send(JSON.stringify({ type: 'error', error: 'Повідомлення занадто велике' }));
             return;
         }
+        const { type, action } = JSON.parse(message);
+            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
 
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(message);
-        } catch (parseErr) {
-            logger.error(`WebSocket: Некоректний формат повідомлення, IP: ${clientIp}:`, parseErr);
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Некоректний формат повідомлення', details: 'Очікується валідний JSON' }));
-            }
-            return;
-        }
+            if (action === 'subscribe') {
+                ws.subscriptions.add(type);
+                logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
 
-        const { type, action } = parsedMessage;
-        if (!type || !action) {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Відсутні обов’язкові поля type або action' }));
-            }
-            return;
-        }
-
-        logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
-
-        if (action === 'subscribe') {
-            ws.subscriptions.add(type);
-            logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
-
-            if (type === 'products') {
-                const products = ws.isAdmin
-                    ? await Product.find()
-                    : await Product.find({ visible: true, active: true });
-                if (ws.readyState === WebSocket.OPEN) {
+                if (type === 'products') {
+                    const products = ws.isAdmin
+                        ? await Product.find()
+                        : await Product.find({ visible: true, active: true });
                     ws.send(JSON.stringify({ type: 'products', data: products }));
-                }
-            } else if (type === 'settings') {
-                const settings = await Settings.findOne();
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'settings') {
+                    const settings = await Settings.findOne();
                     ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                }
-            } else if (type === 'categories') {
-                const categories = await Category.find();
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'categories') {
+                    const categories = await Category.find();
                     ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                }
-            } else if (type === 'slides') {
-                const slides = await Slide.find().sort({ order: 1 });
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'slides') {
+                    const slides = await Slide.find().sort({ order: 1 });
                     ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                }
-            } else if (type === 'orders' && ws.isAdmin) {
-                const orders = await Order.find();
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'orders' && ws.isAdmin) {
+                    const orders = await Order.find();
                     ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                }
-            } else if (type === 'materials' && ws.isAdmin) {
-                const materials = await Material.find().distinct('name');
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'materials' && ws.isAdmin) {
+                    const materials = await Material.find().distinct('name');
                     ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                }
-            } else if (type === 'brands' && ws.isAdmin) {
-                const brands = await Brand.find().distinct('name');
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (type === 'brands' && ws.isAdmin) {
+                    const brands = await Brand.find().distinct('name');
                     ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                }
-            } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-                if (ws.readyState === WebSocket.OPEN) {
+                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
                     ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
                 }
             }
-        } else {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Невідома дія', details: `Дія "${action}" не підтримується` }));
-            }
-        }
     } catch (err) {
         logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки повідомлення', details: err.message }));
-        }
+        ws.send(JSON.stringify({ type: 'error', error: 'Некоректне повідомлення', details: err.message }));
     }
 });
 
@@ -792,10 +669,6 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
 app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
     upload.single('file')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                logger.error('Перевищено ліміт розміру файлу:', err);
-                return res.status(400).json({ error: 'Файл занадто великий', details: 'Максимальний розмір файлу: 5 МБ' });
-            }
             logger.error('Multer помилка:', err);
             return res.status(400).json({ error: 'Помилка завантаження файлу', details: err.message });
         } else if (err) {
@@ -804,24 +677,19 @@ app.post('/api/upload', authenticateToken, csrfProtection, (req, res, next) => {
         }
         try {
             logger.info('Файл отримано:', req.file);
-            if (!req.file || !req.file.path) {
+            if (!req.file || !req.file.path || !req.file.filename) {
                 logger.error('Cloudinary не повернув необхідні дані файлу:', req.file);
                 return res.status(500).json({ error: 'Помилка завантаження: неповні дані від Cloudinary' });
             }
             res.json({ url: req.file.path });
         } catch (cloudinaryErr) {
             logger.error('Помилка Cloudinary:', cloudinaryErr);
-            if (req.file && req.file.path) {
+            if (req.file && req.file.filename) {
                 try {
-                    const publicId = getPublicIdFromUrl(req.file.path);
-                    if (publicId) {
-                        await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Файл видалено з Cloudinary після помилки: ${publicId}`);
-                    } else {
-                        logger.warn('Не вдалося отримати publicId для видалення файлу:', req.file.path);
-                    }
+                    await cloudinary.uploader.destroy(req.file.filename);
+                    logger.info(`Файл видалено з Cloudinary після помилки: ${req.file.filename}`);
                 } catch (deleteErr) {
-                    logger.error(`Не вдалося видалити файл з Cloudinary: ${req.file.path}`, deleteErr);
+                    logger.error(`Не вдалося видалити файл з Cloudinary: ${req.file.filename}`, deleteErr);
                 }
             }
             res.status(500).json({ error: 'Не вдалося завантажити файл до Cloudinary', details: cloudinaryErr.message });
@@ -841,39 +709,13 @@ app.get('/api/filters', authenticateToken, async (req, res) => {
 
 app.get('/api/public/products', async (req, res) => {
     try {
-        const { slug, cursor, limit = 10 } = req.query;
-        const parsedLimit = parseInt(limit);
-        
-        // Валідація limit
-        if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
-            logger.error('Невірний параметр limit:', limit);
-            return res.status(400).json({ error: 'Параметр limit повинен бути числом від 1 до 100' });
-        }
-
+        const { slug, page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
         let query = { visible: true, active: true };
         if (slug) query.slug = slug;
-
-        let products = [];
-        let nextCursor = null;
-
-        if (cursor) {
-            if (!mongoose.Types.ObjectId.isValid(cursor)) {
-                return res.status(400).json({ error: 'Невірний формат cursor' });
-            }
-            query._id = { $gt: cursor };
-        }
-
-        products = await Product.find(query)
-            .sort({ _id: 1 })
-            .limit(parsedLimit + 1);
-
-        if (products.length > parsedLimit) {
-            nextCursor = products[products.length - 1]._id.toString();
-            products = products.slice(0, parsedLimit);
-        }
-
+        const products = await Product.find(query).skip(skip).limit(parseInt(limit));
         const total = await Product.countDocuments(query);
-        res.json({ products, total, nextCursor, limit: parsedLimit });
+        res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', { error: err.message, stack: err.stack });
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -882,23 +724,7 @@ app.get('/api/public/products', async (req, res) => {
 
 app.get('/api/public/settings', async (req, res) => {
     try {
-        const settings = await Settings.findOne({}, { 
-            name: 1, 
-            baseUrl: 1, 
-            logo: 1, 
-            logoWidth: 1, 
-            favicon: 1, 
-            contacts: 1, 
-            socials: 1, 
-            showSocials: 1, 
-            about: 1, 
-            slideWidth: 1, 
-            slideHeight: 1, 
-            slideInterval: 1, 
-            showSlides: 1, 
-            filters: 1,
-            timezone: 1 // Додано timezone
-        });
+        const settings = await Settings.findOne({}, { name: 1, baseUrl: 1, logo: 1, logoWidth: 1, favicon: 1, contacts: 1, socials: 1, showSocials: 1, about: 1, categoryWidth: 1, categoryHeight: 1, productWidth: 1, productHeight: 1, slideWidth: 1, slideHeight: 1, slideInterval: 1, showSlides: 1, filters: 1 });
         res.json(settings || {});
     } catch (err) {
         logger.error('Помилка при отриманні публічних налаштувань:', err);
@@ -987,43 +813,30 @@ const getPublicIdFromUrl = (url) => {
 
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        let productData = { ...req.body };
-        logger.info('Отримано дані продукту для створення:', JSON.stringify(productData, null, 2));
+        let productData = req.body;
+        logger.info('Отримано дані продукту:', productData);
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
             delete productData.img;
         }
+        // Мапінг img у colors
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 if (color.img && !color.photo) {
                     color.photo = color.img;
                     delete color.img;
                 }
-                const { _id, ...rest } = color;
-                return rest;
+                return color;
             });
         }
 
-        // Видаляємо системні поля
-        delete productData._id;
-        delete productData.__v;
-
-        // Встановлюємо значення за замовчуванням
-        productData.filters = productData.filters || [];
-        productData.photos = productData.photos || [];
-        productData.sizes = productData.sizes || [];
-        productData.colors = productData.colors || [];
-        productData.groupProducts = productData.groupProducts || [];
-        productData.subcategory = productData.subcategory || null;
-
-        // Тимчасово відключаємо Joi-валідацію
-        // const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
-        // if (error) {
-        //     logger.error('Помилка валідації продукту:', error.details);
-        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        // }
+        const { error } = productSchemaValidation.validate(productData);
+        if (error) {
+            logger.error('Помилка валідації продукту:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
 
         // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug });
@@ -1057,7 +870,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
         }
 
-        // Перевірка існування subcategory (якщо вказано)
+        // Перевірка існування subcategory
         if (productData.subcategory) {
             const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
             if (!subcategoryExists) {
@@ -1083,6 +896,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
+        // Транзакція для створення продукту
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
@@ -1093,25 +907,15 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             broadcast('products', products);
 
             await session.commitTransaction();
-            logger.info('Продукт успішно створено:', product._id);
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
-            logger.error('Помилка збереження продукту в базі:', {
-                message: err.message,
-                stack: err.stack,
-                validationErrors: err.errors || null
-            });
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', {
-            message: err.message,
-            stack: err.stack,
-            productData: req.body
-        });
+        logger.error('Помилка при додаванні товару:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
@@ -1249,52 +1053,6 @@ app.delete('/api/products/:id', authenticateToken, csrfProtection, async (req, r
     }
 });
 
-app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const productId = req.params.id;
-        logger.info(`Отримано запит на перемикання статусу активності продукту: ${productId}`);
-
-        // Перевірка валідності ObjectId
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            logger.error(`Невірний формат ID продукту: ${productId}`);
-            return res.status(400).json({ error: 'Невірний формат ID продукту' });
-        }
-
-        // Валідація вхідних даних
-        const { error } = Joi.object({
-            active: Joi.boolean().required()
-        }).validate(req.body);
-        if (error) {
-            logger.error('Помилка валідації даних для перемикання статусу:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const { active } = req.body;
-
-        // Пошук та оновлення продукту
-        const product = await Product.findByIdAndUpdate(
-            productId,
-            { active },
-            { new: true }
-        );
-
-        if (!product) {
-            logger.error(`Продукт не знайдено: ${productId}`);
-            return res.status(404).json({ error: 'Продукт не знайдено' });
-        }
-
-        // Трансляція оновленого списку продуктів
-        const products = await Product.find();
-        broadcast('products', products);
-
-        logger.info(`Статус активності продукту ${productId} змінено на ${active}`);
-        res.json(product);
-    } catch (err) {
-        logger.error('Помилка при перемиканні статусу продукту:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
 const categorySchemaValidation = Joi.object({
     name: Joi.string().max(255).required(),
     slug: Joi.string().max(255).required(),
@@ -1307,19 +1065,18 @@ const categorySchemaValidation = Joi.object({
             name: Joi.string().max(255).required(),
             slug: Joi.string().max(255).required(),
             photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().optional(),
-            order: Joi.number().integer().min(0).default(0).optional()
+            visible: Joi.boolean().optional()
         })
-    ).default([]).optional()
+    ).optional()
 }).min(1);
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
     name: Joi.string().max(255).required(),
-    slug: Joi.string().max(255).required(),
+    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
-    order: Joi.number().integer().min(0).default(0).optional() 
+    order: Joi.number().integer().min(0).optional() 
 });
 
 app.get('/api/categories', async (req, res) => {
@@ -1361,15 +1118,6 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
                 }
                 return sub;
             });
-
-            // Валідація кожної підкатегорії
-            for (const subcategory of categoryData.subcategories) {
-                const { error } = subcategorySchemaValidation.validate(subcategory);
-                if (error) {
-                    logger.error('Помилка валідації підкатегорії:', error.details);
-                    return res.status(400).json({ error: 'Помилка валідації підкатегорії', details: error.details });
-                }
-            }
         }
 
         const { error } = categorySchemaValidation.validate(categoryData);
@@ -1393,8 +1141,6 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
 });
 
 app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         let categoryData = req.body;
         logger.info('Отримано дані для оновлення категорії:', JSON.stringify(categoryData, null, 2));
@@ -1426,14 +1172,14 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(400).json({ error: 'Невірний формат ID категорії' });
         }
 
-        const category = await Category.findById(req.params.id).session(session);
+        const category = await Category.findById(req.params.id);
         if (!category) {
             logger.error(`Категорію не знайдено: ${req.params.id}`);
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
         if (categoryData.name && categoryData.name !== category.name) {
-            const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
+            const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } });
             if (existingCategoryByName) {
                 logger.error(`Категорія з назвою "${categoryData.name}" уже існує`);
                 return res.status(400).json({ error: 'Категорія з такою назвою вже існує' });
@@ -1441,7 +1187,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         }
 
         if (categoryData.slug && categoryData.slug !== category.slug) {
-            const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } }).session(session);
+            const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } });
             if (existingCategoryBySlug) {
                 logger.error(`Категорія з slug "${categoryData.slug}" уже існує`);
                 return res.status(400).json({ error: 'Категорія з таким slug вже існує' });
@@ -1457,7 +1203,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                     logger.info(`Видалено старе зображення категорії: ${publicId}`);
                 } catch (err) {
                     logger.error(`Не вдалося видалити старе зображення категорії: ${publicId}`, err);
-                    throw err; // Якщо не вдалося видалити, скасовуємо транзакцію
                 }
             }
         }
@@ -1482,7 +1227,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                         logger.info(`Видалено старе зображення підкатегорії: ${publicId}`);
                     } catch (err) {
                         logger.error(`Не вдалося видалити старе зображення підкатегорії: ${publicId}`, err);
-                        throw err; // Якщо не вдалося видалити, скасовуємо транзакцію
                     }
                 }
             }
@@ -1498,7 +1242,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                 subcategories: subcategories.length > 0 ? subcategories : category.subcategories,
                 order: categoryData.order !== undefined ? categoryData.order : category.order
             },
-            { new: true, session }
+            { new: true }
         );
 
         if (!updatedCategory) {
@@ -1506,17 +1250,13 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(500).json({ error: 'Не вдалося оновити категорію' });
         }
 
-        const categories = await Category.find().session(session);
+        const categories = await Category.find();
         broadcast('categories', categories);
         logger.info(`Категорію оновлено: ${req.params.id}`);
-        await session.commitTransaction();
         res.json(updatedCategory);
     } catch (err) {
-        await session.abortTransaction();
         logger.error('Помилка при оновленні категорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
-    } finally {
-        session.endSession();
     }
 });
 
@@ -1536,7 +1276,6 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         // Валідація
         const { error } = categoryOrderSchema.validate({ categories });
         if (error) {
-            logger.error('Помилка валідації порядку категорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
@@ -1544,28 +1283,16 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         const categoryIds = categories.map(item => item._id);
         const foundCategories = await Category.find({ _id: { $in: categoryIds } });
         if (foundCategories.length !== categoryIds.length) {
-            logger.error('Не всі категорії знайдені:', {
-                requested: categoryIds,
-                found: foundCategories.map(cat => cat._id.toString())
-            });
             return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = categories.map(({ _id, order }) => ({
-            updateOne: {
-                filter: { _id },
-                update: { $set: { order } }
-            }
-        }));
+        // Оновлення порядку
+        for (const { _id, order } of categories) {
+            await Category.findByIdAndUpdate(_id, { order });
+        }
 
-        // Виконання bulkWrite
-        await Category.bulkWrite(bulkOps);
-
-        // Отримання оновлених категорій
         const updatedCategories = await Category.find().sort({ order: 1 });
         broadcast('categories', updatedCategories);
-        logger.info('Порядок категорій успішно оновлено');
         res.status(200).json(updatedCategories);
     } catch (err) {
         logger.error('Помилка оновлення порядку категорій:', err);
@@ -1842,25 +1569,18 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
-            logger.error('Не всі підкатегорії знайдені:', {
-                requested: subcategoryIds,
-                found: existingSubcategories.map(sub => sub._id.toString())
-            });
+            logger.error('Не всі підкатегорії знайдені:', { requested: subcategoryIds, found: existingSubcategories.map(sub => sub._id.toString()) });
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = subcategories.map(({ _id, order }) => ({
-            updateOne: {
-                filter: { _id: categoryId, 'subcategories._id': _id },
-                update: { $set: { 'subcategories.$.order': order } }
+        for (const { _id, order } of subcategories) {
+            const subcat = category.subcategories.id(_id);
+            if (subcat) {
+                subcat.order = order;
             }
-        }));
+        }
 
-        // Виконання bulkWrite у межах сесії
-        await Category.bulkWrite(bulkOps, { session });
-
-        // Оновлення категорій для broadcast
+        await category.save({ session });
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
         await session.commitTransaction();
@@ -1968,7 +1688,7 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
                 {
                     photo: slideData.photo,
                     name: slideData.name,
-                    link: slideData.link,
+                    link: slideData.link, // Виправлено: видалено url
                     title: slideData.title,
                     text: slideData.text,
                     linkText: slideData.linkText,
@@ -1979,19 +1699,6 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             if (!slide) {
                 await session.abortTransaction();
                 return res.status(404).json({ error: 'Слайд не знайдено' });
-            }
-
-            // Видаляємо старе зображення, якщо нове фото відрізняється
-            if (slideData.photo && slide.photo && slideData.photo !== slide.photo) {
-                const publicId = getPublicIdFromUrl(slide.photo);
-                if (publicId) {
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Видалено старе зображення слайду: ${publicId}`);
-                    } catch (err) {
-                        logger.error(`Не вдалося видалити старе зображення слайду: ${publicId}`, err);
-                    }
-                }
             }
 
             const slides = await Slide.find().sort({ order: 1 }).session(session);
@@ -2103,16 +1810,24 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
                 socials: [],
                 showSocials: true,
                 about: '',
+                categoryWidth: 0,
+                categoryHeight: 0,
+                productWidth: 0,
+                productHeight: 0,
                 filters: [],
                 orderFields: [],
                 slideWidth: 0,
                 slideHeight: 0,
                 slideInterval: 3000,
-                showSlides: true,
-                timezone: 'Europe/Kyiv' // Додано timezone
+                showSlides: true
             });
-            await settings.save();
-            logger.info('Створено початкові налаштування');
+            try {
+                await settings.save();
+                logger.info('Створено початкові налаштування');
+            } catch (saveErr) {
+                logger.error('Помилка при збереженні початкових налаштувань:', saveErr);
+                return res.status(500).json({ error: 'Не вдалося створити початкові налаштування', details: saveErr.message });
+            }
         }
         res.json(settings);
     } catch (err) {
@@ -2142,24 +1857,6 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         if (error) {
             logger.error('Помилка валідації налаштувань:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        // Перевірка унікальності імен у filters
-        if (cleanedSettingsData.filters) {
-            const filterNames = cleanedSettingsData.filters.map(f => f.name);
-            if (new Set(filterNames).size !== filterNames.length) {
-                logger.error('Дублювання імен у filters:', filterNames);
-                return res.status(400).json({ error: 'Фільтри містять дубльовані імена' });
-            }
-        }
-
-        // Перевірка унікальності імен у orderFields
-        if (cleanedSettingsData.orderFields) {
-            const fieldNames = cleanedSettingsData.orderFields.map(f => f.name);
-            if (new Set(fieldNames).size !== fieldNames.length) {
-                logger.error('Дублювання імен у orderFields:', fieldNames);
-                return res.status(400).json({ error: 'Поля замовлення містять дубльовані імена' });
-            }
         }
 
         // Санітізація текстових полів
@@ -2205,8 +1902,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
                 slideWidth: 0,
                 slideHeight: 0,
                 slideInterval: 3000,
-                showSlides: true,
-                timezone: 'Europe/Kyiv'
+                showSlides: true
             });
         }
 
@@ -2221,8 +1917,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
             filters: cleanedSettingsData.filters || settings.filters,
             orderFields: cleanedSettingsData.orderFields || settings.orderFields,
             showSlides: cleanedSettingsData.showSlides !== undefined ? cleanedSettingsData.showSlides : settings.showSlides,
-            slideInterval: cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval,
-            timezone: cleanedSettingsData.timezone || settings.timezone
+            slideInterval: cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval
         };
 
         Object.assign(settings, updatedData);
@@ -2306,18 +2001,16 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
                 const cart = await Cart.findOne({ cartId }).session(session);
                 if (cart) {
                     cart.items = [];
-                    cart.updatedAt = Date.now();
                     await cart.save({ session });
                 } else {
                     logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
                 }
             }
 
-            const orders = await Order.find().session(session);
-            broadcast('orders', orders);
-
             await session.commitTransaction();
             logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
+            const orders = await Order.find();
+            broadcast('orders', orders);
             res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
@@ -2353,6 +2046,29 @@ app.get('/api/cart', async (req, res) => {
     }
 });
 
+app.post('/api/cart', csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const cartId = req.query.cartId;
+        logger.info('POST /api/cart:', { cartId, body: req.body });
+        const { error } = cartIdSchema.validate(cartId);
+        if (error) {
+            return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
+        }
+        let cartItems = req.body;
+
+        // Мапінг img на photo у items
+        if (cartItems) {
+            cartItems = cartItems.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
+        }
+
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
         id: Joi.number().required(),
@@ -2363,32 +2079,8 @@ const cartSchemaValidation = Joi.array().items(
     })
 );
 
-app.post('/api/cart', csrfProtection, async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-        const cartId = req.query.cartId;
-        logger.info('POST /api/cart:', { cartId, body: req.body });
-        const { error } = cartIdSchema.validate(cartId);
-        if (error) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
-        }
-        let cartItems = req.body;
-
-        // Перевірка, що всі товари мають id
-        if (cartItems.some(item => !item.id)) {
-            await session.abortTransaction();
-            session.endSession();
-            logger.error('Один або більше товарів у кошику не мають id:', cartItems);
-            return res.status(400).json({ error: 'Один або більше товарів у кошику не мають id' });
-        }
-
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
         if (cartError) {
-            await session.abortTransaction();
-            session.endSession();
             logger.error('Помилка валідації кошика:', cartError.details);
             return res.status(400).json({ error: 'Помилка валідації', details: cartError.details });
         }
@@ -2396,11 +2088,10 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         let cart = await Cart.findOne({ cartId }).session(session);
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: cartItems, updatedAt: Date.now() });
+            cart = new Cart({ cartId, items: cartItems });
         } else {
             logger.info('Оновлюємо існуючий кошик:', { cartId });
             cart.items = cartItems;
-            cart.updatedAt = Date.now();
         }
         await cart.save({ session });
 
@@ -2418,32 +2109,13 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
 
 const cleanupOldCarts = async () => {
     try {
-        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Кошики старше 30 днів
+        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const carts = await Cart.find({ updatedAt: { $lt: thresholdDate } });
-        
-        if (carts.length === 0) {
-            logger.info('Немає старих кошиків для видалення');
-            return 0;
-        }
-
         const cartIds = carts.map(cart => cart.cartId);
-        const orders = await Order.find({ 
-            cartId: { $in: cartIds },
-            status: { $in: ['Нове замовлення', 'В обробці', 'Відправлено'] } // Залишаємо кошики для активних замовлень
-        });
-
+        const orders = await Order.find({ cartId: { $in: cartIds } });
         const activeCartIds = new Set(orders.map(order => order.cartId));
         const cartsToDelete = carts.filter(cart => !activeCartIds.has(cart.cartId));
-
-        if (cartsToDelete.length === 0) {
-            logger.info('Усі старі кошики пов’язані з активними замовленнями, видалення не виконано');
-            return 0;
-        }
-
-        const cartIdsToDelete = cartsToDelete.map(cart => cart.cartId);
-        const result = await Cart.deleteMany({ cartId: { $in: cartIdsToDelete } });
-
-        logger.info(`Видалено старі кошики:`, { deletedCount: result.deletedCount, cartIds: cartIdsToDelete });
+        const result = await Cart.deleteMany({ _id: { $in: cartsToDelete.map(cart => cart._id) } });
         return result.deletedCount;
     } catch (err) {
         logger.error('Помилка при очищенні старих кошиків:', err);
@@ -2469,9 +2141,9 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(orderId)) {
-            logger.error(`Невірний формат ID замовлення: ${orderId}`);
+        const orderId = parseInt(req.params.id);
+        if (isNaN(orderId)) {
+            logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
@@ -2501,30 +2173,21 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        try {
-            const order = await Order.findByIdAndUpdate(
-                orderId,
-                orderData,
-                { new: true, session }
-            );
-            if (!order) {
-                await session.abortTransaction();
-                return res.status(404).json({ error: 'Замовлення не знайдено' });
+        // Перевірка унікальності id
+        if (orderData.id && orderData.id !== orderId) {
+            const existingOrder = await Order.findOne({ id: orderData.id });
+            if (existingOrder) {
+                logger.error('Замовлення з таким id уже існує:', orderData.id);
+                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
             }
-
-            const orders = await Order.find().sort({ date: -1 }).session(session);
-            broadcast('orders', orders);
-
-            await session.commitTransaction();
-            res.json(order);
-        } catch (err) {
-            await session.abortTransaction();
-            throw err;
-        } finally {
-            session.endSession();
         }
+
+        const order = await Order.findOneAndUpdate({ id: orderId }, orderData, { new: true });
+        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
+
+        const orders = await Order.find().sort({ date: -1 });
+        broadcast('orders', orders);
+        res.json(order);
     } catch (err) {
         logger.error('Помилка при оновленні замовлення:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
@@ -2533,136 +2196,19 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = req.params.id;
-        // Перевіряємо, чи ID є валідним MongoDB ObjectID
-        if (!orderId.match(/^[0-9a-fA-F]{24}$/)) {
-            logger.error(`Невірний формат ID замовлення: ${orderId}`);
-            return res.status(400).json({ error: 'Невірний формат ID замовлення' });
-        }
-
-        // Шукаємо за _id, а не за id
-        const order = await Order.findOneAndDelete({ _id: orderId });
-        if (!order) {
-            logger.warn(`Замовлення з _id ${orderId} не знайдено`);
-            return res.status(404).json({ error: 'Замовлення не знайдено' });
-        }
+const orderId = parseInt(req.params.id);
+if (isNaN(orderId)) {
+    logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
+    return res.status(400).json({ error: 'Невірний формат ID замовлення' });
+}
+        const order = await Order.findOneAndDelete({ id: orderId });
+        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
         const orders = await Order.find();
         broadcast('orders', orders);
         res.json({ message: 'Замовлення видалено' });
     } catch (err) {
         logger.error('Помилка при видаленні замовлення:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// Схема валідації для OrderField
-const orderFieldSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required(),
-    label: Joi.string().trim().min(1).max(100).required(),
-    type: Joi.string().valid('text', 'email', 'select').required(),
-    options: Joi.array().items(Joi.string().trim().min(1)).default([])
-});
-
-// Отримання всіх полів замовлення
-app.get('/api/order-fields', authenticateToken, async (req, res) => {
-    try {
-        const fields = await OrderField.find();
-        res.json(fields);
-    } catch (err) {
-        logger.error('Помилка при отриманні полів замовлення:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
-    }
-});
-
-// Створення нового поля замовлення
-app.post('/api/order-fields', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const { error } = orderFieldSchemaValidation.validate(req.body);
-        if (error) {
-            logger.error('Помилка валідації поля замовлення:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const { name, label, type, options } = req.body;
-        const existingField = await OrderField.findOne({ name });
-        if (existingField) {
-            logger.error('Поле замовлення з такою назвою вже існує:', name);
-            return res.status(400).json({ error: `Поле з назвою "${name}" уже існує` });
-        }
-
-        const field = new OrderField({ name, label, type, options });
-        await field.save();
-        logger.info('Поле замовлення створено:', { name, label, type });
-        res.status(201).json(field);
-    } catch (err) {
-        logger.error('Помилка при додаванні поля замовлення:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
-app.put('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const fieldId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
-            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
-            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
-        }
-
-        const fieldData = req.body;
-        const { error } = orderFieldSchemaValidation.validate(fieldData);
-        if (error) {
-            logger.error('Помилка валідації поля замовлення:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        const existingField = await OrderField.findOne({ name: fieldData.name, _id: { $ne: fieldId } });
-        if (existingField) {
-            logger.error('Поле замовлення з такою назвою вже існує:', fieldData.name);
-            return res.status(400).json({ error: `Поле з назвою "${fieldData.name}" уже існує` });
-        }
-
-        const field = await OrderField.findByIdAndUpdate(
-            fieldId,
-            {
-                name: fieldData.name,
-                label: fieldData.label,
-                type: fieldData.type,
-                options: fieldData.options || []
-            },
-            { new: true }
-        );
-        if (!field) {
-            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
-            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
-        }
-
-        logger.info('Поле замовлення оновлено:', { id: fieldId, name: fieldData.name });
-        res.json(field);
-    } catch (err) {
-        logger.error('Помилка при оновленні поля замовлення:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
-    }
-});
-
-app.delete('/api/order-fields/:id', authenticateToken, csrfProtection, async (req, res) => {
-    try {
-        const fieldId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(fieldId)) {
-            logger.error(`Невірний формат ID поля замовлення: ${fieldId}`);
-            return res.status(400).json({ error: 'Невірний формат ID поля замовлення' });
-        }
-
-        const field = await OrderField.findByIdAndDelete(fieldId);
-        if (!field) {
-            logger.error(`Поле замовлення не знайдено: ${fieldId}`);
-            return res.status(404).json({ error: 'Поле замовлення не знайдено' });
-        }
-
-        logger.info('Поле замовлення видалено:', { id: fieldId, name: field.name });
-        res.json({ message: 'Поле замовлення видалено' });
-    } catch (err) {
-        logger.error('Помилка при видаленні поля замовлення:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
@@ -2838,7 +2384,7 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
         const maxJsonSize = 10 * 1024 * 1024; // 10 МБ
         if (req.file.size > maxJsonSize) {
             logger.error('Розмір файлу перевищує ліміт:', { size: req.file.size });
-            throw new Error(`Розмір файлу перевищує ліміт у ${maxJsonSize / (1024 * 1024)} МБ`);
+            return res.status(400).json({ error: `Розмір файлу перевищує ліміт у ${maxJsonSize / (1024 * 1024)} МБ` });
         }
 
         const fileContent = JSON.parse(await fs.promises.readFile(filePath, 'utf8'));
@@ -2848,7 +2394,7 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
             const { error } = settingsSchemaValidation.validate(settings, { abortEarly: false });
             if (error) {
                 logger.error('Помилка валідації налаштувань при імпорті:', error.details);
-                throw new Error('Помилка валідації налаштувань: ' + JSON.stringify(error.details));
+                return res.status(400).json({ error: 'Помилка валідації налаштувань', details: error.details });
             }
             await Settings.findOneAndUpdate({}, settings, { upsert: true });
         }
@@ -2858,7 +2404,7 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
                 const { error } = categorySchemaValidation.validate(category, { abortEarly: false });
                 if (error) {
                     logger.error('Помилка валідації категорії при імпорті:', error.details);
-                    throw new Error('Помилка валідації категорій: ' + JSON.stringify(error.details));
+                    return res.status(400).json({ error: 'Помилка валідації категорій', details: error.details });
                 }
             }
             await Category.deleteMany({});
@@ -2870,7 +2416,7 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
                 const { error } = slideSchemaValidation.validate(slide, { abortEarly: false });
                 if (error) {
                     logger.error('Помилка валідації слайду при імпорті:', error.details);
-                    throw new Error('Помилка валідації слайдів: ' + JSON.stringify(error.details));
+                    return res.status(400).json({ error: 'Помилка валідації слайдів', details: error.details });
                 }
             }
             await Slide.deleteMany({});
