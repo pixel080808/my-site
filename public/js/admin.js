@@ -278,7 +278,9 @@ async function fetchWithAuth(url, options = {}) {
             });
             if (!newResponse.ok) {
                 const errorData = await newResponse.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP error ${newResponse.status}`);
+                const error = new Error(errorData.error || `HTTP error ${newResponse.status}`);
+                error.errorData = errorData; // Зберігаємо деталі помилки
+                throw error;
             }
             return newResponse;
         }
@@ -302,7 +304,9 @@ async function fetchWithAuth(url, options = {}) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Помилка запиту:', { url, status: response.status, errorData });
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
+        const error = new Error(errorData.error || `HTTP error ${response.status}`);
+        error.errorData = errorData; // Зберігаємо деталі помилки
+        throw error;
     }
 
     return response;
@@ -1497,34 +1501,54 @@ async function updateContacts() {
             return;
         }
 
-        settings.contacts.phones = document.getElementById('contact-phones').value;
-        settings.contacts.addresses = document.getElementById('contact-addresses').value;
-        settings.contacts.schedule = document.getElementById('contact-schedule').value;
+        // Отримуємо значення полів
+        const phones = document.getElementById('contact-phones').value.trim();
+        const addresses = document.getElementById('contact-addresses').value.trim();
+        const schedule = document.getElementById('contact-schedule').value.trim();
 
-        // Оновлюємо поле name замість storeName
-        const updatedSettings = {
-            ...settings,
-            name: settings.storeName || settings.name || '', // Використовуємо name
-            contacts: settings.contacts
+        // Валідація полів
+        if (!phones || !addresses || !schedule) {
+            showNotification('Усі поля контактів (телефони, адреси, графік) мають бути заповнені.');
+            return;
+        }
+
+        // Формуємо об'єкт contacts
+        const contacts = {
+            phones,
+            addresses,
+            schedule
         };
 
-        // Видаляємо системні поля та storeName
-        const { _id, __v, updatedAt, createdAt, storeName, ...cleanedSettings } = updatedSettings;
+        // Формуємо дані для відправки (лише name і contacts)
+        const updatedSettings = {
+            name: settings.name || 'Меблевий магазин м.Рівне', // Використовуємо settings.name або дефолтне значення
+            contacts
+        };
 
-        console.log('Надсилаємо контакти:', cleanedSettings);
+        console.log('Надсилаємо контакти:', updatedSettings);
 
-        const token = localStorage.getItem('adminToken');
         const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
         const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
             method: 'PUT',
-            body: JSON.stringify(cleanedSettings)
+            body: JSON.stringify(updatedSettings)
         });
 
-        showNotification('Контакти оновлено!');
+        const responseData = await response.json();
+        showNotification('Контакти успішно оновлено!');
         resetInactivityTimer();
+
+        // Оновлюємо локальні settings
+        settings.name = updatedSettings.name;
+        settings.contacts = updatedSettings.contacts;
+
     } catch (err) {
         console.error('Помилка при оновленні контактів:', err);
-        showNotification('Помилка при оновленні контактів: ' + err.message);
+        let errorMessage = 'Помилка при оновленні контактів: ' + err.message;
+        // Якщо сервер повернув деталі валідації
+        if (err.message.includes('Помилка валідації') && err.errorData?.errors) {
+            errorMessage += '\nДеталі: ' + JSON.stringify(err.errorData.errors, null, 2);
+        }
+        showNotification(errorMessage);
     }
 }
 

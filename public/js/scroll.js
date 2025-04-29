@@ -5,6 +5,8 @@ function scrollToElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        console.warn(`Елемент з ID ${elementId} не знайдено`);
     }
 }
 
@@ -12,20 +14,16 @@ function scrollToElement(elementId) {
 function handleScroll() {
     const scrollTopButton = document.getElementById('scroll-top');
     if (scrollTopButton) {
-        if (window.scrollY > 300) {
-            scrollTopButton.style.display = 'block';
-        } else {
-            scrollTopButton.style.display = 'none';
-        }
+        scrollTopButton.style.display = window.scrollY > 300 ? 'block' : 'none';
     }
 }
 
-// Використовуємо MutationObserver замість застарілого DOMNodeInserted
+// Спостереження за змінами в DOM із можливістю відключення
 function observeDOMChanges(targetSelector, callback) {
     const target = document.querySelector(targetSelector);
     if (!target) {
         console.warn(`Елемент ${targetSelector} не знайдено для спостереження`);
-        return;
+        return null;
     }
 
     const observer = new MutationObserver((mutations) => {
@@ -41,7 +39,11 @@ function observeDOMChanges(targetSelector, callback) {
         subtree: true,
     });
 
-    return observer;
+    // Повертаємо функцію для відключення спостерігача
+    return () => {
+        observer.disconnect();
+        console.log(`Спостерігач для ${targetSelector} відключено`);
+    };
 }
 
 // Ініціалізація
@@ -58,8 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Спостерігаємо за змінами в DOM (наприклад, у списку товарів)
-    observeDOMChanges('#product-list-admin', (mutation) => {
+    const disconnectObserver = observeDOMChanges('#product-list-admin', (mutation) => {
         console.log('Зміни в списку товарів:', mutation);
         handleScroll(); // Оновлюємо видимість кнопки "вгору" при змінах
     });
+
+    // Приклад: відключення спостерігача при зміні секції (опціонально)
+    // document.addEventListener('sectionChanged', () => {
+    //     if (disconnectObserver) disconnectObserver();
+    // });
 });
