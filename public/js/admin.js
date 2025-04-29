@@ -302,13 +302,13 @@ async function fetchWithAuth(url, options = {}) {
         }
     }
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Помилка запиту:', { url, status: response.status, errorData });
-        const error = new Error(errorData.error || `HTTP error ${response.status}`);
-        error.errorData = errorData;
-        throw error;
-    }
+if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Помилка запиту:', { url, status: response.status, errorData });
+    const error = new Error(errorData.error || `HTTP error ${response.status}`);
+    error.errorData = errorData;
+    throw error;
+}
 
     return response;
 }
@@ -4144,6 +4144,8 @@ function updateSubcategories() {
 
     if (!categorySelect || !subcategorySelect) {
         console.warn('Елементи #product-category або #product-subcategory не знайдено');
+        // Спробувати ще раз через 100 мс
+        setTimeout(updateSubcategories, 100);
         return;
     }
 
@@ -4483,9 +4485,7 @@ function searchGroupProducts() {
 
 async function saveNewProduct() {
     const saveButton = document.querySelector('.modal-actions button:first-child');
-    if (saveButton) {
-        saveButton.disabled = true;
-    }
+    if (saveButton) saveButton.disabled = true;
 
     try {
         const tokenRefreshed = await refreshToken();
@@ -4530,7 +4530,8 @@ async function saveNewProduct() {
         }
         const saleEnd = saleEndInput ? saleEndInput.value : null;
         const visible = visibleSelect.value === 'true';
-        const description = descriptionInput.value || '';
+        let description = descriptionInput.value || '';
+        description = description === '<p><br></p>' ? '' : description;
         const widthCm = widthCmInput ? parseFloat(widthCmInput.value) || null : null;
         const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
@@ -4538,6 +4539,11 @@ async function saveNewProduct() {
 
         if (!name || !slug || !category) {
             showNotification('Введіть назву, шлях товару та категорію!');
+            return;
+        }
+
+        if (newProduct.photos.length === 0) {
+            showNotification('Додайте хоча б одну фотографію товару!');
             return;
         }
 
@@ -4568,7 +4574,6 @@ async function saveNewProduct() {
             return;
         }
 
-        // Перевірка категорії та підкатегорії
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
@@ -4582,7 +4587,7 @@ async function saveNewProduct() {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategorySlug = subcategoryObj.slug; // Використовуємо slug
+            subcategorySlug = subcategoryObj.slug;
         }
 
         if (brand && !brands.includes(brand)) {
@@ -4621,12 +4626,12 @@ async function saveNewProduct() {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Надсилаємо slug
+            subcategory: subcategorySlug,
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
             salePrice: salePrice,
             saleEnd: saleEnd || null,
-            description: description || '',
+            description,
             widthCm,
             depthCm,
             heightCm,
@@ -4743,6 +4748,7 @@ async function saveNewProduct() {
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Деталі помилки:', errorData);
             throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
         }
 
@@ -4757,9 +4763,7 @@ async function saveNewProduct() {
         console.error('Помилка при додаванні товару:', err);
         showNotification('Не вдалося додати товар: ' + err.message);
     } finally {
-        if (saveButton) {
-            saveButton.disabled = false;
-        }
+        if (saveButton) saveButton.disabled = false;
     }
 }
 
