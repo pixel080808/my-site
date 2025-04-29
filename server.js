@@ -156,13 +156,9 @@ app.use(cors({
 // Глобальний ліміт запитів для всіх ендпоінтів, крім /api/csrf-token
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 500, // Збільшуємо до 500 запитів на IP
+    max: 100, // 100 запитів на IP
     message: 'Занадто багато запитів з вашої IP-адреси, спробуйте знову через 15 хвилин',
-    skip: (req) => {
-        // Пропускаємо запити до статичних файлів і /api/csrf-token
-        const staticPaths = ['/admin.html', '/favicon.ico', '/index.html'];
-        return req.path === '/api/csrf-token' || staticPaths.includes(req.path);
-    }
+    skip: (req) => req.path === '/api/csrf-token' // Пропускаємо цей ендпоінт
 });
 
 // Застосовуємо ліміт до всіх запитів
@@ -171,7 +167,7 @@ app.use(globalLimiter);
 // Ліміт для особливо чутливих публічних ендпоінтів
 const publicApiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 200, // Збільшуємо до 200 запитів на IP
+    max: 50, // 50 запитів на IP
     message: 'Занадто багато запитів до API, спробуйте знову через 15 хвилин'
 });
 
@@ -242,14 +238,11 @@ app.use(express.static(publicPath, {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
+            res.setHeader('Cache-Control', 'no-store');
         }
         if (path.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
-        }
-        if (path.endsWith('.ico') || path.endsWith('.png') || path.endsWith('.jpg')) {
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // Кеш на 1 рік
+            res.setHeader('Cache-Control', 'no-store');
         }
     }
 }));
@@ -282,7 +275,7 @@ const loginLimiter = rateLimit({
 
 const refreshTokenLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
-    max: 300, // Збільшуємо до 300 запитів
+    max: 100, // Збільшуємо до 100 запитів
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
         const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -315,11 +308,10 @@ const productSchemaValidation = Joi.object({
     category: Joi.string().max(100).required(),
     subcategory: Joi.string().max(255).optional().allow(''),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
+    salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
     brand: Joi.string().max(100).allow(''),
     material: Joi.string().max(100).allow(''),
-    filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
@@ -350,7 +342,6 @@ const productSchemaValidation = Joi.object({
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    cartId: Joi.string().default(''),
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
@@ -374,14 +365,14 @@ const orderSchemaValidation = Joi.object({
         })
     ).required(),
     total: Joi.number().min(0).required(),
-    status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
+    status: Joi.string().default('Нове замовлення')
 });
 
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
     baseUrl: Joi.string().uri().allow(''),
     logo: Joi.string().uri().allow(''),
-    logoWidth: Joi.number().min(0).default(150),
+    logoWidth: Joi.number().min(0).allow(null),
     favicon: Joi.string().uri().allow(''),
     contacts: Joi.object({
         phones: Joi.string().allow(''),
@@ -392,7 +383,7 @@ const settingsSchemaValidation = Joi.object({
         Joi.object({
             name: Joi.string().allow(''),
             url: Joi.string().uri().required(),
-            icon: Joi.string().allow('')
+            icon: Joi.string().required()
         })
     ).default([]),
     showSocials: Joi.boolean().default(true),
@@ -413,9 +404,9 @@ const settingsSchemaValidation = Joi.object({
             options: Joi.array().items(Joi.string().min(1)).default([])
         })
     ).default([]),
-slideWidth: Joi.number().min(0).default(0),
-slideHeight: Joi.number().min(0).default(0),
-slideInterval: Joi.number().min(0).default(3000),
+    slideWidth: Joi.number().min(0).allow(null),
+    slideHeight: Joi.number().min(0).allow(null),
+    slideInterval: Joi.number().min(0).allow(null),
     showSlides: Joi.boolean().default(true),
     _id: Joi.any().optional(),
     __v: Joi.any().optional(),
@@ -439,7 +430,7 @@ const cartIdSchema = Joi.string()
     });
 
 const slideSchemaValidation = Joi.object({
-    id: Joi.number().required(),
+    id: Joi.number().optional(),
     photo: Joi.string().uri().allow('').optional(),
     name: Joi.string().allow(''),
     link: Joi.string().uri().allow('').optional(),
@@ -1272,8 +1263,7 @@ const categorySchemaValidation = Joi.object({
             name: Joi.string().max(255).required(),
             slug: Joi.string().max(255).required(),
             photo: Joi.string().allow('').optional(),
-            visible: Joi.boolean().optional(),
-            order: Joi.number().integer().min(0).default(0).optional()
+            visible: Joi.boolean().optional()
         })
     ).default([]).optional()
 }).min(1);
@@ -1281,7 +1271,7 @@ const categorySchemaValidation = Joi.object({
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
     name: Joi.string().max(255).required(),
-    slug: Joi.string().max(255).required(),
+    slug: Joi.string().pattern(/^[a-z0-9-]+$/).max(255).required(),
     photo: Joi.string().allow('').optional(),
     visible: Joi.boolean().optional(),
     order: Joi.number().integer().min(0).default(0).optional() 
@@ -2326,12 +2316,15 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         }
         let cartItems = req.body;
 
-        // Перевірка, що всі товари мають id
-        if (cartItems.some(item => !item.id)) {
-            await session.abortTransaction();
-            session.endSession();
-            logger.error('Один або більше товарів у кошику не мають id:', cartItems);
-            return res.status(400).json({ error: 'Один або більше товарів у кошику не мають id' });
+        // Мапінг img на photo у items
+        if (cartItems) {
+            cartItems = cartItems.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
         }
 
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
@@ -2491,19 +2484,14 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
 app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = req.params.id;
-        // Перевіряємо, чи ID є валідним MongoDB ObjectID
-        if (!orderId.match(/^[0-9a-fA-F]{24}$/)) {
-            logger.error(`Невірний формат ID замовлення: ${orderId}`);
+        const orderId = parseInt(req.params.id);
+        if (isNaN(orderId)) {
+            logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
-        // Шукаємо за _id, а не за id
-        const order = await Order.findOneAndDelete({ _id: orderId });
-        if (!order) {
-            logger.warn(`Замовлення з _id ${orderId} не знайдено`);
-            return res.status(404).json({ error: 'Замовлення не знайдено' });
-        }
+        const order = await Order.findOneAndDelete({ id: orderId });
+        if (!order) return res.status(404).json({ error: 'Замовлення не знайдено' });
 
         const orders = await Order.find();
         broadcast('orders', orders);
