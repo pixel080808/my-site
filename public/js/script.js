@@ -322,10 +322,19 @@ async function fetchPublicData() {
         console.log('Fetching products...');
         const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`, 3, 1000);
         if (productResponse) {
-            products = await productResponse.json();
-            products = products.filter(p => typeof p.id === 'number' && p.id > 0);
+            const contentType = productResponse.headers.get('Content-Type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Сервер повернув не JSON: ${contentType}`);
+            }
+            const productData = await productResponse.json();
+            // Перевіряємо, чи є productData масивом
+            if (!Array.isArray(productData)) {
+                console.error('Помилка: Дані продуктів не є масивом. Отримано:', productData);
+                throw new Error('Дані продуктів не є масивом');
+            }
+            products = productData.filter(p => typeof p.id === 'number' && p.id > 0);
             console.log('Products fetched:', products.length);
-            saveToStorage('products', products); // Save to localStorage for fallback
+            saveToStorage('products', products); // Зберігаємо в localStorage
         } else {
             throw new Error('Не вдалося отримати продукти через HTTP');
         }
@@ -333,7 +342,12 @@ async function fetchPublicData() {
         console.log('Fetching categories...');
         const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`, 3, 1000);
         if (catResponse) {
-            categories = await catResponse.json();
+            const catData = await catResponse.json();
+            if (!Array.isArray(catData)) {
+                console.error('Помилка: Дані категорій не є масивом. Отримано:', catData);
+                throw new Error('Дані категорій не є масивом');
+            }
+            categories = catData;
             console.log('Categories fetched:', categories.length);
             saveToStorage('categories', categories);
         } else {
@@ -343,7 +357,12 @@ async function fetchPublicData() {
         console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`, 3, 1000);
         if (slidesResponse) {
-            slides = await slidesResponse.json();
+            const slidesData = await slidesResponse.json();
+            if (!Array.isArray(slidesData)) {
+                console.error('Помилка: Дані слайдів не є масивом. Отримано:', slidesData);
+                throw new Error('Дані слайдів не є масивом');
+            }
+            slides = slidesData;
             console.log('Slides fetched:', slides.length);
             saveToStorage('slides', slides);
         } else {
@@ -353,7 +372,12 @@ async function fetchPublicData() {
         console.log('Fetching settings...');
         const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`, 3, 1000);
         if (settingsResponse) {
-            settings = await settingsResponse.json();
+            const settingsData = await settingsResponse.json();
+            if (!settingsData || typeof settingsData !== 'object') {
+                console.error('Помилка: Налаштування не є об’єктом. Отримано:', settingsData);
+                throw new Error('Налаштування не є об’єктом');
+            }
+            settings = settingsData;
             console.log('Settings fetched:', settings);
             saveToStorage('settings', settings);
         } else {
@@ -361,7 +385,7 @@ async function fetchPublicData() {
         }
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e.message, e.stack);
-        // Load from localStorage as a fallback
+        // Завантажуємо з локального сховища як запасний варіант
         products = loadFromStorage('products', []);
         categories = loadFromStorage('categories', []);
         slides = loadFromStorage('slides', []);
