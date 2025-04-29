@@ -97,7 +97,7 @@ function loadFromStorage(key, defaultValue) {
     }
 }
 
-function saveToStorage(key que, value) {
+function saveToStorage(keyque, value) {
     try {
         // Validate data before saving
         if (value === null || value === undefined) {
