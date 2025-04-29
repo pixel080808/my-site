@@ -13,6 +13,7 @@ let products = [];
 let categories = [];
 let orders = [];
 let slides = [];
+let filters = [];
 let settings = {
     name: '',
     baseUrl: '', // Додано для базового URL
@@ -27,6 +28,10 @@ let settings = {
     slideWidth: '',
     slideHeight: '',
     slideInterval: '',
+    categoryWidth: '',
+    categoryHeight: '',
+    productWidth: '',
+    productHeight: ''
 };
 let currentPage = 1;
 const productsPerPage = 20;
@@ -36,12 +41,11 @@ let inactivityTimer;
 let materials = [];
 let brands = [];
 const orderFields = [
-    { name: 'name', label: "Ім'я" },
-    { name: 'surname', label: 'Прізвище' },
+    { name: 'name', label: 'Ім’я' },
     { name: 'phone', label: 'Телефон' },
-    { name: 'email', label: 'Електронна пошта' },
-    { name: 'address', label: 'Адреса доставки' },
-    { name: 'payment', label: 'Спосіб оплати' }
+    { name: 'email', label: 'Email' },
+    { name: 'address', label: 'Адреса' },
+    { name: 'comment', label: 'Коментар' }
 ];
 let unsavedChanges = false;
 let aboutEditor; // Глобальна змінна для редактора
@@ -156,23 +160,43 @@ async function loadSettings() {
             return;
         }
 
-        const response = await fetchWithAuth('/api/settings');
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            console.warn('Токен відсутній. Використовуються локальні налаштування.');
+            renderSettingsAdmin();
+            return;
+        }
+
+        const response = await fetch('/api/settings', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
 
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
                 localStorage.removeItem('adminToken');
-                localStorage.removeItem('csrfToken');
                 session = { isActive: false, timestamp: 0 };
                 localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
                 showSection('admin-login');
                 showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
                 return;
             }
-            throw new Error(`Не вдалося завантажити налаштування: ${text}`);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(`Не вдалося завантажити налаштування: ${errorData.error || response.statusText}`);
+            } catch {
+                throw new Error(`Не вдалося завантажити налаштування: ${response.status} ${text}`);
+            }
         }
 
         const serverSettings = await response.json();
+        console.log('Дані з /api/settings:', serverSettings);
+
+        // Зберігаємо тільки визначені поля, щоб уникнути перезапису порожніми значеннями
         settings = {
             ...settings,
             name: serverSettings.name || settings.name,
@@ -187,38 +211,41 @@ async function loadSettings() {
             },
             socials: serverSettings.socials || settings.socials,
             showSocials: serverSettings.showSocials !== undefined ? serverSettings.showSocials : settings.showSocials,
-            about: serverSettings.about || settings.about,
+            about: serverSettings.about || settings.about, // Зберігаємо about, якщо є
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
             slideWidth: serverSettings.slideWidth || settings.slideWidth,
             slideHeight: serverSettings.slideHeight || settings.slideHeight,
-            slideInterval: serverSettings.slideInterval || settings.slideInterval
+            slideInterval: serverSettings.slideInterval || settings.slideInterval,
+            categoryWidth: serverSettings.categoryWidth || settings.categoryWidth,
+            categoryHeight: serverSettings.categoryHeight || settings.categoryHeight,
+            productWidth: serverSettings.productWidth || settings.productWidth,
+            productHeight: serverSettings.productHeight || settings.productHeight
         };
 
         console.log('Оновлені settings:', settings);
 
-        // Оновлення редактора "Про нас"
-        if (aboutEditor) {
-            if (settings.about) {
-                try {
-                    aboutEditor.root.innerHTML = settings.about;
-                    console.log('Встановлено вміст "Про нас":', settings.about);
-                } catch (e) {
-                    console.error('Помилка при встановленні вмісту "Про нас":', e);
-                    aboutEditor.setText(settings.about || '', 'silent');
-                }
-            } else {
-                console.log('settings.about порожній, редактор очищено.');
-                aboutEditor.setText('', 'silent');
-            }
-            const aboutEdit = document.getElementById('about-edit');
-            if (aboutEdit) aboutEdit.value = settings.about || '';
+// Оновлюємо редактор "Про нас"
+if (aboutEditor) {
+    if (settings.about) {
+        try {
+            aboutEditor.root.innerHTML = settings.about;
+            console.log('Встановлено вміст "Про нас":', settings.about);
+        } catch (e) {
+            console.error('Помилка при встановленні вмісту "Про нас":', e);
+            aboutEditor.setText(settings.about || '', 'silent');
         }
+    } else {
+        console.log('settings.about порожній, редактор залишається без змін.');
+        // Не очищаємо редактор, щоб уникнути втрати локальних змін
+    }
+    document.getElementById('about-edit').value = settings.about || '';
+}
 
         renderSettingsAdmin();
     } catch (e) {
         console.error('Помилка завантаження налаштувань:', e);
         showNotification('Помилка завантаження налаштувань: ' + e.message);
-        renderSettingsAdmin();
+        renderSettingsAdmin(); // Рендеримо з локальними даними
     }
 }
 
@@ -306,73 +333,6 @@ async function fetchWithAuth(url, options = {}) {
     }
 
     return response;
-}
-
-async function updateSocials() {
-    const maxRetries = 3;
-    let retries = 0;
-
-    while (retries < maxRetries) {
-        try {
-            const tokenRefreshed = await refreshToken();
-            if (!tokenRefreshed) {
-                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-                showSection('admin-login');
-                return;
-            }
-
-            // Очищаємо socials від _id
-            const cleanedSocials = settings.socials.map(({ _id, ...rest }) => rest);
-
-            console.log('Надсилаємо соціальні мережі:', {
-                socials: cleanedSocials,
-                showSocials: settings.showSocials
-            });
-
-            const response = await fetchWithAuth('/api/settings', {
-                method: 'PUT',
-                body: JSON.stringify({
-                    socials: cleanedSocials,
-                    showSocials: settings.showSocials
-                })
-            });
-
-            const serverSettings = await response.json();
-            settings = { ...settings, ...serverSettings };
-            renderSettingsAdmin();
-            renderSocialsAdmin();
-            showNotification('Соціальні мережі оновлено!');
-            unsavedChanges = false;
-            resetInactivityTimer();
-
-            // Оновлюємо відображення на головній сторінці (якщо ми не в адмін-панелі)
-            if (typeof renderSocials === 'function' && document.getElementById('contacts-socials')) {
-                renderSocials();
-            }
-
-            return;
-        } catch (err) {
-            retries++;
-            console.error(`Помилка оновлення соціальних мереж (спроба ${retries}/${maxRetries}):`, err);
-            if (retries === maxRetries) {
-                showNotification('Помилка оновлення соціальних мереж: ' + err.message);
-                // Завантажуємо актуальні налаштування з сервера
-                try {
-                    const response = await fetchWithAuth('/api/settings', {
-                        method: 'GET'
-                    });
-                    const serverSettings = await response.json();
-                    settings = { ...settings, ...serverSettings };
-                    renderSettingsAdmin();
-                    renderSocialsAdmin();
-                } catch (fetchErr) {
-                    console.error('Помилка завантаження налаштувань після невдалого оновлення:', fetchErr);
-                }
-                return;
-            }
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-        }
-    }
 }
 
 async function loadOrders() {
@@ -550,6 +510,56 @@ async function loadBrands() {
     }
 }
 
+function renderFilters() {
+    const filterList = document.getElementById('filter-list-admin');
+    if (filterList) {
+        filterList.innerHTML = filters.map((f, index) => `
+            <div>
+                ${f.label} (${f.name}, ${f.type}): ${f.options.join(', ')}
+                <button class="delete-btn" onclick="deleteFilter(${index})">Видалити</button>
+            </div>
+        `).join('');
+    }
+    resetInactivityTimer();
+}
+
+async function deleteFilter(index) {
+    if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            filters.splice(index, 1);
+
+            const token = localStorage.getItem('adminToken');
+            const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+            const response = await fetch(`${baseUrl}/api/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ ...settings, filters })
+            });
+
+            if (!response.ok) {
+                throw new Error('Не вдалося оновити фільтри');
+            }
+
+            renderFilters();
+            showNotification('Фільтр видалено!');
+        } catch (err) {
+            console.error('Помилка видалення фільтру:', err);
+            showNotification('Помилка: ' + err.message);
+        }
+    }
+}
+
 function updateMaterialOptions() {
     const materialInput = document.getElementById('product-material');
     if (materialInput && materialInput.tagName === 'INPUT') {
@@ -587,11 +597,12 @@ async function initializeData() {
             loadOrders(),
             loadSlides(),
             loadMaterials(),
-            loadBrands()
+            loadBrands(),
+            loadFilters()
         ]);
         results.forEach((result, index) => {
             if (result.status === 'rejected') {
-                console.error(`Помилка завантаження ${['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'][index]}:`, result.reason);
+                console.error(`Помилка завантаження ${['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'][index]}:`, result.reason);
                 showNotification(`Помилка завантаження даних: ${result.reason.message}`);
             }
         });
@@ -627,7 +638,7 @@ async function checkAuth() {
             showSection('admin-panel');
             await initializeData();
             connectAdminWebSocket();
-            startTokenRefreshTimer();
+            startTokenRefreshTimer(); // Додаємо виклик
             resetInactivityTimer();
         } else {
             showSection('admin-login');
@@ -1528,95 +1539,54 @@ async function updateContacts() {
     }
 }
 
-async function addSocial() {
-    const url = document.getElementById('social-url').value.trim();
-    const icon = document.getElementById('social-icon').value;
-    const nameInput = document.getElementById('social-name')?.value.trim() || '';
+    function addSocial() {
+        const url = document.getElementById('social-url').value;
+        const icon = document.getElementById('social-icon').value;
 
-    if (!url) {
-        showNotification('Введіть URL соцмережі!');
-        return;
+        if (url) {
+            settings.socials.push({ url, icon });
+            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+            document.getElementById('social-url').value = '';
+            renderAdmin();
+            showNotification('Соцмережу додано!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        } else {
+            alert('Введіть URL соцмережі!');
+        }
     }
 
-    if (!nameInput || nameInput.length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
-        return;
+    function editSocial(index) {
+        const url = prompt('Введіть новий URL соцмережі:', settings.socials[index].url);
+        if (url) {
+            settings.socials[index].url = url;
+            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+            renderAdmin();
+            showNotification('Соцмережу відредаговано!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        }
     }
 
-    const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
-    if (!urlRegex.test(url)) {
-        showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
-        return;
+    function deleteSocial(index) {
+        if (confirm('Ви впевнені, що хочете видалити цю соцмережу?')) {
+            settings.socials.splice(index, 1);
+            localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+            renderAdmin();
+            showNotification('Соцмережу видалено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        }
     }
 
-    settings.socials = settings.socials || [];
-    settings.socials.push({ url, icon, name: nameInput });
-    document.getElementById('social-url').value = '';
-    document.getElementById('social-icon').value = '🔗';
-    if (document.getElementById('social-name')) {
-        document.getElementById('social-name').value = '';
+    function toggleSocials() {
+        settings.showSocials = document.getElementById('social-toggle').checked;
+        localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+        renderAdmin();
+        showNotification('Налаштування соцмереж збережено!');
+        unsavedChanges = false;
+        resetInactivityTimer();
     }
-    await updateSocials();
-}
-
-async function editSocial(index) {
-    const social = settings.socials[index];
-    const url = prompt('Введіть новий URL соцмережі:', social.url);
-    if (url === null) return; // Користувач скасував
-
-    const name = prompt('Введіть нову назву соцмережі:', social.name || '');
-    if (name === null) return; // Користувач скасував
-
-    const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/;
-    if (!url || !urlRegex.test(url)) {
-        showNotification('Введіть коректний URL (наприклад, https://facebook.com)!');
-        return;
-    }
-
-    if (!name.trim() || name.trim().length < 2) {
-        showNotification('Назва соцмережі повинна містити принаймні 2 символи!');
-        return;
-    }
-
-    // Створюємо тимчасовий select для вибору іконки
-    const iconSelect = document.createElement('select');
-    iconSelect.innerHTML = `
-        <option value="🔗" ${social.icon === '🔗' ? 'selected' : ''}>Загальний (🔗)</option>
-        <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
-        <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
-        <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value="▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
-        <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
-    `;
-    const iconPrompt = document.createElement('div');
-    iconPrompt.innerHTML = '<label>Виберіть іконку:</label>';
-    iconPrompt.appendChild(iconSelect);
-    document.body.appendChild(iconPrompt);
-
-    // Показуємо модальне вікно або чекаємо вибору
-    const confirmEdit = confirm('Підтвердіть редагування соцмережі');
-    if (confirmEdit) {
-        settings.socials[index].url = url;
-        settings.socials[index].icon = iconSelect.value;
-        settings.socials[index].name = name.trim();
-        await updateSocials();
-    }
-
-    // Прибираємо тимчасовий елемент
-    document.body.removeChild(iconPrompt);
-}
-
-async function deleteSocial(index) {
-    if (confirm('Ви впевнені, що хочете видалити цю соцмережу?')) {
-        settings.socials.splice(index, 1);
-        await updateSocials();
-    }
-}
-
-async function toggleSocials() {
-    settings.showSocials = document.getElementById('social-toggle').checked;
-    await updateSocials();
-}
 
     function formatText(command) {
         const textarea = document.getElementById('about-edit');
@@ -1757,9 +1727,38 @@ function renderAdmin(section = activeTab) {
         if (slideInterval) slideInterval.value = settings.slideInterval || 3000;
         else console.warn('Елемент #slide-interval не знайдено');
 
-        renderSocialsAdmin();
+        const categoryWidth = document.getElementById('category-width');
+        if (categoryWidth) categoryWidth.value = settings.categoryWidth || 200;
+        else console.warn('Елемент #category-width не знайдено');
 
-        const catList = document.getElementById('category-list-admin');
+        const categoryHeight = document.getElementById('category-height');
+        if (categoryHeight) categoryHeight.value = settings.categoryHeight || 150;
+        else console.warn('Елемент #category-height не знайдено');
+
+        const productWidth = document.getElementById('product-width');
+        if (productWidth) productWidth.value = settings.productWidth || 300;
+        else console.warn('Елемент #product-width не знайдено');
+
+        const productHeight = document.getElementById('product-height');
+        if (productHeight) productHeight.value = settings.productHeight || 280;
+        else console.warn('Елемент #product-height не знайдено');
+
+        const socialList = document.getElementById('social-list');
+        if (socialList) {
+            socialList.innerHTML = settings.socials && Array.isArray(settings.socials)
+                ? settings.socials.map((social, index) => `
+                    <div class="social-item">
+                        <span class="social-icon">${social.icon || '🔗'}</span> ${social.url}
+                        <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
+                        <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+                    </div>
+                `).join('')
+                : '';
+        } else {
+            console.warn('Елемент #social-list не знайдено');
+        }
+
+        const catList = document.getElementById('category-list-admin'); // Змінено з cat-list
         if (catList) {
             console.log('Рендеринг category-list-admin, categories:', categories);
             catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
@@ -1769,7 +1768,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
@@ -1792,7 +1791,7 @@ function renderAdmin(section = activeTab) {
 
         function handleCatListClick(event) {
             const target = event.target;
-            const categoryId = target.dataset.id;
+            const categoryId = target.dataset.id; // Змінено для уникнення помилки
             const subName = target.dataset.subName;
             const catId = target.dataset.catId;
             const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
@@ -1933,11 +1932,11 @@ function renderCategoriesAdmin() {
                 </div>
             </div>
             <div class="subcategories">
-                ${category.subcategories && Array.isArray(category.subcategories) && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
+                ${category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
                     <div class="subcategory-item">
                         <div class="subcategory-order-controls">
                             <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === (category.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
+                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === category.subcategories.length - 1 ? 'disabled' : ''}>↓</button>
                         </div>
                         ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
                         <div class="subcategory-details">
@@ -1975,23 +1974,13 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryUp(catId, subIndex);
-                }
-            }
+            const subIndex = category.subcategories.findIndex(s => s._id === subId);
+            moveSubcategoryUp(catId, subIndex);
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryDown(catId, subIndex);
-                }
-            }
+            const subIndex = category.subcategories.findIndex(s => s._id === subId);
+            moveSubcategoryDown(catId, subIndex);
         } else if (target.classList.contains('sub-edit')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
@@ -2027,27 +2016,13 @@ function renderCategoriesAdmin() {
 function renderSocialsAdmin() {
     const socialList = document.getElementById('social-list');
     if (!socialList) return;
-
-    // Якщо showSocials вимкнено, показуємо повідомлення, але дозволяємо редагувати список
-    if (!settings.showSocials) {
-        socialList.innerHTML = '<p>Соціальні мережі відключені (не відображаються на сайті)</p>';
-    } else {
-        socialList.innerHTML = '';
-    }
-
-    // Завжди показуємо список соціальних мереж для редагування
-    const socialItems = settings.socials && Array.isArray(settings.socials)
-        ? settings.socials.map((social, index) => `
-            <div class="social-item">
-                <span class="social-icon">${social.icon}</span>
-                <span>${social.name} (${social.url})</span>
-                <button class="edit-btn" onclick="editSocial(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
-            </div>
-        `).join('')
-        : '<p>Соціальні мережі відсутні</p>';
-
-    socialList.innerHTML += socialItems;
+    socialList.innerHTML = settings.socials.map((social, index) => `
+        <div class="social-item">
+            <span class="social-icon">${social.icon}</span>
+            <span>${social.url}</span>
+            <button class="delete-btn" onclick="deleteSocial(${index})">Видалити</button>
+        </div>
+    `).join('');
 }
 
 async function deleteCategory(categoryId) {
@@ -2094,46 +2069,24 @@ async function deleteCategory(categoryId) {
 }
 
 function renderSettingsAdmin() {
-    const storeName = document.getElementById('store-name');
-    if (storeName) storeName.value = settings.name || '';
-
-    const baseUrl = document.getElementById('base-url');
-    if (baseUrl) baseUrl.value = settings.baseUrl || '';
-
-    const logoUrl = document.getElementById('logo-url');
-    if (logoUrl) logoUrl.value = settings.logo || '';
-
-    const logoWidth = document.getElementById('logo-width');
-    if (logoWidth) logoWidth.value = settings.logoWidth || '';
-
-    const faviconUrl = document.getElementById('favicon-url');
-    if (faviconUrl) faviconUrl.value = settings.favicon || '';
-
-    const contactPhones = document.getElementById('contact-phones');
-    if (contactPhones) contactPhones.value = settings.contacts.phones || '';
-
-    const contactAddresses = document.getElementById('contact-addresses');
-    if (contactAddresses) contactAddresses.value = settings.contacts.addresses || '';
-
-    const contactSchedule = document.getElementById('contact-schedule');
-    if (contactSchedule) contactSchedule.value = settings.contacts.schedule || '';
-
-    const socialToggle = document.getElementById('social-toggle');
-    if (socialToggle) socialToggle.checked = settings.showSocials;
-
+    document.getElementById('store-name').value = settings.name || '';
+    document.getElementById('base-url').value = settings.baseUrl || '';
+    document.getElementById('logo-url').value = settings.logo || '';
+    document.getElementById('logo-width').value = settings.logoWidth || '';
+    document.getElementById('favicon-url').value = settings.favicon || '';
+    document.getElementById('contact-phones').value = settings.contacts.phones || '';
+    document.getElementById('contact-addresses').value = settings.contacts.addresses || '';
+    document.getElementById('contact-schedule').value = settings.contacts.schedule || '';
+    document.getElementById('social-toggle').checked = settings.showSocials;
     renderSocialsAdmin(); // Викликаємо функцію для соціальних мереж
-
-    const slideWidth = document.getElementById('slide-width');
-    if (slideWidth) slideWidth.value = settings.slideWidth || '';
-
-    const slideHeight = document.getElementById('slide-height');
-    if (slideHeight) slideHeight.value = settings.slideHeight || '';
-
-    const slideInterval = document.getElementById('slide-interval');
-    if (slideInterval) slideInterval.value = settings.slideInterval || '';
-
-    const slideToggle = document.getElementById('slide-toggle');
-    if (slideToggle) slideToggle.checked = settings.showSlides;
+    document.getElementById('category-width').value = settings.categoryWidth || '';
+    document.getElementById('category-height').value = settings.categoryHeight || '';
+    document.getElementById('product-width').value = settings.productWidth || '';
+    document.getElementById('product-height').value = settings.productHeight || '';
+    document.getElementById('slide-width').value = settings.slideWidth || '';
+    document.getElementById('slide-height').value = settings.slideHeight || '';
+    document.getElementById('slide-interval').value = settings.slideInterval || '';
+    document.getElementById('slide-toggle').checked = settings.showSlides;
 }
 
 function openNewSlideModal() {
@@ -3425,6 +3378,352 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     }
 }
 
+async function updateCategorySettings() {
+    const width = parseInt(document.getElementById('category-width').value) || 300;
+    const height = parseInt(document.getElementById('category-height').value) || 200;
+    const token = localStorage.getItem('adminToken');
+
+    if (width < 100 || width > 500 || height < 100 || height > 500) {
+        alert('Ширина та висота категорії мають бути в межах 100-500 px!');
+        return;
+    }
+
+    settings.categoryWidth = width;
+    settings.categoryHeight = height;
+
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                credentials: 'include',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ categoryWidth: width, categoryHeight: height })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Не вдалося оновити налаштування категорій: ${errorData.error}`);
+        }
+
+        showNotification('Налаштування категорій оновлено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка оновлення налаштувань категорій:', err);
+        showNotification(err.message);
+    }
+}
+
+async function updateProductSettings() {
+    const width = parseInt(document.getElementById('product-width').value) || 300;
+    const height = parseInt(document.getElementById('product-height').value) || 300;
+
+    if (width < 200 || width > 500 || height < 200 || height > 500) {
+        showNotification('Ширина та висота товару мають бути в межах 200-500 px!');
+        return;
+    }
+
+    settings.productWidth = width;
+    settings.productHeight = height;
+
+    try {
+        await fetchWithAuth('/api/settings', {
+            method: 'PUT',
+            body: JSON.stringify({ productWidth: width, productHeight: height })
+        });
+
+        showNotification('Налаштування товарів оновлено!');
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка оновлення налаштувань товарів:', err);
+        showNotification('Не вдалося оновити налаштування: ' + err.message);
+    }
+}
+
+async function loadFilters() {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            console.warn('Токен відсутній. Використовуються локальні фільтри.');
+            renderFilters(); // Замінено на renderFilters
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetch(`${baseUrl}/api/filters`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            throw new Error(`Не вдалося завантажити фільтри: ${text}`);
+        }
+
+        filters = await response.json();
+        renderFilters(); // Замінено на renderFilters
+    } catch (err) {
+        console.error('Помилка завантаження фільтрів:', err);
+        showNotification('Помилка завантаження фільтрів: ' + err.message);
+        renderFilters(); // Рендеримо локальні дані при помилці
+    }
+}
+
+async function addFilter() {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const labelInput = document.getElementById('filter-label');
+        const nameInput = document.getElementById('filter-name');
+        const typeSelect = document.getElementById('filter-type');
+        const optionsInput = document.getElementById('filter-options');
+
+        if (!labelInput || !nameInput || !typeSelect || !optionsInput) {
+            showNotification('Елементи форми для фільтра не знайдено');
+            return;
+        }
+
+        const label = labelInput.value.trim();
+        const name = nameInput.value.trim();
+        const type = typeSelect.value;
+        const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
+
+        if (!label || !name || !type || options.length === 0) {
+            showNotification('Заповніть усі поля фільтра!');
+            return;
+        }
+
+        filters.push({ label, name, type, options });
+
+        const token = localStorage.getItem('adminToken');
+        const baseUrl = settings.baseUrl || 'https://mebli.onrender.com';
+        const response = await fetchWithAuth(`${baseUrl}/api/settings`, {
+            method: 'PUT',
+            body: JSON.stringify({ ...settings, filters })
+        });
+
+        if (!response.ok) {
+            throw new Error('Не вдалося оновити фільтри');
+        }
+
+        renderFilters();
+        showNotification('Фільтр додано!');
+        labelInput.value = '';
+        nameInput.value = '';
+        typeSelect.value = 'select';
+        optionsInput.value = '';
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка додавання фільтру:', err);
+        showNotification('Помилка: ' + err.message);
+    }
+}
+
+    function editFilter(name) {
+        const filter = filters.find(f => f.name === name);
+        if (filter) {
+            const modal = document.getElementById('modal');
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Редагувати фільтр</h3>
+                    <input type="text" id="edit-filter-name" value="${filter.name}" readonly><br/>
+                    <label for="edit-filter-name">Назва фільтру</label>
+                    <input type="text" id="edit-filter-label" value="${filter.label}"><br/>
+                    <label for="edit-filter-label">Відображувана назва</label>
+                    <input type="text" id="edit-filter-options" value="${filter.options.join(', ')}"><br/>
+                    <label for="edit-filter-options">Опції (через кому)</label>
+                    <div class="modal-actions">
+                        <button id="save-filter-btn">Зберегти</button>
+                        <button id="cancel-filter-btn">Скасувати</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+            document.getElementById('save-filter-btn').addEventListener('click', () => saveFilterEdit(name));
+            document.getElementById('cancel-filter-btn').addEventListener('click', closeModal);
+            resetInactivityTimer();
+        }
+    }
+
+    function saveFilterEdit(name) {
+        const filter = filters.find(f => f.name === name);
+        if (filter) {
+            const newLabel = document.getElementById('edit-filter-label').value;
+            const newOptions = document.getElementById('edit-filter-options').value.split(',').map(o => o.trim()).filter(o => o);
+
+            if (newLabel && newOptions.length > 0) {
+                filter.label = newLabel;
+                filter.options = newOptions;
+                localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+                closeModal();
+                renderAdmin();
+                showNotification('Фільтр відредаговано!');
+                unsavedChanges = false;
+                resetInactivityTimer();
+            } else {
+                alert('Введіть підпис та опції!');
+            }
+        }
+    }
+
+    function deleteFilter(name) {
+        if (confirm('Ви впевнені, що хочете видалити цей фільтр?')) {
+            filters = filters.filter(f => f.name !== name);
+            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+            renderAdmin();
+            showNotification('Фільтр видалено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        }
+    }
+
+    function moveFilterUp(index) {
+        if (index > 0) {
+            [filters[index - 1], filters[index]] = [filters[index], filters[index - 1]];
+            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+            renderAdmin();
+            resetInactivityTimer();
+        }
+    }
+
+    function moveFilterDown(index) {
+        if (index < filters.length - 1) {
+            [filters[index], filters[index + 1]] = [filters[index + 1], filters[index]];
+            localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+            renderAdmin();
+            resetInactivityTimer();
+        }
+    }
+
+async function addOrderField() {
+    const name = document.getElementById('order-field-name').value;
+    const label = document.getElementById('order-field-label').value;
+    const type = document.getElementById('order-field-type').value;
+    const options = document.getElementById('order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
+
+    if (!name || !label) {
+        showNotification('Введіть назву та підпис для поля!');
+        return;
+    }
+
+    const field = { name, label, type };
+    if (type === 'select' && options.length > 0) field.options = options;
+
+    try {
+        const response = await fetchWithAuth('/api/order-fields', {
+            method: 'POST',
+            body: JSON.stringify(field)
+        });
+
+        const newField = await response.json();
+        orderFields.push(newField);
+        document.getElementById('order-field-name').value = '';
+        document.getElementById('order-field-label').value = '';
+        document.getElementById('order-field-options').value = '';
+        renderAdmin('order-fields');
+        showNotification('Поле замовлення додано!');
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка додавання поля замовлення:', e);
+        showNotification('Не вдалося додати поле: ' + e.message);
+    }
+}
+
+    function editOrderField(name) {
+        const field = orderFields.find(f => f.name === name);
+        if (field) {
+            const modal = document.getElementById('modal');
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Редагувати поле замовлення</h3>
+                    <input type="text" id="edit-order-field-name" value="${field.name}" readonly><br/>
+                    <label for="edit-order-field-name">Назва поля</label>
+                    <input type="text" id="edit-order-field-label" value="${field.label}"><br/>
+                    <label for="edit-order-field-label">Відображувана назва</label>
+                    <select id="edit-order-field-type">
+                        <option value="text" ${field.type === 'text' ? 'selected' : ''}>Текст</option>
+                        <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
+                        <option value="select" ${field.type === 'select' ? 'selected' : ''}>Вибір</option>
+                    </select><br/>
+                    <label for="edit-order-field-type">Тип поля</label>
+                    <input type="text" id="edit-order-field-options" value="${field.options ? field.options.join(', ') : ''}" ${field.type !== 'select' ? 'disabled' : ''}><br/>
+                    <label for="edit-order-field-options">Опції (через кому, для select)</label>
+                    <div class="modal-actions">
+                        <button id="save-order-field-btn">Зберегти</button>
+                        <button id="cancel-order-field-btn">Скасувати</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+            document.getElementById('edit-order-field-type').addEventListener('change', (e) => {
+                document.getElementById('edit-order-field-options').disabled = e.target.value !== 'select';
+            });
+            document.getElementById('save-order-field-btn').addEventListener('click', () => saveOrderFieldEdit(name));
+            document.getElementById('cancel-order-field-btn').addEventListener('click', closeModal);
+            resetInactivityTimer();
+        }
+    }
+
+    function saveOrderFieldEdit(name) {
+        const field = orderFields.find(f => f.name === name);
+        if (field) {
+            const newLabel = document.getElementById('edit-order-field-label').value;
+            const newType = document.getElementById('edit-order-field-type').value;
+            const newOptions = document.getElementById('edit-order-field-options').value.split(',').map(o => o.trim()).filter(o => o);
+
+            if (newLabel) {
+                field.label = newLabel;
+                field.type = newType;
+                if (newType === 'select') {
+                    if (newOptions.length > 0) {
+                        field.options = newOptions;
+                    } else {
+                        alert('Введіть опції для типу "Вибір"!');
+                        return;
+                    }
+                } else {
+                    delete field.options;
+                }
+                localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
+                closeModal();
+                renderAdmin();
+                showNotification('Поле замовлення відредаговано!');
+                unsavedChanges = false;
+                resetInactivityTimer();
+            } else {
+                alert('Введіть відображувану назву!');
+            }
+        }
+    }
+
+    function deleteOrderField(name) {
+        if (confirm('Ви впевнені, що хочете видалити це поле?')) {
+            orderFields = orderFields.filter(f => f.name !== name);
+            localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
+            renderAdmin();
+            showNotification('Поле замовлення видалено!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        }
+    }
+
 async function updateSlideshowSettings() {
     const width = parseInt(document.getElementById('slide-width').value) || 100;
     const height = parseInt(document.getElementById('slide-height').value) || 300;
@@ -3667,22 +3966,24 @@ function editSlide(order) {
         resetInactivityTimer();
     }
 
-function exportSiteBackup() {
-    const data = {
-        settings,
-        categories,
-        slides
-    };
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'site-backup.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification('Бекап сайту експортовано!');
-    resetInactivityTimer();
-}
+    function exportSiteBackup() {
+        const data = {
+            settings,
+            categories,
+            filters,
+            orderFields,
+            slides
+        };
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'site-backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('Бекап сайту експортовано!');
+        resetInactivityTimer();
+    }
 
     function exportProductsBackup() {
         const blob = new Blob([JSON.stringify(products)], { type: 'application/json' });
@@ -3708,32 +4009,36 @@ function exportSiteBackup() {
         resetInactivityTimer();
     }
 
-function importSiteBackup() {
-    const file = document.getElementById('import-site-file').files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                settings = data.settings || settings;
-                categories = data.categories || categories;
-                slides = data.slides || slides;
-                localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                renderAdmin();
-                showNotification('Бекап сайту імпортовано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } catch (err) {
-                alert('Помилка імпорту: ' + err.message);
-            }
-        };
-        reader.readAsText(file);
-    } else {
-        alert('Виберіть файл для імпорту!');
+    function importSiteBackup() {
+        const file = document.getElementById('import-site-file').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    settings = data.settings || settings;
+                    categories = data.categories || categories;
+                    filters = data.filters || filters;
+                    orderFields = data.orderFields || orderFields;
+                    slides = data.slides || slides;
+                    localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
+                    localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
+                    localStorage.setItem('filters', LZString.compressToUTF16(JSON.stringify(filters)));
+                    localStorage.setItem('orderFields', LZString.compressToUTF16(JSON.stringify(orderFields)));
+                    localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
+                    renderAdmin();
+                    showNotification('Бекап сайту імпортовано!');
+                    unsavedChanges = false;
+                    resetInactivityTimer();
+                } catch (err) {
+                    alert('Помилка імпорту: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            alert('Виберіть файл для імпорту!');
+        }
     }
-}
 
     function importProductsBackup() {
         const file = document.getElementById('import-products-file').files[0];
@@ -4067,12 +4372,18 @@ function renderPriceFields() {
 }
 
 function updateSubcategories() {
+    const modal = document.getElementById('modal');
+    if (!modal || modal.style.display !== 'block') {
+        console.warn('Модальне вікно #modal не відкрите, пропускаємо updateSubcategories');
+        return;
+    }
+
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено');
+        console.warn('Елементи #product-category або #product-subcategory не знайдено в модальному вікні');
         return;
     }
 
@@ -5413,17 +5724,17 @@ function viewOrder(index) {
     const order = orders[index];
     if (order) {
         // Форматуємо дату в локальний часовий пояс
-        const orderDate = new Date(order.date);
-        const formattedDate = isNaN(orderDate.getTime())
-            ? 'Невідома дата'
-            : orderDate.toLocaleString('uk-UA', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-              });
+const orderDate = new Date(order.date);
+const formattedDate = isNaN(orderDate.getTime())
+    ? 'Невідома дата'
+    : orderDate.toLocaleString('uk-UA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+      });
 
         const modal = document.getElementById('modal');
         modal.innerHTML = `
@@ -5446,12 +5757,10 @@ function viewOrder(index) {
                     order.items && Array.isArray(order.items) && order.items.length > 0
                         ? order.items.map(item => {
                               const product = products.find(p => p.id === item.id);
-                              const colorInfo = item.color && item.color.trim() !== '' && item.color !== 'Не вказано' ? `, Колір: ${item.color}` : '';
-                              const sizeInfo = item.size ? `, Розмір: ${item.size}` : '';
-                              const brandInfo = item.brand && item.brand !== 'Не вказано' ? `, Виробник: ${item.brand}` : '';
+                              const colorInfo = item.color && item.color.trim() !== '' ? `, Колір: ${item.color}` : '';
                               return product
-                                  ? `<p>${product.name}${colorInfo}${sizeInfo}${brandInfo} - ${item.quantity} шт. - ${item.price} грн (Загалом: ${item.totalPrice} грн)</p>`
-                                  : `<p>Товар #${item.id} (видалений)${colorInfo}${sizeInfo}${brandInfo} - ${item.quantity} шт. - ${item.price} грн (Загалом: ${item.totalPrice} грн)</p>`;
+                                  ? `<p>${product.name}${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`
+                                  : `<p>Товар #${item.id} (видалений)${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`;
                           }).join('')
                         : '<p>Товари відсутні.</p>'
                 }
@@ -5479,8 +5788,7 @@ function changeOrderStatus(index) {
                     <option value="Нове замовлення" ${order.status === 'Нове замовлення' ? 'selected' : ''}>Нове замовлення</option>
                     <option value="В обробці" ${order.status === 'В обробці' ? 'selected' : ''}>В обробці</option>
                     <option value="Відправлено" ${order.status === 'Відправлено' ? 'selected' : ''}>Відправлено</option>
-                    <option value="Доставлено" ${order.status === 'Доставлено' ? 'selected' : ''}>Доставлено</option>
-                    <option value="Скасовано" ${order.status === 'Скасовано' ? 'selected' : ''}>Скасовано</option>
+                    <option value="Завершено" ${order.status === 'Завершено' ? 'selected' : ''}>Завершено</option>
                 </select><br/>
                 <label for="new-order-status">Новий статус</label>
                 <div class="modal-actions">
@@ -5511,36 +5819,16 @@ async function saveOrderStatus(index) {
             return;
         }
 
-        // Перевіряємо, чи є елементи в items
-        if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
-            showNotification('Замовлення не містить товарів! Додайте товари перед зміною статусу.');
-            return;
-        }
-
-        // Нормалізуємо items
+        // Очищаємо items від системних полів
         const cleanedItems = order.items.map(item => {
             const { _id, ...cleanedItem } = item;
-            return {
-                id: cleanedItem.id,
-                name: cleanedItem.name || 'Невідомий товар',
-                quantity: parseInt(cleanedItem.quantity) || 1,
-                price: parseFloat(cleanedItem.price) || 0,
-                color: cleanedItem.color || '',
-                photo: cleanedItem.photo && typeof cleanedItem.photo === 'string' && cleanedItem.photo.trim() !== '' ? cleanedItem.photo : null
-            };
+            return cleanedItem;
         });
-
-        // Перевіряємо, чи ціни в межах розумного
-        const hasInvalidPrice = cleanedItems.some(item => item.price < 0 || item.price > 1000000);
-        if (hasInvalidPrice) {
-            showNotification('Одна або кілька цін у замовленні мають некоректне значення (занадто велике або від’ємне).');
-            return;
-        }
 
         const updatedOrder = {
             status: newStatus,
             date: order.date,
-            total: parseFloat(order.total) || 0,
+            total: order.total,
             customer: order.customer,
             items: cleanedItems
         };
@@ -5550,14 +5838,7 @@ async function saveOrderStatus(index) {
             body: JSON.stringify(updatedOrder)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося оновити статус замовлення');
-        }
-
-        const updatedOrderFromServer = await response.json();
-        // Оновлюємо локальний масив orders
-        orders[index] = { ...order, ...updatedOrderFromServer };
+        order.status = newStatus;
         closeModal();
         renderAdmin('orders');
         showNotification('Статус замовлення змінено!');
@@ -5584,32 +5865,15 @@ async function deleteOrder(index) {
                 return;
             }
 
-            // Перевіряємо, чи замовлення існує на сервері
-            const checkResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
-                method: 'GET'
-            });
-            if (!checkResponse.ok) {
-                const errorData = await checkResponse.json();
-                throw new Error(errorData.error || 'Замовлення не знайдено на сервері');
-            }
-
-            const deleteResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
+            const response = await fetchWithAuth(`/api/orders/${order._id}`, {
                 method: 'DELETE'
             });
 
-            if (!deleteResponse.ok) {
-                const errorData = await deleteResponse.json();
-                throw new Error(errorData.error || 'Не вдалося видалити замовлення');
+            if (!response.ok) {
+                throw new Error('Не вдалося видалити замовлення');
             }
 
-            // Видаляємо замовлення з локального масиву
-            const orderIndex = orders.findIndex(o => o._id === order._id);
-            if (orderIndex !== -1) {
-                orders.splice(orderIndex, 1);
-            } else {
-                console.warn('Замовлення не знайдено в локальному масиві після видалення');
-            }
-
+            orders.splice(index, 1);
             renderAdmin('orders');
             showNotification('Замовлення видалено!');
             unsavedChanges = false;
@@ -5617,16 +5881,6 @@ async function deleteOrder(index) {
         } catch (err) {
             console.error('Помилка видалення замовлення:', err);
             showNotification('Не вдалося видалити замовлення: ' + err.message);
-            // Завантажуємо актуальний список замовлень з сервера
-            try {
-                const response = await fetchWithAuth('/api/orders', { method: 'GET' });
-                if (response.ok) {
-                    orders = await response.json();
-                    renderAdmin('orders');
-                }
-            } catch (fetchErr) {
-                console.error('Помилка завантаження замовлень після невдалого видалення:', fetchErr);
-            }
         }
     }
 }
@@ -5703,81 +5957,88 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onopen = () => {
         console.log('Адмін підключено до WebSocket');
-        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands'].forEach(type => {
+        ['products', 'categories', 'settings', 'orders', 'slides', 'materials', 'brands', 'filters'].forEach(type => {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type, action: 'subscribe' }));
             }
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-            if (type === 'settings' && data) {
-                settings = { ...settings, ...data };
-                renderSettingsAdmin();
-            } else if (type === 'products') {
-                if (Array.isArray(data)) {
-                    products = data;
-                    if (document.querySelector('#products.active')) {
-                        renderAdmin('products');
-                    }
-                } else {
-                    console.warn('Некоректні дані продуктів:', data);
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+        if (type === 'settings') {
+            settings = { ...settings, ...data };
+            renderSettingsAdmin();
+        } else if (type === 'products') {
+            if (Array.isArray(data)) {
+                products = data;
+                if (document.querySelector('#products.active')) {
+                    renderAdmin('products');
                 }
-            } else if (type === 'categories') {
-                if (Array.isArray(data)) {
-                    categories = data;
-                    renderCategoriesAdmin();
-                } else {
-                    console.warn('Некоректні дані категорій:', data);
-                    loadCategories();
-                }
-            } else if (type === 'orders') {
-                if (Array.isArray(data)) {
-                    orders = data;
-                    if (document.querySelector('#orders.active')) {
-                        renderAdmin('orders');
-                    }
-                } else {
-                    console.warn('Некоректні дані замовлень:', data);
-                }
-            } else if (type === 'slides') {
-                if (Array.isArray(data)) {
-                    slides = data;
-                    if (document.querySelector('#site-editing.active')) {
-                        renderSlidesAdmin();
-                    }
-                } else {
-                    console.warn('Некоректні дані слайдів:', data);
-                }
-            } else if (type === 'materials') {
-                if (Array.isArray(data)) {
-                    materials = data;
-                    updateMaterialOptions();
-                } else {
-                    console.warn('Некоректні дані матеріалів:', data);
-                }
-            } else if (type === 'brands') {
-                if (Array.isArray(data)) {
-                    brands = data;
-                    updateBrandOptions();
-                } else {
-                    console.warn('Некоректні дані брендів:', data);
-                }
-            } else if (type === 'error') {
-                console.error('WebSocket помилка від сервера:', data);
-                showNotification('Помилка WebSocket: ' + data.error);
-                if (data.error.includes('неавторизований')) {
-                    localStorage.removeItem('adminToken');
-                    localStorage.removeItem('adminSession');
-                    showSection('admin-login');
-                }
+            } else {
+                console.warn('Некоректні дані продуктів:', data);
             }
-        } catch (e) {
-            console.error('Помилка обробки WebSocket-повідомлення:', e);
-            showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+        } else if (type === 'categories') {
+            if (Array.isArray(data)) {
+                categories = data;
+                renderCategoriesAdmin();
+            } else {
+                console.warn('Некоректні дані категорій:', data);
+                loadCategories();
+            }
+        } else if (type === 'orders') {
+            if (Array.isArray(data)) {
+                orders = data;
+                if (document.querySelector('#orders.active')) {
+                    renderAdmin('orders');
+                }
+            } else {
+                console.warn('Некоректні дані замовлень:', data);
+            }
+        } else if (type === 'slides') {
+            if (Array.isArray(data)) {
+                slides = data;
+                if (document.querySelector('#site-editing.active')) {
+                    renderSlidesAdmin();
+                }
+            } else {
+                console.warn('Некоректні дані слайдів:', data);
+            }
+        } else if (type === 'materials') {
+            if (Array.isArray(data)) {
+                materials = data;
+                updateMaterialOptions();
+            } else {
+                console.warn('Некоректні дані матеріалів:', data);
+            }
+        } else if (type === 'brands') {
+            if (Array.isArray(data)) {
+                brands = data;
+                updateBrandOptions();
+            } else {
+                console.warn('Некоректні дані брендів:', data);
+            }
+        } else if (type === 'filters') {
+            if (Array.isArray(data)) {
+                filters = data;
+                renderFilters();
+            } else {
+                console.warn('Некоректні дані фільтрів:', data);
+            }
+        } else if (type === 'error') {
+            console.error('WebSocket помилка від сервера:', data);
+            showNotification('Помилка WebSocket: ' + data.error);
+            if (data.error.includes('неавторизований')) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminSession');
+                showSection('admin-login');
+            }
         }
-    };
+    } catch (e) {
+        console.error('Помилка обробки WebSocket-повідомлення:', e);
+        showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+    }
+};
 }

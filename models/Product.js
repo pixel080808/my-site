@@ -13,8 +13,6 @@ const productSchema = new mongoose.Schema({
     filters: [{
         name: { type: String, required: true },
         value: { type: String, required: true }
-        // У server.js потрібно додати в productSchemaValidation:
-        // filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([])
     }],
     photos: [{
         type: String,
