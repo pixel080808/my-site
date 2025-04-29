@@ -47,51 +47,24 @@ function loadFromStorage(key, defaultValue) {
         const compressed = localStorage.getItem(key);
         if (!compressed) return defaultValue;
 
-        // Attempt to decompress
-        let decompressed;
-        try {
-            decompressed = LZString.decompressFromUTF16(compressed);
-        } catch (e) {
-            console.warn(`Failed to decompress data for ${key}:`, e);
-            localStorage.removeItem(key);
-            return defaultValue;
-        }
-
+        const decompressed = LZString.decompressFromUTF16(compressed);
         if (!decompressed) {
-            console.warn(`Decompressed data for ${key} is empty or invalid`);
+            console.warn(`Дані для ${key} не вдалося декомпресувати, повертаємо значення за замовчуванням`);
             localStorage.removeItem(key);
             return defaultValue;
         }
 
-        // Attempt to parse JSON
-        const parsed = JSON.parse(decompressed);
-        if (parsed === null || typeof parsed !== 'object') {
-            console.warn(`Parsed data for ${key} is not a valid object`);
+        // Перевіряємо, чи є декомпресовані дані валідним JSON
+        try {
+            const parsed = JSON.parse(decompressed);
+            return parsed || defaultValue;
+        } catch (parseError) {
+            console.error(`Невалідний JSON для ${key}:`, parseError);
             localStorage.removeItem(key);
             return defaultValue;
         }
-
-        // Additional validation for cart
-        if (key === 'cart') {
-            const validCart = parsed.filter(item => {
-                const isValid = item &&
-                    typeof item.id === 'number' &&
-                    typeof item.name === 'string' &&
-                    typeof item.quantity === 'number' &&
-                    item.quantity >= 1 &&
-                    typeof item.price === 'number' &&
-                    item.price >= 0;
-                if (!isValid) {
-                    console.warn(`Invalid cart item removed:`, item);
-                }
-                return isValid;
-            });
-            return validCart.length > 0 ? validCart : defaultValue;
-        }
-
-        return parsed;
     } catch (e) {
-        console.error(`Error parsing ${key}:`, e);
+        console.error(`Помилка парсингу ${key}:`, e);
         localStorage.removeItem(key);
         return defaultValue;
     }
@@ -99,51 +72,19 @@ function loadFromStorage(key, defaultValue) {
 
 function saveToStorage(key, value) {
     try {
-        // Validate data before saving
-        if (value === null || value === undefined) {
-            console.warn(`Attempted to save null/undefined value for ${key}, skipping`);
+        // Перевіряємо, чи можна серіалізувати об'єкт
+        const testStringify = JSON.stringify(value);
+        if (typeof testStringify !== 'string') {
+            console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
             return;
         }
-
-        // For cart, ensure all items are valid
-        if (key === 'cart') {
-            const validCart = value.filter(item => {
-                const isValid = item &&
-                    typeof item.id === 'number' &&
-                    typeof item.name === 'string' &&
-                    typeof item.quantity === 'number' &&
-                    item.quantity >= 1 &&
-                    typeof item.price === 'number' &&
-                    item.price >= 0;
-                if (!isValid) {
-                    console.warn(`Invalid cart item not saved:`, item);
-                }
-                return isValid;
-            });
-            value = validCart;
-        }
-
-        // Stringify and compress
-        const stringified = JSON.stringify(value);
-        if (typeof stringified !== 'string') {
-            console.error(`Error: Data for ${key} cannot be serialized to JSON`);
-            return;
-        }
-
-        const compressed = LZString.compressToUTF16(stringified);
-        localStorage.setItem(key, compressed);
+        localStorage.setItem(key, LZString.compressToUTF16(testStringify));
     } catch (e) {
-        console.error(`Error saving ${key}:`, e);
+        console.error(`Помилка збереження ${key}:`, e);
         if (e.name === 'QuotaExceededError') {
-            console.warn('Storage quota exceeded, clearing localStorage');
             localStorage.clear();
-            try {
-                localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
-                showNotification('Локальне сховище очищено через перевищення квоти.', 'warning');
-            } catch (innerError) {
-                console.error('Failed to save after clearing storage:', innerError);
-                showNotification('Не вдалося зберегти дані в локальне сховище.', 'error');
-            }
+            localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
+            showNotification('Локальне сховище очищено через перевищення квоти.', 'error');
         }
     }
 }
@@ -172,36 +113,10 @@ async function loadCartFromServer() {
             throw new Error('Сервер повернув не JSON: ' + contentType);
         }
         cart = await response.json() || [];
-        // Validate cart items
-        cart = cart.filter(item => {
-            const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
-            if (!isValid) {
-                console.warn('Елемент кошика видалено через некоректні дані:', item);
-            }
-            return isValid;
-        });
-        saveToStorage('cart', cart);
+        saveToStorage('cart', cart); // Синхронізуємо локальний кошик із сервером
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
-        // Спробуємо завантажити з локального сховища, але перевіримо на валідність
-        const localCart = loadFromStorage('cart', []);
-        cart = localCart.filter(item => {
-            const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
-            if (!isValid) {
-                console.warn('Елемент кошика з localStorage видалено через некоректні дані:', item);
-            }
-            return isValid;
-        });
-        if (localCart.length !== cart.length) {
-            // Якщо були видалені невалідні елементи, оновлюємо localStorage
-            saveToStorage('cart', cart);
-        }
-        if (cart.length === 0 && localCart.length > 0) {
-            // Якщо кошик порожній через помилку, очищаємо cartId і створюємо новий
-            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('cartId', newCartId);
-            console.warn('Кошик очищено через некоректні дані, створено новий cartId:', newCartId);
-        }
+        cart = loadFromStorage('cart', []);
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
     }
 }
@@ -210,12 +125,42 @@ async function loadCartFromServer() {
 // triggerCleanupOldCarts();
 
 async function saveCartToServer() {
-    // Use loadFromStorage to properly decompress and parse cart data
-    let cartItems = loadFromStorage('cart', []);
+    let cartItems = [];
+    
+    // Перевіряємо, чи є кошик у localStorage
+    const cartData = localStorage.getItem('cart');
+    if (cartData) {
+        try {
+            const decompressed = LZString.decompressFromUTF16(cartData);
+            if (!decompressed) {
+                console.warn('Дані кошика не вдалося декомпресувати, очищаємо кошик');
+                cartItems = [];
+                localStorage.setItem('cart', LZString.compressToUTF16(JSON.stringify(cartItems)));
+            } else {
+                cartItems = JSON.parse(decompressed);
+                if (!Array.isArray(cartItems)) {
+                    console.warn('Кошик у localStorage не є масивом, очищаємо його');
+                    cartItems = [];
+                    localStorage.setItem('cart', LZString.compressToUTF16(JSON.stringify(cartItems)));
+                }
+            }
+        } catch (error) {
+            console.error('Помилка парсингу кошика з localStorage:', error);
+            cartItems = [];
+            localStorage.setItem('cart', LZString.compressToUTF16(JSON.stringify(cartItems)));
+        }
+    }
 
     // Фільтруємо некоректні елементи кошика
     const filteredCartItems = cartItems.filter(item => {
-        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        const isValid = item && 
+            typeof item.id === 'number' && 
+            item.id > 0 && 
+            item.name && 
+            typeof item.quantity === 'number' && 
+            item.quantity > 0 && 
+            typeof item.price === 'number' && 
+            item.price >= 0;
         if (!isValid) {
             console.warn('Елемент кошика видалено через некоректні дані:', item);
         }
@@ -323,7 +268,6 @@ async function fetchPublicData() {
         const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
         if (response) {
             products = await response.json();
-            products = products.filter(p => typeof p.id === 'number' && p.id > 0);
             console.log('Products fetched:', products.length);
         } else {
             throw new Error('Не вдалося отримати продукти');
@@ -355,7 +299,7 @@ async function fetchPublicData() {
         } else {
             throw new Error('Не вдалося отримати налаштування');
         }
-} catch (e) {
+    } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
         showNotification('Не вдалося завантажити дані з сервера!', 'error');
     }
@@ -424,8 +368,8 @@ function connectPublicWebSocket() {
             console.log('Отримано повідомлення WebSocket:', { type, data });
 
             switch (type) {
-            case 'products':
-                    products = data.filter(p => typeof p.id === 'number' && p.id > 0);
+                case 'products':
+                    products = data;
                     updateCartPrices();
                     if (document.getElementById('catalog').classList.contains('active')) {
                         renderCatalog(currentCategory, currentSubcategory, currentProduct);
@@ -505,17 +449,6 @@ async function initializeData() {
     if (!cartId) {
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', cartId);
-    }
-
-    // Clear potentially corrupted cart data
-    const cartData = localStorage.getItem('cart');
-    if (cartData) {
-        try {
-            LZString.decompressFromUTF16(cartData);
-        } catch (e) {
-            console.warn('Виявлено пошкоджені дані кошика в localStorage, очищаємо їх');
-            localStorage.removeItem('cart');
-        }
     }
 
     await fetchCsrfToken();
@@ -1375,24 +1308,14 @@ function renderProducts(filtered) {
             btn.onclick = () => openProduct(product.id);
         } else {
             btn.textContent = 'Додати в кошик';
-            btn.onclick = () => {
-                if (typeof product.id !== 'number' || product.id <= 0) {
-                    console.error(`Invalid product ID in renderProducts: ${product.id}`);
-                    showNotification('Невірний ідентифікатор товару!', 'error');
-                    return;
-                }
-                product.colors?.length > 1 
-                    ? (openProduct(product.id), showNotification('Виберіть потрібний колір', 'error')) 
-                    : addToCartWithColor(product.id);
-            };
+            btn.onclick = () => product.colors?.length > 1 ? (openProduct(product.id), showNotification('Виберіть потрібний колір', 'error')) : addToCartWithColor(product.id);
         }
         productDiv.appendChild(btn);
 
         productList.appendChild(productDiv);
-    }); // Додаємо закриваючу дужку для forEach
-} // Додаємо закриваючу дужку для функції renderProducts
+    });
+}
 
-// Функція renderProductDetails має бути визначена окремо
 function renderProductDetails() {
     const productDetails = document.getElementById('product-details');
     if (!productDetails || !currentProduct) return;
@@ -1539,14 +1462,7 @@ function renderProductDetails() {
         const buyBtn = document.createElement('button');
         buyBtn.className = 'buy-btn';
         buyBtn.textContent = 'Додати в кошик';
-        buyBtn.onclick = () => {
-            if (typeof product.id !== 'number' || product.id <= 0) {
-                console.error(`Invalid product ID in renderProductDetails: ${product.id}`);
-                showNotification('Невірний ідентифікатор товару!', 'error');
-                return;
-            }
-            addToCartWithColor(product.id);
-        };
+        buyBtn.onclick = () => addToCartWithColor(product.id);
         if (product.type !== 'group') rightDiv.appendChild(buyBtn);
 
         if (product.colors?.length >= 1) {
@@ -1889,38 +1805,30 @@ function updateGroupSelection(productId) {
 }
 
 async function addToCartWithColor(productId) {
-    // Check if products are loaded, fetch if not
-    if (products.length === 0) {
-        console.warn('Products not loaded yet, fetching...');
-        await fetchPublicData();
+    if (!products.length) {
+        console.warn('Товари ще не завантажено, чекаємо...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!products.length) {
+            showNotification('Товари недоступні, спробуйте пізніше!', 'error');
+            return;
+        }
     }
-
-    // Convert productId to number and validate
-    const parsedProductId = Number(productId);
-    if (isNaN(parsedProductId) || parsedProductId <= 0) {
-        console.error(`Invalid productId: ${productId}, parsed as: ${parsedProductId}`);
-        showNotification('Невірний ідентифікатор товару!', 'error');
+    const product = products.find(p => p.id === productId);
+    if (!product || !Number.isInteger(productId) || productId <= 0) {
+        showNotification('Товар не знайдено або некоректний ID!', 'error');
         return;
     }
-
-    // Log the input for debugging
-    console.log(`Adding to cart: productId=${parsedProductId}, type=${typeof productId}`);
-
-    const product = products.find(p => p.id === parsedProductId);
-    if (!product) {
-        console.warn(`Product not found for ID: ${parsedProductId}`);
-        showNotification('Товар не знайдено!', 'error');
+    if (product.colors?.length > 1 && selectedColors[productId] === undefined) {
+        showNotification('Будь ласка, виберіть колір!', 'error');
         return;
     }
-
     let price = product.price || 0;
     let colorName = '';
     if (product.colors?.length > 0) {
-        const colorIndex = selectedColors[parsedProductId] !== undefined ? selectedColors[parsedProductId] : 0;
+        const colorIndex = selectedColors[productId] !== undefined ? selectedColors[productId] : 0;
         if (!product.colors[colorIndex]) {
-            console.warn(`Selected color index ${colorIndex} is invalid for product ID: ${parsedProductId}`);
             showNotification('Обраний колір більше недоступний!', 'error');
-            delete selectedColors[parsedProductId];
+            delete selectedColors[productId];
             saveToStorage('selectedColors', selectedColors);
             return;
         }
@@ -1928,58 +1836,43 @@ async function addToCartWithColor(productId) {
         price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
         price += product.colors[colorIndex].priceChange || 0;
     }
-
     if (product.type === 'mattresses') {
-        const select = document.getElementById(`mattress-size-${parsedProductId}`);
-        if (!select || !selectedMattressSizes[parsedProductId]) {
-            console.warn(`No size selected for mattress product ID: ${parsedProductId}`);
+        const select = document.getElementById(`mattress-size-${productId}`);
+        if (!select || !selectedMattressSizes[productId]) {
             showNotification('Будь ласка, виберіть розмір!', 'error');
             return;
         }
-        const size = selectedMattressSizes[parsedProductId];
+        const size = selectedMattressSizes[productId];
         const sizeData = product.sizes.find(s => s.name === size);
         if (!sizeData) {
-            console.warn(`Selected size ${size} is invalid for product ID: ${parsedProductId}`);
             showNotification('Обраний розмір більше недоступний!', 'error');
-            delete selectedMattressSizes[parsedProductId];
+            delete selectedMattressSizes[productId];
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             return;
         }
         price = sizeData.price;
         colorName = colorName ? `${colorName} (${size})` : size;
     }
-
-    const quantity = parseInt(document.getElementById(`quantity-${parsedProductId}`)?.value) || 1;
+    const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = { 
-        id: parsedProductId, 
+        id: productId, 
         name: product.name,
         color: colorName || 'Не вказано',
         price, 
         quantity, 
         photo: product.photos?.[0] || NO_IMAGE_URL
     };
-
-    // Validate cart item
-    if (!cartItem.id || typeof cartItem.id !== 'number') {
-        console.error('Invalid cart item ID:', cartItem);
-        showNotification('Помилка додавання товару до кошика!', 'error');
-        return;
-    }
-
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
-    if (existingItemIndex > -1) {
-        cart[existingItemIndex].quantity += cartItem.quantity;
-    } else {
-        cart.push(cartItem);
-    }
+    if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
+    else cart.push(cartItem);
     
-    // Save locally and update UI
+    // Зберігаємо локально та оновлюємо інтерфейс
     saveToStorage('cart', cart);
     updateCartCount();
     renderCart();
     showNotification(`${product.name} додано до кошика!`, 'success');
     
-    // Sync with server in the background
+    // Синхронізуємо з сервером у фоновому режимі
     try {
         await saveCartToServer();
     } catch (error) {
@@ -1988,57 +1881,37 @@ async function addToCartWithColor(productId) {
     }
 }
 
-async function addGroupToCart(productId) {
-    const product = products.find(p => p.id === productId);
-    if (!product || product.type !== 'group') {
-        showNotification('Груповий товар не знайдено!', 'error');
-        return;
-    }
-    const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]:checked`);
-    if (checkboxes.length === 0) {
-        showNotification('Будь ласка, виберіть хоча б один товар!', 'error');
-        return;
-    }
-    const addedItems = [];
-    checkboxes.forEach(cb => {
-        const id = parseInt(cb.value);
-        const p = products.find(p => p.id === id);
-        if (p) {
-            const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
-            const cartItem = {
-                id: p.id,
-                name: p.name,
-                price,
-                quantity: 1,
-                photo: p.photos?.[0] || NO_IMAGE_URL,
-                color: 'Не вказано'
-            };
-            // Validate cart item
-            if (!cartItem.id || typeof cartItem.id !== 'number') {
-                console.warn(`Invalid cart item ID for group product ${p.name}:`, cartItem);
+       async function addGroupToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || product.type !== 'group') return;
+            const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]:checked`);
+            if (checkboxes.length === 0) {
+                showNotification('Будь ласка, виберіть хоча б один товар!', 'error');
                 return;
             }
-            addedItems.push(cartItem);
+            checkboxes.forEach(cb => {
+                const id = parseInt(cb.value);
+                const p = products.find(p => p.id === id);
+                if (p) {
+                    const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
+                    const cartItem = {
+                        id: p.id,
+                        name: p.name,
+                        price,
+                        quantity: 1,
+                        photo: p.photos?.[0] || NO_IMAGE_URL
+                    };
+                    const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.name === cartItem.name);
+                    if (existingItemIndex > -1) cart[existingItemIndex].quantity += 1;
+                    else cart.push(cartItem);
+                }
+            });
+            saveToStorage('cart', cart);
+            await saveCartToServer();
+            updateCartCount();
+            showNotification('Вибрані товари додано до кошика!', 'success');
+            renderCart();
         }
-    });
-    if (addedItems.length === 0) {
-        showNotification('Жоден дійсний товар не додано до кошика!', 'error');
-        return;
-    }
-    addedItems.forEach(cartItem => {
-        const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
-        if (existingItemIndex > -1) {
-            cart[existingItemIndex].quantity += 1;
-        } else {
-            cart.push(cartItem);
-        }
-    });
-    saveToStorage('cart', cart);
-    await saveCartToServer();
-    updateCartCount();
-    showNotification('Вибрані товари додано до кошика!', 'success');
-    renderCart();
-}
 
 function openProduct(productId) {
     const product = products.find(p => p.id === productId);
@@ -2393,105 +2266,39 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
-    // Validate cart items and ensure they exist in products
+    // Фільтруємо кошик перед формуванням замовлення
     const validCartItems = cart.filter(item => {
-        const product = products.find(p => p.id === item.id);
-        if (!product) {
-            console.warn('Товар не знайдено в products, видаляємо з кошика:', item);
-            return false;
-        }
-        const isValid = item &&
-            typeof item.id === 'number' &&
-            item.id > 0 &&
-            typeof item.name === 'string' &&
-            item.name.length > 0 &&
-            typeof item.quantity === 'number' &&
-            item.quantity >= 1 &&
-            typeof item.price === 'number' &&
+        const isValid = item && 
+            typeof item.id === 'number' && 
+            item.id > 0 && 
+            item.name && 
+            typeof item.quantity === 'number' && 
+            item.quantity > 0 && 
+            typeof item.price === 'number' && 
             item.price >= 0;
         if (!isValid) {
-            console.warn('Елемент замовлення видалено через некоректні дані:', item);
-            return false;
+            console.warn('Елемент кошика видалено через некоректні дані:', item);
         }
-        return true;
+        return isValid;
     });
 
-    // Update cart with valid items
-    if (cart.length !== validCartItems.length) {
-        cart = validCartItems;
-        saveToStorage('cart', cart);
-        await saveCartToServer();
-        showNotification('Деякі товари були видалені з кошика через некоректні дані.', 'warning');
-    }
-
-    // Перевіряємо, чи є товари в кошику після валідації
     if (validCartItems.length === 0) {
-        showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
+        showNotification('Кошик порожній або містить некоректні дані!', 'error');
         return;
     }
-
-    // Формуємо деталізовані дані про товари
-    const detailedItems = validCartItems.map(item => {
-        const product = products.find(p => p.id === item.id);
-        if (!product) {
-            console.warn(`Товар з ID ${item.id} не знайдено при формуванні замовлення`);
-            return null;
-        }
-
-        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
-        let price = isOnSale ? product.salePrice : product.price || 0;
-        let colorName = item.color || 'Не вказано';
-        let size = null;
-        let brand = product.brand || 'Не вказано';
-
-        if (product.type === 'mattresses') {
-            const selectedSize = selectedMattressSizes[item.id];
-            if (selectedSize) {
-                const sizeData = product.sizes.find(s => s.name === selectedSize);
-                if (sizeData) {
-                    price = sizeData.price;
-                    size = selectedSize;
-                    colorName = colorName !== 'Не вказано' ? `${colorName} (${size})` : size;
-                } else {
-                    console.warn(`Розмір ${selectedSize} для товару ${item.id} не знайдено`);
-                }
-            }
-        }
-
-        if (product.colors?.length > 0) {
-            const colorIndex = selectedColors[item.id] !== undefined ? selectedColors[item.id] : 0;
-            if (product.colors[colorIndex]) {
-                price += product.colors[colorIndex].priceChange || 0;
-            }
-        }
-
-        return {
-            id: item.id,
-            name: product.name,
-            quantity: item.quantity,
-            price: price,
-            totalPrice: price * item.quantity,
-            color: colorName,
-            size: size,
-            brand: brand,
-            photo: item.photo || product.photos?.[0] || NO_IMAGE_URL
-        };
-    }).filter(item => item !== null);
-
-    if (!detailedItems || detailedItems.length === 0) {
-        showNotification('Кошик порожній після перевірки! Додайте товари перед оформленням замовлення.', 'error');
-        return;
-    }
-
-    const total = detailedItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
     const orderData = {
         date: new Date().toISOString(),
         status: 'Нове замовлення',
-        total: total,
+        total: validCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
-        items: detailedItems,
-        cartId: localStorage.getItem('cartId')
+        items: validCartItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            color: item.color || ''
+        }))
     };
 
     console.log('Дані замовлення перед відправкою:', orderData);
@@ -2746,13 +2553,6 @@ function changeQuantity(productId, change) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Одноразове очищення localStorage
-        if (!localStorage.getItem('dataCleared')) {
-            localStorage.clear();
-            localStorage.setItem('dataCleared', 'true');
-            console.log('localStorage очищено для нової версії');
-        }
-
         console.log('Initializing application...');
         await initializeData();
         updateHeader();
@@ -2773,7 +2573,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSection('cart');
             } else if (parts[0] === 'contacts') {
                 showSection('contacts');
-            } else if (parts[0] === 'about') {
+            } else if (parts[0] === 'about') { // Виправлено: parts[0] замість parts(")
                 showSection('about');
             } else if (parts[0] === 'catalog') {
                 showSection('catalog');
