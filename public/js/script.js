@@ -320,44 +320,67 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
 async function fetchPublicData() {
     try {
         console.log('Fetching products...');
-        const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-        if (response) {
-            products = await response.json();
+        const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`, 3, 1000);
+        if (productResponse) {
+            products = await productResponse.json();
             products = products.filter(p => typeof p.id === 'number' && p.id > 0);
             console.log('Products fetched:', products.length);
+            saveToStorage('products', products); // Save to localStorage for fallback
         } else {
-            throw new Error('Не вдалося отримати продукти');
+            throw new Error('Не вдалося отримати продукти через HTTP');
         }
 
         console.log('Fetching categories...');
-        const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
+        const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`, 3, 1000);
         if (catResponse) {
             categories = await catResponse.json();
             console.log('Categories fetched:', categories.length);
+            saveToStorage('categories', categories);
         } else {
-            throw new Error('Не вдалося отримати категорії');
+            throw new Error('Не вдалося отримати категорії через HTTP');
         }
 
         console.log('Fetching slides...');
-        const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
+        const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`, 3, 1000);
         if (slidesResponse) {
             slides = await slidesResponse.json();
             console.log('Slides fetched:', slides.length);
+            saveToStorage('slides', slides);
         } else {
-            throw new Error('Не вдалося отримати слайди');
+            throw new Error('Не вдалося отримати слайди через HTTP');
         }
 
         console.log('Fetching settings...');
-        const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`);
+        const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`, 3, 1000);
         if (settingsResponse) {
             settings = await settingsResponse.json();
             console.log('Settings fetched:', settings);
+            saveToStorage('settings', settings);
         } else {
-            throw new Error('Не вдалося отримати налаштування');
+            throw new Error('Не вдалося отримати налаштування через HTTP');
         }
-} catch (e) {
-        console.error('Помилка завантаження даних через HTTP:', e);
-        showNotification('Не вдалося завантажити дані з сервера!', 'error');
+    } catch (e) {
+        console.error('Помилка завантаження даних через HTTP:', e.message, e.stack);
+        // Load from localStorage as a fallback
+        products = loadFromStorage('products', []);
+        categories = loadFromStorage('categories', []);
+        slides = loadFromStorage('slides', []);
+        settings = loadFromStorage('settings', {
+            name: 'Меблевий магазин',
+            logo: NO_IMAGE_URL,
+            logoWidth: 150,
+            contacts: { phones: '', addresses: '', schedule: '' },
+            socials: [],
+            showSocials: true,
+            about: '',
+            showSlides: true,
+            slideInterval: 3000,
+            favicon: ''
+        });
+        showNotification('Не вдалося завантажити дані з сервера! Використовуються локальні дані.', 'warning');
+        if (products.length === 0) {
+            showNotification('Товари відсутні. Спробуйте оновити сторінку пізніше.', 'error');
+        }
     }
 }
 
@@ -410,7 +433,9 @@ function connectPublicWebSocket() {
         console.log('Публічний WebSocket підключено');
         reconnectAttempts = 0; // Скидаємо лічильник при успішному підключенні
         ['products', 'categories', 'settings', 'slides'].forEach(type => {
-            ws.send(JSON.stringify({ type, action: 'subscribe' }));
+            const message = JSON.stringify({ type, action: 'subscribe' });
+            ws.send(message);
+            console.log(`Відправлено підписку WebSocket: ${message}`);
         });
     };
 
@@ -421,11 +446,13 @@ function connectPublicWebSocket() {
                 throw new Error('Некоректний формат повідомлення WebSocket');
             }
             const { type, data } = message;
-            console.log('Отримано повідомлення WebSocket:', { type, data });
+            console.log(`Отримано повідомлення WebSocket: type=${type}, data=`, data);
 
             switch (type) {
-            case 'products':
+                case 'products':
                     products = data.filter(p => typeof p.id === 'number' && p.id > 0);
+                    saveToStorage('products', products); // Save to localStorage
+                    console.log('Оновлено товари:', products.length);
                     updateCartPrices();
                     if (document.getElementById('catalog').classList.contains('active')) {
                         renderCatalog(currentCategory, currentSubcategory, currentProduct);
@@ -438,6 +465,8 @@ function connectPublicWebSocket() {
                     break;
                 case 'categories':
                     categories = data;
+                    saveToStorage('categories', categories);
+                    console.log('Оновлено категорії:', categories.length);
                     renderCategories();
                     renderCatalogDropdown();
                     if (document.getElementById('catalog').classList.contains('active')) {
@@ -453,12 +482,12 @@ function connectPublicWebSocket() {
                         showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
                         showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                     };
+                    saveToStorage('settings', settings);
+                    console.log('Оновлено налаштування:', settings);
                     updateHeader();
-                    // Завжди викликаємо ці функції, щоб оновити DOM незалежно від активної секції
-                    renderContacts(); // Оновлюємо контакти та соціальні мережі
-                    renderAbout();    // Оновлюємо секцію "Про нас"
-                    renderSlideshow(); // Оновлюємо слайдшоу
-                    // Оновлюємо favicon
+                    renderContacts();
+                    renderAbout();
+                    renderSlideshow();
                     const oldFavicon = document.querySelector('link[rel="icon"]');
                     if (oldFavicon) oldFavicon.remove();
                     const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
@@ -470,6 +499,8 @@ function connectPublicWebSocket() {
                     break;
                 case 'slides':
                     slides = data;
+                    saveToStorage('slides', slides);
+                    console.log('Оновлено слайди:', slides.length);
                     if (settings.showSlides && slides.length > 0) {
                         renderSlideshow();
                     }
@@ -478,7 +509,7 @@ function connectPublicWebSocket() {
                     console.warn('Невідомий тип повідомлення:', type);
             }
         } catch (e) {
-            console.error('Помилка обробки WebSocket:', e);
+            console.error('Помилка обробки WebSocket:', e.message, e.stack);
             showNotification('Помилка синхронізації даних!', 'error');
         }
     };
@@ -491,7 +522,7 @@ function connectPublicWebSocket() {
             setTimeout(connectPublicWebSocket, 2000);
         } else if (reconnectAttempts >= maxAttempts) {
             console.error('Досягнуто максимальної кількості спроб підключення');
-            showNotification('Не вдалося підключитися до сервера!', 'error');
+            showNotification('Не вдалося підключитися до сервера через WebSocket!', 'error');
         }
     };
 
@@ -547,10 +578,11 @@ async function initializeData() {
     if (orders.length > 5) orders = orders.slice(-5);
     saveToStorage('orders', orders);
 
-    products = [];
-    categories = [];
-    slides = [];
-    settings = {
+    // Initialize data arrays
+    products = loadFromStorage('products', []);
+    categories = loadFromStorage('categories', []);
+    slides = loadFromStorage('slides', []);
+    settings = loadFromStorage('settings', {
         name: 'Меблевий магазин',
         logo: NO_IMAGE_URL,
         logoWidth: 150,
@@ -561,13 +593,14 @@ async function initializeData() {
         showSlides: true,
         slideInterval: 3000,
         favicon: ''
-    };
+    });
 
     connectPublicWebSocket();
+    let receivedData = false;
     await new Promise(resolve => {
-        let receivedData = false;
         const checkInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
+            if (ws.readyState === WebSocket.OPEN && products.length > 0) {
+                console.log('Дані отримано через WebSocket:', products.length, 'товарів');
                 receivedData = true;
                 clearInterval(checkInterval);
                 resolve();
@@ -586,6 +619,12 @@ async function initializeData() {
             }
         }, 5000);
     });
+
+    // Final check: if products are still empty, notify the user
+    if (products.length === 0) {
+        console.warn('Товари не завантажено ні через WebSocket, ні через HTTP');
+        showNotification('Не вдалося завантажити товари. Спробуйте оновити сторінку.', 'error');
+    }
 }
 
 async function updateProducts() {
@@ -941,6 +980,24 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     const productsDiv = document.getElementById('products');
     if (!productsDiv) return;
     while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
+
+    // Check if products are loaded
+    if (products.length === 0) {
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Товари недоступні';
+        productsDiv.appendChild(h2);
+        const p = document.createElement('p');
+        p.textContent = 'Не вдалося завантажити товари. ';
+        const retryBtn = document.createElement('button');
+        retryBtn.textContent = 'Спробувати знову';
+        retryBtn.onclick = async () => {
+            await fetchPublicData();
+            renderCatalog(category, subcategory, product);
+        };
+        p.appendChild(retryBtn);
+        productsDiv.appendChild(p);
+        return;
+    }
 
     if (isSearchActive) {
         const query = document.getElementById('search').value.toLowerCase().trim();
