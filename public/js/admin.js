@@ -276,13 +276,13 @@ async function fetchWithAuth(url, options = {}) {
                 },
                 credentials: 'include'
             });
-            if (!newResponse.ok) {
-                const errorData = await newResponse.json().catch(() => ({}));
-                console.error('Деталі помилки запиту:', errorData); // Додаємо логування
-                const error = new Error(errorData.error || `HTTP error ${newResponse.status}`);
-                error.errorData = errorData;
-                throw error;
-            }
+if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Помилка запиту:', { url, status: response.status, errorData });
+    const error = new Error(errorData.error || `HTTP error ${response.status}`);
+    error.errorData = errorData;
+    throw error;
+}
             return newResponse;
         }
     } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
@@ -302,13 +302,13 @@ async function fetchWithAuth(url, options = {}) {
         }
     }
 
-if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error('Помилка запиту:', { url, status: response.status, errorData });
-    const error = new Error(errorData.error || `HTTP error ${response.status}`);
-    error.errorData = errorData;
-    throw error;
-}
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Помилка запиту:', { url, status: response.status, errorData });
+        const error = new Error(errorData.error || `HTTP error ${response.status}`);
+        error.errorData = errorData;
+        throw error;
+    }
 
     return response;
 }
@@ -2096,10 +2096,17 @@ async function deleteCategory(categoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const response = await fetchWithAuth(`/api/categories/${encodeURIComponent(category.slug)}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                'X-CSRF-Token': localStorage.getItem('csrfToken') // Додаємо CSRF-токен
             }
         });
 
@@ -2277,37 +2284,34 @@ function validateFile(file) {
 
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
-    if (!category) {
-        showNotification('Категорія не знайдена!');
-        return;
-    }
-
-    const modal = document.getElementById('modal');
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Редагувати категорію #${categoryId}</h3>
-            <input type="text" id="category-name" value="${category.name}" required><br/>
-            <label for="category-name">Назва категорії</label>
-            <input type="text" id="category-slug" value="${category.slug || ''}" required><br/>
-            <label for="category-slug">Шлях категорії</label>
-            <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
-            <label for="category-photo-url">URL фотографії</label>
-            <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-            <label for="category-photo-file">Завантажте фотографію</label>
-            <select id="category-visible">
-                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-            </select><br/>
-            <label for="category-visible">Видимість</label>
-            <div class="modal-actions">
-                <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
-                <button onclick="closeModal()">Скасувати</button>
+    if (category) {
+        const modal = document.getElementById('modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Редагувати категорію #${categoryId}</h3>
+                <input type="text" id="category-name" value="${category.name}"><br/>
+                <label for="category-name">Назва категорії</label>
+                <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
+                <label for="category-slug">Шлях категорії</label>
+                <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
+                <label for="category-photo-url">URL фотографії</label>
+                <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                <label for="category-photo-file">Завантажте фотографію</label>
+                <select id="category-visible">
+                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+                </select><br/>
+                <label for="category-visible">Видимість</label>
+                <div class="modal-actions">
+                    <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
+                    <button onclick="closeModal()">Скасувати</button>
+                </div>
             </div>
-        </div>
-    `;
-    modal.classList.add('active');
-    console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
-    resetInactivityTimer();
+        `;
+        modal.classList.add('active');
+        console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
+        resetInactivityTimer();
+    }
 }
 
 function openAddCategoryModal() {
@@ -2452,9 +2456,14 @@ async function saveEditedCategory(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        // Клієнтська валідація
-        if (!name || !slug) {
-            showNotification('Назва та шлях категорії є обов’язковими!');
+        // Валідація
+        if (!name) {
+            showNotification('Назва категорії є обов’язковою!');
+            return;
+        }
+
+        if (!slug) {
+            showNotification('Шлях категорії є обов’язковим!');
             return;
         }
 
@@ -2579,7 +2588,7 @@ async function addCategory() {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value.trim();
         const visible = visibleSelect.value === 'true';
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
@@ -2622,10 +2631,7 @@ async function addCategory() {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -2643,16 +2649,16 @@ async function addCategory() {
             photo,
             visible,
             subcategories: [],
-            order: categories.length
+            order: categories.length // Автоматично встановлюємо порядок
         };
 
-        console.log('Дані для сервера:', JSON.stringify(category, null, 2));
+        console.log('Дані для сервера:', category);
 
         const response = await fetchWithAuth('/api/categories', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                'X-CSRF-Token': localStorage.getItem('csrfToken')
             },
             body: JSON.stringify(category)
         });
@@ -2961,9 +2967,14 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        // Клієнтська валідація
-        if (!name || !slug) {
-            showNotification('Назва та шлях підкатегорії є обов’язковими!');
+        // Валідація
+        if (!name) {
+            showNotification('Назва підкатегорії є обов’язковою!');
+            return;
+        }
+
+        if (!slug) {
+            showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
 
@@ -3087,7 +3098,7 @@ async function addSubcategory() {
 
         const categoryId = categorySelect.value;
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value.trim();
         const visible = visibleSelect.value === 'true';
         const photoUrl = photoUrlInput.value.trim();
 
@@ -3147,15 +3158,8 @@ async function addSubcategory() {
             photo = photoUrl;
         }
 
-        const newSubcategory = {
-            name,
-            slug,
-            photo,
-            visible,
-            order: category.subcategories.length
-        };
-
-        console.log('Дані нової підкатегорії:', JSON.stringify(newSubcategory, null, 2));
+        const newSubcategory = { name, slug, photo, visible };
+        console.log('Дані нової підкатегорії:', newSubcategory);
 
         const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
             method: 'POST',
@@ -3207,11 +3211,11 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати підкатегорію</h3>
-            <input type="text" id="subcategory-name" value="${subcategory.name}" required><br/>
+            <input type="text" id="subcategory-name" value="${subcategory.name}"><br/>
             <label for="subcategory-name">Назва підкатегорії</label>
-            <input type="text" id="subcategory-slug" value="${subcategory.slug}" required><br/>
+            <input type="text" id="subcategory-slug" value="${subcategory.slug}"><br/>
             <label for="subcategory-slug">Шлях підкатегорії</label>
-            <input type="text" id="subcategory-photo-url" value="${subcategory.photo || ''}" placeholder="URL фотографії"><br/>
+            <input type="text" id="subcategory-photo-url" value="${subcategory.photo || ''}"><br/>
             <label for="subcategory-photo-url">URL фотографії</label>
             <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
             <label for="subcategory-photo-file">Завантажте фотографію</label>
@@ -3354,29 +3358,40 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
     }
 }
 
-async function deleteSubcategory(categoryId, subcategoryId) {
+async function deleteSubcategory(categoryId, subcatName) {
     if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив’язку до неї.')) {
         return;
     }
 
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
             showNotification('Категорія не знайдена!');
             return;
         }
 
-        const subcategory = category.subcategories.find(s => s._id === subcategoryId);
+        const subcategory = category.subcategories.find(s => s.name === subcatName);
         if (!subcategory) {
             showNotification('Підкатегорія не знайдена!');
             return;
         }
 
-        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
-            method: 'DELETE',
+        category.subcategories = category.subcategories.filter(s => s.name !== subcatName);
+
+        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
+            method: 'PUT',
             headers: {
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            }
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken')
+            },
+            body: JSON.stringify(category)
         });
 
         if (!response.ok) {
@@ -3389,7 +3404,7 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         categories[index] = updatedCategory;
 
         products.forEach(p => {
-            if (p.subcategory === subcategory.name && p.category === category.name) {
+            if (p.subcategory === subcatName && p.category === category.name) {
                 p.subcategory = '';
             }
         });
