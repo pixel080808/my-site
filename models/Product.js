@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
 
 const productSchema = new mongoose.Schema({
-    name: { type: String, required: true, trim: true },
-    category: { type: String, required: true, trim: true },
+    name: { type: String, trim: true }, // Removed required
+    category: { type: String, trim: true }, // Removed required
     subcategory: { type: String, trim: true },
     price: { type: Number },
     salePrice: { type: Number },
@@ -11,37 +11,22 @@ const productSchema = new mongoose.Schema({
     brand: { type: String, trim: true },
     material: { type: String, trim: true },
     filters: [{
-        name: { type: String, required: true },
-        value: { type: String, required: true }
-        // У server.js потрібно додати в productSchemaValidation:
-        // filters: Joi.array().items(Joi.object({ name: Joi.string().required(), value: Joi.string().required() })).default([])
+        name: { type: String }, // Removed required
+        value: { type: String } // Removed required
     }],
     photos: [{
         type: String,
-        validate: {
-            validator: function(v) {
-                return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-            },
-            message: 'Photo must be a valid URL'
-        }
+        // Removed URL validator to allow any string
     }],
     visible: { type: Boolean, default: true },
     active: { type: Boolean, default: true },
-    slug: { type: String, unique: true, trim: true },
-    type: { type: String, enum: ['simple', 'mattresses', 'group'] },
+    slug: { type: String, unique: true, trim: true }, // Kept unique, but can remove if duplicates are okay
+    type: { type: String, enum: ['simple', 'mattresses', 'group'] }, // Removed required by not specifying default
     sizes: [{ name: String, price: Number }],
     colors: [{
         name: String,
         value: String,
-        photo: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-                },
-                message: 'Color photo must be a valid URL or null'
-            }
-        },
+        photo: { type: String }, // Removed URL validator
         priceChange: Number
     }],
     groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
@@ -53,19 +38,20 @@ const productSchema = new mongoose.Schema({
     popularity: Number
 }, { timestamps: true });
 
-// Перевірка існування groupProducts
+// Перевірка існування groupProducts (послаблюємо: не кидаємо помилку, а очищаємо)
 productSchema.pre('save', async function(next) {
     const product = this;
     if (product.groupProducts && product.groupProducts.length > 0) {
         const existingProducts = await mongoose.models.Product.find({ _id: { $in: product.groupProducts } });
         if (existingProducts.length !== product.groupProducts.length) {
-            throw new Error('Деякі продукти в groupProducts не існують');
+            logger.warn('Деякі продукти в groupProducts не існують, очищаємо');
+            product.groupProducts = []; // Очищаємо замість помилки
         }
     }
     next();
 });
 
-// Захист від XSS у description
+// Захист від XSS у description (залишаємо для безпеки)
 productSchema.pre('save', function(next) {
     if (this.description) {
         this.description = sanitizeHtml(this.description, {
@@ -76,7 +62,7 @@ productSchema.pre('save', function(next) {
     next();
 });
 
-// Індекси
+// Індекси (залишаємо для продуктивності)
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
 

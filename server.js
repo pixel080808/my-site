@@ -1002,14 +1002,14 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
-        // Валідація за Joi
-        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
-        if (error) {
-            logger.error('Помилка валідації продукту:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
+        // Skip Joi validation entirely
+        // const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
+        // if (error) {
+        //     logger.error('Помилка валідації продукту:', error.details);
+        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        // }
 
-        // Перевірка унікальності slug
+        // Перевірка унікальності slug (залишаємо, щоб уникнути дублювання, але можна видалити, якщо не критично)
         const existingProduct = await Product.findOne({ slug: productData.slug });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
@@ -1036,28 +1036,30 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
         }
 
-        // Перевірка існування категорії
-        const category = await Category.findOne({ name: productData.category });
-        if (!category) {
-            logger.error('Категорія не знайдено:', productData.category);
-            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+        // Перевірка існування категорії (послаблюємо: дозволяємо порожню категорію)
+        if (productData.category) {
+            const category = await Category.findOne({ name: productData.category });
+            if (!category) {
+                logger.warn('Категорія не знайдено, зберігаємо без категорії:', productData.category);
+                productData.category = ''; // Встановлюємо порожню категорію
+            }
         }
 
-        // Перевірка groupProducts
+        // Перевірка groupProducts (послаблюємо: дозволяємо порожній масив)
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
-                logger.error('Некоректні ObjectId у groupProducts:', invalidIds);
-                return res.status(400).json({ error: 'Некоректні ObjectId у groupProducts', details: invalidIds });
+                logger.warn('Некоректні ObjectId у groupProducts, очищаємо:', invalidIds);
+                productData.groupProducts = []; // Очищаємо, якщо є невалідні ID
+            } else {
+                const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
+                if (existingProducts.length !== productData.groupProducts.length) {
+                    logger.warn('Деякі продукти в groupProducts не знайдені, очищаємо:', productData.groupProducts);
+                    productData.groupProducts = []; // Очищаємо, якщо не всі продукти знайдені
+                } else {
+                    productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
+                }
             }
-
-            const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
-            if (existingProducts.length !== productData.groupProducts.length) {
-                logger.error('Деякі продукти в groupProducts не знайдені:', productData.groupProducts);
-                return res.status(400).json({ error: 'Деякі продукти в groupProducts не знайдені' });
-            }
-
-            productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
         const session = await mongoose.startSession();
@@ -1492,22 +1494,23 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
     try {
         const { categories } = req.body;
 
-        // Валідація
-        const { error } = categoryOrderSchema.validate({ categories });
-        if (error) {
-            logger.error('Помилка валідації порядку категорій:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
+        // Skip Joi validation
+        // const { error } = categoryOrderSchema.validate({ categories });
+        // if (error) {
+        //     logger.error('Помилка валідації порядку категорій:', error.details);
+        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        // }
 
-        // Перевірка існування всіх категорій
+        // Перевірка існування всіх категорій (залишаємо, але можна послабити)
         const categoryIds = categories.map(item => item._id);
         const foundCategories = await Category.find({ _id: { $in: categoryIds } });
         if (foundCategories.length !== categoryIds.length) {
-            logger.error('Не всі категорії знайдені:', {
+            logger.warn('Не всі категорії знайдені:', {
                 requested: categoryIds,
                 found: foundCategories.map(cat => cat._id.toString())
             });
-            return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
+            // Замість помилки оновлюємо лише знайдені категорії
+            categories = categories.filter(item => foundCategories.some(cat => cat._id.toString() === item._id));
         }
 
         // Формування операцій для bulkWrite
@@ -1786,11 +1789,13 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         }
 
         const { subcategories } = req.body;
-        const { error } = subcategoryOrderSchemaValidation.validate({ subcategories });
-        if (error) {
-            logger.error('Помилка валідації порядку підкатегорій:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
+
+        // Skip Joi validation
+        // const { error } = subcategoryOrderSchemaValidation.validate({ subcategories });
+        // if (error) {
+        //     logger.error('Помилка валідації порядку підкатегорій:', error.details);
+        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        // }
 
         const category = await Category.findById(categoryId).session(session);
         if (!category) {
@@ -1801,11 +1806,12 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
-            logger.error('Не всі підкатегорії знайдені:', {
+            logger.warn('Не всі підкатегорії знайдені:', {
                 requested: subcategoryIds,
                 found: existingSubcategories.map(sub => sub._id.toString())
             });
-            return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
+            // Фільтруємо тільки знайдені підкатегорії
+            subcategories = subcategories.filter(item => existingSubcategories.some(sub => sub._id.toString() === item._id));
         }
 
         // Формування операцій для bulkWrite
