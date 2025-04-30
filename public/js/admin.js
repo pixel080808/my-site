@@ -1617,7 +1617,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value="▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option value=▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -4514,17 +4514,77 @@ async function saveNewProduct() {
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
-        // Видаляємо клієнтські перевірки, оскільки сервер тепер дозволяє все
+        // Перевірка унікальності slug
+        const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
+        const existingProducts = await slugCheck.json();
+        if (!existingProducts.products || !Array.isArray(existingProducts.products)) {
+            console.error('Некоректна структура existingProducts:', existingProducts);
+            throw new Error('Некоректна відповідь сервера при перевірці slug');
+        }
+        if (existingProducts.products.some(p => p.slug === slug)) {
+            showNotification('Шлях товару має бути унікальним!');
+            return;
+        }
+
+        // Перевірка категорії та вибір slug для підкатегорії
+        const categoryObj = categories.find(c => c.name === category);
+        if (!categoryObj && category) {
+            showNotification('Обрана категорія не існує!');
+            return;
+        }
+
+        let subcategorySlug = '';
+        if (subcategory) {
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+            if (!subcategoryObj) {
+                showNotification('Обрана підкатегорія не існує в цій категорії!');
+                return;
+            }
+            subcategorySlug = subcategoryObj.slug; // Використовуємо slug
+        }
+
+        // Додавання бренду, якщо він новий
+        if (brand && !brands.includes(brand)) {
+            try {
+                const response = await fetchWithAuth('/api/brands', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: brand })
+                });
+                if (response.ok) {
+                    brands.push(brand);
+                    updateBrandOptions();
+                }
+            } catch (e) {
+                console.error('Помилка додавання бренду:', e);
+            }
+        }
+
+        // Додавання матеріалу, якщо він новий
+        if (material && !materials.includes(material)) {
+            try {
+                const response = await fetchWithAuth('/api/materials', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: material })
+                });
+                if (response.ok) {
+                    materials.push(material);
+                    updateMaterialOptions();
+                }
+            } catch (e) {
+                console.error('Помилка додавання матеріалу:', e);
+            }
+        }
+
         let product = {
             type: newProduct.type,
             name,
             slug,
-            brand,
-            category,
-            subcategory, // Надсилаємо slug підкатегорії
-            material,
-            price,
-            salePrice,
+            brand: brand || '',
+            category: category || '',
+            subcategory: subcategorySlug || '',
+            material: material || '',
+            price: newProduct.type === 'simple' ? price : null,
+            salePrice: salePrice || null,
             saleEnd: saleEnd || null,
             description,
             widthCm,
@@ -4536,7 +4596,7 @@ async function saveNewProduct() {
                 name: color.name,
                 value: color.value,
                 priceChange: color.priceChange || 0,
-                photo: null
+                photo: color.photo || null
             })),
             sizes: newProduct.sizes,
             groupProducts: newProduct.groupProducts,
@@ -4639,6 +4699,7 @@ async function saveNewProduct() {
             }
         }
 
+        console.log('Відправляємо дані продукту:', JSON.stringify(product, null, 2));
         const response = await fetchWithAuth('/api/products', {
             method: 'POST',
             body: JSON.stringify(product)

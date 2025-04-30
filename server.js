@@ -1002,6 +1002,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
         if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
 
+        // Перевірка унікальності slug
+        const existingProduct = await Product.findOne({ slug: productData.slug });
+        if (existingProduct) {
+            logger.warn('Продукт з таким slug уже існує:', productData.slug);
+            return res.status(400).json({ error: 'Шлях товару має бути унікальним' });
+        }
+
         logger.info('Підготовлені дані для збереження:', productData);
 
         const session = await mongoose.startSession();
