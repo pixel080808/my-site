@@ -2817,19 +2817,26 @@ async function saveCategoryEdit(categoryId) {
 async function moveCategoryUp(index) {
     if (index <= 0 || index >= categories.length) return;
     try {
+        // Міняємо місцями категорії в масиві
+        [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
+
+        // Нормалізуємо order для всіх категорій
         const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx === index ? idx - 1 : idx === index - 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            categories: categories
+                .map((cat, idx) => ({
+                    _id: cat._id,
+                    order: idx // Унікальний order на основі позиції
+                }))
+                .filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
         };
+
         console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             body: JSON.stringify(categoryOrder)
         });
+
         if (response.ok) {
-            [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
             renderAdmin('categories');
             showNotification('Порядок категорій змінено!');
         } else {
@@ -2842,21 +2849,30 @@ async function moveCategoryUp(index) {
         showNotification('Не вдалося змінити порядок: ' + err.message);
     }
 }
+
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
+        // Міняємо місцями категорії в масиві
+        [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
+
+        // Нормалізуємо order для всіх категорій
         const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx === index ? idx + 1 : idx === index + 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            categories: categories
+                .map((cat, idx) => ({
+                    _id: cat._id,
+                    order: idx // Унікальний order на основі позиції
+                }))
+                .filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
         };
+
+        console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             body: JSON.stringify(categoryOrder)
         });
+
         if (response.ok) {
-            [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
             renderAdmin('categories');
             showNotification('Порядок категорій змінено!');
         } else {
@@ -3397,21 +3413,29 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex <= 0 || subIndex >= category.subcategories.length) return;
     try {
+        // Міняємо місцями підкатегорії в масиві
+        [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
+            category.subcategories[subIndex - 1],
+            category.subcategories[subIndex]
+        ];
+
+        // Нормалізуємо order для всіх підкатегорій
         const subcategoriesOrder = {
-            subcategories: category.subcategories.map((subcat, idx) => ({
-                _id: subcat._id,
-                order: idx === subIndex ? idx - 1 : idx === subIndex - 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            subcategories: category.subcategories
+                .map((subcat, idx) => ({
+                    _id: subcat._id,
+                    order: idx // Унікальний order на основі позиції
+                }))
+                .filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
         };
+
+        console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             body: JSON.stringify(subcategoriesOrder)
         });
+
         if (response.ok) {
-            [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
-                category.subcategories[subIndex - 1],
-                category.subcategories[subIndex]
-            ];
             renderAdmin('categories');
             showNotification('Порядок підкатегорій змінено!');
         } else {
@@ -3429,21 +3453,29 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex >= category.subcategories.length - 1 || subIndex < 0) return;
     try {
+        // Міняємо місцями підкатегорії в масиві
+        [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
+            category.subcategories[subIndex + 1],
+            category.subcategories[subIndex]
+        ];
+
+        // Нормалізуємо order для всіх підкатегорій
         const subcategoriesOrder = {
-            subcategories: category.subcategories.map((subcat, idx) => ({
-                _id: subcat._id,
-                order: idx === subIndex ? idx + 1 : idx === subIndex + 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            subcategories: category.subcategories
+                .map((subcat, idx) => ({
+                    _id: subcat._id,
+                    order: idx // Унікальний order на основі позиції
+                }))
+                .filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
         };
+
+        console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             body: JSON.stringify(subcategoriesOrder)
         });
+
         if (response.ok) {
-            [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
-                category.subcategories[subIndex + 1],
-                category.subcategories[subIndex]
-            ];
             renderAdmin('categories');
             showNotification('Порядок підкатегорій змінено!');
         } else {

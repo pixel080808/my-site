@@ -1002,13 +1002,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
         if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
 
-        // Ніяких перевірок унікальності slug чи існування категорії
         logger.info('Підготовлені дані для збереження:', productData);
 
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
             const product = new Product(productData);
+            logger.info('Зберігаємо продукт у MongoDB...');
             await product.save({ session });
             logger.info('Продукт успішно збережено:', product._id);
 
@@ -1019,14 +1019,22 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
-            logger.error('Помилка при збереженні продукту:', { error: err.message, stack: err.stack, productData });
+            logger.error('Помилка при збереженні продукту:', {
+                error: err.message,
+                stack: err.stack,
+                productData
+            });
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', { error: err.message, stack: err.stack, productData });
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
+        logger.error('Помилка при додаванні товару:', {
+            error: err.message,
+            stack: err.stack,
+            productData: req.body
+        });
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
@@ -1440,18 +1448,21 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         const { categories } = req.body;
         logger.info('Отримано дані для зміни порядку категорій:', categories);
 
-        // Фільтруємо тільки валідні _id
+        if (!Array.isArray(categories) || categories.length === 0) {
+            logger.warn('Дані категорій відсутні або не є масивом');
+            return res.status(400).json({ error: 'Невірні дані', details: 'Очікується масив категорій' });
+        }
+
         const validCategories = categories.filter(item => mongoose.Types.ObjectId.isValid(item._id));
         if (validCategories.length === 0) {
             logger.warn('Немає валідних категорій для оновлення');
-            return res.status(200).json([]); // Повертаємо порожній результат, якщо немає валідних даних
+            return res.status(200).json([]);
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = validCategories.map(({ _id, order }) => ({
+        const bulkOps = validCategories.map(({ _id, order }, index) => ({
             updateOne: {
                 filter: { _id },
-                update: { $set: { order: Number(order) || 0 } }
+                update: { $set: { order: Number(order) || index } }
             }
         }));
 
@@ -1463,8 +1474,12 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         logger.info('Порядок категорій успішно оновлено');
         res.status(200).json(updatedCategories);
     } catch (err) {
-        logger.error('Помилка оновлення порядку категорій:', { error: err.message, stack: err.stack, categories });
-        res.status(400).json({ error: 'Не вдалося оновити порядок', details: err.message });
+        logger.error('Помилка оновлення порядку категорій:', {
+            error: err.message,
+            stack: err.stack,
+            categories
+        });
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
@@ -1723,12 +1738,10 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
 
         const { subcategories } = req.body;
 
-        // Skip Joi validation
-        // const { error } = subcategoryOrderSchemaValidation.validate({ subcategories });
-        // if (error) {
-        //     logger.error('Помилка валідації порядку підкатегорій:', error.details);
-        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        // }
+        if (!Array.isArray(subcategories) || subcategories.length === 0) {
+            logger.warn('Дані підкатегорій відсутні або не є масивом');
+            return res.status(400).json({ error: 'Невірні дані', details: 'Очікується масив підкатегорій' });
+        }
 
         const category = await Category.findById(categoryId).session(session);
         if (!category) {
@@ -1743,22 +1756,18 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
                 requested: subcategoryIds,
                 found: existingSubcategories.map(sub => sub._id.toString())
             });
-            // Фільтруємо тільки знайдені підкатегорії
             subcategories = subcategories.filter(item => existingSubcategories.some(sub => sub._id.toString() === item._id));
         }
 
-        // Формування операцій для bulkWrite
-        const bulkOps = subcategories.map(({ _id, order }) => ({
+        const bulkOps = subcategories.map(({ _id, order }, index) => ({
             updateOne: {
                 filter: { _id: categoryId, 'subcategories._id': _id },
-                update: { $set: { 'subcategories.$.order': order } }
+                update: { $set: { 'subcategories.$.order': Number(order) || index } }
             }
         }));
 
-        // Виконання bulkWrite у межах сесії
         await Category.bulkWrite(bulkOps, { session });
 
-        // Оновлення категорій для broadcast
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
         await session.commitTransaction();
@@ -1766,8 +1775,12 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         res.status(200).json(category);
     } catch (err) {
         await session.abortTransaction();
-        logger.error('Помилка оновлення порядку підкатегорій:', err);
-        res.status(400).json({ error: 'Не вдалося оновити порядок підкатегорій', details: err.message });
+        logger.error('Помилка оновлення порядку підкатегорій:', {
+            error: err.message,
+            stack: err.stack,
+            subcategories
+        });
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     } finally {
         session.endSession();
     }
