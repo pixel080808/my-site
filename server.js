@@ -995,6 +995,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = req.body;
         logger.info('Отримано дані продукту:', productData);
 
+        // Додаємо валідацію
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
+        if (error) {
+            logger.error('Помилка валідації продукту:', error.details);
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
+        }
+
         // Зберігаємо продукт у чергу
         const queueItem = new ProductQueue({ productData });
         await queueItem.save();
@@ -1003,71 +1010,81 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         // Повертаємо клієнту тимчасовий успіх
         res.status(202).json({ message: 'Продукт додано до черги', queueId: queueItem._id });
 
-        // Фонова обробка продукту
-        setImmediate(async () => {
-            try {
-                // Видаляємо null/undefined поля
-                Object.keys(productData).forEach(key => {
-                    if (productData[key] === null || productData[key] === undefined) {
-                        delete productData[key];
-                    }
-                });
-
-                // Перетворюємо числові поля
-                if (productData.price) productData.price = Number(productData.price) || 0;
-                if (productData.salePrice) productData.salePrice = Number(productData.salePrice) || 0;
-                if (productData.widthCm) productData.widthCm = Number(productData.widthCm) || 0;
-                if (productData.depthCm) productData.depthCm = Number(productData.depthCm) || 0;
-                if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
-                if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
-
-                // Перевірка унікальності slug
-                const existingProduct = await Product.findOne({ slug: productData.slug });
-                if (existingProduct) {
-                    logger.warn('Продукт з таким slug уже існує:', productData.slug);
-                    queueItem.status = 'failed';
-                    queueItem.error = 'Шлях товару має бути унікальним';
-                    await queueItem.save();
-                    return;
-                }
-
-                const session = await mongoose.startSession();
-                session.startTransaction();
-                try {
-                    const product = new Product(productData);
-                    await product.save({ session });
-                    logger.info('Продукт успішно збережено:', product._id);
-
-                    const products = await Product.find().session(session);
-                    broadcast('products', products);
-
-                    await session.commitTransaction();
-                    queueItem.status = 'completed';
-                    await queueItem.save();
-                } catch (err) {
-                    await session.abortTransaction();
-                    logger.error('Помилка при збереженні продукту:', {
-                        error: err.message,
-                        stack: err.stack,
-                        productData
-                    });
-                    queueItem.status = 'failed';
-                    queueItem.error = err.message;
-                    await queueItem.save();
-                } finally {
-                    session.endSession();
-                }
-            } catch (err) {
-                logger.error('Помилка обробки черги:', {
-                    error: err.message,
-                    stack: err.stack,
-                    productData
-                });
-                queueItem.status = 'failed';
-                queueItem.error = err.message;
-                await queueItem.save();
+// Фонова обробка продукту
+setImmediate(async () => {
+    try {
+        logger.info('Починаємо обробку продукту з черги:', productData);
+        // Видаляємо null/undefined поля
+        Object.keys(productData).forEach(key => {
+            if (productData[key] === null || productData[key] === undefined) {
+                delete productData[key];
             }
         });
+
+        // Перетворюємо числові поля
+        if (productData.price) productData.price = Number(productData.price) || 0;
+        if (productData.salePrice) productData.salePrice = Number(productData.salePrice) || 0;
+        if (productData.widthCm) productData.widthCm = Number(productData.widthCm) || 0;
+        if (productData.depthCm) productData.depthCm = Number(productData.depthCm) || 0;
+        if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
+        if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
+
+        // Забезпечуємо, що строкові поля мають значення за замовчуванням
+        productData.name = productData.name || '';
+        productData.brand = productData.brand || '';
+        productData.category = productData.category || '';
+        productData.subcategory = productData.subcategory || '';
+        productData.material = productData.material || '';
+        productData.slug = productData.slug || '';
+        productData.type = productData.type || 'simple';
+
+        // Перевірка унікальності slug
+        const existingProduct = await Product.findOne({ slug: productData.slug });
+        if (existingProduct) {
+            logger.warn('Продукт з таким slug уже існує:', productData.slug);
+            queueItem.status = 'failed';
+            queueItem.error = 'Шлях товару має бути унікальним';
+            await queueItem.save();
+            return;
+        }
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const product = new Product(productData);
+            await product.save({ session });
+            logger.info('Продукт успішно збережено:', product._id);
+
+            const products = await Product.find().session(session);
+            broadcast('products', products);
+
+            await session.commitTransaction();
+            queueItem.status = 'completed';
+            await queueItem.save();
+        } catch (err) {
+            await session.abortTransaction();
+            logger.error('Помилка при збереженні продукту:', {
+                error: err.message,
+                stack: err.stack,
+                productData
+            });
+            queueItem.status = 'failed';
+            queueItem.error = err.message;
+            await queueItem.save();
+        } finally {
+            session.endSession();
+        }
+    } catch (err) {
+        logger.error('Помилка обробки черги:', {
+            error: err.message,
+            stack: err.stack,
+            productData
+        });
+        queueItem.status = 'failed';
+        queueItem.error = err.message;
+        await queueItem.save();
+    }
+});
     } catch (err) {
         logger.error('Помилка при додаванні товару до черги:', {
             error: err.message,
@@ -1287,7 +1304,6 @@ app.get('/api/categories', async (req, res) => {
         } else {
             categories = await Category.find().sort({ order: 1 });
         }
-        // Сортуємо підкатегорії за order
         categories.forEach(category => {
             category.subcategories.sort((a, b) => a.order - b.order);
         });
