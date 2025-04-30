@@ -29,7 +29,6 @@ const Cart = require('./models/Cart');
 const OrderField = require('./models/OrderField');
 
 // Модель черги продуктів
-const mongoose = require('mongoose');
 const productQueueSchema = new mongoose.Schema({
     productData: { type: Object, required: true },
     status: { type: String, default: 'pending' },
