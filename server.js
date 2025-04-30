@@ -987,86 +987,30 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = req.body;
         logger.info('Отримано дані продукту:', productData);
 
-        // Мапінг img на photos
-        if (productData.img && !productData.photos) {
-            productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
-            delete productData.img;
-        }
-        if (productData.colors) {
-            productData.colors = productData.colors.map(color => {
-                if (color.img && !color.photo) {
-                    color.photo = color.img;
-                    delete color.img;
-                }
-                return color;
-            });
-        }
-
-        // Skip Joi validation entirely
-        // const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
-        // if (error) {
-        //     logger.error('Помилка валідації продукту:', error.details);
-        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        // }
-
-        // Перевірка унікальності slug (залишаємо, щоб уникнути дублювання, але можна видалити, якщо не критично)
-        const existingProduct = await Product.findOne({ slug: productData.slug });
-        if (existingProduct) {
-            logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
-        }
-
-        // Автоматичне створення бренду
-        if (productData.brand && productData.brand.trim()) {
-            let brand = await Brand.findOne({ name: productData.brand });
-            if (!brand) {
-                brand = new Brand({ name: productData.brand });
-                await brand.save();
-                logger.info(`Створено новий бренд: ${productData.brand}`);
+        // Видаляємо null/undefined поля
+        Object.keys(productData).forEach(key => {
+            if (productData[key] === null || productData[key] === undefined) {
+                delete productData[key];
             }
-        }
+        });
 
-        // Автоматичне створення матеріалу
-        if (productData.material && productData.material.trim()) {
-            let material = await Material.findOne({ name: productData.material });
-            if (!material) {
-                material = new Material({ name: productData.material });
-                await material.save();
-                logger.info(`Створено новий матеріал: ${productData.material}`);
-            }
-        }
+        // Перетворюємо числові поля в числа (якщо вони є)
+        if (productData.price) productData.price = Number(productData.price) || 0;
+        if (productData.salePrice) productData.salePrice = Number(productData.salePrice) || 0;
+        if (productData.widthCm) productData.widthCm = Number(productData.widthCm) || 0;
+        if (productData.depthCm) productData.depthCm = Number(productData.depthCm) || 0;
+        if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
+        if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
 
-        // Перевірка існування категорії (послаблюємо: дозволяємо порожню категорію)
-        if (productData.category) {
-            const category = await Category.findOne({ name: productData.category });
-            if (!category) {
-                logger.warn('Категорія не знайдено, зберігаємо без категорії:', productData.category);
-                productData.category = ''; // Встановлюємо порожню категорію
-            }
-        }
-
-        // Перевірка groupProducts (послаблюємо: дозволяємо порожній масив)
-        if (productData.groupProducts && productData.groupProducts.length > 0) {
-            const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
-            if (invalidIds.length > 0) {
-                logger.warn('Некоректні ObjectId у groupProducts, очищаємо:', invalidIds);
-                productData.groupProducts = []; // Очищаємо, якщо є невалідні ID
-            } else {
-                const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
-                if (existingProducts.length !== productData.groupProducts.length) {
-                    logger.warn('Деякі продукти в groupProducts не знайдені, очищаємо:', productData.groupProducts);
-                    productData.groupProducts = []; // Очищаємо, якщо не всі продукти знайдені
-                } else {
-                    productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
-                }
-            }
-        }
+        // Ніяких перевірок унікальності slug чи існування категорії
+        logger.info('Підготовлені дані для збереження:', productData);
 
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
             const product = new Product(productData);
             await product.save({ session });
+            logger.info('Продукт успішно збережено:', product._id);
 
             const products = await Product.find().session(session);
             broadcast('products', products);
@@ -1075,12 +1019,13 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             res.status(201).json(product);
         } catch (err) {
             await session.abortTransaction();
+            logger.error('Помилка при збереженні продукту:', { error: err.message, stack: err.stack, productData });
             throw err;
         } finally {
             session.endSession();
         }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', err);
+        logger.error('Помилка при додаванні товару:', { error: err.message, stack: err.stack, productData });
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
@@ -1493,44 +1438,32 @@ const categoryOrderSchema = Joi.object({
 app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const { categories } = req.body;
+        logger.info('Отримано дані для зміни порядку категорій:', categories);
 
-        // Skip Joi validation
-        // const { error } = categoryOrderSchema.validate({ categories });
-        // if (error) {
-        //     logger.error('Помилка валідації порядку категорій:', error.details);
-        //     return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        // }
-
-        // Перевірка існування всіх категорій (залишаємо, але можна послабити)
-        const categoryIds = categories.map(item => item._id);
-        const foundCategories = await Category.find({ _id: { $in: categoryIds } });
-        if (foundCategories.length !== categoryIds.length) {
-            logger.warn('Не всі категорії знайдені:', {
-                requested: categoryIds,
-                found: foundCategories.map(cat => cat._id.toString())
-            });
-            // Замість помилки оновлюємо лише знайдені категорії
-            categories = categories.filter(item => foundCategories.some(cat => cat._id.toString() === item._id));
+        // Фільтруємо тільки валідні _id
+        const validCategories = categories.filter(item => mongoose.Types.ObjectId.isValid(item._id));
+        if (validCategories.length === 0) {
+            logger.warn('Немає валідних категорій для оновлення');
+            return res.status(200).json([]); // Повертаємо порожній результат, якщо немає валідних даних
         }
 
         // Формування операцій для bulkWrite
-        const bulkOps = categories.map(({ _id, order }) => ({
+        const bulkOps = validCategories.map(({ _id, order }) => ({
             updateOne: {
                 filter: { _id },
-                update: { $set: { order } }
+                update: { $set: { order: Number(order) || 0 } }
             }
         }));
 
-        // Виконання bulkWrite
+        logger.info('Виконуємо bulkWrite для категорій:', bulkOps);
         await Category.bulkWrite(bulkOps);
 
-        // Отримання оновлених категорій
         const updatedCategories = await Category.find().sort({ order: 1 });
         broadcast('categories', updatedCategories);
         logger.info('Порядок категорій успішно оновлено');
         res.status(200).json(updatedCategories);
     } catch (err) {
-        logger.error('Помилка оновлення порядку категорій:', err);
+        logger.error('Помилка оновлення порядку категорій:', { error: err.message, stack: err.stack, categories });
         res.status(400).json({ error: 'Не вдалося оновити порядок', details: err.message });
     }
 });
