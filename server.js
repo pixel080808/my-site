@@ -28,6 +28,15 @@ const Brand = require('./models/Brand');
 const Cart = require('./models/Cart');
 const OrderField = require('./models/OrderField');
 
+// Модель черги продуктів
+const mongoose = require('mongoose');
+const productQueueSchema = new mongoose.Schema({
+    productData: { type: Object, required: true },
+    status: { type: String, default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+const ProductQueue = mongoose.model('ProductQueue', productQueueSchema);
+
 // Налаштування логера
 const logger = winston.createLogger({
     level: 'info',
@@ -987,56 +996,81 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = req.body;
         logger.info('Отримано дані продукту:', productData);
 
-        // Видаляємо null/undefined поля
-        Object.keys(productData).forEach(key => {
-            if (productData[key] === null || productData[key] === undefined) {
-                delete productData[key];
+        // Зберігаємо продукт у чергу
+        const queueItem = new ProductQueue({ productData });
+        await queueItem.save();
+        logger.info('Продукт додано до черги:', queueItem._id);
+
+        // Повертаємо клієнту тимчасовий успіх
+        res.status(202).json({ message: 'Продукт додано до черги', queueId: queueItem._id });
+
+        // Фонова обробка продукту
+        setImmediate(async () => {
+            try {
+                // Видаляємо null/undefined поля
+                Object.keys(productData).forEach(key => {
+                    if (productData[key] === null || productData[key] === undefined) {
+                        delete productData[key];
+                    }
+                });
+
+                // Перетворюємо числові поля
+                if (productData.price) productData.price = Number(productData.price) || 0;
+                if (productData.salePrice) productData.salePrice = Number(productData.salePrice) || 0;
+                if (productData.widthCm) productData.widthCm = Number(productData.widthCm) || 0;
+                if (productData.depthCm) productData.depthCm = Number(productData.depthCm) || 0;
+                if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
+                if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
+
+                // Перевірка унікальності slug
+                const existingProduct = await Product.findOne({ slug: productData.slug });
+                if (existingProduct) {
+                    logger.warn('Продукт з таким slug уже існує:', productData.slug);
+                    queueItem.status = 'failed';
+                    queueItem.error = 'Шлях товару має бути унікальним';
+                    await queueItem.save();
+                    return;
+                }
+
+                const session = await mongoose.startSession();
+                session.startTransaction();
+                try {
+                    const product = new Product(productData);
+                    await product.save({ session });
+                    logger.info('Продукт успішно збережено:', product._id);
+
+                    const products = await Product.find().session(session);
+                    broadcast('products', products);
+
+                    await session.commitTransaction();
+                    queueItem.status = 'completed';
+                    await queueItem.save();
+                } catch (err) {
+                    await session.abortTransaction();
+                    logger.error('Помилка при збереженні продукту:', {
+                        error: err.message,
+                        stack: err.stack,
+                        productData
+                    });
+                    queueItem.status = 'failed';
+                    queueItem.error = err.message;
+                    await queueItem.save();
+                } finally {
+                    session.endSession();
+                }
+            } catch (err) {
+                logger.error('Помилка обробки черги:', {
+                    error: err.message,
+                    stack: err.stack,
+                    productData
+                });
+                queueItem.status = 'failed';
+                queueItem.error = err.message;
+                await queueItem.save();
             }
         });
-
-        // Перетворюємо числові поля в числа (якщо вони є)
-        if (productData.price) productData.price = Number(productData.price) || 0;
-        if (productData.salePrice) productData.salePrice = Number(productData.salePrice) || 0;
-        if (productData.widthCm) productData.widthCm = Number(productData.widthCm) || 0;
-        if (productData.depthCm) productData.depthCm = Number(productData.depthCm) || 0;
-        if (productData.heightCm) productData.heightCm = Number(productData.heightCm) || 0;
-        if (productData.lengthCm) productData.lengthCm = Number(productData.lengthCm) || 0;
-
-        // Перевірка унікальності slug
-        const existingProduct = await Product.findOne({ slug: productData.slug });
-        if (existingProduct) {
-            logger.warn('Продукт з таким slug уже існує:', productData.slug);
-            return res.status(400).json({ error: 'Шлях товару має бути унікальним' });
-        }
-
-        logger.info('Підготовлені дані для збереження:', productData);
-
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        try {
-            const product = new Product(productData);
-            logger.info('Зберігаємо продукт у MongoDB...');
-            await product.save({ session });
-            logger.info('Продукт успішно збережено:', product._id);
-
-            const products = await Product.find().session(session);
-            broadcast('products', products);
-
-            await session.commitTransaction();
-            res.status(201).json(product);
-        } catch (err) {
-            await session.abortTransaction();
-            logger.error('Помилка при збереженні продукту:', {
-                error: err.message,
-                stack: err.stack,
-                productData
-            });
-            throw err;
-        } finally {
-            session.endSession();
-        }
     } catch (err) {
-        logger.error('Помилка при додаванні товару:', {
+        logger.error('Помилка при додаванні товару до черги:', {
             error: err.message,
             stack: err.stack,
             productData: req.body

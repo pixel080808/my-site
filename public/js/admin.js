@@ -4700,16 +4700,23 @@ async function saveNewProduct() {
         }
 
         console.log('Відправляємо дані продукту:', JSON.stringify(product, null, 2));
-        const response = await fetchWithAuth('/api/products', {
-            method: 'POST',
-            body: JSON.stringify(product)
-        });
+const response = await fetchWithAuth('/api/products', {
+    method: 'POST',
+    body: JSON.stringify(product)
+});
 
-        const newProductData = await response.json();
-        products.push(newProductData);
-        closeModal();
-        renderAdmin('products');
-        showNotification('Товар додано!');
+if (response.status === 202) {
+    const queueData = await response.json();
+    showNotification('Продукт додано до черги. Очікуйте завершення обробки.');
+    // Очікування WebSocket-повідомлення про завершення
+    return;
+}
+
+const newProductData = await response.json();
+products.push(newProductData);
+closeModal();
+renderAdmin('products');
+showNotification('Товар додано!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
@@ -5745,15 +5752,17 @@ function connectAdminWebSocket(attempt = 1) {
             if (type === 'settings' && data) {
                 settings = { ...settings, ...data };
                 renderSettingsAdmin();
-            } else if (type === 'products') {
-                if (Array.isArray(data)) {
-                    products = data;
-                    if (document.querySelector('#products.active')) {
-                        renderAdmin('products');
-                    }
-                } else {
-                    console.warn('Некоректні дані продуктів:', data);
-                }
+} else if (type === 'products') {
+    if (Array.isArray(data)) {
+        products = data;
+        if (document.querySelector('#products.active')) {
+            renderAdmin('products');
+        }
+        showNotification('Список продуктів оновлено!'); // Додаємо сповіщення
+    } else {
+        console.warn('Некоректні дані продуктів:', data);
+    }
+}
             } else if (type === 'categories') {
                 if (Array.isArray(data)) {
                     categories = data;
