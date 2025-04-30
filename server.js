@@ -313,19 +313,19 @@ mongoose.connect(process.env.MONGO_URI)
 const productSchemaValidation = Joi.object({
     name: Joi.string().min(1).max(255).required(),
     category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).optional().allow(''),
+    subcategory: Joi.string().max(255).optional().allow('', null),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
+    salePrice: Joi.number().min(0).allow(null),
     saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
+    brand: Joi.string().max(100).optional().allow('', null),
+    material: Joi.string().max(100).optional().allow('', null),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
             value: Joi.string().required()
         })
-    ).default([]), // Додано валідацію для filters
-    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
+    ).default([]),
+    photos: Joi.array().items(Joi.string().uri().allow('', null)).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
     slug: Joi.string().min(1).max(255).required(),
@@ -345,13 +345,13 @@ const productSchemaValidation = Joi.object({
         })
     ).default([]),
     groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow(''),
+    description: Joi.string().allow('', null),
     widthCm: Joi.number().min(0).allow(null),
     depthCm: Joi.number().min(0).allow(null),
     heightCm: Joi.number().min(0).allow(null),
     lengthCm: Joi.number().min(0).allow(null),
     popularity: Joi.number().allow(null)
-});
+}).unknown(false);
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -1002,7 +1002,8 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Валідація за Joi
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -1015,44 +1016,34 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перевірка існування brand
-        if (productData.brand) {
-            const brand = await Brand.findOne({ name: productData.brand });
+        // Автоматичне створення бренду
+        if (productData.brand && productData.brand.trim()) {
+            let brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
-                logger.error('Бренд не знайдено:', productData.brand);
-                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+                brand = new Brand({ name: productData.brand });
+                await brand.save();
+                logger.info(`Створено новий бренд: ${productData.brand}`);
             }
         }
 
-        // Перевірка існування material
-        if (productData.material) {
-            const material = await Material.findOne({ name: productData.material });
+        // Автоматичне створення матеріалу
+        if (productData.material && productData.material.trim()) {
+            let material = await Material.findOne({ name: productData.material });
             if (!material) {
-                logger.error('Матеріал не знайдено:', productData.material);
-                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+                material = new Material({ name: productData.material });
+                await material.save();
+                logger.info(`Створено новий матеріал: ${productData.material}`);
             }
         }
 
-        // Перевірка існування category
+        // Перевірка існування категорії
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
         }
 
-        // Перевірка існування subcategory
-        if (productData.subcategory) {
-            const categoryWithSub = await Category.findOne({
-                name: productData.category,
-                'subcategories.slug': productData.subcategory
-            });
-            if (!categoryWithSub) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-            }
-        }
-
-        // Перевірка існування groupProducts
+        // Перевірка groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1102,7 +1093,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
             delete productData.img;
         }
-        // Мапінг img у colors
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 if (color.img && !color.photo) {
@@ -1122,7 +1112,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
@@ -1135,38 +1125,31 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перевірка існування brand
-        if (productData.brand) {
-            const brand = await Brand.findOne({ name: productData.brand });
+        // Автоматичне створення бренду
+        if (productData.brand && productData.brand.trim()) {
+            let brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
-                logger.error('Бренд не знайдено:', productData.brand);
-                return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+                brand = new Brand({ name: productData.brand });
+                await brand.save();
+                logger.info(`Створено новий бренд: ${productData.brand}`);
             }
         }
 
-        // Перевірка існування material
-        if (productData.material) {
-            const material = await Material.findOne({ name: productData.material });
+        // Автоматичне створення матеріалу
+        if (productData.material && productData.material.trim()) {
+            let material = await Material.findOne({ name: productData.material });
             if (!material) {
-                logger.error('Матеріал не знайдено:', productData.material);
-                return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+                material = new Material({ name: productData.material });
+                await material.save();
+                logger.info(`Створено новий матеріал: ${productData.material}`);
             }
         }
 
-        // Перевірка існування category
+        // Перевірка існування категорії
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
-        }
-
-        // Перевірка існування subcategory
-        if (productData.subcategory) {
-            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-            if (!subcategoryExists) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-            }
         }
 
         // Валідація groupProducts
