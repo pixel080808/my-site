@@ -982,11 +982,6 @@ const getPublicIdFromUrl = (url) => {
     }
 };
 
-Нижче наведено оновлений код для маршруту POST /api/products у файлі server.js. Замініть відповідну частину вашого коду цим фрагментом.
-
-javascript
-
-Копіювати
 app.post('/api/products', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = { ...req.body };
