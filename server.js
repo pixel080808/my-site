@@ -311,47 +311,47 @@ mongoose.connect(process.env.MONGO_URI)
     });
 
 const productSchemaValidation = Joi.object({
-    name: Joi.string().min(1).max(255).required(),
-    category: Joi.string().max(100).required(),
-    subcategory: Joi.string().max(255).optional().allow(''),
+    name: Joi.string().min(1).max(255).required().trim(),
+    category: Joi.string().max(100).required().trim(),
+    subcategory: Joi.string().max(255).optional().allow('').trim(),
     price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
     salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
     saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow(''),
-    material: Joi.string().max(100).allow(''),
+    brand: Joi.string().max(100).allow('').trim(),
+    material: Joi.string().max(100).allow('').trim(),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
             value: Joi.string().required()
         })
-    ).default([]), // Додано валідацію для filters
+    ).default([]),
     photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
-    slug: Joi.string().min(1).max(255).required(),
+    slug: Joi.string().min(1).max(255).required().trim(),
     type: Joi.string().valid('simple', 'mattresses', 'group').required(),
     sizes: Joi.array().items(
         Joi.object({
-            name: Joi.string().max(100).required(),
+            name: Joi.string().max(100).required().trim(),
             price: Joi.number().min(0).required()
         })
     ).default([]),
     colors: Joi.array().items(
         Joi.object({
-            name: Joi.string().max(100).required(),
-            value: Joi.string().max(100).required(),
+            name: Joi.string().max(100).required().trim(),
+            value: Joi.string().max(100).required().trim(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null)
         })
     ).default([]),
     groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow(''),
+    description: Joi.string().allow('').trim(),
     widthCm: Joi.number().min(0).allow(null),
     depthCm: Joi.number().min(0).allow(null),
     heightCm: Joi.number().min(0).allow(null),
     lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().allow(null)
-});
+    popularity: Joi.number().min(0).default(0)
+}).unknown(false); // Відхиляємо невідомі поля
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -987,7 +987,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = { ...req.body };
         logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
-        // Видаляємо поле id, якщо воно присутнє
+        // Видаляємо поле id та _id
         delete productData.id;
         delete productData._id;
 
@@ -1023,7 +1023,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         const existingProduct = await Product.findOne({ slug: productData.slug });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400).json({ error: 'Продукт з таким slug вже існує', field: 'slug' });
+            return res.status(400). Alonso({ error: 'Продукт з таким slug вже існує', field: 'slug' });
         }
 
         // Перевірка існування brand
@@ -1117,8 +1117,14 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         logger.error('Помилка при додаванні товару:', {
             message: err.message,
             stack: err.stack,
-            data: JSON.stringify(req.body, null, 2)
+            data: JSON.stringify(req.body, null, 2),
+            mongoError: err.code ? {
+                code: err.code,
+                keyPattern: err.keyPattern,
+                keyValue: err.keyValue
+            } : null
         });
+
         if (err.name === 'ValidationError') {
             const errors = Object.values(err.errors).map(e => ({
                 field: e.path,
@@ -1126,11 +1132,18 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }));
             return res.status(400).json({ error: 'Помилка валідації Mongoose', details: errors });
         }
+
         if (err.code === 11000) {
-            const field = Object.keys(err.keyValue)[0];
-            return res.status(400).json({ error: `Значення для поля ${field} уже існує`, field });
+            const field = Object.keys(err.keyPattern)[0];
+            const value = err.keyValue[field];
+            return res.status(400).json({
+                error: `Значення "${value}" для поля ${field} уже існує`,
+                field,
+                value
+            });
         }
-        res.status(400).json({ error: 'Невірні дані', details: err.message });
+
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
