@@ -311,46 +311,46 @@ mongoose.connect(process.env.MONGO_URI)
     });
 
 const productSchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).required(),
-    category: Joi.string().trim().min(1).required(),
-    subcategory: Joi.string().allow('').optional(),
-    price: Joi.number().positive().optional(),
-    salePrice: Joi.number().positive().allow(null).optional(),
-    saleEnd: Joi.date().allow(null).optional(),
-    brand: Joi.string().trim().allow('').optional(),
-    material: Joi.string().trim().allow('').optional(),
+    name: Joi.string().min(1).max(255).required(),
+    category: Joi.string().max(100).required(),
+    subcategory: Joi.string().max(255).optional().allow(''),
+    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
+    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
+    saleEnd: Joi.date().allow(null),
+    brand: Joi.string().max(100).allow(''),
+    material: Joi.string().max(100).allow(''),
     filters: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
             value: Joi.string().required()
         })
-    ).default([]),
-    photos: Joi.array().items(Joi.string().uri()).default([]),
+    ).default([]), // Додано валідацію для filters
+    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
-    slug: Joi.string().trim().min(1).required(),
+    slug: Joi.string().min(1).max(255).required(),
     type: Joi.string().valid('simple', 'mattresses', 'group').required(),
     sizes: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            price: Joi.number().optional()
+            name: Joi.string().max(100).required(),
+            price: Joi.number().min(0).required()
         })
     ).default([]),
     colors: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required(),
-            photo: Joi.string().uri().allow(null).optional(),
-            priceChange: Joi.number().optional()
+            name: Joi.string().max(100).required(),
+            value: Joi.string().max(100).required(),
+            priceChange: Joi.number().default(0),
+            photo: Joi.string().uri().allow('', null)
         })
     ).default([]),
     groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow('').optional(),
-    widthCm: Joi.number().allow(null).optional(),
-    depthCm: Joi.number().allow(null).optional(),
-    heightCm: Joi.number().allow(null).optional(),
-    lengthCm: Joi.number().allow(null).optional(),
-    popularity: Joi.number().optional()
+    description: Joi.string().allow(''),
+    widthCm: Joi.number().min(0).allow(null),
+    depthCm: Joi.number().min(0).allow(null),
+    heightCm: Joi.number().min(0).allow(null),
+    lengthCm: Joi.number().min(0).allow(null),
+    popularity: Joi.number().allow(null)
 });
 
 const orderSchemaValidation = Joi.object({
@@ -1002,10 +1002,10 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
+        const { error } = productSchemaValidation.validate(productData);
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
-            return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
+            return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
         // Перевірка унікальності slug
@@ -1088,7 +1088,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         }
     } catch (err) {
         logger.error('Помилка при додаванні товару:', err);
-        res.status(400).json({ error: 'Невірні дані', details: err.message || 'Перевірте формат і значення полів' });
+        res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
 });
 
