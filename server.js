@@ -3005,7 +3005,13 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
 
-        const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        let products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        // Видаляємо поле id з кожного продукту
+        products = products.map(product => {
+            const { id, _id, __v, ...cleanedProduct } = product;
+            return cleanedProduct;
+        });
+
         for (const product of products) {
             const { error } = productSchemaValidation.validate(product, { abortEarly: false });
             if (error) {

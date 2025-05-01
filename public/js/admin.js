@@ -4445,42 +4445,42 @@ function searchGroupProducts() {
     const results = document.getElementById('group-product-results');
     const filteredProducts = products.filter(p => 
         p.active && 
-        p.type === 'simple' &&  // Змінено з p.type !== 'group' на p.type === 'simple'
-        (p.name.toLowerCase().includes(query) || p.id.toString().includes(query))
+        p.type === 'simple' && 
+        (p.name.toLowerCase().includes(query) || p._id.toString().includes(query))
     );
     results.innerHTML = filteredProducts.slice(0, 5).map(p => `
         <div>
-            #${p.id} ${p.name}
-            <button onclick="addGroupProduct(${p.id})">Додати</button>
+            #${p._id} ${p.name}
+            <button onclick="addGroupProduct('${p._id}')">Додати</button>
         </div>
     `).join('');
     resetInactivityTimer();
 }
 
-    function addGroupProduct(productId) {
-        if (!newProduct.groupProducts.includes(productId)) {
-            newProduct.groupProducts.push(productId);
-            renderGroupProducts();
-            document.getElementById('group-product-search').value = '';
-            document.getElementById('group-product-results').innerHTML = '';
-            resetInactivityTimer();
-        }
+function addGroupProduct(productId) {
+    if (!newProduct.groupProducts.includes(productId)) {
+        newProduct.groupProducts.push(productId);
+        renderGroupProducts();
+        document.getElementById('group-product-search').value = '';
+        document.getElementById('group-product-results').innerHTML = '';
+        resetInactivityTimer();
     }
+}
 
-    function renderGroupProducts() {
-        const groupList = document.getElementById('group-product-list');
-        if (groupList) {
-            groupList.innerHTML = newProduct.groupProducts.map((pid, index) => {
-                const p = products.find(pr => pr.id === pid);
-                return p ? `
-                    <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                        #${p.id} ${p.name}
-                        <button class="delete-btn" onclick="deleteGroupProduct(${pid})">Видалити</button>
-                    </div>
-                ` : '';
-            }).join('');
-        }
+function renderGroupProducts() {
+    const groupList = document.getElementById('group-product-list');
+    if (groupList) {
+        groupList.innerHTML = newProduct.groupProducts.map((pid, index) => {
+            const p = products.find(pr => pr._id === pid);
+            return p ? `
+                <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
+                    #${p._id} ${p.name}
+                    <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
+                </div>
+            ` : '';
+        }).join('');
     }
+}
 
     function dragGroupProduct(event, index) {
         event.dataTransfer.setData('text/plain', index);
@@ -4521,6 +4521,10 @@ async function saveNewProduct() {
             showSection('admin-login');
             return;
         }
+
+        // Очищення newProduct від id і _id
+        delete newProduct.id;
+        delete newProduct._id;
 
         // Збір даних із форми
         const nameInput = document.getElementById('product-name');
@@ -4650,9 +4654,6 @@ async function saveNewProduct() {
             active: true,
             visible
         };
-
-        // Додаткове логування для перевірки
-        console.log('Сформований продукт перед обробкою зображень:', JSON.stringify(product, null, 2));
 
         // Обробка зображень у описі
         const mediaUrls = [];
@@ -5384,30 +5385,30 @@ async function toggleProductActive(productId, currentActive) {
     }
 }
 
-    function sortAdminProducts(sortType) {
-        const [key, order] = sortType.split('-');
-        products.sort((a, b) => {
-            let valA, valB;
-            if (key === 'id') {
-                valA = a.id;
-                valB = b.id;
-            } else if (key === 'name') {
-                valA = a.name.toLowerCase();
-                valB = b.name.toLowerCase();
-            } else if (key === 'brand') {
-                valA = (a.brand || '').toLowerCase();
-                valB = (b.brand || '').toLowerCase();
-            } else if (key === 'price') {
-                valA = a.price || (a.sizes ? Math.min(...a.sizes.map(s => s.price)) : Infinity);
-                valB = b.price || (b.sizes ? Math.min(...b.sizes.map(s => s.price)) : Infinity);
-            }
-            if (valA < valB) return order === 'asc' ? -1 : 1;
-            if (valA > valB) return order === 'asc' ? 1 : -1;
-            return 0;
-        });
-        renderAdmin('products');
-        resetInactivityTimer();
-    }
+function sortAdminProducts(sortType) {
+    const [key, order] = sortType.split('-');
+    products.sort((a, b) => {
+        let valA, valB;
+        if (key === '_id') {
+            valA = a._id;
+            valB = b._id;
+        } else if (key === 'name') {
+            valA = a.name.toLowerCase();
+            valB = b.name.toLowerCase();
+        } else if (key === 'brand') {
+            valA = (a.brand || '').toLowerCase();
+            valB = (b.brand || '').toLowerCase();
+        } else if (key === 'price') {
+            valA = a.price || (a.sizes ? Math.min(...a.sizes.map(s => s.price)) : Infinity);
+            valB = b.price || (b.sizes ? Math.min(...b.sizes.map(s => s.price)) : Infinity);
+        }
+        if (valA < valB) return order === 'asc' ? -1 : 1;
+        if (valA > valB) return order === 'asc' ? 1 : -1;
+        return 0;
+    });
+    renderAdmin('products');
+    resetInactivityTimer();
+}
 
 function sortOrders(sortType) {
     const [key, order] = sortType.split('-');
