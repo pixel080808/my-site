@@ -9,19 +9,34 @@
     <meta property="og:title" content="Меблевий магазин"/>
     <meta property="og:description" content="Якісні меблі для вашого дому за доступними цінами."/>
     <meta property="og:image" content="https://picsum.photos/1200/630"/> <!-- Замініть на реальне зображення -->
-    <meta property="og:url" content="https://yourwebsite.com"/> <!-- Замініть на ваш URL -->
+    <meta property="og:url" content="https://mebli.onrender.com"/> <!-- Оновлено URL -->
     <meta property="og:type" content="website"/>
     <title>Меблевий магазин</title>
-    <link href="css/styles.css" rel="stylesheet"/>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> <!-- Замініть G-XXXXXXXXXX на ваш ID -->
-    <script>
+    <link href="/css/styles.css" rel="stylesheet"/>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- Основний скрипт із defer -->
+    <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
+    <!-- Google Analytics асинхронно -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script type="text/javascript">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'G-XXXXXXXXXX'); // Замініть G-XXXXXXXXXX на ваш ID Google Analytics
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <!-- LZ-String із defer -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
     <style>
+.logo {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 150px;
+    height: auto; /* Змінено на auto */
+    padding-top: 33.33%; /* Співвідношення сторін 150/50 = 3, тому 33.33% */
+    cursor: pointer;
+    position: relative;
+}
 /* Попередні стилі */
 #about-text img,
 #about-text iframe {
@@ -291,6 +306,46 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* Стилі для соціальних мереж у секції Контакти */
+#socials {
+    margin-top: 20px;
+}
+
+#socials h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: #007bff;
+    font-size: 1.1em;
+    transition: color 0.2s;
+}
+
+.social-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.social-link .social-icon {
+    margin-right: 5px;
+    font-size: 1.2em;
+}
+
+@media (max-width: 600px) {
+    .social-link {
+        display: flex;
+        margin-bottom: 15px;
+        font-size: 1em;
+    }
+}
     </style>
 </head>
 <body>
@@ -399,56 +454,6 @@
             </button>
         </div>
     </div>
-<script>
-    async function loadProducts() {
-        try {
-            const response = await fetch('/api/products');
-            const products = await response.json();
-            const productList = document.getElementById('products');
-            if (productList) {
-                productList.innerHTML = products
-                    .filter(p => p.visible && p.active)
-                    .map(product => `
-                        <div class="product-item">
-                            <h3>${product.name}</h3>
-                            ${product.photos && product.photos.length > 0 ? `<img src="${product.photos[0]}" alt="${product.name}" style="max-width: 200px;">` : ''}
-                            <p class="price">
-                                ${product.salePrice ? `
-                                    <span class="sale-price">${product.salePrice} грн</span>
-                                    <s>${product.price} грн</s>
-                                ` : `
-                                    <span class="regular-price">${product.price || (product.sizes && product.sizes.length > 0 ? product.sizes[0].price : 'Н/Д')} грн</span>
-                                `}
-                            </p>
-                            <p>${product.description || ''}</p>
-                            <a href="/product/${product.slug}" onclick="showProductDetails(${product.id}); return false;">Детальніше</a>
-                        </div>
-                    `).join('');
-            }
-        } catch (err) {
-            console.error('Помилка завантаження товарів:', err);
-        }
-    }
-
-    // Завантажуємо товари при завантаженні сторінки
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.location.pathname === '/' || window.location.pathname === '/catalog') {
-            loadProducts();
-        }
-    });
-
-    // Функція для відображення деталей товару (якщо потрібно)
-    function showProductDetails(productId) {
-        // Ця функція має бути визначена у вашому script.js
-        // Вона викликається при кліку на "Детальніше"
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            showSection('product-details');
-            // Логіка відображення деталей товару
-        }
-    }
-</script>
     <!-- Підключаємо script.js -->
-    <script src="js/script.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
