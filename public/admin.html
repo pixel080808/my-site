@@ -785,45 +785,57 @@ button:hover {
         </div>
     </div>
     <!-- Товари та Замовлення залишаються без змін -->
-    <div class="admin-tab" id="products">
-        <div class="admin-section">
-            <h3>Товари</h3>
-            <div class="product-controls">
-                <button onclick="openAddProductModal()">Додати товар</button>
-                <div class="sort-menu">
-                    <button class="sort-btn">Сортування ▼</button>
-                    <div class="sort-dropdown">
-                        <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
-                        <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
-                        <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
-                        <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
-                        <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
-                        <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
-                        <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
-                        <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
-                    </div>
-                </div>
-                <div class="backup-group">
-                    <button onclick="exportPrices()">Експортувати ціни</button>
-                    <div class="import-group">
-                        <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
-                        <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
-                    </div>
+<div class="admin-tab" id="products">
+    <div class="admin-section">
+        <h3>Товари</h3>
+        <div class="product-controls">
+            <button onclick="openAddProductModal()">Додати товар</button>
+            <!-- Форма для фільтрації товарів -->
+            <form id="product-filter-form" onsubmit="event.preventDefault(); filterProducts();">
+                <select id="filter-category">
+                    <option value="">Виберіть категорію</option>
+                </select>
+                <label for="filter-category">Категорія</label>
+                <select id="filter-subcategory">
+                    <option value="">Без підкатегорії</option>
+                </select>
+                <label for="filter-subcategory">Підкатегорія</label>
+                <button type="submit">Фільтрувати</button>
+            </form>
+            <div class="sort-menu">
+                <button class="sort-btn">Сортування ▼</button>
+                <div class="sort-dropdown">
+                    <button onclick="sortAdminProducts('id-asc')">ID (зростання)</button>
+                    <button onclick="sortAdminProducts('id-desc')">ID (спадання)</button>
+                    <button onclick="sortAdminProducts('name-asc')">Назва (А-Я)</button>
+                    <button onclick="sortAdminProducts('name-desc')">Назва (Я-А)</button>
+                    <button onclick="sortAdminProducts('brand-asc')">Виробник (А-Я)</button>
+                    <button onclick="sortAdminProducts('brand-desc')">Виробник (Я-А)</button>
+                    <button onclick="sortAdminProducts('price-asc')">Ціна (зростання)</button>
+                    <button onclick="sortAdminProducts('price-desc')">Ціна (спадання)</button>
                 </div>
             </div>
-            <div class="product-admin-item" id="product-list-header">
-                <span>№</span>
-                <span>Тип</span>
-                <span>Назва</span>
-                <span>Виробник</span>
-                <span>Ціна</span>
-                <span>Акційна ціна</span>
-                <span>Статус</span>
+            <div class="backup-group">
+                <button onclick="exportPrices()">Експортувати ціни</button>
+                <div class="import-group">
+                    <input accept=".txt,.csv" id="bulk-price-file" style="display: none;" type="file"/>
+                    <button class="import-btn" onclick="document.getElementById('bulk-price-file').click()">Оновити ціни з файлу</button>
+                </div>
             </div>
-            <div id="product-list-admin"></div>
-            <div class="pagination" id="pagination"></div>
         </div>
+        <div class="product-admin-item" id="product-list-header">
+            <span>№</span>
+            <span>Тип</span>
+            <span>Назва</span>
+            <span>Виробник</span>
+            <span>Ціна</span>
+            <span>Акційна ціна</span>
+            <span>Статус</span>
+        </div>
+        <div id="product-list-admin"></div>
+        <div class="pagination" id="pagination"></div>
     </div>
+</div>
     <div class="admin-tab" id="orders">
         <div class="admin-section orders-section">
             <h3>Замовлення</h3>

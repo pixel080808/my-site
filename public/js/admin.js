@@ -4058,6 +4058,7 @@ function openAddProductModal() {
     setTimeout(() => {
         const categorySelect = document.getElementById('product-category');
         if (categorySelect) {
+            categorySelect.removeEventListener('change', updateSubcategories);
             categorySelect.addEventListener('change', updateSubcategories);
             updateSubcategories();
         } else {
@@ -4066,48 +4067,23 @@ function openAddProductModal() {
 
         const photoInput = document.getElementById('product-photo-file');
         if (photoInput) {
-            photoInput.addEventListener('change', () => {
-                const files = photoInput.files;
-                Array.from(files).forEach(file => {
-                    if (!newProduct.photos.includes(file)) {
-                        newProduct.photos.push(file);
-                    }
-                });
-                renderPhotoList();
-                resetInactivityTimer();
-            });
+            photoInput.removeEventListener('change', handlePhotoInputChange);
+            photoInput.addEventListener('change', handlePhotoInputChange);
         } else {
             console.warn('Елемент #product-photo-file не знайдено');
         }
 
         const colorPhotoInput = document.getElementById('product-color-photo-file');
         if (colorPhotoInput) {
-            colorPhotoInput.addEventListener('change', () => {
-                const file = colorPhotoInput.files[0];
-                if (file) {
-                    const name = document.getElementById('product-color-name').value;
-                    const value = document.getElementById('product-color-value').value;
-                    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-                    if (name && value) {
-                        const color = { name, value, priceChange, photo: file };
-                        newProduct.colors.push(color);
-                        document.getElementById('product-color-name').value = '';
-                        document.getElementById('product-color-value').value = '#000000';
-                        document.getElementById('product-color-price-change').value = '';
-                        document.getElementById('product-color-photo-url').value = '';
-                        document.getElementById('product-color-photo-file').value = '';
-                        renderColorsList();
-                        resetInactivityTimer();
-                    }
-                }
-            });
+            colorPhotoInput.removeEventListener('change', handleColorPhotoInputChange);
+            colorPhotoInput.addEventListener('change', handleColorPhotoInputChange);
         } else {
             console.warn('Елемент #product-color-photo-file не знайдено');
         }
 
-        // Додаємо обробники для кнопок модального вікна
         const saveButton = document.getElementById('save-product-btn');
         if (saveButton) {
+            saveButton.removeEventListener('click', saveNewProduct);
             saveButton.addEventListener('click', saveNewProduct);
         } else {
             console.warn('Кнопка #save-product-btn не знайдена');
@@ -4115,6 +4091,7 @@ function openAddProductModal() {
 
         const cancelButton = document.getElementById('cancel-product-btn');
         if (cancelButton) {
+            cancelButton.removeEventListener('click', closeModal);
             cancelButton.addEventListener('click', closeModal);
         } else {
             console.warn('Кнопка #cancel-product-btn не знайдена');
@@ -4122,6 +4099,40 @@ function openAddProductModal() {
     }, 0);
 
     resetInactivityTimer();
+}
+
+// Допоміжні функції для обробки подій
+function handlePhotoInputChange() {
+    const photoInput = document.getElementById('product-photo-file');
+    const files = photoInput.files;
+    Array.from(files).forEach(file => {
+        if (!newProduct.photos.includes(file)) {
+            newProduct.photos.push(file);
+        }
+    });
+    renderPhotoList();
+    resetInactivityTimer();
+}
+
+function handleColorPhotoInputChange() {
+    const colorPhotoInput = document.getElementById('product-color-photo-file');
+    const file = colorPhotoInput.files[0];
+    if (file) {
+        const name = document.getElementById('product-color-name').value;
+        const value = document.getElementById('product-color-value').value;
+        const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+        if (name && value) {
+            const color = { name, value, priceChange, photo: file };
+            newProduct.colors.push(color);
+            document.getElementById('product-color-name').value = '';
+            document.getElementById('product-color-value').value = '#000000';
+            document.getElementById('product-color-price-change').value = '';
+            document.getElementById('product-color-photo-url').value = '';
+            document.getElementById('product-color-photo-file').value = '';
+            renderColorsList();
+            resetInactivityTimer();
+        }
+    }
 }
 
 function updateProductType() {
@@ -4152,29 +4163,39 @@ function renderPriceFields() {
     }
 }
 
-function updateSubcategories() {
+function updateSubcategories(attempt = 0, maxAttempts = 10) {
+    const modal = document.getElementById('modal');
+    if (!modal || !modal.classList.contains('active')) {
+        console.log('Модальне вікно не відкрите, пропускаємо updateSubcategories');
+        return;
+    }
+
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено');
-        // Спробувати ще раз через 100 мс
-        setTimeout(updateSubcategories, 100);
+        if (attempt < maxAttempts) {
+            console.warn('Елементи #product-category або #product-subcategory не знайдено, спроба', attempt + 1);
+            setTimeout(() => updateSubcategories(attempt + 1, maxAttempts), 100);
+        } else {
+            console.error('Досягнуто максимальної кількості спроб для updateSubcategories');
+        }
         return;
     }
 
     const categoryName = categorySelect.value;
     console.log('Оновлення підкатегорій для categoryName:', categoryName);
     subcategorySelect.innerHTML = '<option value="">Без підкатегорії</option>';
-
-    if (!categoryName) {
-        console.log('Категорія не вибрана');
-        if (addSubcategoryBtn) {
-            addSubcategoryBtn.style.display = 'none';
-        }
-        return;
+    if (categoryName && subcategories[categoryName]) {
+        subcategories[categoryName].forEach(sub => {
+            subcategorySelect.innerHTML += `<option value="${sub.name}">${sub.name}</option>`;
+        });
+        addSubcategoryBtn.style.display = subcategories[categoryName].length ? 'inline-block' : 'none';
+    } else {
+        addSubcategoryBtn.style.display = 'none';
     }
+}
 
     const category = categories.find(c => c.name === categoryName);
     console.log('Знайдена категорія:', category);
