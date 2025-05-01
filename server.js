@@ -987,6 +987,10 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = { ...req.body };
         logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
+        // Видаляємо поле id, якщо воно присутнє
+        delete productData.id;
+        delete productData._id;
+
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
