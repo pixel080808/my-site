@@ -4168,14 +4168,13 @@ function renderPriceFields() {
     }
 }
 
-function updateSubcategories() {
+async function updateSubcategories() {
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено');
-        // Спробувати ще раз через 100 мс
+        console.warn('Елементи #product-category або #product-subcategory не знайдено, повторна спроба через 100 мс');
         setTimeout(updateSubcategories, 100);
         return;
     }
@@ -4551,7 +4550,16 @@ async function saveNewProduct() {
         const slug = slugInput.value.trim();
         const brand = brandInput ? brandInput.value.trim() : '';
         const category = categoryInput.value.trim();
-        const subcategory = subcategoryInput.value.trim();
+const subcategory = subcategoryInput.value.trim();
+let subcategorySlug = null; // Змінено з ''
+if (subcategory) {
+    const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+    if (!subcategoryObj) {
+        showNotification('Обрана підкатегорія не існує в цій категорії!');
+        return;
+    }
+    subcategorySlug = subcategoryObj.slug;
+}
         const material = materialInput ? materialInput.value.trim() : '';
         let price = null;
         let salePrice = null;
@@ -4772,16 +4780,16 @@ async function saveNewProduct() {
             }
         }
 
-        const response = await fetchWithAuth('/api/products', {
-            method: 'POST',
-            body: JSON.stringify(product)
-        });
+const response = await fetchWithAuth('/api/products', {
+    method: 'POST',
+    body: JSON.stringify(product)
+});
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Деталі помилки:', errorData);
-            throw new Error(`Помилка додавання товару: ${errorData.error || response.statusText}`);
-        }
+if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Деталі помилки:', errorData); // Лог детальної помилки
+    throw new Error(`Помилка додавання товару: ${errorData.error || errorData.message || response.statusText}`);
+}
 
         const newProductData = await response.json();
         products.push(newProductData);
@@ -5087,34 +5095,34 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        let product = {
-            type: newProduct.type,
-            name,
-            slug,
-            brand: brand || '',
-            category,
-            subcategory: subcategorySlug, // Надсилаємо slug
-            material: material || '',
-            price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice || null,
-            saleEnd: saleEnd || null,
-            description,
-            widthCm,
-            depthCm,
-            heightCm,
-            lengthCm,
-            photos: [],
-            colors: newProduct.colors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: color.photo || null
-            })),
-            sizes: newProduct.sizes,
-            groupProducts: newProduct.groupProducts,
-            active: newProduct.active,
-            visible
-        };
+let product = {
+    type: newProduct.type,
+    name,
+    slug,
+    brand: brand || '',
+    category,
+    subcategory: subcategorySlug || null,
+    material: material || '',
+    price: newProduct.type === 'simple' ? price : null,
+    salePrice: salePrice || null,
+    saleEnd: saleEnd || null,
+    description: description || '',
+    widthCm: widthCm || null,
+    depthCm: depthCm || null,
+    heightCm: heightCm || null,
+    lengthCm: lengthCm || null,
+    photos: [],
+    colors: newProduct.colors.map(color => ({
+        name: color.name,
+        value: color.value,
+        priceChange: color.priceChange || 0,
+        photo: null
+    })),
+    sizes: newProduct.sizes || [],
+    groupProducts: newProduct.groupProducts || [],
+    active: true,
+    visible
+};
 
         // Обробка зображень у описі
         const mediaUrls = [];
