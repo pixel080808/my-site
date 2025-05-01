@@ -1,12 +1,28 @@
 let activeTab = 'products';
 let newProduct = {
-    type: 'simple', 
+    name: '',
+    category: '',
+    subcategory: '',
+    slug: '',
+    price: 0,
+    salePrice: null,
+    saleEnd: null,
+    brand: '',
+    material: '',
+    filters: [],
     photos: [],
     colors: [],
     sizes: [],
     groupProducts: [],
-    active: true,
-    visible: true
+    description: '',
+    widthCm: null,
+    depthCm: null,
+    heightCm: null,
+    lengthCm: null,
+    popularity: null,
+    type: 'simple',
+    visible: true,
+    active: true
 };
 let session;
 let products = [];
