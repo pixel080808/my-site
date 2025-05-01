@@ -54,6 +54,14 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
+// Middleware для видалення поля id перед збереженням
+productSchema.pre('save', function(next) {
+    if ('id' in this) {
+        delete this.id;
+    }
+    next();
+});
+
 // Перевірка існування groupProducts
 productSchema.pre('save', async function(next) {
     try {

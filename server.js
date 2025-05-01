@@ -350,7 +350,8 @@ const productSchemaValidation = Joi.object({
     depthCm: Joi.number().min(0).allow(null),
     heightCm: Joi.number().min(0).allow(null),
     lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().min(0).default(0)
+    popularity: Joi.number().min(0).default(0),
+    id: Joi.forbidden() // Явно забороняємо поле id
 }).unknown(false); // Відхиляємо невідомі поля
 
 const orderSchemaValidation = Joi.object({
@@ -987,9 +988,10 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = { ...req.body };
         logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
-        // Видаляємо поле id та _id
+        // Видаляємо поле id, _id та будь-які інші системні поля
         delete productData.id;
         delete productData._id;
+        delete productData.__v;
 
         // Мапінг img на photos
         if (productData.img && !productData.photos) {
@@ -1023,7 +1025,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         const existingProduct = await Product.findOne({ slug: productData.slug });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
-            return res.status(400). Alonso({ error: 'Продукт з таким slug вже існує', field: 'slug' });
+            return res.status(400).json({ error: 'Продукт з таким slug вже існує', field: 'slug' });
         }
 
         // Перевірка існування brand
@@ -1092,6 +1094,12 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
 
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId.createFromHexString(id));
+        }
+
+        // Додаткова перевірка на відсутність id перед збереженням
+        if ('id' in productData) {
+            logger.warn('Поле id все ще присутнє в productData після видалення:', productData.id);
+            delete productData.id; // Повторне видалення для впевненості
         }
 
         const session = await mongoose.startSession();

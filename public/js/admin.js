@@ -4631,7 +4631,7 @@ async function saveNewProduct() {
             subcategory: subcategorySlug,
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice,
+            salePrice,
             saleEnd: saleEnd || null,
             description,
             widthCm,
@@ -4752,6 +4752,11 @@ async function saveNewProduct() {
         // Видаляємо поле id явно перед відправкою
         delete product.id;
         delete product._id;
+
+        // Додаткове логування для перевірки відсутності id
+        if ('id' in product) {
+            console.warn('Поле id все ще присутнє перед відправкою:', product.id);
+        }
 
         // Логування перед відправкою
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
