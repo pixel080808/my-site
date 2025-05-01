@@ -4195,7 +4195,6 @@ function updateSubcategories(attempt = 0, maxAttempts = 10) {
     } else {
         addSubcategoryBtn.style.display = 'none';
     }
-}
 
     const category = categories.find(c => c.name === categoryName);
     console.log('Знайдена категорія:', category);
