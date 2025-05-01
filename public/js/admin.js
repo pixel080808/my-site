@@ -4179,62 +4179,38 @@ async function updateSubcategories() {
         return;
     }
 
+    subcategorySelect.innerHTML = '<option value="">Оберіть підкатегорію</option>';
     const categoryName = categorySelect.value;
     console.log('Оновлення підкатегорій для categoryName:', categoryName);
-    subcategorySelect.innerHTML = '<option value="">Без підкатегорії</option>';
 
     if (!categoryName) {
         console.log('Категорія не вибрана');
-        if (addSubcategoryBtn) {
-            addSubcategoryBtn.style.display = 'none';
-        }
+        subcategorySelect.disabled = true;
+        if (addSubcategoryBtn) addSubcategoryBtn.disabled = true;
         return;
     }
 
-    const category = categories.find(c => c.name === categoryName);
+    const category = window.categories.find(cat => cat.name === categoryName);
     console.log('Знайдена категорія:', category);
-    if (category && Array.isArray(category.subcategories)) {
-        category.subcategories.forEach(sub => {
-            if (sub.name && sub.slug) {
+
+    if (category && category.subcategories && category.subcategories.length > 0) {
+        subcategorySelect.disabled = false;
+        category.subcategories
+            .filter(sub => sub.visible)
+            .sort((a, b) => a.order - b.order)
+            .forEach(sub => {
                 const option = document.createElement('option');
-                option.value = sub.slug;
+                option.value = sub.name;
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
-            }
-        });
+            });
+    } else {
+        subcategorySelect.disabled = true;
     }
 
     if (addSubcategoryBtn) {
-        addSubcategoryBtn.style.display = 'block';
-        addSubcategoryBtn.onclick = () => {
-            const newSubcategory = prompt('Введіть назву нової підкатегорії:');
-            if (newSubcategory && categoryName) {
-                const category = categories.find(c => c.name === categoryName);
-                if (category) {
-                    const newSub = {
-                        name: newSubcategory,
-                        slug: newSubcategory.toLowerCase().replace(/\s+/g, '-'),
-                        order: category.subcategories.length,
-                        visible: true
-                    };
-                    category.subcategories.push(newSub);
-                    saveSubcategory(category._id, newSub)
-                        .then(() => {
-                            updateSubcategories();
-                            showNotification('Підкатегорію додано!');
-                        })
-                        .catch(err => {
-                            console.error('Помилка додавання підкатегорії:', err);
-                            showNotification('Не вдалося додати підкатегорію: ' + err.message);
-                        });
-                }
-            }
-        };
-    } else {
-        console.warn('Елемент #add-subcategory-btn не знайдено');
+        addSubcategoryBtn.disabled = !category;
     }
-
-    resetInactivityTimer();
 }
 
 async function saveSubcategory(categoryId, subcategory) {
@@ -4513,7 +4489,7 @@ function searchGroupProducts() {
         resetInactivityTimer();
     }
 
-async function saveNewProduct() {
+async function saveNewProduct(event) {
     const saveButton = document.querySelector('.modal-actions button:first-child');
     if (saveButton) saveButton.disabled = true;
 
@@ -4549,17 +4525,22 @@ async function saveNewProduct() {
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim();
         const brand = brandInput ? brandInput.value.trim() : '';
-        const category = categoryInput.value.trim();
-const subcategory = subcategoryInput.value.trim();
-let subcategorySlug = null; // Змінено з ''
-if (subcategory) {
-    const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
-    if (!subcategoryObj) {
-        showNotification('Обрана підкатегорія не існує в цій категорії!');
-        return;
-    }
-    subcategorySlug = subcategoryObj.slug;
-}
+const category = categoryInput.value.trim();
+        let subcategory = null; // Змінено з ''
+        if (subcategoryInput && subcategoryInput.value.trim()) {
+            const categoryObj = window.categories.find(cat => cat.name === category);
+            if (!categoryObj) {
+                showNotification('Обрана категорія не існує!');
+                return;
+            }
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategoryInput.value.trim());
+            if (!subcategoryObj) {
+                showNotification('Обрана підкатегорія не існує в цій категорії!');
+                return;
+            }
+            subcategory = subcategoryObj.slug;
+        }
+
         const material = materialInput ? materialInput.value.trim() : '';
         let price = null;
         let salePrice = null;
