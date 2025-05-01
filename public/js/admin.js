@@ -136,7 +136,6 @@ async function loadCategories() {
         } else {
             categories = data;
             console.log('Категорії завантажено:', categories);
-            updateSubcategories();
             renderCategoriesAdmin();
         }
     } catch (e) {
@@ -4153,14 +4152,19 @@ function renderPriceFields() {
 }
 
 function updateSubcategories() {
+    const modal = document.getElementById('modal');
+    // Перевіряємо, чи модальне вікно активне
+    if (!modal || !modal.classList.contains('active')) {
+        console.log('Модальне вікно не активне, пропускаємо оновлення підкатегорій');
+        return;
+    }
+
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
 
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено');
-        // Спробувати ще раз через 100 мс
-        setTimeout(updateSubcategories, 100);
+        console.warn('Елементи #product-category або #product-subcategory не знайдено в модальному вікні');
         return;
     }
 
