@@ -2568,12 +2568,80 @@ function changeQuantity(productId, change) {
     }
 }
 
+async function handleNavigation(path) {
+    try {
+        console.log('Обробка навігації для шляху:', path);
+        const parts = path.split('/').filter(p => p);
+
+        if (!parts.length) {
+            currentCategory = null;
+            currentSubcategory = null;
+            currentProduct = null;
+            isSearchActive = false;
+            showSection('home');
+            return;
+        }
+
+        if (parts[0] === 'cart') {
+            showSection('cart');
+        } else if (parts[0] === 'contacts') {
+            showSection('contacts');
+        } else if (parts[0] === 'about') {
+            showSection('about');
+        } else if (parts[0] === 'catalog') {
+            currentCategory = null;
+            currentSubcategory = null;
+            currentProduct = null;
+            isSearchActive = false;
+            showSection('catalog');
+        } else {
+            const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
+            if (cat) {
+                currentCategory = cat.name;
+                currentSubcategory = null;
+                currentProduct = null;
+                isSearchActive = false;
+
+                if (parts[1]) {
+                    const subCat = cat.subcategories?.find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
+                    if (subCat) {
+                        currentSubcategory = subCat.name;
+                    }
+                    if (parts[2]) {
+                        const product = await fetchProductBySlug(parts[2]);
+                        if (product) {
+                            currentProduct = product;
+                            currentCategory = product.category;
+                            currentSubcategory = product.subcategory || null;
+                            showSection('product-details');
+                            return;
+                        } else {
+                            showNotification('Товар не знайдено!', 'error');
+                            showSection('home');
+                            return;
+                        }
+                    }
+                }
+                showSection('catalog');
+            } else {
+                showNotification('Сторінку не знайдено!', 'error');
+                showSection('home');
+            }
+        }
+    } catch (error) {
+        console.error('Помилка обробки навігації:', error);
+        showNotification('Помилка завантаження сторінки!', 'error');
+        showSection('home');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('Initializing application...');
+        console.log('Ініціалізація програми...');
         await initializeData();
         updateHeader();
         updateCartCount();
+
         const catalogToggle = document.getElementById('catalog-toggle');
         const catalogDropdown = document.getElementById('catalog-dropdown');
         if (catalogToggle && catalogDropdown) {
@@ -2582,53 +2650,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 catalogDropdown.classList.toggle('active');
             });
         }
-        const path = window.location.pathname.slice(1);
-        console.log('Processing path:', path);
-        if (path) {
-            const parts = path.split('/').filter(p => p);
-            if (parts[0] === 'cart') {
-                showSection('cart');
-            } else if (parts[0] === 'contacts') {
-                showSection('contacts');
-            } else if (parts[0] === 'about') {
-                showSection('about');
-            } else if (parts[0] === 'catalog') {
-                showSection('catalog');
-            } else {
-                const cat = categories.find(
-                    (c) => transliterate(c.name.replace('ь', '')) === parts[0]
-                );
-                if (cat) {
-                    currentCategory = cat.name;
-                    if (parts[1]) {
-                        const subCat = cat.subcategories?.find(
-                            (sc) =>
-                                transliterate(sc.name.replace('ь', '')) === parts[1]
-                        );
-                        if (subCat) currentSubcategory = subCat.name;
-                        if (parts[2]) {
-                            await openProduct(parts[2]); // Викликаємо openProduct з slug
-                            return;
-                        }
-                    }
-                    showSection('catalog');
-                } else {
-                    showSection('home');
-                    showNotification('Сторінку не знайдено!', 'error');
-                }
-            }
-        } else {
-            showSection('home');
-        }
+
         const searchInput = document.getElementById('search');
         if (searchInput) {
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchProducts();
             });
         }
-        console.log('Application initialized successfully');
+
+        // Обробка початкового шляху
+        const path = window.location.pathname.slice(1) || '';
+        console.log('Обробка початкового шляху:', path);
+        await handleNavigation(path);
+
+        console.log('Програма ініціалізована успішно');
     } catch (error) {
-        console.error('Error in DOMContentLoaded:', error);
+        console.error('Помилка в DOMContentLoaded:', error);
         showNotification('Помилка ініціалізації сторінки!', 'error');
+    }
+});
+
+window.addEventListener('popstate', async (event) => {
+    try {
+        console.log('Подія popstate:', window.location.pathname);
+        const path = window.location.pathname.slice(1) || '';
+        await handleNavigation(path);
+    } catch (error) {
+        console.error('Помилка в обробнику popstate:', error);
+        showNotification('Помилка навігації!', 'error');
+        showSection('home');
     }
 });
