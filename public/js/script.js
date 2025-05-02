@@ -330,28 +330,30 @@ function connectPublicWebSocket() {
         });
     };
 
-    ws.onmessage = (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            if (!message.type || !('data' in message)) {
-                throw new Error('Некоректний формат повідомлення WebSocket');
-            }
-            const { type, data } = message;
-            console.log('Отримано повідомлення WebSocket:', { type, data });
+ws.onmessage = (event) => {
+    try {
+        const message = JSON.parse(event.data);
+        if (!message.type || !('data' in message)) {
+            throw new Error('Некоректний формат повідомлення WebSocket');
+        }
+        const { type, data } = message;
+        console.log('WebSocket message received:', { type, dataLength: data.length, data: data });
 
-            switch (type) {
-                case 'products':
-                    products = data;
-                    updateCartPrices();
-                    if (document.getElementById('catalog').classList.contains('active')) {
-                        renderCatalog(currentCategory, currentSubcategory, currentProduct);
-                    } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-                        currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
-                        renderProductDetails();
-                    } else if (document.getElementById('cart').classList.contains('active')) {
-                        renderCart();
-                    }
-                    break;
+        switch (type) {
+            case 'products':
+                console.log('Updating products:', data.map(p => ({ id: p.id, name: p.name, slug: p.slug })));
+                products = data;
+                updateCartPrices();
+                if (document.getElementById('catalog').classList.contains('active')) {
+                    renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
+                    currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
+                    console.log('Updated currentProduct:', currentProduct?.name, currentProduct?.slug);
+                    renderProductDetails();
+                } else if (document.getElementById('cart').classList.contains('active')) {
+                    renderCart();
+                }
+                break;
                 case 'categories':
                     categories = data;
                     renderCategories();
@@ -583,6 +585,7 @@ function showSection(sectionId) {
         }
         saveToStorage('currentCategory', currentCategory);
         saveToStorage('currentSubcategory', currentSubcategory);
+        // Не зберігаємо currentProduct
         history.pushState({ sectionId }, '', newPath);
         updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
         renderBreadcrumbs();
@@ -1290,7 +1293,12 @@ function renderProducts(filtered) {
 
 function renderProductDetails() {
     const productDetails = document.getElementById('product-details');
-    if (!productDetails || !currentProduct) return;
+    if (!productDetails || !currentProduct) {
+        console.error('Product details element or currentProduct missing:', { productDetails, currentProduct });
+        return;
+    }
+
+    console.log('Rendering product details for:', currentProduct.name, 'Slug:', currentProduct.slug, 'ID:', currentProduct.id);
 
     try {
         document.querySelectorAll('.sale-timer').forEach(timer => {
@@ -1609,7 +1617,7 @@ function renderProductDetails() {
             }
         }
         renderBreadcrumbs();
-    } catch (error) {
+        } catch (error) {
         console.error('Помилка в renderProductDetails:', error.message, error.stack);
         showNotification('Помилка при відображенні товару!', 'error');
         showSection('home');
@@ -1875,15 +1883,27 @@ async function addToCartWithColor(productId) {
         }
 
 function openProduct(productId) {
+    console.log('Opening product with ID:', productId);
     const product = products.find(p => p.id === productId);
     if (!product) {
+        console.error('Product not found for ID:', productId);
         showNotification('Товар не знайдено!', 'error');
         return;
     }
+    console.log('Found product:', product.name, 'Slug:', product.slug, 'ID:', product.id);
 
-    // Перевіряємо, чи категорія та підкатегорія все ще існують
+    // Перевірка дублікатів slug
+    const duplicateSlug = products.filter(p => p.slug === product.slug);
+    if (duplicateSlug.length > 1) {
+        console.warn('Duplicate slugs found:', product.slug, duplicateSlug);
+        showNotification('Помилка: кілька товарів мають однаковий slug!', 'error');
+        return;
+    }
+
+    // Перевірка категорії та підкатегорії
     const categoryExists = categories.some(cat => cat.name === product.category);
     if (!categoryExists) {
+        console.error('Category does not exist:', product.category);
         showNotification('Категорія товару більше не існує!', 'error');
         showSection('home');
         return;
@@ -1891,12 +1911,13 @@ function openProduct(productId) {
 
     const subCategoryExists = product.subcategory ? categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : true;
     if (!subCategoryExists) {
+        console.error('Subcategory does not exist:', product.subcategory);
         showNotification('Підкатегорія товару більше не існує!', 'error');
         showSection('home');
         return;
     }
 
-    // Перевіряємо, чи цей товар є частиною групового товару
+    // Перевірка групового товару
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(productId));
     if (groupProduct && currentProduct?.type === 'group') {
         parentGroupProduct = currentProduct;
@@ -1912,6 +1933,7 @@ function openProduct(productId) {
     isSearchActive = false;
     searchResults = [];
     baseSearchResults = [];
+    console.log('Set currentProduct:', currentProduct.name, 'Slug:', currentProduct.slug);
     showSection('product-details');
 }
 
@@ -2526,7 +2548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSection('cart');
             } else if (parts[0] === 'contacts') {
                 showSection('contacts');
-            } else if (parts[0] === 'about') { // Виправлено: parts[0] замість parts(")
+            } else if (parts[0] === 'about') {
                 showSection('about');
             } else if (parts[0] === 'catalog') {
                 showSection('catalog');
@@ -2543,9 +2565,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         );
                         if (subCat) currentSubcategory = subCat.name;
                         if (parts[2]) {
-                            currentProduct = products.find(
+                            const matchingProducts = products.filter(
                                 (p) => p.slug === parts[2]
                             );
+                            if (matchingProducts.length > 1) {
+                                console.warn('Знайдено кілька товарів з slug:', parts[2], matchingProducts);
+                                showNotification('Помилка: кілька товарів мають однаковий slug!', 'error');
+                                showSection('home');
+                                return;
+                            }
+                            currentProduct = matchingProducts[0];
                             if (currentProduct) {
                                 showSection('product-details');
                                 return;
