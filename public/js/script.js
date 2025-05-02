@@ -474,7 +474,8 @@ async function initializeData() {
     await new Promise(resolve => {
         let receivedData = false;
         const checkInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
+            if (ws.readyState === WebSocket.OPEN && products.length > 0 && categories.length > 0) {
+                console.log('Дані отримано через WebSocket:', { products: products.length, categories: categories.length });
                 receivedData = true;
                 clearInterval(checkInterval);
                 resolve();
@@ -485,13 +486,19 @@ async function initializeData() {
             if (!receivedData) {
                 console.warn('Дані від WebSocket не отримано, використовуємо HTTP');
                 await fetchPublicData();
+                if (products.length === 0 || categories.length === 0) {
+                    console.error('Дані не завантажено через HTTP:', { products: products.length, categories: categories.length });
+                    showNotification('Не вдалося завантажити дані з сервера!', 'error');
+                } else {
+                    console.log('Дані отримано через HTTP:', { products: products.length, categories: categories.length });
+                }
                 updateHeader();
                 renderCategories();
                 renderCatalogDropdown();
                 clearInterval(checkInterval);
                 resolve();
             }
-        }, 5000);
+        }, 10000); // Збільшено таймаут до 10 секунд
     });
 }
 
@@ -585,8 +592,9 @@ function showSection(sectionId) {
         }
         saveToStorage('currentCategory', currentCategory);
         saveToStorage('currentSubcategory', currentSubcategory);
-        // Не зберігаємо currentProduct
-        history.pushState({ sectionId }, '', newPath);
+        // Додаємо унікальний ідентифікатор стану
+        const stateId = `${sectionId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        history.pushState({ sectionId, path: newPath, stateId }, '', newPath);
         updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
         renderBreadcrumbs();
         window.scrollTo(0, 0);
@@ -1885,19 +1893,36 @@ async function addToCartWithColor(productId) {
 
 async function fetchProductBySlug(slug) {
     try {
+        console.log('Запит продукту за slug:', slug);
         const response = await fetchWithRetry(`${BASE_URL}/api/public/products?slug=${slug}`);
         if (!response) {
+            console.error('Відповідь від сервера відсутня для slug:', slug);
             throw new Error('Не вдалося отримати відповідь від сервера');
         }
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType.includes('application/json')) {
+            console.error('Сервер повернув не JSON:', contentType);
+            throw new Error('Некоректний формат відповіді сервера');
+        }
         const data = await response.json();
-        if (!data.products || data.products.length === 0) {
+        console.log('Відповідь сервера:', data);
+
+        let product = null;
+        if (Array.isArray(data)) {
+            product = data.find(p => p.slug === slug) || null;
+        } else if (data.products && Array.isArray(data.products)) {
+            product = data.products.find(p => p.slug === slug) || null;
+        } else if (data.slug === slug) {
+            product = data;
+        }
+
+        if (!product) {
             console.error('Продукт із slug не знайдено:', slug);
             return null;
         }
-        if (data.products.length > 1) {
-            console.warn('Знайдено кілька продуктів із slug:', slug, data.products);
-        }
-        return data.products[0];
+
+        console.log('Знайдено продукт:', product.name, 'ID:', product.id);
+        return product;
     } catch (error) {
         console.error('Помилка отримання продукту за slug:', error);
         showNotification('Не вдалося завантажити товар!', 'error');
@@ -2568,10 +2593,16 @@ function changeQuantity(productId, change) {
     }
 }
 
-async function handleNavigation(path) {
+async function handleNavigation(path, isPopstate = false) {
     try {
-        console.log('Обробка навігації для шляху:', path);
+        console.log('Обробка навігації для шляху:', path, 'isPopstate:', isPopstate);
         const parts = path.split('/').filter(p => p);
+
+        // Чекаємо завершення ініціалізації, якщо дані ще не завантажені
+        if (!categories.length || !products.length) {
+            console.warn('Дані ще не завантажені, чекаємо ініціалізації...');
+            await initializeData();
+        }
 
         if (!parts.length) {
             currentCategory = null;
@@ -2616,6 +2647,7 @@ async function handleNavigation(path) {
                             showSection('product-details');
                             return;
                         } else {
+                            console.error('Продукт не знайдено для slug:', parts[2]);
                             showNotification('Товар не знайдено!', 'error');
                             showSection('home');
                             return;
@@ -2624,6 +2656,7 @@ async function handleNavigation(path) {
                 }
                 showSection('catalog');
             } else {
+                console.error('Категорія не знайдена для slug:', parts[0]);
                 showNotification('Сторінку не знайдено!', 'error');
                 showSection('home');
             }
@@ -2672,9 +2705,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 window.addEventListener('popstate', async (event) => {
     try {
-        console.log('Подія popstate:', window.location.pathname);
+        console.log('Подія popstate:', window.location.pathname, 'state:', event.state);
         const path = window.location.pathname.slice(1) || '';
-        await handleNavigation(path);
+        await handleNavigation(path, true);
     } catch (error) {
         console.error('Помилка в обробнику popstate:', error);
         showNotification('Помилка навігації!', 'error');
