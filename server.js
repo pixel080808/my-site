@@ -1102,6 +1102,18 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             delete productData.id; // Повторне видалення для впевненості
         }
 
+        // Фіксація проблеми з фото: оновлюємо перше фото продукту, якщо воно відсутнє
+        if (!productData.photos || productData.photos.length === 0) {
+            const firstProduct = await Product.findOne().sort({ _id: 1 });
+            if (firstProduct && firstProduct.photos && firstProduct.photos.length > 0) {
+                productData.photos = [firstProduct.photos[0]];
+                logger.warn('Додано перше фото з іншого продукту:', productData.photos[0]);
+            } else {
+                logger.error('Немає доступних фото для додавання');
+                return res.status(400).json({ error: 'Немає доступних фото для продукту' });
+            }
+        }
+
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
