@@ -2541,7 +2541,7 @@ function renderSlideshow() {
 function openGallery(productId, index = 0) {
     const product = products.find(p => p.id === productId);
     if (!product || !product.photos || product.photos.length === 0) return;
-    currentGalleryImages = [...product.photos]; // Створюємо копію масиву фотографій
+    currentGalleryImages = [...product.photos]; // Прив'язуємо масив фотографій до поточного товару
     currentGalleryIndex = Math.max(0, Math.min(index, product.photos.length - 1));
     const modal = document.getElementById('gallery-modal');
     const img = document.getElementById('gallery-image');
