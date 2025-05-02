@@ -527,6 +527,8 @@ async function updateProducts() {
     }
 }
 
+
+
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
@@ -592,7 +594,6 @@ function showSection(sectionId) {
         }
         saveToStorage('currentCategory', currentCategory);
         saveToStorage('currentSubcategory', currentSubcategory);
-        // Додаємо унікальний ідентифікатор стану
         const stateId = `${sectionId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         history.pushState({ sectionId, path: newPath, stateId }, '', newPath);
         updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
@@ -1838,7 +1839,7 @@ async function addToCartWithColor(productId) {
         color: colorName || 'Не вказано',
         price, 
         quantity, 
-        photo: product.photos?.[0] || NO_IMAGE_URL
+        photo: product.photos?.[0] || NO_IMAGE_URL // Використовуємо перше фото продукту
     };
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
     if (existingItemIndex > -1) cart[existingItemIndex].quantity += cartItem.quantity;
@@ -2540,8 +2541,8 @@ function renderSlideshow() {
 function openGallery(productId, index = 0) {
     const product = products.find(p => p.id === productId);
     if (!product || !product.photos || product.photos.length === 0) return;
-    currentGalleryImages = product.photos;
-    currentGalleryIndex = index;
+    currentGalleryImages = [...product.photos]; // Створюємо копію масиву фотографій
+    currentGalleryIndex = Math.max(0, Math.min(index, product.photos.length - 1));
     const modal = document.getElementById('gallery-modal');
     const img = document.getElementById('gallery-image');
     if (modal && img) {
