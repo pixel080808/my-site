@@ -153,7 +153,7 @@ async function saveCartToServer() {
 
     // Фільтруємо некоректні елементи кошика
     const filteredCartItems = cartItems.filter(item => {
-        const isValid = item && typeof item.id !== 'undefined' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        const isValid = item && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
             console.warn('Елемент кошика видалено через некоректні дані:', item);
         }
@@ -185,6 +185,8 @@ async function saveCartToServer() {
             throw new Error(`Помилка сервера: ${response.status}`);
         }
         console.log('Кошик успішно збережено на сервері');
+        cart = filteredCartItems; // Синхронізуємо локальний кошик із відфільтрованим
+        saveToStorage('cart', cart); // Зберігаємо оновлений кошик локально
     } catch (error) {
         console.error('Помилка збереження кошика:', error);
         throw error;
@@ -1391,7 +1393,7 @@ function renderProductDetails() {
         mainImg.className = 'main-product-image';
         mainImg.alt = product.name;
         mainImg.loading = 'lazy';
-        mainImg.onclick = () => openGallery(product.id);
+        mainImg.onclick = () => openGallery(product.slug);
         leftDiv.appendChild(mainImg);
 
         const thumbnailContainer = document.createElement('div');
@@ -1402,7 +1404,7 @@ function renderProductDetails() {
             thumbImg.className = 'thumbnail';
             thumbImg.alt = `Мініатюра ${index + 1}`;
             thumbImg.loading = 'lazy';
-            thumbImg.onclick = () => { mainImg.src = photo; openGallery(product.id, index); };
+            thumbImg.onclick = () => { mainImg.src = photo; openGallery(product.slug, index); };
             thumbnailContainer.appendChild(thumbImg);
         });
         leftDiv.appendChild(thumbnailContainer);
@@ -1576,7 +1578,7 @@ function renderProductDetails() {
                 const img = document.createElement('img');
                 img.src = p.photos?.[0] || NO_IMAGE_URL;
                 img.alt = p.name;
-                img.onclick = () => openProduct(p.slug); // Використовуємо slug
+                img.onclick = () => openProduct(p.slug);
                 label.appendChild(img);
 
                 const infoDiv = document.createElement('div');
@@ -1584,7 +1586,7 @@ function renderProductDetails() {
 
                 const h4 = document.createElement('h4');
                 h4.textContent = p.name;
-                h4.onclick = () => openProduct(p.slug); // Використовуємо slug
+                h4.onclick = () => openProduct(p.slug);
                 infoDiv.appendChild(h4);
 
                 const priceDiv = document.createElement('div');
@@ -2581,13 +2583,13 @@ function renderSlideshow() {
             }, settings.slideInterval || 3000);
         }
 
-function openGallery(productId, index = 0) {
-    const product = products.find(p => p.id === productId);
+function openGallery(productSlug, index = 0) {
+    const product = products.find(p => p.slug === productSlug);
     if (!product || !product.photos || product.photos.length === 0) {
-        console.error('Товар або фотографії не знайдено:', { productId, product });
+        console.error('Товар або фотографії не знайдено:', { productSlug, product });
         return;
     }
-    console.log('Відкриття галереї для товару:', product.name, 'ID:', product.id, 'Фотографії:', product.photos);
+    console.log('Відкриття галереї для товару:', product.name, 'Slug:', product.slug, 'Фотографії:', product.photos);
     currentGalleryImages = []; // Очищаємо масив перед заповненням
     currentGalleryImages = [...product.photos]; // Заповнюємо новими фотографіями
     console.log('currentGalleryImages:', currentGalleryImages);
