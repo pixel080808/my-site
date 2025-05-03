@@ -56,12 +56,22 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Автоматичне створення унікального id
+// Автоматичне створення унікального id з використанням лічильника
+const counterSchema = new mongoose.Schema({
+    _id: { type: String, required: true },
+    seq: { type: Number, default: 0 }
+});
+const Counter = mongoose.model('Counter', counterSchema);
+
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
-            const lastProduct = await mongoose.models.Product.findOne().sort({ id: -1 });
-            this.id = lastProduct && lastProduct.id ? lastProduct.id + 1 : 1;
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'productId' },
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true }
+            );
+            this.id = counter.seq;
         }
         next();
     } catch (err) {
@@ -88,7 +98,7 @@ productSchema.pre('save', async function(next) {
 productSchema.pre('save', function(next) {
     if (this.description) {
         this.description = sanitizeHtml(this.description, {
-            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
+            allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li', 'br'],
             allowedAttributes: { 'a': ['href'] }
         });
     }

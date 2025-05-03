@@ -21,19 +21,22 @@ const cartSchema = new mongoose.Schema({
                 }
             },
             color: {
-                name: { type: String },
-                value: { type: String },
-                priceChange: { type: Number, default: 0 },
-                photo: { // Додано поле photo
-                    type: String,
-                    default: '',
-                    validate: {
-                        validator: function(v) {
-                            return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-                        },
-                        message: 'Color photo must be a valid URL or empty string'
+                type: {
+                    name: { type: String },
+                    value: { type: String },
+                    priceChange: { type: Number, default: 0 },
+                    photo: {
+                        type: String,
+                        default: '',
+                        validate: {
+                            validator: function(v) {
+                                return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                            },
+                            message: 'Color photo must be a valid URL or empty string'
+                        }
                     }
-                }
+                },
+                default: null // Додано default: null для відповідності Joi
             }
         }
     ],
@@ -46,8 +49,8 @@ cartSchema.pre('save', function(next) {
     next();
 });
 
-// Індекс для updatedAt
-cartSchema.index({ updatedAt: 1 });
+// TTL-індекс для видалення кошиків, старших за 30 днів
+cartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 const Cart = mongoose.model('Cart', cartSchema);
 
@@ -60,11 +63,11 @@ const cartSchemaValidation = Joi.array().items(
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
         color: Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required(),
+            name: Joi.string().allow('').optional(),
+            value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional()
-        }).optional()
+        }).allow(null).optional()
     })
 );
 

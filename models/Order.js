@@ -2,7 +2,16 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
-    cartId: { type: String, default: '' }, // Додано поле cartId
+    cartId: {
+        type: String,
+        default: '',
+        validate: {
+            validator: function(v) {
+                return v === '' || /^cart-[a-zA-Z0-9]{9}$/.test(v);
+            },
+            message: 'cartId must be in format cart-xxxxxxxxx (9 alphanumeric characters) or empty string'
+        }
+    },
     date: { type: Date, default: Date.now },
     customer: {
         type: {
@@ -58,8 +67,6 @@ const orderSchema = new mongoose.Schema({
         type: String, 
         default: 'Нове замовлення',
         enum: ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано']
-        // У server.js потрібно додати в orderSchemaValidation:
-        // status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
     }
 }, { timestamps: true });
 
