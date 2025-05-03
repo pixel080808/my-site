@@ -103,10 +103,27 @@ async function loadCartFromServer() {
             throw new Error('Сервер повернув не JSON: ' + contentType);
         }
         cart = await response.json() || [];
+        // Перевіряємо коректність даних кошика
+        cart = cart.filter(item => {
+            const isValid = item && typeof item.id !== 'undefined' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            if (!isValid) {
+                console.warn('Елемент кошика видалено через некоректні дані:', item);
+            }
+            return isValid;
+        });
         saveToStorage('cart', cart); // Синхронізуємо локальний кошик із сервером
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
         cart = loadFromStorage('cart', []);
+        // Додаткова перевірка для очищення пошкоджених даних
+        cart = cart.filter(item => {
+            const isValid = item && typeof item.id !== 'undefined' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            if (!isValid) {
+                console.warn('Елемент кошика видалено через некоректні дані:', item);
+            }
+            return isValid;
+        });
+        saveToStorage('cart', cart);
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
     }
 }
@@ -121,22 +138,22 @@ async function saveCartToServer() {
     const cartData = localStorage.getItem('cart');
     if (cartData) {
         try {
-            cartItems = JSON.parse(cartData);
+            cartItems = JSON.parse(LZString.decompressFromUTF16(cartData));
             if (!Array.isArray(cartItems)) {
                 console.warn('Кошик у localStorage не є масивом, очищаємо його');
                 cartItems = [];
-                localStorage.setItem('cart', JSON.stringify(cartItems));
+                saveToStorage('cart', cartItems);
             }
         } catch (error) {
             console.error('Помилка парсингу кошика з localStorage:', error);
             cartItems = [];
-            localStorage.setItem('cart', JSON.stringify(cartItems));
+            saveToStorage('cart', cartItems);
         }
     }
 
     // Фільтруємо некоректні елементи кошика
     const filteredCartItems = cartItems.filter(item => {
-        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        const isValid = item && typeof item.id !== 'undefined' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
             console.warn('Елемент кошика видалено через некоректні дані:', item);
         }
@@ -343,27 +360,31 @@ function connectPublicWebSocket() {
                 // Очищаємо старий масив продуктів
                 products = [];
                 
-                // Видаляємо дублікати за id, зберігаючи останній екземпляр
+                // Видаляємо дублікати за slug, зберігаючи останній екземпляр
                 const uniqueProducts = [];
-                const seenIds = new Set();
+                const seenSlugs = new Set();
                 
                 for (const product of data) {
-                    if (!seenIds.has(product.id)) {
+                    if (!product.slug) {
+                        console.warn('Продукт без slug проігноровано:', product);
+                        continue;
+                    }
+                    if (!seenSlugs.has(product.slug)) {
                         uniqueProducts.push(product);
-                        seenIds.add(product.id);
+                        seenSlugs.add(product.slug);
                     } else {
-                        console.warn(`Дубльований товар з id ${product.id} проігноровано:`, product);
+                        console.warn(`Дубльований товар з slug ${product.slug} проігноровано:`, product);
                     }
                 }
 
-                // Перевірка дублікатів id після фільтрації
-                const idCounts = uniqueProducts.reduce((acc, p) => {
-                    acc[p.id] = (acc[p.id] || 0) + 1;
+                // Перевірка дублікатів slug після фільтрації
+                const slugCounts = uniqueProducts.reduce((acc, p) => {
+                    acc[p.slug] = (acc[p.slug] || 0) + 1;
                     return acc;
                 }, {});
-                const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
+                const duplicates = Object.entries(slugCounts).filter(([slug, count]) => count > 1);
                 if (duplicates.length > 0) {
-                    console.error('Знайдено товари з однаковими id після фільтрації:', duplicates);
+                    console.error('Знайдено товари з однаковими slug після фільтрації:', duplicates);
                     showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
                     return;
                 }
@@ -375,7 +396,7 @@ function connectPublicWebSocket() {
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-                    currentProduct = products.find(p => p.id === currentProduct.id) || currentProduct;
+                    currentProduct = products.find(p => p.slug === currentProduct.slug) || currentProduct;
                     console.log('Updated currentProduct:', currentProduct?.name, currentProduct?.slug);
                     renderProductDetails();
                 } else if (document.getElementById('cart').classList.contains('active')) {
