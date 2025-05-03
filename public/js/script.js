@@ -324,7 +324,7 @@ function connectPublicWebSocket() {
 
     ws.onopen = () => {
         console.log('Публічний WebSocket підключено');
-        reconnectAttempts = 0; // Скидаємо лічильник при успішному підключенні
+        reconnectAttempts = 0;
         ['products', 'categories', 'settings', 'slides'].forEach(type => {
             ws.send(JSON.stringify({ type, action: 'subscribe' }));
         });
@@ -340,17 +340,37 @@ function connectPublicWebSocket() {
             console.log('WebSocket message received:', { type, dataLength: data.length });
 
             if (type === 'products') {
-                // Перевірка дублікатів id
-                const idCounts = data.reduce((acc, p) => {
+                // Очищаємо старий масив продуктів
+                products = [];
+                
+                // Видаляємо дублікати за id, зберігаючи останній екземпляр
+                const uniqueProducts = [];
+                const seenIds = new Set();
+                
+                for (const product of data) {
+                    if (!seenIds.has(product.id)) {
+                        uniqueProducts.push(product);
+                        seenIds.add(product.id);
+                    } else {
+                        console.warn(`Дубльований товар з id ${product.id} проігноровано:`, product);
+                    }
+                }
+
+                // Перевірка дублікатів id після фільтрації
+                const idCounts = uniqueProducts.reduce((acc, p) => {
                     acc[p.id] = (acc[p.id] || 0) + 1;
                     return acc;
                 }, {});
                 const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
                 if (duplicates.length > 0) {
-                    console.error('Знайдено товари з однаковими id:', duplicates);
+                    console.error('Знайдено товари з однаковими id після фільтрації:', duplicates);
                     showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
+                    return;
                 }
-                products = data;
+
+                products = uniqueProducts;
+                console.log('Оновлено продукти:', products.length, 'елементів');
+
                 updateCartPrices();
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
@@ -378,11 +398,9 @@ function connectPublicWebSocket() {
                     showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                 };
                 updateHeader();
-                // Завжди викликаємо ці функції, щоб оновити DOM незалежно від активної секції
-                renderContacts(); // Оновлюємо контакти та соціальні мережі
-                renderAbout();    // Оновлюємо секцію "Про нас"
-                renderSlideshow(); // Оновлюємо слайдшоу
-                // Оновлюємо favicon
+                renderContacts();
+                renderAbout();
+                renderSlideshow();
                 const oldFavicon = document.querySelector('link[rel="icon"]');
                 if (oldFavicon) oldFavicon.remove();
                 const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
