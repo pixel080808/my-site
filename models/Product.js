@@ -1,11 +1,13 @@
+const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
 
 const productSchema = new mongoose.Schema({
+    id: { type: Number, unique: true, sparse: true },
     name: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
     subcategory: { type: String, trim: true },
-    price: { type: Number, min: 0 }, // Додано min для уникнення від’ємних цін
+    price: { type: Number, min: 0 },
     salePrice: { type: Number, min: 0 },
     saleEnd: { type: Date },
     brand: { type: String, trim: true },
@@ -25,8 +27,8 @@ const productSchema = new mongoose.Schema({
     }],
     visible: { type: Boolean, default: true },
     active: { type: Boolean, default: true },
-    slug: { type: String, required: true, unique: true, trim: true }, // Додано required
-    type: { type: String, required: true, enum: ['simple', 'mattresses', 'group'] }, // Додано required
+    slug: { type: String, required: true, unique: true, trim: true },
+    type: { type: String, required: true, enum: ['simple', 'mattresses', 'group'] },
     sizes: [{
         name: { type: String, required: true },
         price: { type: Number, required: true, min: 0 }
@@ -54,15 +56,20 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Middleware для видалення поля id перед збереженням
-productSchema.pre('save', function(next) {
-    if ('id' in this) {
-        delete this.id;
+// Автоматичне створення унікального id
+productSchema.pre('save', async function(next) {
+    try {
+        if (!this.id) {
+            const lastProduct = await mongoose.models.Product.findOne().sort({ id: -1 });
+            this.id = lastProduct && lastProduct.id ? lastProduct.id + 1 : 1;
+        }
+        next();
+    } catch (err) {
+        next(err);
     }
-    next();
 });
 
-// Перевірка існування groupProducts
+// Перевірка groupProducts
 productSchema.pre('save', async function(next) {
     try {
         if (this.groupProducts && this.groupProducts.length > 0) {
@@ -77,11 +84,13 @@ productSchema.pre('save', async function(next) {
     }
 });
 
-// Захист від XSS у description
+// Очищення description від XSS
 productSchema.pre('save', function(next) {
-    // Видаляємо системні поля, які можуть викликати конфлікти
-    if ('id' in this) {
-        delete this.id;
+    if (this.description) {
+        this.description = sanitizeHtml(this.description, {
+            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
+            allowedAttributes: { 'a': ['href'] }
+        });
     }
     if ('_id' in this && !mongoose.Types.ObjectId.isValid(this._id)) {
         delete this._id;
@@ -96,5 +105,56 @@ productSchema.pre('save', function(next) {
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
 productSchema.index({ slug: 1 }, { unique: true });
+productSchema.index({ id: 1 }, { unique: true, sparse: true });
 
-module.exports = mongoose.model('Product', productSchema);
+const Product = mongoose.model('Product', productSchema);
+
+// Joi-валідація для продуктів
+const productSchemaValidation = Joi.object({
+    name: Joi.string().required().trim(),
+    category: Joi.string().required().trim(),
+    subcategory: Joi.string().trim().optional(),
+    price: Joi.number().min(0).required(),
+    salePrice: Joi.number().min(0).optional(),
+    saleEnd: Joi.date().optional(),
+    brand: Joi.string().trim().optional(),
+    material: Joi.string().trim().optional(),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required()
+        })
+    ).optional(),
+    photos: Joi.array().items(
+        Joi.string().uri().allow('').optional()
+    ).optional(),
+    visible: Joi.boolean().default(true),
+    active: Joi.boolean().default(true),
+    slug: Joi.string().required().trim(),
+    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
+    sizes: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            price: Joi.number().min(0).required()
+        })
+    ).optional(),
+    colors: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required(),
+            photo: Joi.string().uri().allow('').optional(),
+            priceChange: Joi.number().default(0)
+        })
+    ).optional(),
+    groupProducts: Joi.array().items(
+        Joi.string().regex(/^[0-9a-fA-F]{24}$/)
+    ).optional(),
+    description: Joi.string().trim().optional(),
+    widthCm: Joi.number().min(0).optional(),
+    depthCm: Joi.number().min(0).optional(),
+    heightCm: Joi.number().min(0).optional(),
+    lengthCm: Joi.number().min(0).optional(),
+    popularity: Joi.number().min(0).default(0)
+});
+
+module.exports = { Product, productSchemaValidation };
