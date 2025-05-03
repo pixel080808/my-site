@@ -337,13 +337,21 @@ ws.onmessage = (event) => {
             throw new Error('Некоректний формат повідомлення WebSocket');
         }
         const { type, data } = message;
-        console.log('WebSocket message received:', { type, dataLength: data.length, data: data });
+        console.log('WebSocket message received:', { type, dataLength: data.length });
 
-        switch (type) {
-            case 'products':
-                console.log('Updating products:', data.map(p => ({ id: p.id, name: p.name, slug: p.slug })));
-                products = data;
-                updateCartPrices();
+        if (type === 'products') {
+            // Перевірка дублікатів id
+            const idCounts = data.reduce((acc, p) => {
+                acc[p.id] = (acc[p.id] || 0) + 1;
+                return acc;
+            }, {});
+            const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
+            if (duplicates.length > 0) {
+                console.error('Знайдено товари з однаковими id:', duplicates);
+                showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
+            }
+            products = data;
+            updateCartPrices();
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
@@ -2540,16 +2548,24 @@ function renderSlideshow() {
 
 function openGallery(productId, index = 0) {
     const product = products.find(p => p.id === productId);
-    if (!product || !product.photos || product.photos.length === 0) return;
+    if (!product || !product.photos || product.photos.length === 0) {
+        console.error('Товар або фотографії не знайдено:', { productId, product });
+        return;
+    }
+    console.log('Відкриття галереї для товару:', product.name, 'ID:', product.id, 'Фотографії:', product.photos);
     currentGalleryImages = []; // Очищаємо масив перед заповненням
     currentGalleryImages = [...product.photos]; // Заповнюємо новими фотографіями
+    console.log('currentGalleryImages:', currentGalleryImages);
     currentGalleryIndex = Math.max(0, Math.min(index, product.photos.length - 1));
     const modal = document.getElementById('gallery-modal');
     const img = document.getElementById('gallery-image');
     if (modal && img) {
         img.src = currentGalleryImages[currentGalleryIndex];
+        console.log('Встановлено зображення:', img.src);
         modal.style.display = 'flex';
         modal.classList.add('active');
+    } else {
+        console.error('Модальне вікно або зображення не знайдено:', { modal, img });
     }
 }
 
@@ -2559,6 +2575,9 @@ function closeGallery() {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
+    currentGalleryImages = []; // Очищаємо масив
+    currentGalleryIndex = 0; // Скидаємо індекс
+    console.log('Галерею закрито, currentGalleryImages очищено');
 }
 
 function prevGalleryImage() {
