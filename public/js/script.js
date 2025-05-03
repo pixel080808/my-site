@@ -330,28 +330,28 @@ function connectPublicWebSocket() {
         });
     };
 
-ws.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
-        if (!message.type || !('data' in message)) {
-            throw new Error('Некоректний формат повідомлення WebSocket');
-        }
-        const { type, data } = message;
-        console.log('WebSocket message received:', { type, dataLength: data.length });
-
-        if (type === 'products') {
-            // Перевірка дублікатів id
-            const idCounts = data.reduce((acc, p) => {
-                acc[p.id] = (acc[p.id] || 0) + 1;
-                return acc;
-            }, {});
-            const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
-            if (duplicates.length > 0) {
-                console.error('Знайдено товари з однаковими id:', duplicates);
-                showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            if (!message.type || !('data' in message)) {
+                throw new Error('Некоректний формат повідомлення WebSocket');
             }
-            products = data;
-            updateCartPrices();
+            const { type, data } = message;
+            console.log('WebSocket message received:', { type, dataLength: data.length });
+
+            if (type === 'products') {
+                // Перевірка дублікатів id
+                const idCounts = data.reduce((acc, p) => {
+                    acc[p.id] = (acc[p.id] || 0) + 1;
+                    return acc;
+                }, {});
+                const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
+                if (duplicates.length > 0) {
+                    console.error('Знайдено товари з однаковими id:', duplicates);
+                    showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
+                }
+                products = data;
+                updateCartPrices();
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
@@ -361,47 +361,43 @@ ws.onmessage = (event) => {
                 } else if (document.getElementById('cart').classList.contains('active')) {
                     renderCart();
                 }
-                break;
-                case 'categories':
-                    categories = data;
-                    renderCategories();
-                    renderCatalogDropdown();
-                    if (document.getElementById('catalog').classList.contains('active')) {
-                        renderCatalog(currentCategory, currentSubcategory, currentProduct);
-                    }
-                    break;
-                case 'settings':
-                    settings = {
-                        ...settings,
-                        ...data,
-                        contacts: { ...settings.contacts, ...(data.contacts || {}) },
-                        socials: data.socials || settings.socials,
-                        showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
-                        showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
-                    };
-                    updateHeader();
-                    // Завжди викликаємо ці функції, щоб оновити DOM незалежно від активної секції
-                    renderContacts(); // Оновлюємо контакти та соціальні мережі
-                    renderAbout();    // Оновлюємо секцію "Про нас"
-                    renderSlideshow(); // Оновлюємо слайдшоу
-                    // Оновлюємо favicon
-                    const oldFavicon = document.querySelector('link[rel="icon"]');
-                    if (oldFavicon) oldFavicon.remove();
-                    const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
-                    const favicon = document.createElement('link');
-                    favicon.rel = 'icon';
-                    favicon.type = 'image/x-icon';
-                    favicon.href = faviconUrl;
-                    document.head.appendChild(favicon);
-                    break;
-                case 'slides':
-                    slides = data;
-                    if (settings.showSlides && slides.length > 0) {
-                        renderSlideshow();
-                    }
-                    break;
-                default:
-                    console.warn('Невідомий тип повідомлення:', type);
+            } else if (type === 'categories') {
+                categories = data;
+                renderCategories();
+                renderCatalogDropdown();
+                if (document.getElementById('catalog').classList.contains('active')) {
+                    renderCatalog(currentCategory, currentSubcategory, currentProduct);
+                }
+            } else if (type === 'settings') {
+                settings = {
+                    ...settings,
+                    ...data,
+                    contacts: { ...settings.contacts, ...(data.contacts || {}) },
+                    socials: data.socials || settings.socials,
+                    showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
+                    showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
+                };
+                updateHeader();
+                // Завжди викликаємо ці функції, щоб оновити DOM незалежно від активної секції
+                renderContacts(); // Оновлюємо контакти та соціальні мережі
+                renderAbout();    // Оновлюємо секцію "Про нас"
+                renderSlideshow(); // Оновлюємо слайдшоу
+                // Оновлюємо favicon
+                const oldFavicon = document.querySelector('link[rel="icon"]');
+                if (oldFavicon) oldFavicon.remove();
+                const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
+                const favicon = document.createElement('link');
+                favicon.rel = 'icon';
+                favicon.type = 'image/x-icon';
+                favicon.href = faviconUrl;
+                document.head.appendChild(favicon);
+            } else if (type === 'slides') {
+                slides = data;
+                if (settings.showSlides && slides.length > 0) {
+                    renderSlideshow();
+                }
+            } else {
+                console.warn('Невідомий тип повідомлення:', type);
             }
         } catch (e) {
             console.error('Помилка обробки WebSocket:', e);
@@ -2696,6 +2692,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateHeader();
         updateCartCount();
 
+        // Обробка catalog-toggle
         const catalogToggle = document.getElementById('catalog-toggle');
         const catalogDropdown = document.getElementById('catalog-dropdown');
         if (catalogToggle && catalogDropdown) {
@@ -2703,14 +2700,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.preventDefault();
                 catalogDropdown.classList.toggle('active');
             });
+        } else {
+            console.warn('Елементи catalog-toggle або catalog-dropdown не знайдено');
         }
 
+        // Обробка пошуку
         const searchInput = document.getElementById('search');
         if (searchInput) {
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchProducts();
             });
+        } else {
+            console.warn('Поле пошуку не знайдено');
         }
+
+        // Обробка кнопки пошуку
+        const searchButton = document.querySelector('.search-btn');
+        if (searchButton) {
+            searchButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                searchProducts();
+            });
+        } else {
+            console.warn('Кнопка пошуку не знайдено');
+        }
+
+        // Обробка навігаційних елементів
+        const navLinks = [
+            { id: 'nav-home', section: 'home' },
+            { id: 'nav-contacts', section: 'contacts' },
+            { id: 'nav-about', section: 'about' },
+            { id: 'logo', section: 'home' },
+            { id: 'cart', section: 'cart' }
+        ];
+
+        navLinks.forEach(link => {
+            const element = document.getElementById(link.id);
+            if (element) {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showSection(link.section);
+                });
+            } else {
+                console.warn(`Елемент із ID ${link.id} не знайдено`);
+            }
+        });
 
         // Обробка початкового шляху
         const path = window.location.pathname.slice(1) || '';
