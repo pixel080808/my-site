@@ -79,11 +79,15 @@ productSchema.pre('save', async function(next) {
 
 // Захист від XSS у description
 productSchema.pre('save', function(next) {
-    if (this.description) {
-        this.description = sanitizeHtml(this.description, {
-            allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li', 'br', 'div', 'span'],
-            allowedAttributes: { 'a': ['href'], 'div': ['style'], 'span': ['style'] }
-        });
+    // Видаляємо системні поля, які можуть викликати конфлікти
+    if ('id' in this) {
+        delete this.id;
+    }
+    if ('_id' in this && !mongoose.Types.ObjectId.isValid(this._id)) {
+        delete this._id;
+    }
+    if ('__v' in this) {
+        delete this.__v;
     }
     next();
 });
@@ -91,5 +95,6 @@ productSchema.pre('save', function(next) {
 // Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
+productSchema.index({ slug: 1 }, { unique: true });
 
 module.exports = mongoose.model('Product', productSchema);

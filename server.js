@@ -842,7 +842,7 @@ app.get('/api/public/products', async (req, res) => {
     try {
         const { slug, cursor, limit = 10 } = req.query;
         const parsedLimit = parseInt(limit);
-        
+
         // Валідація limit
         if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
             logger.error('Невірний параметр limit:', limit);
@@ -850,7 +850,9 @@ app.get('/api/public/products', async (req, res) => {
         }
 
         let query = { visible: true, active: true };
-        if (slug) query.slug = slug;
+        if (slug) {
+            query.slug = slug;
+        }
 
         let products = [];
         let nextCursor = null;
@@ -864,12 +866,19 @@ app.get('/api/public/products', async (req, res) => {
 
         products = await Product.find(query)
             .sort({ _id: 1 })
-            .limit(parsedLimit + 1);
+            .limit(parsedLimit + 1)
+            .lean(); // Використовуємо lean для швидшого виконання запиту
 
         if (products.length > parsedLimit) {
             nextCursor = products[products.length - 1]._id.toString();
             products = products.slice(0, parsedLimit);
         }
+
+        // Видаляємо системні поля з відповіді
+        products = products.map(product => {
+            const { __v, ...cleanedProduct } = product;
+            return cleanedProduct;
+        });
 
         const total = await Product.countDocuments(query);
         res.json({ products, total, nextCursor, limit: parsedLimit });
@@ -988,7 +997,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = { ...req.body };
         logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
-        // Видаляємо поле id, _id та будь-які інші системні поля
+        // Очищаємо системні поля на початку, щоб уникнути конфліктів
         delete productData.id;
         delete productData._id;
         delete productData.__v;
@@ -1094,12 +1103,6 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
 
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId.createFromHexString(id));
-        }
-
-        // Додаткова перевірка на відсутність id перед збереженням
-        if ('id' in productData) {
-            logger.warn('Поле id все ще присутнє в productData після видалення:', productData.id);
-            delete productData.id; // Повторне видалення для впевненості
         }
 
         // Фіксація проблеми з фото: оновлюємо перше фото продукту, якщо воно відсутнє
