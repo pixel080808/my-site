@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter'); // Import the Counter model
 
 const slideSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
@@ -30,12 +31,6 @@ const slideSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Автоматичне створення унікального id з використанням лічильника
-const counterSchema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 }
-});
-const Counter = mongoose.model('Counter', counterSchema);
-
 slideSchema.pre('save', async function(next) {
     try {
         if (!this.id) {

@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
+const Counter = require('./Counter'); // Import the Counter model
 
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
@@ -57,12 +58,6 @@ const productSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Автоматичне створення унікального id з використанням лічильника
-const counterSchema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 }
-});
-const Counter = mongoose.model('Counter', counterSchema);
-
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
