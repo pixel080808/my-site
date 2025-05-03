@@ -104,8 +104,6 @@ productSchema.pre('save', function(next) {
 // Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
-productSchema.index({ slug: 1 }, { unique: true });
-productSchema.index({ id: 1 }, { unique: true, sparse: true });
 
 const Product = mongoose.model('Product', productSchema);
 
