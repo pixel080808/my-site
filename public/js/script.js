@@ -400,20 +400,23 @@ async function fetchCsrfToken(retries = 3, delay = 1000) {
                 method: 'GET',
                 credentials: 'include'
             });
-        console.log(`Fetch CSRF token status: ${response.status}`);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const contentType = response.headers.get('Content-Type');
-        console.log('Content-Type:', contentType);
-        const data = await response.json();
-        console.log('Дані відповіді:', data);
-        if (data.csrfToken) {
-            localStorage.setItem('csrfToken', data.csrfToken);
-            console.log('CSRF-токен отримано:', data.csrfToken);
-            return data.csrfToken;
+            console.log(`Fetch CSRF token status: ${response.status}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const contentType = response.headers.get('Content-Type');
+            console.log('Content-Type:', contentType);
+            const data = await response.json();
+            console.log('Дані відповіді:', data);
+            if (data.csrfToken) {
+                localStorage.setItem('csrfToken', data.csrfToken);
+                console.log('CSRF-токен отримано:', data.csrfToken);
+                return data.csrfToken;
+            } else {
+                throw new Error('CSRF token not found in response');
+            }
         } catch (e) {
             console.error(`Attempt ${i + 1} failed:`, e);
             if (i === retries - 1) {
@@ -425,6 +428,7 @@ async function fetchCsrfToken(retries = 3, delay = 1000) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
+    return null;
 }
 
 function connectPublicWebSocket() {
