@@ -2378,7 +2378,7 @@ const cartSchemaValidation = Joi.array().items(
             value: Joi.string().required(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional()
-        }).optional()
+        }).allow(null).optional()
     })
 );
 
