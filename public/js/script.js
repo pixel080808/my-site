@@ -150,16 +150,16 @@ async function saveCartToServer() {
 
     const filteredCartItems = cartItems.map(item => {
         const cartItem = {
-            id: item.id || 0, // Забезпечуємо числовий id
+            id: item.id, // Залишаємо як рядок
             name: item.name || '',
             quantity: item.quantity || 1,
             price: item.price || 0,
             photo: item.photo || '',
-            color: item.color || null // Додаємо null як резерв
+            color: item.color || null
         };
         return cartItem;
     }).filter(item => 
-        item.id && item.name && item.quantity > 0 && item.price >= 0
+        typeof item.id === 'string' && item.id && item.name && item.quantity > 0 && item.price >= 0
     );
 
     console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
@@ -185,12 +185,13 @@ async function saveCartToServer() {
         const responseBody = await response.json();
         if (!response.ok) {
             console.error(`Помилка сервера: ${response.status}, Тіло:`, responseBody);
-            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'} (${JSON.stringify(responseBody.details || {})})`);
+            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома пом
+илка'} (${JSON.stringify(responseBody.details || {})})`);
         }
         console.log('Кошик успішно збережено на сервері:', responseBody);
         // Оновлюємо локальний cart лише після успішного збереження
         cart = filteredCartItems.map(item => ({
-            id: item.id.toString(),
+            id: item.id, // Залишаємо як рядок
             name: item.name,
             color: item.color ? item.color.name : 'Не вказано',
             price: item.price,
@@ -1996,12 +1997,12 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: Number(product._id), // Перетворюємо на число для сервера
+        id: product._id, // Залишаємо як рядок
         name: product.name,
         quantity: quantity,
         price: price,
         photo: product.photos?.[0] || NO_IMAGE_URL,
-        color: colorData // Об’єкт для кольору
+        color: colorData
     };
     console.log('Створено cartItem:', cartItem);
 
@@ -2237,6 +2238,7 @@ async function renderCart() {
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
         console.error('Елементи cart-items або cart-content не знайдено');
+        showNotification('Помилка відображення кошика!', 'error');
         return;
     }
 
@@ -2261,7 +2263,7 @@ async function renderCart() {
     await updateCartPrices();
 
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id.toString());
+        const product = products.find(p => p._id === item.id); // Порівняння рядків
         if (!product) {
             console.warn(`Товар з ID ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
@@ -2279,7 +2281,7 @@ async function renderCart() {
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
-        span.textContent = `${item.name}${item.color && item.color !== 'Не вказано' ? ` (${item.color})` : ''} - ${item.price * item.quantity} грн`;
+        span.textContent = `${item.name}${item.color && item.color !== 'Не вказано' ? ` (${item.color.name || item.color})` : ''} - ${item.price * item.quantity} грн`;
         span.onclick = () => openProduct(item.id);
         itemDiv.appendChild(span);
 
@@ -2490,19 +2492,19 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
-    const orderData = {
-        date: new Date().toISOString(),
-        status: 'Нове замовлення',
-        total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        customer,
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            color: item.color || ''
-        }))
-    };
+const orderData = {
+    date: new Date().toISOString(),
+    status: 'Нове замовлення',
+    total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    customer,
+    items: cart.map(item => ({
+        id: item.id, // Залишаємо як рядок
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        color: item.color?.name || ''
+    }))
+};
 
 if (orderData.items) {
     orderData.items = orderData.items.filter(item => {
