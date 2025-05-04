@@ -158,19 +158,36 @@ async function saveCartToServer() {
         }
     }
 
-    const filteredCartItems = cartItems.filter(item => {
-        const isValid = item &&
-            typeof item.id === 'string' && item.id && // Дозволяємо рядковий id
-            item.name &&
-            typeof item.quantity === 'number' &&
-            typeof item.price === 'number' &&
-            (item.color || item.color === '') &&
-            (item.photo || item.photo === NO_IMAGE_URL);
-        if (!isValid) {
-            console.warn('Елемент кошика видалено через некоректні дані:', item);
-        }
-        return isValid;
-    });
+    // Приводимо структуру до серверних вимог
+    const filteredCartItems = cartItems
+        .map(item => {
+            const product = products.find(p => p._id === item.id);
+            if (!product) {
+                console.warn('Продукт не знайдено для cartItem:', item);
+                return null;
+            }
+            return {
+                _id: item.id, // Сервер може очікувати _id замість id
+                productId: item.id, // Додаємо productId для сумісності
+                name: item.name,
+                color: item.color || 'Не вказано',
+                price: item.price,
+                quantity: item.quantity,
+                photo: item.photo || NO_IMAGE_URL
+            };
+        })
+        .filter(item => {
+            const isValid = item &&
+                typeof item._id === 'string' && item._id &&
+                typeof item.productId === 'string' && item.productId &&
+                item.name &&
+                typeof item.quantity === 'number' &&
+                typeof item.price === 'number';
+            if (!isValid) {
+                console.warn('Елемент кошика видалено через некоректні дані:', item);
+            }
+            return isValid;
+        });
 
     console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
 
@@ -198,10 +215,18 @@ async function saveCartToServer() {
             throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'}`);
         }
         console.log('Кошик успішно збережено на сервері:', responseBody);
-        cart = filteredCartItems;
+        cart = filteredCartItems.map(item => ({
+            id: item._id,
+            name: item.name,
+            color: item.color,
+            price: item.price,
+            quantity: item.quantity,
+            photo: item.photo
+        }));
         saveToStorage('cart', cart);
     } catch (error) {
         console.error('Помилка збереження кошика:', error);
+        showNotification('Не вдалося синхронізувати кошик із сервером. Дані збережено локально.', 'warning');
         throw error;
     }
 }
@@ -255,7 +280,17 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
-            const response = await fetch(url, { ...options, credentials: 'include' });
+            if (!localStorage.getItem('csrfToken')) {
+                await fetchCsrfToken();
+            }
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'X-CSRF-Token': localStorage.getItem('csrfToken')
+                },
+                credentials: 'include'
+            });
             console.log(`Fetch ${url} status: ${response.status}`);
             if (!response.ok) {
                 const errorText = await response.text();
@@ -1971,28 +2006,30 @@ async function addToCartWithColor(productId) {
         colorName = colorName ? `${colorName} (${size})` : size;
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
-    const cartItem = { 
-        id: product._id, // Використовуємо _id як ідентифікатор
+    const cartItem = {
+        id: product._id, // Для локального використання
+        _id: product._id, // Для сервера
+        productId: product._id, // Для сумісності
         name: product.name,
         color: colorName || 'Не вказано',
-        price, 
-        quantity, 
+        price,
+        quantity,
         photo: product.photos?.[0] || NO_IMAGE_URL
     };
     console.log('Створено cartItem:', cartItem);
 
-    const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.color === cartItem.color);
+    const existingItemIndex = cart.findIndex(item => item._id === cartItem._id && item.color === cartItem.color);
     if (existingItemIndex > -1) {
         cart[existingItemIndex].quantity += cartItem.quantity;
     } else {
         cart.push(cartItem);
     }
-    
+
     saveToStorage('cart', cart);
     updateCartCount();
     renderCart();
     showNotification(`${product.name} додано до кошика!`, 'success');
-    
+
     try {
         await saveCartToServer();
     } catch (error) {
@@ -2034,9 +2071,20 @@ async function addGroupToCart(productId) {
 }
 
 async function fetchProductBySlug(slug) {
+    // Спочатку перевіряємо локальний кеш
+    const cachedProduct = products.find(p => p.slug === slug);
+    if (cachedProduct) {
+        console.log('Продукт знайдено в локальному кеші:', cachedProduct.name);
+        return cachedProduct;
+    }
+    // Якщо не знайдено, робимо запит до сервера
+    return await fetchProductFromServer(slug);
+}
+
+async function fetchProductFromServer(slug) {
     try {
         console.log('Запит продукту за slug:', slug);
-        const response = await fetchWithRetry(`${BASE_URL}/api/public/products?slug=${slug}`);
+        const response = await fetchWithRetry(`${BASE_URL}/api/public/products?slug=${slug}`, 1);
         if (!response) {
             console.error('Відповідь від сервера відсутня для slug:', slug);
             throw new Error('Не вдалося отримати відповідь від сервера');
@@ -2060,14 +2108,19 @@ async function fetchProductBySlug(slug) {
 
         if (!product) {
             console.error('Продукт із slug не знайдено:', slug);
+            showNotification('Товар не знайдено!', 'error');
             return null;
         }
 
         console.log('Знайдено продукт:', product.name, 'ID:', product._id);
+        // Оновлюємо локальний кеш
+        products = products.filter(p => p._id !== product._id);
+        products.push(product);
+        saveToStorage('products', products);
         return product;
     } catch (error) {
         console.error('Помилка отримання продукту за slug:', error);
-        showNotification('Не вдалося завантажити товар!', 'error');
+        showNotification('Не вдалося завантажити товар через помилку сервера!', 'error');
         return null;
     }
 }
