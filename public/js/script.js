@@ -150,20 +150,13 @@ async function saveCartToServer() {
 
     const filteredCartItems = cartItems.map(item => {
         const cartItem = {
-            id: Number(item._id || item.productId), // Convert string ID to number
-            name: item.name,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            photo: item.photo || ''
+            id: item.id || 0, // Забезпечуємо числовий id
+            name: item.name || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            photo: item.photo || '',
+            color: item.color || null // Додаємо null як резерв
         };
-        // Only include color object if it’s valid; otherwise, omit it
-        if (item.color && item.color !== 'Не вказано') {
-            cartItem.color = {
-                name: item.color, // Adjust based on your color data structure
-                value: item.color, // Adjust if you have a separate value
-                priceChange: 0
-            };
-        }
         return cartItem;
     }).filter(item => 
         item.id && item.name && item.quantity > 0 && item.price >= 0
@@ -195,8 +188,9 @@ async function saveCartToServer() {
             throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'} (${JSON.stringify(responseBody.details || {})})`);
         }
         console.log('Кошик успішно збережено на сервері:', responseBody);
+        // Оновлюємо локальний cart лише після успішного збереження
         cart = filteredCartItems.map(item => ({
-            _id: item.id.toString(), // Store as string locally if needed
+            id: item.id.toString(),
             name: item.name,
             color: item.color ? item.color.name : 'Не вказано',
             price: item.price,
@@ -1966,7 +1960,7 @@ async function addToCartWithColor(productId) {
         return;
     }
     let price = product.price || 0;
-    let colorName = '';
+    let colorData = null;
     if (product.colors?.length > 0) {
         const colorIndex = selectedColors[productId] !== undefined ? selectedColors[productId] : 0;
         if (!product.colors[colorIndex]) {
@@ -1975,9 +1969,13 @@ async function addToCartWithColor(productId) {
             saveToStorage('selectedColors', selectedColors);
             return;
         }
-        colorName = product.colors[colorIndex].name;
+        colorData = {
+            name: product.colors[colorIndex].name,
+            value: product.colors[colorIndex].value || product.colors[colorIndex].name,
+            priceChange: product.colors[colorIndex].priceChange || 0
+        };
         price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
-        price += product.colors[colorIndex].priceChange || 0;
+        price += colorData.priceChange;
     }
     if (product.type === 'mattresses') {
         const select = document.getElementById(`mattress-size-${productId}`);
@@ -1994,22 +1992,20 @@ async function addToCartWithColor(productId) {
             return;
         }
         price = sizeData.price;
-        colorName = colorName ? `${colorName} (${size})` : size;
+        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0 };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product._id, // Для локального використання
-        _id: product._id, // Для сервера
-        productId: product._id, // Для сумісності
+        id: Number(product._id), // Перетворюємо на число для сервера
         name: product.name,
-        color: colorName || 'Не вказано',
-        price,
-        quantity,
-        photo: product.photos?.[0] || NO_IMAGE_URL
+        quantity: quantity,
+        price: price,
+        photo: product.photos?.[0] || NO_IMAGE_URL,
+        color: colorData // Об’єкт для кольору
     };
     console.log('Створено cartItem:', cartItem);
 
-    const existingItemIndex = cart.findIndex(item => item._id === cartItem._id && item.color === cartItem.color);
+    const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && JSON.stringify(item.color) === JSON.stringify(cartItem.color));
     if (existingItemIndex > -1) {
         cart[existingItemIndex].quantity += cartItem.quantity;
     } else {
@@ -2239,17 +2235,19 @@ async function updateCartPrices() {
 async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
-    if (!cartItems || !cartContent) return;
+    if (!cartItems || !cartContent) {
+        console.error('Елементи cart-items або cart-content не знайдено');
+        return;
+    }
 
     const existingTimers = cartItems.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
-        if (timer.dataset.intervalId) {
-            clearInterval(parseInt(timer.dataset.intervalId));
-        }
+        if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
     while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
+    console.log('Рендер кошика, поточний cart:', cart);
     if (cart.length === 0) {
         const p = document.createElement('p');
         p.className = 'empty-cart';
@@ -2262,21 +2260,16 @@ async function renderCart() {
 
     await updateCartPrices();
 
-    cart = cart.filter(item => {
-        const product = products.find(p => p._id === item.id);
+    cart.forEach((item, index) => {
+        const product = products.find(p => p._id === item.id.toString());
         if (!product) {
             console.warn(`Товар з ID ${item.id} не знайдено, видаляємо з кошика`);
-            return false;
+            cart.splice(index, 1);
+            saveToStorage('cart', cart);
+            return;
         }
-        return true;
-    });
-    saveToStorage('cart', cart);
-
-    cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id);
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
-
         const img = document.createElement('img');
         img.src = item.photo;
         img.className = 'cart-item-image';
