@@ -149,19 +149,16 @@ async function saveCartToServer() {
         saveToStorage('cart', cartItems);
     }
 
-    // Filter and normalize cart items, converting id to number
+    // Filter and normalize cart items
     const filteredCartItems = cartItems
-        .map(item => {
-            const product = products.find(p => p._id === item.id);
-            return {
-                id: product ? Number(product.id) : null, // Конвертуємо id у число, використовуючи числове поле id продукту
-                name: item.name || '',
-                quantity: item.quantity || 1,
-                price: item.price || 0,
-                photo: item.photo || '',
-                color: item.color || null
-            };
-        })
+        .map(item => ({
+            id: Number(item.id), // Переконуємося, що id є числом
+            name: item.name || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            photo: item.photo || '',
+            color: item.color || null
+        }))
         .filter(item => 
             typeof item.id === 'number' && 
             item.id !== null && 
@@ -2016,7 +2013,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product._id, // Використовуємо _id замість id
+        id: Number(product.id), // Використовуємо числове product.id замість _id
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2059,7 +2056,7 @@ async function addGroupToCart(productId) {
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: p._id,
+                id: Number(p.id), // Використовуємо числове p.id замість _id
                 name: p.name,
                 price,
                 quantity: 1,
