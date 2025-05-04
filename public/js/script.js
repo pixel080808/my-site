@@ -149,19 +149,22 @@ async function saveCartToServer() {
         saveToStorage('cart', cartItems);
     }
 
-    // Filter and normalize cart items, keeping id as string
+    // Filter and normalize cart items, converting id to number
     const filteredCartItems = cartItems
-        .map(item => ({
-            id: item.id, // Залишаємо id як рядок
-            name: item.name || '',
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-            photo: item.photo || '',
-            color: item.color || null
-        }))
+        .map(item => {
+            const product = products.find(p => p._id === item.id);
+            return {
+                id: product ? Number(product.id) : null, // Конвертуємо id у число, використовуючи числове поле id продукту
+                name: item.name || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                photo: item.photo || '',
+                color: item.color || null
+            };
+        })
         .filter(item => 
-            typeof item.id === 'string' && 
-            item.id && 
+            typeof item.id === 'number' && 
+            item.id !== null && 
             item.name && 
             item.quantity > 0 && 
             item.price >= 0
@@ -206,7 +209,7 @@ async function saveCartToServer() {
 
         // Update global cart after successful save
         cart = filteredCartItems.map(item => ({
-            id: item.id, // Залишаємо id як рядок
+            id: String(item.id), // Зберігаємо id як рядок для клієнтської логіки
             name: item.name,
             color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
             price: item.price,
