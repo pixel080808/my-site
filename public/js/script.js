@@ -151,21 +151,22 @@ async function saveCartToServer() {
 
     // Filter and normalize cart items
     const filteredCartItems = cartItems
-        .map(item => ({
-            id: Number(item.id), // Переконуємося, що id є числом
-            name: item.name || '',
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-            photo: item.photo || '',
-            color: item.color || null
-        }))
-        .filter(item => 
-            typeof item.id === 'number' && 
-            item.id !== null && 
-            item.name && 
-            item.quantity > 0 && 
-            item.price >= 0
-        );
+        .map(item => {
+            // Перевіряємо, чи є id валідним рядком
+            if (!item.id || typeof item.id !== 'string') {
+                console.warn('Некоректний id в елементі кошика:', item);
+                return null;
+            }
+            return {
+                id: item.id, // Залишаємо id як рядок
+                name: item.name || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                photo: item.photo || '',
+                color: item.color || null
+            };
+        })
+        .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
 
     console.log('Cart data before sending:', JSON.stringify(filteredCartItems, null, 2));
 
@@ -206,7 +207,7 @@ async function saveCartToServer() {
 
         // Update global cart after successful save
         cart = filteredCartItems.map(item => ({
-            id: String(item.id), // Зберігаємо id як рядок для клієнтської логіки
+            id: String(item.id),
             name: item.name,
             color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
             price: item.price,
@@ -2013,8 +2014,13 @@ async function addToCartWithColor(productId) {
         colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
+    if (!product._id || typeof product._id !== 'string') {
+        console.error('Некоректний або відсутній _id продукту:', product);
+        showNotification('Помилка: не вдалося додати товар через некоректний ідентифікатор!', 'error');
+        return;
+    }
     const cartItem = {
-        id: product._id, // Використовуємо _id як рядок
+        id: product._id,
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2250,7 +2256,7 @@ async function updateCartPrices() {
     saveToStorage('cart', cart);
 }
 
-async function renderCart() {
+function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
@@ -2265,7 +2271,7 @@ async function renderCart() {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
-    while (cartContent.firstChild) cartItems.removeChild(cartItems.firstChild);
+    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
     console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
@@ -2298,12 +2304,12 @@ async function renderCart() {
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(product.slug); // Використовуємо slug продукту
+        img.onclick = () => openProduct(product.slug);
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name && item.color.name !== 'Not specified' ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
-        span.onclick = () => openProduct(product.slug); // Використовуємо slug продукту
+        span.onclick = () => openProduct(product.slug);
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
