@@ -1963,7 +1963,7 @@ async function addToCartWithColor(productId) {
         return;
     }
     console.log('Додавання до кошика, продукт:', {
-        _id: product.id,
+        _id: product._id,
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -2013,7 +2013,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product.id, // Залишаємо як рядок
+        id: product._id, // Використовуємо _id замість id
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2253,12 +2253,12 @@ async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
-        console.error('Elements cart-items or cart-content not found');
-        showNotification('Error displaying cart!', 'error');
+        console.error('Елементи cart-items або cart-content не знайдено');
+        showNotification('Помилка відображення кошика!', 'error');
         return;
     }
 
-    // Clear existing timers
+    // Очищення існуючих таймерів
     const existingTimers = cartItems.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
@@ -2266,25 +2266,25 @@ async function renderCart() {
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
     while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
-    console.log('Rendering cart, current cart:', cart);
+    console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
         const p = document.createElement('p');
         p.className = 'empty-cart';
-        p.textContent = 'Cart is empty';
+        p.textContent = 'Кошик порожній';
         cartContent.appendChild(p);
         renderBreadcrumbs();
         updateCartCount();
         return;
     }
 
-    // Ensure cart prices are up-to-date
+    // Оновлення цін у кошику
     await updateCartPrices();
 
-    // Render each cart item
+    // Відображення кожного елемента кошика
     cart.forEach((item, index) => {
         const product = products.find(p => p._id === item.id);
         if (!product) {
-            console.warn(`Product with ID ${item.id} not found, removing from cart`);
+            console.warn(`Товар із ID ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
             saveToStorage('cart', cart);
             return;
@@ -2297,19 +2297,19 @@ async function renderCart() {
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(item.id);
+        img.onclick = () => openProduct(product.slug); // Використовуємо slug продукту
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
-        span.textContent = `${item.name}${item.color && item.color !== 'Not specified' ? ` (${item.color.name || item.color})` : ''} - ${item.price * item.quantity} грн`;
-        span.onclick = () => openProduct(item.id);
+        span.textContent = `${item.name}${item.color && item.color.name && item.color.name !== 'Not specified' ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
+        span.onclick = () => openProduct(product.slug); // Використовуємо slug продукту
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
         qtyDiv.className = 'quantity-selector';
         const minusBtn = document.createElement('button');
         minusBtn.className = 'quantity-btn';
-        minusBtn.setAttribute('aria-label', 'Decrease quantity');
+        minusBtn.setAttribute('aria-label', 'Зменшити кількість');
         minusBtn.textContent = '-';
         minusBtn.onclick = () => updateCartQuantity(index, -1);
         qtyDiv.appendChild(minusBtn);
@@ -2324,7 +2324,7 @@ async function renderCart() {
         
         const plusBtn = document.createElement('button');
         plusBtn.className = 'quantity-btn';
-        plusBtn.setAttribute('aria-label', 'Increase quantity');
+        plusBtn.setAttribute('aria-label', 'Збільшити кількість');
         plusBtn.textContent = '+';
         plusBtn.onclick = () => updateCartQuantity(index, 1);
         qtyDiv.appendChild(plusBtn);
@@ -2332,8 +2332,8 @@ async function renderCart() {
 
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
-        removeBtn.setAttribute('aria-label', 'Remove item');
-        removeBtn.textContent = 'Remove';
+        removeBtn.setAttribute('aria-label', 'Видалити товар');
+        removeBtn.textContent = 'Видалити';
         removeBtn.onclick = () => promptRemoveFromCart(index);
         itemDiv.appendChild(removeBtn);
 
@@ -2349,15 +2349,15 @@ async function renderCart() {
         cartItems.appendChild(itemDiv);
     });
 
-    // Add total price
+    // Додавання загальної суми
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
-    totalP.textContent = `Total: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
+    totalP.textContent = `Загалом: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
     cartContent.appendChild(totalP);
 
-    // Add order form
+    // Додавання форми замовлення
     const h3 = document.createElement('h3');
-    h3.textContent = 'Place Order';
+    h3.textContent = 'Оформити замовлення';
     cartContent.appendChild(h3);
 
     const form = document.createElement('div');
@@ -2378,7 +2378,7 @@ async function renderCart() {
             select.className = 'order-input custom-select';
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
-            defaultOption.textContent = `Select ${f.label.toLowerCase()}`;
+            defaultOption.textContent = `Оберіть ${f.label.toLowerCase()}`;
             select.appendChild(defaultOption);
             f.options.forEach(opt => {
                 const option = document.createElement('option');
@@ -2400,7 +2400,7 @@ async function renderCart() {
 
     const submitBtn = document.createElement('button');
     submitBtn.className = 'submit-order';
-    submitBtn.textContent = 'Submit Order';
+    submitBtn.textContent = 'Оформити замовлення';
     submitBtn.onclick = () => submitOrder();
     form.appendChild(submitBtn);
     cartContent.appendChild(form);
