@@ -156,12 +156,20 @@ async function saveCartToServer() {
     }
 
     const filteredCartItems = cartItems.filter(item => {
-        const isValid = item && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        const isValid = item &&
+            typeof item.id === 'number' && // Додано перевірку id
+            item.name &&
+            typeof item.quantity === 'number' &&
+            typeof item.price === 'number' &&
+            (item.color || item.color === '') &&
+            (item.photo || item.photo === NO_IMAGE_URL);
         if (!isValid) {
             console.warn('Елемент кошика видалено через некоректні дані:', item);
         }
         return isValid;
     });
+
+    console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2)); // Детальне логування
 
     let cartId = localStorage.getItem('cartId');
     if (!cartId) {
@@ -184,9 +192,9 @@ async function saveCartToServer() {
         const responseBody = await response.json();
         if (!response.ok) {
             console.error(`Помилка сервера: ${response.status}, Тіло:`, responseBody);
-            throw new Error(`Помилка сервера: ${response.status}`);
+            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'}`);
         }
-        console.log('Кошик успішно збережено на сервері');
+        console.log('Кошик успішно збережено на сервері:', responseBody);
         cart = filteredCartItems;
         saveToStorage('cart', cart);
     } catch (error) {
