@@ -158,36 +158,34 @@ async function saveCartToServer() {
         }
     }
 
-    // Приводимо структуру до серверних вимог
-    const filteredCartItems = cartItems
-        .map(item => {
-            const product = products.find(p => p._id === item.id);
-            if (!product) {
-                console.warn('Продукт не знайдено для cartItem:', item);
-                return null;
-            }
-            return {
-                _id: item.id, // Сервер може очікувати _id замість id
-                productId: item.id, // Додаємо productId для сумісності
-                name: item.name,
-                color: item.color || 'Не вказано',
-                price: item.price,
-                quantity: item.quantity,
-                photo: item.photo || NO_IMAGE_URL
-            };
-        })
-        .filter(item => {
-            const isValid = item &&
-                typeof item._id === 'string' && item._id &&
-                typeof item.productId === 'string' && item.productId &&
-                item.name &&
-                typeof item.quantity === 'number' &&
-                typeof item.price === 'number';
-            if (!isValid) {
-                console.warn('Елемент кошика видалено через некоректні дані:', item);
-            }
-            return isValid;
-        });
+const filteredCartItems = cartItems.reduce((acc, item) => {
+    const product = products.find(p => p._id === item.id);
+    if (!product) {
+        console.warn('Продукт не знайдено для cartItem:', item);
+        return acc;
+    }
+    const cartItem = {
+        _id: item.id,
+        productId: item.id,
+        name: item.name,
+        color: item.color || 'Не вказано',
+        price: item.price,
+        quantity: item.quantity,
+        photo: item.photo || NO_IMAGE_URL
+    };
+    const isValid = cartItem &&
+        typeof cartItem._id === 'string' && cartItem._id &&
+        typeof cartItem.productId === 'string' && cartItem.productId &&
+        cartItem.name &&
+        typeof cartItem.quantity === 'number' &&
+        typeof cartItem.price === 'number';
+    if (isValid) {
+        acc.push(cartItem);
+    } else {
+        console.warn('Елемент кошика видалено через некоректні дані:', cartItem);
+    }
+    return acc;
+}, []);
 
     console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
 
@@ -280,9 +278,9 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
-            if (!localStorage.getItem('csrfToken')) {
-                await fetchCsrfToken();
-            }
+if (!localStorage.getItem('csrfToken')) {
+    await fetchCsrfToken();
+}
             const response = await fetch(url, {
                 ...options,
                 headers: {
@@ -394,33 +392,38 @@ async function fetchPublicData() {
     }
 }
 
-async function fetchCsrfToken() {
-    try {
-        const response = await fetchWithRetry(`${BASE_URL}/api/csrf-token`, 3, 1000);
-        if (response) {
-            console.log('Відповідь сервера для CSRF-токена:', response.status, response.statusText);
-            const contentType = response.headers.get('Content-Type');
-            console.log('Content-Type:', contentType);
-            const data = await response.json();
-            console.log('Дані відповіді:', data);
-            if (data.csrfToken) {
-                localStorage.setItem('csrfToken', data.csrfToken);
-                console.log('CSRF-токен отримано:', data.csrfToken);
-                return data.csrfToken;
-            } else {
-                console.warn('CSRF-токен не отримано від сервера:', data);
+async function fetchCsrfToken(retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            console.log(`Fetching CSRF token, attempt ${i + 1}...`);
+            const response = await fetch(`${BASE_URL}/api/csrf-token`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+        console.log(`Fetch CSRF token status: ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const contentType = response.headers.get('Content-Type');
+        console.log('Content-Type:', contentType);
+        const data = await response.json();
+        console.log('Дані відповіді:', data);
+        if (data.csrfToken) {
+            localStorage.setItem('csrfToken', data.csrfToken);
+            console.log('CSRF-токен отримано:', data.csrfToken);
+            return data.csrfToken;
+        } catch (e) {
+            console.error(`Attempt ${i + 1} failed:`, e);
+            if (i === retries - 1) {
+                console.error('All attempts to fetch CSRF token failed');
                 localStorage.removeItem('csrfToken');
-                showNotification('Не вдалося отримати CSRF-токен. Деякі функції будуть збережені локально.', 'warning');
+                showNotification('Не вдалося отримати CSRF-токен. Дані будуть збережені локально.', 'warning');
                 return null;
             }
-        } else {
-            throw new Error('Не вдалося отримати відповідь від сервера');
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
-    } catch (e) {
-        console.error('Помилка отримання CSRF-токена:', e);
-        localStorage.removeItem('csrfToken');
-        showNotification('Не вдалося отримати CSRF-токен. Дані будуть збережені локально.', 'warning');
-        return null;
     }
 }
 
