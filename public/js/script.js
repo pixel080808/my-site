@@ -142,17 +142,17 @@ async function loadCartFromServer() {
 async function saveCartToServer() {
     let cartItems = loadFromStorage('cart', []);
 
-    // Перевірка, чи є cartItems масивом
+    // Ensure cartItems is an array
     if (!Array.isArray(cartItems)) {
-        console.warn('Кошик у localStorage не є масивом, очищаємо його');
+        console.warn('Cart in localStorage is not an array, resetting');
         cartItems = [];
         saveToStorage('cart', cartItems);
     }
 
-    // Фільтрація та нормалізація елементів кошика
+    // Filter and normalize cart items, converting id to number for server
     const filteredCartItems = cartItems
         .map(item => ({
-            id: item.id, // Залишаємо як рядок
+            id: parseInt(item.id, 16), // Convert hex string ID to number
             name: item.name || '',
             quantity: item.quantity || 1,
             price: item.price || 0,
@@ -160,29 +160,29 @@ async function saveCartToServer() {
             color: item.color || null
         }))
         .filter(item => 
-            typeof item.id === 'string' && 
-            item.id && 
+            typeof item.id === 'number' && 
+            !isNaN(item.id) && 
             item.name && 
             item.quantity > 0 && 
             item.price >= 0
         );
 
-    console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
+    console.log('Cart data before sending:', JSON.stringify(filteredCartItems, null, 2));
 
-    // Перевірка наявності BASE_URL
+    // Check if BASE_URL is defined
     if (!BASE_URL) {
-        console.error('BASE_URL не визначено');
-        showNotification('Помилка: сервер недоступний. Дані збережено локально.', 'error');
+        console.error('BASE_URL is undefined');
+        showNotification('Error: server is unavailable. Data saved locally.', 'error');
         renderCart();
         return;
     }
 
-    // Отримання або генерація cartId
+    // Get or generate cartId
     let cartId = localStorage.getItem('cartId');
     if (!cartId) {
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', cartId);
-        console.log('Новий cartId згенеровано:', cartId);
+        console.log('Generated new cartId:', cartId);
     }
 
     try {
@@ -198,17 +198,17 @@ async function saveCartToServer() {
 
         const responseBody = await response.json();
         if (!response.ok) {
-            console.error(`Помилка сервера: ${response.status}, Тіло:`, responseBody);
-            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'} (${JSON.stringify(responseBody.details || {})})`);
+            console.error(`Server error: ${response.status}, Body:`, responseBody);
+            throw new Error(`Server error: ${response.status} - ${responseBody.error || 'Unknown error'} (${JSON.stringify(responseBody.details || {})})`);
         }
 
-        console.log('Кошик успішно збережено на сервері:', responseBody);
+        console.log('Cart successfully saved to server:', responseBody);
 
-        // Оновлення глобального cart після успішного збереження
+        // Update global cart after successful save, keeping id as string locally
         cart = filteredCartItems.map(item => ({
-            id: item.id, // Залишаємо як рядок
+            id: item.id.toString(16), // Convert back to string for local storage
             name: item.name,
-            color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Не вказано',
+            color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
             price: item.price,
             quantity: item.quantity,
             photo: item.photo
@@ -217,8 +217,8 @@ async function saveCartToServer() {
         saveToStorage('cart', cart);
         renderCart();
     } catch (error) {
-        console.error('Помилка збереження кошика:', error);
-        showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
+        console.error('Error saving cart:', error);
+        showNotification(`Failed to sync cart with server: ${error.message}. Data saved locally.`, 'warning');
         renderCart();
         throw error;
     }
@@ -2253,11 +2253,12 @@ async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
-        console.error('Елементи cart-items або cart-content не знайдено');
-        showNotification('Помилка відображення кошика!', 'error');
+        console.error('Elements cart-items or cart-content not found');
+        showNotification('Error displaying cart!', 'error');
         return;
     }
 
+    // Clear existing timers
     const existingTimers = cartItems.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
@@ -2265,29 +2266,32 @@ async function renderCart() {
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
     while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
-    console.log('Рендер кошика, поточний cart:', cart);
+    console.log('Rendering cart, current cart:', cart);
     if (cart.length === 0) {
         const p = document.createElement('p');
         p.className = 'empty-cart';
-        p.textContent = 'Кошик порожній';
+        p.textContent = 'Cart is empty';
         cartContent.appendChild(p);
         renderBreadcrumbs();
         updateCartCount();
         return;
     }
 
+    // Ensure cart prices are up-to-date
     await updateCartPrices();
 
+    // Render each cart item
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id); // Порівняння рядків
+        const product = products.find(p => p._id === item.id);
         if (!product) {
-            console.warn(`Товар з ID ${item.id} не знайдено, видаляємо з кошика`);
+            console.warn(`Product with ID ${item.id} not found, removing from cart`);
             cart.splice(index, 1);
             saveToStorage('cart', cart);
             return;
         }
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
+        
         const img = document.createElement('img');
         img.src = item.photo;
         img.className = 'cart-item-image';
@@ -2297,7 +2301,7 @@ async function renderCart() {
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
-        span.textContent = `${item.name}${item.color && item.color !== 'Не вказано' ? ` (${item.color.name || item.color})` : ''} - ${item.price * item.quantity} грн`;
+        span.textContent = `${item.name}${item.color && item.color !== 'Not specified' ? ` (${item.color.name || item.color})` : ''} - ${item.price * item.quantity} грн`;
         span.onclick = () => openProduct(item.id);
         itemDiv.appendChild(span);
 
@@ -2305,10 +2309,11 @@ async function renderCart() {
         qtyDiv.className = 'quantity-selector';
         const minusBtn = document.createElement('button');
         minusBtn.className = 'quantity-btn';
-        minusBtn.setAttribute('aria-label', 'Зменшити кількість');
+        minusBtn.setAttribute('aria-label', 'Decrease quantity');
         minusBtn.textContent = '-';
         minusBtn.onclick = () => updateCartQuantity(index, -1);
         qtyDiv.appendChild(minusBtn);
+        
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
         qtyInput.id = `cart-quantity-${index}`;
@@ -2316,9 +2321,10 @@ async function renderCart() {
         qtyInput.value = item.quantity;
         qtyInput.readOnly = true;
         qtyDiv.appendChild(qtyInput);
+        
         const plusBtn = document.createElement('button');
         plusBtn.className = 'quantity-btn';
-        plusBtn.setAttribute('aria-label', 'Збільшити кількість');
+        plusBtn.setAttribute('aria-label', 'Increase quantity');
         plusBtn.textContent = '+';
         plusBtn.onclick = () => updateCartQuantity(index, 1);
         qtyDiv.appendChild(plusBtn);
@@ -2326,8 +2332,8 @@ async function renderCart() {
 
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
-        removeBtn.setAttribute('aria-label', 'Видалити товар');
-        removeBtn.textContent = 'Видалити';
+        removeBtn.setAttribute('aria-label', 'Remove item');
+        removeBtn.textContent = 'Remove';
         removeBtn.onclick = () => promptRemoveFromCart(index);
         itemDiv.appendChild(removeBtn);
 
@@ -2343,13 +2349,15 @@ async function renderCart() {
         cartItems.appendChild(itemDiv);
     });
 
+    // Add total price
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
-    totalP.textContent = `Загальна сума: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
+    totalP.textContent = `Total: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
     cartContent.appendChild(totalP);
 
+    // Add order form
     const h3 = document.createElement('h3');
-    h3.textContent = 'Оформлення замовлення';
+    h3.textContent = 'Place Order';
     cartContent.appendChild(h3);
 
     const form = document.createElement('div');
@@ -2370,7 +2378,7 @@ async function renderCart() {
             select.className = 'order-input custom-select';
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
-            defaultOption.textContent = `Виберіть ${f.label.toLowerCase()}`;
+            defaultOption.textContent = `Select ${f.label.toLowerCase()}`;
             select.appendChild(defaultOption);
             f.options.forEach(opt => {
                 const option = document.createElement('option');
@@ -2392,7 +2400,7 @@ async function renderCart() {
 
     const submitBtn = document.createElement('button');
     submitBtn.className = 'submit-order';
-    submitBtn.textContent = 'Оформити замовлення';
+    submitBtn.textContent = 'Submit Order';
     submitBtn.onclick = () => submitOrder();
     form.appendChild(submitBtn);
     cartContent.appendChild(form);
