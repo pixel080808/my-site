@@ -17,14 +17,14 @@ const rateLimit = require('express-rate-limit');
 const csurf = require('csurf');
 const winston = require('winston');
 
-const Product = require('./models/Product');
+const { Product } = require('./models/Product');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
 const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
-const Cart = require('./models/Cart');
+const { Cart } = require('./models/Cart');
 const OrderField = require('./models/OrderField');
 
 const logger = winston.createLogger({
@@ -834,7 +834,7 @@ app.get('/api/public/products', async (req, res) => {
             query._id = { $gt: cursor };
         }
 
-        products = await Product.find(query)
+        products = await ProductModel.find(query)
             .select('id name category subcategory price salePrice saleEnd brand material filters photos visible active slug type sizes colors groupProducts description widthCm depthCm heightCm lengthCm popularity')
             .sort({ _id: 1 })
             .limit(parsedLimit + 1)
@@ -850,7 +850,7 @@ app.get('/api/public/products', async (req, res) => {
             return cleanedProduct;
         });
 
-        const total = await Product.countDocuments(query);
+        const total = await ProductModel.countDocuments(query);
         res.json({ products, total, nextCursor, limit: parsedLimit });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', { error: err.message, stack: err.stack });
@@ -858,7 +858,6 @@ app.get('/api/public/products', async (req, res) => {
     }
 });
 
-// Решта коду залишається без змін
 app.get('/api/public/settings', async (req, res) => {
     try {
         const settings = await Settings.findOne({}, { 
@@ -2409,18 +2408,22 @@ app.get('/api/cart', async (req, res) => {
     try {
         const cartId = req.query.cartId;
         logger.info('GET /api/cart:', { cartId });
-        const { error } = cartIdSchema.validate(cartId);
-        if (error) {
-            return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
+
+        // Валідація cartId
+        if (!cartId || typeof cartId !== 'string') {
+            logger.error('Невірний формат cartId:', cartId);
+            return res.status(400).json({ error: 'Невірний формат cartId' });
         }
-        let cart = await Cart.findOne({ cartId });
+
+        let cart = await CartModel.findOne({ cartId });
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: [], updatedAt: Date.now() });
+            cart = new CartModel({ cartId, items: [], updatedAt: Date.now() });
             await cart.save();
         }
+
         logger.info('Повертаємо кошик:', cart.items);
-        res.json(cart.items);
+        res.json(cart.items || []);
     } catch (err) {
         logger.error('Помилка при отриманні кошика:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });

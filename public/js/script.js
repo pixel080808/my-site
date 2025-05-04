@@ -94,6 +94,11 @@ async function loadCartFromServer() {
             console.error('Відповідь від сервера відсутня для cartId:', cartId);
             throw new Error('Не вдалося отримати відповідь від сервера');
         }
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
+            throw new Error(`Помилка сервера: ${response.status}`);
+        }
         const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('application/json')) {
             const errorText = await response.text();
@@ -121,7 +126,13 @@ async function loadCartFromServer() {
             return isValid;
         });
         saveToStorage('cart', cart);
-        showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'error');
+        showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'warning');
+        // Додаємо резервний виклик для очищення старих кошиків
+        try {
+            await triggerCleanupOldCarts();
+        } catch (cleanupError) {
+            console.error('Помилка очищення старих кошиків:', cleanupError);
+        }
     }
 }
 
@@ -239,6 +250,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
         } catch (error) {
             console.error(`Fetch attempt ${i + 1} failed:`, error);
             if (i === retries - 1) {
+                console.error(`Усі ${retries} спроби для ${url} не вдалися`);
                 showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
                 return null;
             }
@@ -252,43 +264,82 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
 async function fetchPublicData() {
     try {
         console.log('Fetching products...');
-        const response = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-        if (response) {
-            products = await response.json();
+        const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`);
+        if (productResponse && productResponse.ok) {
+            products = await productResponse.json();
             console.log('Products fetched:', products.length);
+            saveToStorage('products', products);
         } else {
-            throw new Error('Не вдалося отримати продукти');
+            console.warn('Не вдалося отримати продукти, використовуємо локальні дані');
+            products = loadFromStorage('products', []);
         }
 
         console.log('Fetching categories...');
         const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
-        if (catResponse) {
+        if (catResponse && catResponse.ok) {
             categories = await catResponse.json();
             console.log('Categories fetched:', categories.length);
+            saveToStorage('categories', categories);
         } else {
-            throw new Error('Не вдалося отримати категорії');
+            console.warn('Не вдалося отримати категорії, використовуємо локальні дані');
+            categories = loadFromStorage('categories', []);
         }
 
         console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
-        if (slidesResponse) {
+        if (slidesResponse && slidesResponse.ok) {
             slides = await slidesResponse.json();
             console.log('Slides fetched:', slides.length);
+            saveToStorage('slides', slides);
         } else {
-            throw new Error('Не вдалося отримати слайди');
+            console.warn('Не вдалося отримати слайди, використовуємо локальні дані');
+            slides = loadFromStorage('slides', []);
         }
 
         console.log('Fetching settings...');
         const settingsResponse = await fetchWithRetry(`${BASE_URL}/api/public/settings`);
-        if (settingsResponse) {
+        if (settingsResponse && settingsResponse.ok) {
             settings = await settingsResponse.json();
             console.log('Settings fetched:', settings);
+            saveToStorage('settings', settings);
         } else {
-            throw new Error('Не вдалося отримати налаштування');
+            console.warn('Не вдалося отримати налаштування, використовуємо локальні дані');
+            settings = loadFromStorage('settings', {
+                name: 'Меблевий магазин',
+                logo: NO_IMAGE_URL,
+                logoWidth: 150,
+                contacts: { phones: '', addresses: '', schedule: '' },
+                socials: [],
+                showSocials: true,
+                about: '',
+                showSlides: true,
+                slideInterval: 3000,
+                favicon: ''
+            });
+        }
+
+        if (products.length === 0 || categories.length === 0) {
+            throw new Error('Дані не завантажено: продукти або категорії відсутні');
         }
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
-        showNotification('Не вдалося завантажити дані з сервера!', 'error');
+        // Завантажуємо локальні дані як резерв
+        products = loadFromStorage('products', []);
+        categories = loadFromStorage('categories', []);
+        slides = loadFromStorage('slides', []);
+        settings = loadFromStorage('settings', {
+            name: 'Меблевий магазин',
+            logo: NO_IMAGE_URL,
+            logoWidth: 150,
+            contacts: { phones: '', addresses: '', schedule: '' },
+            socials: [],
+            showSocials: true,
+            about: '',
+            showSlides: true,
+            slideInterval: 3000,
+            favicon: ''
+        });
+        showNotification('Не вдалося завантажити дані з сервера. Використано локальні дані.', 'warning');
     }
 }
 
@@ -340,7 +391,9 @@ function connectPublicWebSocket() {
     ws.onopen = () => {
         console.log('Публічний WebSocket підключено');
         reconnectAttempts = 0;
-        ['products', 'categories', 'settings', 'slides'].forEach(type => {
+        // Уникаємо дублювання підписок
+        const subscriptions = ['products', 'categories', 'settings', 'slides'];
+        subscriptions.forEach(type => {
             ws.send(JSON.stringify({ type, action: 'subscribe' }));
         });
     };
@@ -349,18 +402,29 @@ function connectPublicWebSocket() {
         try {
             const message = JSON.parse(event.data);
             console.log('WebSocket message received:', { type: message.type, dataLength: message.data?.length });
-            if (!message.type || !message.hasOwnProperty('data')) {
-                console.warn('Некоректний формат повідомлення WebSocket:', message);
+
+            // Перевірка формату повідомлення
+            if (!message.type) {
+                console.warn('Повідомлення WebSocket без типу:', message);
                 return;
             }
+            if (message.error) {
+                console.error('Помилка від WebSocket:', message.error, message.details);
+                showNotification('Помилка синхронізації даних: ' + message.error, 'error');
+                return;
+            }
+            if (!message.hasOwnProperty('data')) {
+                console.warn('Повідомлення WebSocket без даних:', message);
+                return;
+            }
+
             const { type, data } = message;
 
             if (type === 'products') {
                 products = [];
-                
                 const uniqueProducts = [];
                 const seenSlugs = new Set();
-                
+
                 for (const product of data) {
                     if (!product.slug) {
                         console.warn('Продукт без slug проігноровано:', product);
@@ -387,6 +451,7 @@ function connectPublicWebSocket() {
 
                 products = uniqueProducts;
                 console.log('Оновлено продукти:', products.length, 'елементів');
+                saveToStorage('products', products);
 
                 updateCartPrices();
                 if (document.getElementById('catalog').classList.contains('active')) {
@@ -400,6 +465,7 @@ function connectPublicWebSocket() {
                 }
             } else if (type === 'categories') {
                 categories = data;
+                saveToStorage('categories', categories);
                 renderCategories();
                 renderCatalogDropdown();
                 if (document.getElementById('catalog').classList.contains('active')) {
@@ -414,6 +480,7 @@ function connectPublicWebSocket() {
                     showSocials: data.showSocials !== undefined ? data.showSocials : settings.showSocials,
                     showSlides: data.showSlides !== undefined ? data.showSlides : settings.showSlides
                 };
+                saveToStorage('settings', settings);
                 updateHeader();
                 renderContacts();
                 renderAbout();
@@ -428,6 +495,7 @@ function connectPublicWebSocket() {
                 document.head.appendChild(favicon);
             } else if (type === 'slides') {
                 slides = data;
+                saveToStorage('slides', slides);
                 if (settings.showSlides && slides.length > 0) {
                     renderSlideshow();
                 }
