@@ -2065,6 +2065,13 @@ async function openProduct(slugOrId) {
         return;
     }
 
+    if (typeof product.id !== 'number' || isNaN(product.id)) {
+        console.error('Некоректний ID продукту:', product);
+        showNotification('Помилка: товар має некоректний ідентифікатор!', 'error');
+        showSection('home');
+        return;
+    }
+
     console.log('Found product:', product.name, 'Slug:', product.slug, 'ID:', product.id);
 
     const duplicateSlug = products.filter(p => p.slug === product.slug);
