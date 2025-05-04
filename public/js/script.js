@@ -149,10 +149,10 @@ async function saveCartToServer() {
         saveToStorage('cart', cartItems);
     }
 
-    // Filter and normalize cart items, converting id to number for server
+    // Filter and normalize cart items, keeping id as string
     const filteredCartItems = cartItems
         .map(item => ({
-            id: parseInt(item.id, 16), // Convert hex string ID to number
+            id: item.id, // Залишаємо id як рядок
             name: item.name || '',
             quantity: item.quantity || 1,
             price: item.price || 0,
@@ -160,8 +160,8 @@ async function saveCartToServer() {
             color: item.color || null
         }))
         .filter(item => 
-            typeof item.id === 'number' && 
-            !isNaN(item.id) && 
+            typeof item.id === 'string' && 
+            item.id && 
             item.name && 
             item.quantity > 0 && 
             item.price >= 0
@@ -204,9 +204,9 @@ async function saveCartToServer() {
 
         console.log('Cart successfully saved to server:', responseBody);
 
-        // Update global cart after successful save, keeping id as string locally
+        // Update global cart after successful save
         cart = filteredCartItems.map(item => ({
-            id: item.id.toString(16), // Convert back to string for local storage
+            id: item.id, // Залишаємо id як рядок
             name: item.name,
             color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
             price: item.price,
@@ -1963,7 +1963,7 @@ async function addToCartWithColor(productId) {
         return;
     }
     console.log('Додавання до кошика, продукт:', {
-        _id: product._id,
+        _id: product.id,
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -2013,7 +2013,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product._id, // Залишаємо як рядок
+        id: product.id, // Залишаємо як рядок
         name: product.name,
         quantity: quantity,
         price: price,
