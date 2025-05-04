@@ -2256,7 +2256,7 @@ async function updateCartPrices() {
     saveToStorage('cart', cart);
 }
 
-function renderCart() {
+async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
