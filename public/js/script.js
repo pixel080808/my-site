@@ -1989,7 +1989,8 @@ async function addToCartWithColor(productId) {
         colorData = {
             name: product.colors[colorIndex].name,
             value: product.colors[colorIndex].value || product.colors[colorIndex].name,
-            priceChange: product.colors[colorIndex].priceChange || 0
+            priceChange: product.colors[colorIndex].priceChange || 0,
+            photo: product.colors[colorIndex].photo || null
         };
         price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
         price += colorData.priceChange;
@@ -2009,11 +2010,11 @@ async function addToCartWithColor(productId) {
             return;
         }
         price = sizeData.price;
-        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0 };
+        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: Number(product.id), // Використовуємо числове product.id замість _id
+        id: product._id, // Використовуємо _id як рядок
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2264,7 +2265,7 @@ async function renderCart() {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
-    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
+    while (cartContent.firstChild) cartItems.removeChild(cartItems.firstChild);
 
     console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
@@ -2284,7 +2285,7 @@ async function renderCart() {
     cart.forEach((item, index) => {
         const product = products.find(p => p._id === item.id);
         if (!product) {
-            console.warn(`Товар із ID ${item.id} не знайдено, видаляємо з кошика`);
+            console.warn(`Товар із _id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
             saveToStorage('cart', cart);
             return;
