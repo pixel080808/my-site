@@ -197,10 +197,15 @@ async function saveCartToServer() {
 
 async function triggerCleanupOldCarts() {
     try {
+        const csrfToken = localStorage.getItem('csrfToken');
+        if (!csrfToken) {
+            throw new Error('CSRF-токен відсутній');
+        }
         const response = await fetch(`${BASE_URL}/api/cleanup-carts`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             }
         });
         if (!response.ok) {
