@@ -278,9 +278,9 @@ async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
-if (!localStorage.getItem('csrfToken')) {
-    await fetchCsrfToken();
-}
+            if (!localStorage.getItem('csrfToken')) {
+                await fetchCsrfToken();
+            }
             const response = await fetch(url, {
                 ...options,
                 headers: {
