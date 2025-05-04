@@ -140,52 +140,40 @@ async function loadCartFromServer() {
 }
 
 async function saveCartToServer() {
-    let cartItems = [];
+    let cartItems = loadFromStorage('cart', []);
     
-    const cartData = localStorage.getItem('cart');
-    if (cartData) {
-        try {
-            cartItems = JSON.parse(LZString.decompressFromUTF16(cartData));
-            if (!Array.isArray(cartItems)) {
-                console.warn('Кошик у localStorage не є масивом, очищаємо його');
-                cartItems = [];
-                saveToStorage('cart', cartItems);
-            }
-        } catch (error) {
-            console.error('Помилка парсингу кошика з localStorage:', error);
-            cartItems = [];
-            saveToStorage('cart', cartItems);
-        }
+    if (!Array.isArray(cartItems)) {
+        console.warn('Кошик у localStorage не є масивом, очищаємо його');
+        cartItems = [];
+        saveToStorage('cart', cartItems);
     }
 
-const filteredCartItems = cartItems.reduce((acc, item) => {
-    const product = products.find(p => p._id === item.id);
-    if (!product) {
-        console.warn('Продукт не знайдено для cartItem:', item);
+    const filteredCartItems = cartItems.reduce((acc, item) => {
+        const product = products.find(p => p._id === item.id);
+        if (!product) {
+            console.warn('Продукт не знайдено для cartItem:', item);
+            return acc;
+        }
+        const cartItem = {
+            id: item.id, // Use 'id' to match typical server expectations
+            name: item.name,
+            color: item.color && item.color !== 'Не вказано' ? item.color : null, // Avoid sending 'Не вказано' if not needed
+            price: Number(item.price), // Ensure price is a number
+            quantity: Number(item.quantity), // Ensure quantity is a number
+            photo: item.photo || NO_IMAGE_URL
+        };
+        const isValid = cartItem &&
+            typeof cartItem.id === 'string' && cartItem.id &&
+            cartItem.name &&
+            typeof cartItem.quantity === 'number' && cartItem.quantity > 0 &&
+            typeof cartItem.price === 'number' && cartItem.price >= 0;
+        if (isValid) {
+            acc.push(cartItem);
+        } else {
+            console.warn('Елемент кошика видалено через некоректні дані:', cartItem);
+        }
         return acc;
-    }
-    const cartItem = {
-        _id: item.id,
-        productId: item.id,
-        name: item.name,
-        color: item.color || 'Не вказано',
-        price: item.price,
-        quantity: item.quantity,
-        photo: item.photo || NO_IMAGE_URL
-    };
-    const isValid = cartItem &&
-        typeof cartItem._id === 'string' && cartItem._id &&
-        typeof cartItem.productId === 'string' && cartItem.productId &&
-        cartItem.name &&
-        typeof cartItem.quantity === 'number' &&
-        typeof cartItem.price === 'number';
-    if (isValid) {
-        acc.push(cartItem);
-    } else {
-        console.warn('Елемент кошика видалено через некоректні дані:', cartItem);
-    }
-    return acc;
-}, []);
+    }, []);
 
     console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
 
@@ -210,21 +198,23 @@ const filteredCartItems = cartItems.reduce((acc, item) => {
         const responseBody = await response.json();
         if (!response.ok) {
             console.error(`Помилка сервера: ${response.status}, Тіло:`, responseBody);
-            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'}`);
+            throw new Error(`Помилка сервера: ${response.status} - ${responseBody.error || 'Невідома помилка'} (${JSON.stringify(responseBody.details || {})})`);
         }
         console.log('Кошик успішно збережено на сервері:', responseBody);
         cart = filteredCartItems.map(item => ({
-            id: item._id,
+            id: item.id,
             name: item.name,
-            color: item.color,
+            color: item.color || 'Не вказано',
             price: item.price,
             quantity: item.quantity,
             photo: item.photo
         }));
         saveToStorage('cart', cart);
+        renderCart(); // Ensure the cart is re-rendered after successful sync
     } catch (error) {
         console.error('Помилка збереження кошика:', error);
-        showNotification('Не вдалося синхронізувати кошик із сервером. Дані збережено локально.', 'warning');
+        showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
+        renderCart(); // Render the cart even if the server sync fails
         throw error;
     }
 }
