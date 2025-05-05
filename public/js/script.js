@@ -158,7 +158,7 @@ async function saveCartToServer() {
                 return null;
             }
             return {
-                id: item.id, // Залишаємо id як рядок
+                id: parseInt(item.id, 16), // Конвертуємо рядок id у число (16-кова система для ObjectId)
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -173,7 +173,7 @@ async function saveCartToServer() {
     // Check if BASE_URL is defined
     if (!BASE_URL) {
         console.error('BASE_URL is undefined');
-        showNotification('Error: server is unavailable. Data saved locally.', 'error');
+        showNotification('Помилка: сервер недоступний. Дані збережено локально.', 'error');
         renderCart();
         return;
     }
@@ -207,7 +207,7 @@ async function saveCartToServer() {
 
         // Update global cart after successful save
         cart = filteredCartItems.map(item => ({
-            id: String(item.id),
+            id: item.id.toString(), // Зберігаємо id як рядок локально
             name: item.name,
             color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
             price: item.price,
@@ -219,7 +219,7 @@ async function saveCartToServer() {
         renderCart();
     } catch (error) {
         console.error('Error saving cart:', error);
-        showNotification(`Failed to sync cart with server: ${error.message}. Data saved locally.`, 'warning');
+        showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
         renderCart();
         throw error;
     }
@@ -2063,7 +2063,7 @@ async function addGroupToCart(productId) {
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: Number(p.id), // Використовуємо числове p.id замість _id
+                id: parseInt(p._id, 16), // Конвертуємо _id у число
                 name: p.name,
                 price,
                 quantity: 1,
@@ -2271,7 +2271,7 @@ async function renderCart() {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
-    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
+    while (cartContent.firstChild) cartItems.removeChild(cartItems.firstChild);
 
     console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
@@ -2289,7 +2289,7 @@ async function renderCart() {
 
     // Відображення кожного елемента кошика
     cart.forEach((item, index) => {
-        const product = products.find(p => p.id === item.id); // Змінено з p._id на p.id
+        const product = products.find(p => p._id === item.id); // Використовуємо _id замість id
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
@@ -2523,29 +2523,29 @@ async function submitOrder() {
 
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
-const orderData = {
-    date: new Date().toISOString(),
-    status: 'Нове замовлення',
-    total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    customer,
-    items: cart.map(item => ({
-        id: item.id, // Залишаємо як рядок
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        color: item.color?.name || ''
-    }))
-};
+    const orderData = {
+        date: new Date().toISOString(),
+        status: 'Нове замовлення',
+        total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        customer,
+        items: cart.map(item => ({
+            id: parseInt(item.id, 16), // Конвертуємо id у число
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            color: item.color?.name || ''
+        }))
+    };
 
-if (orderData.items) {
-    orderData.items = orderData.items.filter(item => {
-        const isValid = item && typeof item.id === 'string' && item.id; 
-        if (!isValid) {
-            console.warn('Елемент замовлення видалено через відсутність id:', item);
-        }
-        return isValid;
-    });
-}
+    if (orderData.items) {
+        orderData.items = orderData.items.filter(item => {
+            const isValid = item && typeof item.id === 'number' && item.id;
+            if (!isValid) {
+                console.warn('Елемент замовлення видалено через некоректний id:', item);
+            }
+            return isValid;
+        });
+    }
 
     console.log('Дані замовлення перед відправкою:', orderData);
 
