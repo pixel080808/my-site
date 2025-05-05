@@ -2013,14 +2013,14 @@ async function addToCartWithColor(productId) {
         colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
-const cartItem = {
-    id: product.id.toString(),
-    name: product.name,
-    quantity: quantity,
-    price: price,
-    photo: product.photos?.[0] || NO_IMAGE_URL,
-    color: colorData
-};
+    const cartItem = {
+        id: product._id, // Використовуємо _id замість id
+        name: product.name,
+        quantity: quantity,
+        price: price,
+        photo: product.photos?.[0] || NO_IMAGE_URL,
+        color: colorData
+    };
     console.log('Створено cartItem:', cartItem);
 
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && JSON.stringify(item.color) === JSON.stringify(cartItem.color));

@@ -50,7 +50,7 @@ const settingsSchema = new mongoose.Schema({
                 message: 'Social URL must be a valid URL'
             }
         },
-        icon: { type: String, default: '' } // Зроблено необов’язковим
+        icon: { type: String, default: '' }
     }],
     showSocials: { type: Boolean, default: true },
     about: { type: String, default: '' },

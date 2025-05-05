@@ -1,7 +1,7 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
-const Counter = require('./Counter'); // Import the Counter model
+const Counter = require('./Counter');
 
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
@@ -57,7 +57,6 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Автоматичне створення унікального id з використанням лічильника
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
@@ -74,7 +73,6 @@ productSchema.pre('save', async function(next) {
     }
 });
 
-// Перевірка groupProducts
 productSchema.pre('save', async function(next) {
     try {
         if (this.groupProducts && this.groupProducts.length > 0) {
@@ -89,7 +87,6 @@ productSchema.pre('save', async function(next) {
     }
 });
 
-// Очищення description від XSS
 productSchema.pre('save', function(next) {
     if (this.description) {
         this.description = sanitizeHtml(this.description, {
@@ -106,13 +103,11 @@ productSchema.pre('save', function(next) {
     next();
 });
 
-// Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 
-// Joi-валідація для продуктів
 const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),

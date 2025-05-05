@@ -2351,10 +2351,10 @@ app.get('/api/cart', async (req, res) => {
             return res.status(400).json({ error: 'Невірний формат cartId' });
         }
 
-        let cart = await Cart.findOne({ cartId }); // Змінено CartModel на Cart
+        let cart = await Cart.findOne({ cartId });
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: [], updatedAt: Date.now() }); // Змінено CartModel на Cart
+            cart = new Cart({ cartId, items: [], updatedAt: Date.now() });
             await cart.save();
         }
 

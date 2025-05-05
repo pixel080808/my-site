@@ -4,7 +4,6 @@ const materialSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, trim: true }
 }, { timestamps: true });
 
-// Перевірка унікальності name
 materialSchema.pre('save', async function(next) {
     const material = this;
     if (material.isModified('name')) {
