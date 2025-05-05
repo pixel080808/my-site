@@ -148,27 +148,27 @@ async function saveCartToServer() {
         saveToStorage('cart', cartItems);
     }
 
-const filteredCartItems = cartItems
-    .map(item => {
-        if (!item.id || typeof item.id !== 'string') {
-            console.warn('Некоректний id в елементі кошика:', item);
-            return null;
-        }
-        const product = products.find(p => p._id === item.id);
-        if (!product) {
-            console.warn('Продукт не знайдено для id:', item.id);
-            return null;
-        }
-        return {
-            id: item.id, // Використовуємо _id (ObjectId) напряму
-            name: item.name || '',
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-            photo: item.photo || '',
-            color: item.color || null
-        };
-    })
-    .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
+    const filteredCartItems = cartItems
+        .map(item => {
+            if (!item.id || typeof item.id !== 'number') {
+                console.warn('Некоректний id в елементі кошика:', item);
+                return null;
+            }
+            const product = products.find(p => p.id === item.id);
+            if (!product) {
+                console.warn('Продукт не знайдено для id:', item.id);
+                return null;
+            }
+            return {
+                id: item.id, // Використовуємо числове поле id
+                name: item.name || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                photo: item.photo || '',
+                color: item.color || null
+            };
+        })
+        .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
 
     console.log('Cart data before sending:', JSON.stringify(filteredCartItems, null, 2));
 
@@ -207,7 +207,7 @@ const filteredCartItems = cartItems
 
         cart = filteredCartItems.map(item => ({
             ...item,
-            id: item.id.toString()
+            id: item.id
         }));
         saveToStorage('cart', cart);
         renderCart();
@@ -1957,13 +1957,13 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-    if (typeof product._id !== 'string' || !product._id) {
-        console.error('Некоректний _id продукту:', product);
+    if (typeof product.id !== 'number') {
+        console.error('Некоректний id продукту:', product);
         showNotification('Помилка: товар має некоректний ідентифікатор!', 'error');
         return;
     }
     console.log('Додавання до кошика, продукт:', {
-        _id: product._id,
+        id: product.id,
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -2014,7 +2014,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product._id, // Використовуємо _id замість id
+        id: product.id, // Використовуємо числове поле id
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2057,7 +2057,7 @@ async function addGroupToCart(productId) {
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: p._id,
+                id: p.id, // Використовуємо числове поле id
                 name: p.name,
                 price,
                 quantity: 1,
@@ -2277,7 +2277,7 @@ async function renderCart() {
     await updateCartPrices();
 
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id);
+        const product = products.find(p => p.id === item.id);
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);

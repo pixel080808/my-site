@@ -1,12 +1,11 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 
-
 const cartSchema = new mongoose.Schema({
     cartId: { type: String, required: true, unique: true },
     items: [
         {
-            id: { type: String, required: true },
+            id: { type: Number, required: true }, // Змінено на Number
             name: { type: String, required: true },
             quantity: { type: Number, required: true, min: 1 },
             price: { type: Number, required: true, min: 0 },
@@ -54,7 +53,7 @@ const Cart = mongoose.model('Cart', cartSchema);
 
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.string().required(),
+        id: Joi.number().required(), // Змінено на number
         name: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
