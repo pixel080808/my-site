@@ -1,7 +1,6 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
-const Counter = require('./Counter');
 
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
@@ -48,7 +47,7 @@ const productSchema = new mongoose.Schema({
         },
         priceChange: { type: Number, default: 0 }
     }],
-    groupProducts: [{ type: Number, ref: 'Product' }], // Змінено на Number
+    groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     description: { type: String, trim: true },
     widthCm: { type: Number, min: 0 },
     depthCm: { type: Number, min: 0 },
@@ -61,12 +60,8 @@ const productSchema = new mongoose.Schema({
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
-            const counter = await Counter.findOneAndUpdate(
-                { _id: 'productId' },
-                { $inc: { seq: 1 } },
-                { new: true, upsert: true }
-            );
-            this.id = counter.seq;
+            const lastProduct = await mongoose.models.Product.findOne().sort({ id: -1 });
+            this.id = lastProduct && lastProduct.id ? lastProduct.id + 1 : 1;
         }
         next();
     } catch (err) {
@@ -78,7 +73,7 @@ productSchema.pre('save', async function(next) {
 productSchema.pre('save', async function(next) {
     try {
         if (this.groupProducts && this.groupProducts.length > 0) {
-            const existingProducts = await mongoose.models.Product.find({ id: { $in: this.groupProducts } });
+            const existingProducts = await mongoose.models.Product.find({ _id: { $in: this.groupProducts } });
             if (existingProducts.length !== this.groupProducts.length) {
                 throw new Error('Деякі продукти в groupProducts не існують');
             }
@@ -93,7 +88,7 @@ productSchema.pre('save', async function(next) {
 productSchema.pre('save', function(next) {
     if (this.description) {
         this.description = sanitizeHtml(this.description, {
-            allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li', 'br'],
+            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
             allowedAttributes: { 'a': ['href'] }
         });
     }
@@ -109,10 +104,12 @@ productSchema.pre('save', function(next) {
 // Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
+productSchema.index({ slug: 1 }, { unique: true });
+productSchema.index({ id: 1 }, { unique: true, sparse: true });
 
 const Product = mongoose.model('Product', productSchema);
 
-// Joi-валідація
+// Joi-валідація для продуктів
 const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),
@@ -150,7 +147,7 @@ const productSchemaValidation = Joi.object({
         })
     ).optional(),
     groupProducts: Joi.array().items(
-        Joi.number() // Змінено на number
+        Joi.string().regex(/^[0-9a-fA-F]{24}$/)
     ).optional(),
     description: Joi.string().trim().optional(),
     widthCm: Joi.number().min(0).optional(),

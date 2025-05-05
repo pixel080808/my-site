@@ -17,14 +17,14 @@ const rateLimit = require('express-rate-limit');
 const csurf = require('csurf');
 const winston = require('winston');
 
-const { Product } = require('./models/Product');
+const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
 const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
-const { Cart } = require('./models/Cart');
+const Cart = require('./models/Cart');
 const OrderField = require('./models/OrderField');
 
 const logger = winston.createLogger({
@@ -343,7 +343,7 @@ const orderSchemaValidation = Joi.object({
             .allow('')
             .optional(),
         address: Joi.string().allow('').optional(),
-        payment: Joi.string().allow('').optional()
+        payment: Joi.string().optional()
     }).required(),
     items: Joi.array().items(
         Joi.object({
@@ -834,7 +834,7 @@ app.get('/api/public/products', async (req, res) => {
             query._id = { $gt: cursor };
         }
 
-        products = await ProductModel.find(query)
+        products = await Product.find(query)
             .select('id name category subcategory price salePrice saleEnd brand material filters photos visible active slug type sizes colors groupProducts description widthCm depthCm heightCm lengthCm popularity')
             .sort({ _id: 1 })
             .limit(parsedLimit + 1)
@@ -850,7 +850,7 @@ app.get('/api/public/products', async (req, res) => {
             return cleanedProduct;
         });
 
-        const total = await ProductModel.countDocuments(query);
+        const total = await Product.countDocuments(query);
         res.json({ products, total, nextCursor, limit: parsedLimit });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', { error: err.message, stack: err.stack });
@@ -858,6 +858,7 @@ app.get('/api/public/products', async (req, res) => {
     }
 });
 
+// Решта коду залишається без змін
 app.get('/api/public/settings', async (req, res) => {
     try {
         const settings = await Settings.findOne({}, { 
@@ -949,8 +950,10 @@ const getPublicIdFromUrl = (url) => {
     if (!url) return null;
     try {
         const parts = url.split('/');
+        // Знаходимо індекс папки 'products' (або іншої папки, визначеної в Cloudinary)
         const folderIndex = parts.findIndex(part => part === 'products');
         if (folderIndex === -1) return null;
+        // Беремо всі частини після папки і до розширення файлу
         const publicIdWithExtension = parts.slice(folderIndex + 1).join('/');
         const publicId = publicIdWithExtension.split('.')[0];
         return publicId || null;
@@ -965,10 +968,12 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         let productData = { ...req.body };
         logger.info('Отримано дані продукту:', JSON.stringify(productData, null, 2));
 
+        // Очищаємо системні поля на початку, щоб уникнути конфліктів
         delete productData.id;
         delete productData._id;
         delete productData.__v;
 
+        // Мапінг img на photos
         if (productData.img && !productData.photos) {
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
             delete productData.img;
@@ -983,6 +988,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
+        // Валідація даних за допомогою Joi
         const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації продукту:', JSON.stringify(error.details, null, 2));
@@ -995,12 +1001,14 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             });
         }
 
+        // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує', field: 'slug' });
         }
 
+        // Перевірка існування brand
         if (productData.brand && productData.brand.trim()) {
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
@@ -1009,6 +1017,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
         }
 
+        // Перевірка існування material
         if (productData.material && productData.material.trim()) {
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
@@ -1017,12 +1026,14 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
         }
 
+        // Перевірка існування category
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, field: 'category' });
         }
 
+        // Перевірка існування subcategory (за slug)
         if (productData.subcategory && productData.subcategory.trim()) {
             const categoryWithSub = await Category.findOne({
                 name: productData.category,
@@ -1037,6 +1048,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             }
         }
 
+        // Перевірка існування groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1064,6 +1076,7 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId.createFromHexString(id));
         }
 
+        // Фіксація проблеми з фото: оновлюємо перше фото продукту, якщо воно відсутнє
         if (!productData.photos || productData.photos.length === 0) {
             const firstProduct = await Product.findOne().sort({ _id: 1 });
             if (firstProduct && firstProduct.photos && firstProduct.photos.length > 0) {
@@ -1133,10 +1146,12 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
 
+        // Мапінг img на photos
         if (productData.img && !productData.photos) {
             productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
             delete productData.img;
         }
+        // Мапінг img у colors
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 if (color.img && !color.photo) {
@@ -1162,12 +1177,14 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності slug
         const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
         if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
+        // Перевірка існування brand
         if (productData.brand) {
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
@@ -1176,6 +1193,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
+        // Перевірка існування material
         if (productData.material) {
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
@@ -1184,12 +1202,14 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
+        // Перевірка існування category
         const category = await Category.findOne({ name: productData.category });
         if (!category) {
             logger.error('Категорія не знайдено:', productData.category);
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
         }
 
+        // Перевірка існування subcategory
         if (productData.subcategory) {
             const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
             if (!subcategoryExists) {
@@ -1198,6 +1218,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
+        // Валідація groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1258,11 +1279,13 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
         const productId = req.params.id;
         logger.info(`Отримано запит на перемикання статусу активності продукту: ${productId}`);
 
+        // Перевірка валідності ObjectId
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             logger.error(`Невірний формат ID продукту: ${productId}`);
             return res.status(400).json({ error: 'Невірний формат ID продукту' });
         }
 
+        // Валідація вхідних даних
         const { error } = Joi.object({
             active: Joi.boolean().required()
         }).validate(req.body);
@@ -1273,6 +1296,7 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
 
         const { active } = req.body;
 
+        // Пошук та оновлення продукту
         const product = await Product.findByIdAndUpdate(
             productId,
             { active },
@@ -1284,6 +1308,7 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
             return res.status(404).json({ error: 'Продукт не знайдено' });
         }
 
+        // Трансляція оновленого списку продуктів
         const products = await Product.find();
         broadcast('products', products);
 
@@ -1363,6 +1388,7 @@ app.get('/api/categories', async (req, res) => {
         } else {
             categories = await Category.find().sort({ order: 1 });
         }
+        // Сортуємо підкатегорії за order
         categories.forEach(category => {
             category.subcategories.sort((a, b) => a.order - b.order);
         });
@@ -1376,10 +1402,12 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
     try {
         let categoryData = req.body;
 
+        // Мапінг img на photo для категорії
         if (categoryData.img && !categoryData.photo) {
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
+        // Мапінг img на photo для підкатегорій
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
@@ -1389,6 +1417,7 @@ app.post('/api/categories', authenticateToken, csrfProtection, async (req, res) 
                 return sub;
             });
 
+            // Валідація кожної підкатегорії
             for (const subcategory of categoryData.subcategories) {
                 const { error } = subcategorySchemaValidation.validate(subcategory);
                 if (error) {
@@ -1425,10 +1454,12 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         let categoryData = { ...req.body };
         logger.info('Отримано дані для оновлення категорії:', JSON.stringify(categoryData, null, 2));
 
+        // Мапінг img на photo для категорії
         if (categoryData.img && !categoryData.photo) {
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
+        // Мапінг img на photo для підкатегорій
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
@@ -1439,6 +1470,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             });
         }
 
+        // Видаляємо системні поля
         delete categoryData._id;
         delete categoryData.__v;
         if (categoryData.subcategories) {
@@ -1465,6 +1497,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
+        // Перевірка унікальності назви
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
             if (existingCategoryByName) {
@@ -1473,6 +1506,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Перевірка унікальності slug
         if (categoryData.slug && categoryData.slug !== category.slug) {
             const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } }).session(session);
             if (existingCategoryBySlug) {
@@ -1481,6 +1515,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Видаляємо старе зображення категорії
         if (category.photo && categoryData.photo && categoryData.photo !== category.photo) {
             const publicId = getPublicIdFromUrl(category.photo);
             if (publicId) {
@@ -1493,6 +1528,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Перевірка унікальності slug у підкатегоріях і видалення старих зображень
         const subcategories = categoryData.subcategories || [];
         const subSlugs = new Set();
         for (const sub of subcategories) {
@@ -1502,6 +1538,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
             subSlugs.add(sub.slug);
 
+            // Видаляємо старе зображення підкатегорії
             const existingSub = category.subcategories.find(s => s.name === sub.name && s.slug !== sub.slug);
             if (existingSub && existingSub.photo && sub.photo && sub.photo !== existingSub.photo) {
                 const publicId = getPublicIdFromUrl(existingSub.photo);
@@ -1516,6 +1553,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Оновлення категорії
         category.name = categoryData.name || category.name;
         category.slug = categoryData.slug || category.slug;
         category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;
@@ -1554,12 +1592,14 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
     try {
         const { categories } = req.body;
 
+        // Валідація
         const { error } = categoryOrderSchema.validate({ categories }, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації порядку категорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
         }
 
+        // Перевірка існування всіх категорій
         const categoryIds = categories.map(item => item._id);
         const foundCategories = await Category.find({ _id: { $in: categoryIds } }).session(session);
         if (foundCategories.length !== categoryIds.length) {
@@ -1570,6 +1610,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: 'Одна або більше категорій не знайдені' });
         }
 
+        // Перевірка унікальності значень order
         const orders = categories.map(item => item.order);
         const uniqueOrders = new Set(orders);
         if (uniqueOrders.size !== orders.length) {
@@ -1577,6 +1618,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: 'Значення order повинні бути унікальними' });
         }
 
+        // Формування операцій для bulkWrite
         const bulkOps = categories.map(({ _id, order }) => ({
             updateOne: {
                 filter: { _id },
@@ -1584,8 +1626,10 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
             }
         }));
 
+        // Виконання bulkWrite
         await Category.bulkWrite(bulkOps, { session });
 
+        // Отримання оновлених категорій
         const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
         broadcast('categories', updatedCategories);
         logger.info('Порядок категорій успішно оновлено');
@@ -1611,18 +1655,21 @@ app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (re
                 return res.status(404).json({ error: 'Категорію не знайдено' });
             }
 
+            // Оновлення продуктів, які посилаються на цю категорію
             await Product.updateMany(
                 { category: category.name },
                 { $set: { category: '' } },
                 { session }
             );
 
+            // Оновлення продуктів, які посилаються на підкатегорії
             await Product.updateMany(
                 { subcategory: { $in: category.subcategories.map(sub => sub.name) } },
                 { $set: { subcategory: '' } },
                 { session }
             );
 
+            // Видаляємо зображення категорії
             if (category.photo) {
                 const publicId = getPublicIdFromUrl(category.photo);
                 if (publicId) {
@@ -1635,6 +1682,7 @@ app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (re
                 }
             }
 
+            // Видаляємо зображення підкатегорій
             for (const subcategory of category.subcategories) {
                 if (subcategory.photo) {
                     const publicId = getPublicIdFromUrl(subcategory.photo);
@@ -1683,6 +1731,7 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
 
         const subcategory = category.subcategories[subcategoryIndex];
 
+        // Видаляємо зображення підкатегорії
         if (subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
@@ -1712,6 +1761,7 @@ app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection,
         const categoryId = req.params.id;
         let subcategoryData = req.body;
 
+        // Мапінг img на photo
         if (subcategoryData.img && !subcategoryData.photo) {
             subcategoryData.photo = subcategoryData.img;
             delete subcategoryData.img;
@@ -1772,11 +1822,13 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 
         logger.info('Отримано дані для оновлення підкатегорії:', JSON.stringify(subcategoryData, null, 2));
 
+        // Мапінг img на photo
         if (subcategoryData.img && !subcategoryData.photo) {
             subcategoryData.photo = subcategoryData.img;
             delete subcategoryData.img;
         }
 
+        // Видаляємо системні поля
         delete subcategoryData._id;
         delete subcategoryData.__v;
 
@@ -1803,6 +1855,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             return res.status(404).json({ error: 'Підкатегорію не знайдено' });
         }
 
+        // Перевірка унікальності slug у підкатегоріях
         if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
             const existingSubcategory = category.subcategories.find(sub => sub.slug === subcategoryData.slug && sub._id.toString() !== subcategoryId);
             if (existingSubcategory) {
@@ -1811,6 +1864,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
+        // Видаляємо старе зображення підкатегорії
         if (subcategory.photo && subcategoryData.photo && subcategoryData.photo !== subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
@@ -1823,6 +1877,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
+        // Оновлення підкатегорії
         subcategory.name = subcategoryData.name || subcategory.name;
         subcategory.slug = subcategoryData.slug || subcategory.slug;
         subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
@@ -1878,6 +1933,7 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
             return res.status(400).json({ error: 'Одна або більше підкатегорій не знайдені' });
         }
 
+        // Перевірка унікальності значень order
         const orders = subcategories.map(item => item.order);
         const uniqueOrders = new Set(orders);
         if (uniqueOrders.size !== orders.length) {
@@ -1885,6 +1941,7 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
             return res.status(400).json({ error: 'Значення order повинні бути унікальними' });
         }
 
+        // Оновлення порядку підкатегорій
         subcategories.forEach(({ _id, order }) => {
             const sub = category.subcategories.id(_id);
             if (sub) {
@@ -1926,6 +1983,7 @@ app.post('/api/slides', authenticateToken, csrfProtection, async (req, res) => {
         let slideData = req.body;
         logger.info('Отримано дані слайду:', slideData);
 
+        // Мапінг img на photo
         if (slideData.img && !slideData.photo) {
             slideData.photo = slideData.img;
             delete slideData.img;
@@ -1980,6 +2038,7 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Невірний формат ID слайду' });
         }
 
+        // Мапінг img на photo, якщо клієнт надсилає img
         if (slideData.img && !slideData.photo) {
             slideData.photo = slideData.img;
             delete slideData.img;
@@ -2012,6 +2071,7 @@ app.put('/api/slides/:id', authenticateToken, csrfProtection, async (req, res) =
                 return res.status(404).json({ error: 'Слайд не знайдено' });
             }
 
+            // Видаляємо старе зображення, якщо нове фото відрізняється
             if (slideData.photo && slide.photo && slideData.photo !== slide.photo) {
                 const publicId = getPublicIdFromUrl(slide.photo);
                 if (publicId) {
@@ -2160,6 +2220,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
         let settingsData = req.body;
         logger.info('Отримано дані для оновлення налаштувань:', JSON.stringify(settingsData, null, 2));
 
+        // Мапінг img на logo і favicon
         if (settingsData.img && !settingsData.logo) {
             settingsData.logo = settingsData.img;
             delete settingsData.img;
@@ -2177,6 +2238,7 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Санітізація текстових полів
         if (cleanedSettingsData.about) {
             cleanedSettingsData.about = sanitizeHtml(cleanedSettingsData.about, {
                 allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li'],
@@ -2271,6 +2333,7 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
         let orderData = req.body;
         const cartId = req.query.cartId;
 
+        // Мапінг img на photo у items
         if (orderData.items) {
             orderData.items = orderData.items.map(item => {
                 if (item.img && !item.photo) {
@@ -2295,6 +2358,7 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності id
         if (orderData.id) {
             const existingOrder = await Order.findOne({ id: orderData.id });
             if (existingOrder) {
@@ -2345,21 +2409,18 @@ app.get('/api/cart', async (req, res) => {
     try {
         const cartId = req.query.cartId;
         logger.info('GET /api/cart:', { cartId });
-
-        if (!cartId || typeof cartId !== 'string') {
-            logger.error('Невірний формат cartId:', cartId);
-            return res.status(400).json({ error: 'Невірний формат cartId' });
+        const { error } = cartIdSchema.validate(cartId);
+        if (error) {
+            return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
         }
-
-        let cart = await Cart.findOne({ cartId }); // Змінено CartModel на Cart
+        let cart = await Cart.findOne({ cartId });
         if (!cart) {
             logger.info('Кошик не знайдено, створюємо новий:', { cartId });
-            cart = new Cart({ cartId, items: [], updatedAt: Date.now() }); // Змінено CartModel на Cart
+            cart = new Cart({ cartId, items: [], updatedAt: Date.now() });
             await cart.save();
         }
-
         logger.info('Повертаємо кошик:', cart.items);
-        res.json(cart.items || []);
+        res.json(cart.items);
     } catch (err) {
         logger.error('Помилка при отриманні кошика:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
@@ -2378,7 +2439,7 @@ const cartSchemaValidation = Joi.array().items(
             value: Joi.string().required(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional()
-        }).allow(null).optional()
+        }).optional()
     })
 );
 
@@ -2389,6 +2450,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         const cartId = req.query.cartId;
         logger.info('POST /api/cart:', { cartId, body: req.body });
 
+        // Валідація cartId
         const { error } = cartIdSchema.validate(cartId);
         if (error) {
             await session.abortTransaction();
@@ -2398,15 +2460,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
 
         let cartItems = req.body;
 
-        // Додаткова перевірка типу id
-        const invalidIds = cartItems.filter(item => typeof item.id !== 'number');
-        if (invalidIds.length > 0) {
-            logger.error('Отримано некоректні id у кошику:', invalidIds);
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ error: 'Усі id елементів кошика мають бути числами', details: invalidIds });
-        }
-
+        // Мапінг img на photo для елементів кошика
         cartItems = cartItems.map(item => {
             if (item.img && !item.photo) {
                 item.photo = item.img;
@@ -2415,6 +2469,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             return item;
         });
 
+        // Валідація елементів кошика
         const { error: cartError } = cartSchemaValidation.validate(cartItems);
         if (cartError) {
             await session.abortTransaction();
@@ -2423,6 +2478,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації кошика', details: cartError.details });
         }
 
+        // Перевірка кольорів відносно даних продукту
         for (const item of cartItems) {
             if (item.color) {
                 const product = await Product.findOne({ id: item.id }).session(session);
@@ -2437,6 +2493,7 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
                     session.endSession();
                     return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` });
                 }
+                // Перевірка відповідності ціни
                 const expectedPrice = product.price + (color.priceChange || 0);
                 if (item.price !== expectedPrice) {
                     logger.warn(`Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
@@ -2444,10 +2501,8 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
                 }
                 item.color.priceChange = color.priceChange || 0;
                 item.photo = color.photo || item.photo || product.photos[0] || '';
-                if (color.photo) {
-                    logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`);
-                }
             } else {
+                // Перевірка ціни для елементів без кольору
                 const product = await Product.findOne({ id: item.id }).session(session);
                 if (!product) {
                     await session.abortTransaction();
@@ -2489,7 +2544,7 @@ const cleanupOldCarts = async () => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const thresholdDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Кошики старше 30 днів
         const carts = await Cart.find({ updatedAt: { $lt: thresholdDate } }).session(session);
         
         if (carts.length === 0) {
@@ -2516,6 +2571,7 @@ const cleanupOldCarts = async () => {
         const cartIdsToDelete = cartsToDelete.map(cart => cart.cartId);
         const result = await Cart.deleteMany({ cartId: { $in: cartIdsToDelete } }).session(session);
 
+        // Трансляція змін кошиків для адміністраторів
         const remainingCarts = await Cart.find().session(session);
         broadcast('carts', remainingCarts);
 
@@ -2557,6 +2613,7 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
         let orderData = req.body;
 
+        // Мапінг img на photo у items
         if (orderData.items) {
             orderData.items = orderData.items.map(item => {
                 if (item.img && !item.photo) {
@@ -2580,6 +2637,7 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Перевірка унікальності id
         if (orderData.id && orderData.id !== orderId) {
             const existingOrder = await Order.findOne({ id: orderData.id });
             if (existingOrder) {
@@ -2621,11 +2679,13 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const orderId = req.params.id;
+        // Перевіряємо, чи ID є валідним MongoDB ObjectID
         if (!orderId.match(/^[0-9a-fA-F]{24}$/)) {
             logger.error(`Невірний формат ID замовлення: ${orderId}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
+        // Шукаємо за _id, а не за id
         const order = await Order.findOneAndDelete({ _id: orderId });
         if (!order) {
             logger.warn(`Замовлення з _id ${orderId} не знайдено`);
@@ -2641,6 +2701,7 @@ app.delete('/api/orders/:id', authenticateToken, csrfProtection, async (req, res
     }
 });
 
+// Схема валідації для OrderField
 const orderFieldSchemaValidation = Joi.object({
     name: Joi.string().trim().min(1).max(100).required(),
     label: Joi.string().trim().min(1).max(100).required(),
@@ -2648,6 +2709,7 @@ const orderFieldSchemaValidation = Joi.object({
     options: Joi.array().items(Joi.string().trim().min(1)).default([])
 });
 
+// Отримання всіх полів замовлення
 app.get('/api/order-fields', authenticateToken, async (req, res) => {
     try {
         const fields = await OrderField.find();
@@ -2658,6 +2720,7 @@ app.get('/api/order-fields', authenticateToken, async (req, res) => {
     }
 });
 
+// Створення нового поля замовлення
 app.post('/api/order-fields', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const { error } = orderFieldSchemaValidation.validate(req.body);
@@ -2917,7 +2980,7 @@ app.post('/api/import/site', authenticateToken, csrfProtection, importUpload.sin
         }
         filePath = req.file.path;
 
-        const maxJsonSize = 10 * 1024 * 1024;
+        const maxJsonSize = 10 * 1024 * 1024; // 10 МБ
         if (req.file.size > maxJsonSize) {
             logger.error('Розмір файлу перевищує ліміт:', { size: req.file.size });
             throw new Error(`Розмір файлу перевищує ліміт у ${maxJsonSize / (1024 * 1024)} МБ`);
@@ -2988,6 +3051,7 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
         }
 
         let products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        // Видаляємо поле id з кожного продукту
         products = products.map(product => {
             const { id, _id, __v, ...cleanedProduct } = product;
             return cleanedProduct;
