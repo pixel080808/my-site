@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
+const Counter = require('./Counter'); // Import the Counter model
 
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
@@ -56,12 +57,16 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Автоматичне створення унікального id
+// Автоматичне створення унікального id з використанням лічильника
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
-            const lastProduct = await mongoose.models.Product.findOne().sort({ id: -1 });
-            this.id = lastProduct && lastProduct.id ? lastProduct.id + 1 : 1;
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'productId' },
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true }
+            );
+            this.id = counter.seq;
         }
         next();
     } catch (err) {
@@ -88,7 +93,7 @@ productSchema.pre('save', async function(next) {
 productSchema.pre('save', function(next) {
     if (this.description) {
         this.description = sanitizeHtml(this.description, {
-            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
+            allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li', 'br'],
             allowedAttributes: { 'a': ['href'] }
         });
     }
@@ -104,8 +109,6 @@ productSchema.pre('save', function(next) {
 // Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
-productSchema.index({ slug: 1 }, { unique: true });
-productSchema.index({ id: 1 }, { unique: true, sparse: true });
 
 const Product = mongoose.model('Product', productSchema);
 

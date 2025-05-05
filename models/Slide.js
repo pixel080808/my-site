@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter'); // Import the Counter model
 
 const slideSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
@@ -13,7 +14,7 @@ const slideSchema = new mongoose.Schema({
         }
     },
     name: { type: String, default: '' },
-    link: { // Змінено з url на link (видалено поле url)
+    link: {
         type: String,
         default: '',
         validate: {
@@ -28,6 +29,23 @@ const slideSchema = new mongoose.Schema({
     linkText: { type: String, default: '' },
     order: { type: Number, default: 0 }
 }, { timestamps: true });
+
+// Автоматичне створення унікального id з використанням лічильника
+slideSchema.pre('save', async function(next) {
+    try {
+        if (!this.id) {
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'slideId' },
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true }
+            );
+            this.id = counter.seq;
+        }
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
 
 // Індекси
 slideSchema.index({ order: 1 });
