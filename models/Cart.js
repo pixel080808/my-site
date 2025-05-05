@@ -6,7 +6,7 @@ const cartSchema = new mongoose.Schema({
     cartId: { type: String, required: true, unique: true },
     items: [
         {
-            id: { type: Number, required: true },
+            id: { type: String, required: true }, // Змінено з Number на String
             name: { type: String, required: true },
             quantity: { type: Number, required: true, min: 1 },
             price: { type: Number, required: true, min: 0 },
@@ -36,7 +36,7 @@ const cartSchema = new mongoose.Schema({
                         }
                     }
                 },
-                default: null // Додано default: null для відповідності Joi
+                default: null
             }
         }
     ],
@@ -57,7 +57,7 @@ const Cart = mongoose.model('Cart', cartSchema);
 // Joi-валідація для масиву items
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.number().required(),
+        id: Joi.string().required(), // Змінено з number на string
         name: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),

@@ -142,46 +142,36 @@ async function loadCartFromServer() {
 async function saveCartToServer() {
     let cartItems = loadFromStorage('cart', []);
 
-    // Ensure cartItems is an array
     if (!Array.isArray(cartItems)) {
         console.warn('Cart in localStorage is not an array, resetting');
         cartItems = [];
         saveToStorage('cart', cartItems);
     }
 
-    // Filter and normalize cart items
-    const filteredCartItems = cartItems
-        .map(item => {
-            // Перевіряємо, чи є id валідним рядком
-            if (!item.id || typeof item.id !== 'string') {
-                console.warn('Некоректний id в елементі кошика:', item);
-                return null;
-            }
-            // Спробуємо отримати продукт для отримання числового id, якщо воно є
-            const product = products.find(p => p._id === item.id);
-            let numericId = null;
-            if (product && product.numericId) {
-                // Якщо у продукті є поле numericId (наприклад, додане в API)
-                numericId = product.numericId;
-            } else {
-                // Спробуємо конвертувати ObjectId у число, якщо це доречно
-                // УВАГА: Це лише приклад, потрібно перевірити, чи підходить для вашого API
-                numericId = parseInt(item.id.substring(0, 8), 16) || item.id; // Конвертація перших 8 символів ObjectId у число
-            }
-            return {
-                id: numericId, // Використовуємо числовий id або залишаємо рядок, якщо конвертація неможлива
-                name: item.name || '',
-                quantity: item.quantity || 1,
-                price: item.price || 0,
-                photo: item.photo || '',
-                color: item.color || null
-            };
-        })
-        .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
+const filteredCartItems = cartItems
+    .map(item => {
+        if (!item.id || typeof item.id !== 'string') {
+            console.warn('Некоректний id в елементі кошика:', item);
+            return null;
+        }
+        const product = products.find(p => p._id === item.id);
+        if (!product) {
+            console.warn('Продукт не знайдено для id:', item.id);
+            return null;
+        }
+        return {
+            id: item.id, // Використовуємо _id (ObjectId) напряму
+            name: item.name || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            photo: item.photo || '',
+            color: item.color || null
+        };
+    })
+    .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
 
     console.log('Cart data before sending:', JSON.stringify(filteredCartItems, null, 2));
 
-    // Check if BASE_URL is defined
     if (!BASE_URL) {
         console.error('BASE_URL is undefined');
         showNotification('Помилка: сервер недоступний. Дані збережено локально.', 'error');
@@ -189,7 +179,6 @@ async function saveCartToServer() {
         return;
     }
 
-    // Get or generate cartId
     let cartId = localStorage.getItem('cartId');
     if (!cartId) {
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
@@ -216,10 +205,9 @@ async function saveCartToServer() {
 
         console.log('Cart successfully saved to server:', responseBody);
 
-        // Update global cart after successful save
         cart = filteredCartItems.map(item => ({
             ...item,
-            id: item.id.toString() // Конвертуємо назад у рядок для локального зберігання
+            id: item.id.toString()
         }));
         saveToStorage('cart', cart);
         renderCart();
@@ -374,7 +362,6 @@ async function fetchPublicData() {
         }
     } catch (e) {
         console.error('Помилка завантаження даних через HTTP:', e);
-        // Завантажуємо локальні дані як резерв
         products = loadFromStorage('products', []);
         categories = loadFromStorage('categories', []);
         slides = loadFromStorage('slides', []);
@@ -451,7 +438,6 @@ function connectPublicWebSocket() {
     ws.onopen = () => {
         console.log('Публічний WebSocket підключено');
         reconnectAttempts = 0;
-        // Уникаємо дублювання підписок
         const subscriptions = ['products', 'categories', 'settings', 'slides'];
         subscriptions.forEach(type => {
             ws.send(JSON.stringify({ type, action: 'subscribe' }));
@@ -463,7 +449,6 @@ function connectPublicWebSocket() {
             const message = JSON.parse(event.data);
             console.log('WebSocket message received:', { type: message.type, dataLength: message.data?.length });
 
-            // Перевірка формату повідомлення
             if (!message.type) {
                 console.warn('Повідомлення WebSocket без типу:', message);
                 return;
@@ -592,7 +577,6 @@ async function initializeData() {
         localStorage.setItem('cartId', cartId);
     }
 
-    // Check for corrupted cart data
     let tempCart = loadFromStorage('cart', []);
     if (tempCart.some(item => typeof item.id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(item.id))) {
         console.warn('Corrupted cart data detected, resetting cart');
@@ -1571,7 +1555,6 @@ function renderProductDetails() {
             rightDiv.appendChild(priceDiv);
             rightDiv.appendChild(sizeP);
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            // Цей блок залишиться без змін, якщо не потрібно
         } else {
             if (isOnSale) {
                 const saleSpan = document.createElement('span');
@@ -2030,14 +2013,14 @@ async function addToCartWithColor(productId) {
         colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
-    const cartItem = {
-        id: product._id, // Ensure id is a string
-        name: product.name,
-        quantity: quantity,
-        price: price,
-        photo: product.photos?.[0] || NO_IMAGE_URL,
-        color: colorData
-    };
+const cartItem = {
+    id: product.id.toString(),
+    name: product.name,
+    quantity: quantity,
+    price: price,
+    photo: product.photos?.[0] || NO_IMAGE_URL,
+    color: colorData
+};
     console.log('Створено cartItem:', cartItem);
 
     const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && JSON.stringify(item.color) === JSON.stringify(cartItem.color));
@@ -2069,12 +2052,12 @@ async function addGroupToCart(productId) {
         return;
     }
     checkboxes.forEach(cb => {
-        const id = cb.value; // _id is already a string
+        const id = cb.value;
         const p = products.find(p => p._id === id);
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: p._id, // Keep id as a string
+                id: p._id,
                 name: p.name,
                 price,
                 quantity: 1,
@@ -2093,13 +2076,11 @@ async function addGroupToCart(productId) {
 }
 
 async function fetchProductBySlug(slug) {
-    // Спочатку перевіряємо локальний кеш
     const cachedProduct = products.find(p => p.slug === slug);
     if (cachedProduct) {
         console.log('Продукт знайдено в локальному кеші:', cachedProduct.name);
         return cachedProduct;
     }
-    // Якщо не знайдено, робимо запит до сервера
     return await fetchProductFromServer(slug);
 }
 
@@ -2135,7 +2116,6 @@ async function fetchProductFromServer(slug) {
         }
 
         console.log('Знайдено продукт:', product.name, 'ID:', product._id);
-        // Оновлюємо локальний кеш
         products = products.filter(p => p._id !== product._id);
         products.push(product);
         saveToStorage('products', products);
@@ -2151,7 +2131,7 @@ async function openProduct(slugOrId) {
     console.log('Opening product with slug or ID:', slugOrId);
     
     let product = null;
-    if (typeof slugOrId === 'string' && slugOrId.includes('-')) { // Припускаємо, що _id містить дефіси
+    if (typeof slugOrId === 'string' && slugOrId.includes('-')) {
         product = products.find(p => p._id === slugOrId);
     } else {
         product = products.find(p => p.slug === slugOrId);
@@ -2276,13 +2256,12 @@ async function renderCart() {
         return;
     }
 
-    // Очищення існуючих таймерів
     const existingTimers = cartItems.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
-    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild); // Fixed line
+    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
     console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
@@ -2295,12 +2274,10 @@ async function renderCart() {
         return;
     }
 
-    // Оновлення цін у кошику
     await updateCartPrices();
 
-    // Відображення кожного елемента кошика
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id); // Використовуємо _id замість id
+        const product = products.find(p => p._id === item.id);
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
@@ -2367,13 +2344,11 @@ async function renderCart() {
         cartItems.appendChild(itemDiv);
     });
 
-    // Додавання загальної суми
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
     totalP.textContent = `Загалом: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
     cartContent.appendChild(totalP);
 
-    // Додавання форми замовлення
     const h3 = document.createElement('h3');
     h3.textContent = 'Оформити замовлення';
     cartContent.appendChild(h3);
@@ -2540,7 +2515,7 @@ async function submitOrder() {
         total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
         items: cart.map(item => ({
-            id: item.id, // Keep id as a string
+            id: item.id,
             name: item.name,
             quantity: item.quantity,
             price: item.price,
