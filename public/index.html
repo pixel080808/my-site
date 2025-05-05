@@ -15,7 +15,7 @@
     <link href="/css/styles.css" rel="stylesheet"/>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <!-- Основний скрипт із defer -->
-    <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
+    <script type="text/javascript" src="/js/script.js?v=1.0.4" defer></script>
     <!-- Google Analytics асинхронно -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
@@ -306,47 +306,71 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* Стилі для соціальних мереж у секції Контакти */
+#socials {
+    margin-top: 20px;
+}
+
+#socials h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: #007bff;
+    font-size: 1.1em;
+    transition: color 0.2s;
+}
+
+.social-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.social-link .social-icon {
+    margin-right: 5px;
+    font-size: 1.2em;
+}
+
+@media (max-width: 600px) {
+    .social-link {
+        display: flex;
+        margin-bottom: 15px;
+        font-size: 1em;
+    }
+}
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo" id="logo" onclick="showSection('home')">
-        </div>
-        <div class="logo-text" id="logo-text">
-        </div>
-        <div class="phones" id="phones">
-        </div>
-        <div class="search-bar">
-            <input aria-label="Пошук товарів" id="search" placeholder="Пошук товарів" type="text"/>
-            <button aria-label="Шукати" class="search-btn" onclick="searchProducts()">
-                🔍
-            </button>
-        </div>
-        <div class="cart" onclick="showSection('cart')">
-            Кошик
-            <span class="cart-count">
-                0
-            </span>
-        </div>
-    </header>
-    <nav class="nav">
-        <a href="#" onclick="showSection('home'); return false;">
-            Головна
-        </a>
-        <div class="catalog-menu">
-            <a href="#" id="catalog-toggle">
-                Каталог
-            </a>
-            <div class="dropdown" id="catalog-dropdown">
-            </div>
-        </div>
-        <a href="#" onclick="showSection('contacts'); return false;">
-            Контакти
-        </a>
-        <a href="#" onclick="showSection('about'); return false;">
-            Про нас
-        </a>
-    </nav>
+<header>
+    <div class="logo" id="logo"></div>
+    <div class="logo-text" id="logo-text"></div>
+    <div class="phones" id="phones"></div>
+    <div class="search-bar">
+        <input aria-label="Пошук товарів" id="search" placeholder="Пошук товарів" type="text"/>
+        <button aria-label="Шукати" class="search-btn">🔍</button>
+    </div>
+    <div class="cart" id="cart">
+        Кошик
+        <span class="cart-count">0</span>
+    </div>
+</header>
+<nav class="nav">
+    <a href="#" id="nav-home">Головна</a>
+    <div class="catalog-menu">
+        <a href="#" id="catalog-toggle">Каталог</a>
+        <div class="dropdown" id="catalog-dropdown"></div>
+    </div>
+    <a href="#" id="nav-contacts">Контакти</a>
+    <a href="#" id="nav-about">Про нас</a>
+</nav>
     <div class="breadcrumbs" id="breadcrumbs">
     </div>
     <div class="content">
