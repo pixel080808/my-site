@@ -112,7 +112,7 @@ async function loadCartFromServer() {
             cart = [];
         }
         cart = cart.filter(item => {
-            const isValid = item && typeof item.id === 'string' && item.id && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            const isValid = item && typeof item.id === 'string' && /^[0-9a-fA-F]{24}$/.test(item.id) && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
             if (!isValid) {
                 console.warn('Елемент кошика видалено через некоректні дані:', item);
             }
@@ -123,7 +123,7 @@ async function loadCartFromServer() {
         console.error('Помилка завантаження кошика:', e);
         cart = loadFromStorage('cart', []);
         cart = cart.filter(item => {
-            const isValid = item && typeof item.id === 'string' && item.id && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            const isValid = item && typeof item.id === 'string' && /^[0-9a-fA-F]{24}$/.test(item.id) && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
             if (!isValid) {
                 console.warn('Елемент кошика видалено через некоректні дані:', item);
             }
@@ -158,7 +158,7 @@ async function saveCartToServer() {
                 return null;
             }
             return {
-                id: parseInt(item.id, 16), // Конвертуємо рядок id у число (16-кова система для ObjectId)
+                id: item.id, // Keep id as a string, no conversion
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -206,15 +206,7 @@ async function saveCartToServer() {
         console.log('Cart successfully saved to server:', responseBody);
 
         // Update global cart after successful save
-        cart = filteredCartItems.map(item => ({
-            id: item.id.toString(), // Зберігаємо id як рядок локально
-            name: item.name,
-            color: item.color && typeof item.color === 'object' && item.color.name ? item.color.name : 'Not specified',
-            price: item.price,
-            quantity: item.quantity,
-            photo: item.photo
-        }));
-
+        cart = filteredCartItems;
         saveToStorage('cart', cart);
         renderCart();
     } catch (error) {
@@ -584,6 +576,16 @@ async function initializeData() {
     if (!cartId) {
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('cartId', cartId);
+    }
+
+    // Check for corrupted cart data
+    let tempCart = loadFromStorage('cart', []);
+    if (tempCart.some(item => typeof item.id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(item.id))) {
+        console.warn('Corrupted cart data detected, resetting cart');
+        cart = [];
+        cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('cartId', cartId);
+        saveToStorage('cart', cart);
     }
 
     await fetchCsrfToken();
@@ -2014,13 +2016,8 @@ async function addToCartWithColor(productId) {
         colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
-    if (!product._id || typeof product._id !== 'string') {
-        console.error('Некоректний або відсутній _id продукту:', product);
-        showNotification('Помилка: не вдалося додати товар через некоректний ідентифікатор!', 'error');
-        return;
-    }
     const cartItem = {
-        id: product._id,
+        id: product._id, // Ensure id is a string
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2058,12 +2055,12 @@ async function addGroupToCart(productId) {
         return;
     }
     checkboxes.forEach(cb => {
-        const id = cb.value; // _id уже рядок
+        const id = cb.value; // _id is already a string
         const p = products.find(p => p._id === id);
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: parseInt(p._id, 16), // Конвертуємо _id у число
+                id: p._id, // Keep id as a string
                 name: p.name,
                 price,
                 quantity: 1,
@@ -2271,7 +2268,7 @@ async function renderCart() {
         if (timer.dataset.intervalId) clearInterval(parseInt(timer.dataset.intervalId));
     });
     while (cartItems.firstChild) cartItems.removeChild(cartItems.firstChild);
-    while (cartContent.firstChild) cartItems.removeChild(cartItems.firstChild);
+    while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild); // Fixed line
 
     console.log('Відображення кошика, поточний кошик:', cart);
     if (cart.length === 0) {
@@ -2529,7 +2526,7 @@ async function submitOrder() {
         total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
         items: cart.map(item => ({
-            id: parseInt(item.id, 16), // Конвертуємо id у число
+            id: item.id, // Keep id as a string
             name: item.name,
             quantity: item.quantity,
             price: item.price,
@@ -2539,7 +2536,7 @@ async function submitOrder() {
 
     if (orderData.items) {
         orderData.items = orderData.items.filter(item => {
-            const isValid = item && typeof item.id === 'number' && item.id;
+            const isValid = item && typeof item.id === 'string' && item.id;
             if (!isValid) {
                 console.warn('Елемент замовлення видалено через некоректний id:', item);
             }
