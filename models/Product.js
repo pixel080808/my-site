@@ -1,7 +1,7 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
-const Counter = require('./Counter'); // Import the Counter model
+const Counter = require('./Counter');
 
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
@@ -48,7 +48,7 @@ const productSchema = new mongoose.Schema({
         },
         priceChange: { type: Number, default: 0 }
     }],
-    groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    groupProducts: [{ type: Number, ref: 'Product' }], // Змінено на Number
     description: { type: String, trim: true },
     widthCm: { type: Number, min: 0 },
     depthCm: { type: Number, min: 0 },
@@ -57,7 +57,7 @@ const productSchema = new mongoose.Schema({
     popularity: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Автоматичне створення унікального id з використанням лічильника
+// Автоматичне створення унікального id
 productSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
@@ -78,7 +78,7 @@ productSchema.pre('save', async function(next) {
 productSchema.pre('save', async function(next) {
     try {
         if (this.groupProducts && this.groupProducts.length > 0) {
-            const existingProducts = await mongoose.models.Product.find({ _id: { $in: this.groupProducts } });
+            const existingProducts = await mongoose.models.Product.find({ id: { $in: this.groupProducts } });
             if (existingProducts.length !== this.groupProducts.length) {
                 throw new Error('Деякі продукти в groupProducts не існують');
             }
@@ -112,7 +112,7 @@ productSchema.index({ category: 1, subcategory: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 
-// Joi-валідація для продуктів
+// Joi-валідація
 const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),
@@ -150,7 +150,7 @@ const productSchemaValidation = Joi.object({
         })
     ).optional(),
     groupProducts: Joi.array().items(
-        Joi.string().regex(/^[0-9a-fA-F]{24}$/)
+        Joi.number() // Змінено на number
     ).optional(),
     description: Joi.string().trim().optional(),
     widthCm: Joi.number().min(0).optional(),

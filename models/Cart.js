@@ -1,7 +1,6 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
 
-// Схема MongoDB для Cart
 const cartSchema = new mongoose.Schema({
     cartId: { type: String, required: true, unique: true },
     items: [
@@ -36,30 +35,27 @@ const cartSchema = new mongoose.Schema({
                         }
                     }
                 },
-                default: null // Додано default: null для відповідності Joi
+                default: null
             }
         }
     ],
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Оновлення updatedAt перед збереженням
 cartSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// TTL-індекс для видалення кошиків, старших за 30 днів
 cartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-// Joi-валідація для масиву items
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.number().required(),
+        id: Joi.number().integer().required(),
         name: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
+        quantity: Joi.number().integer().min(1).required(),
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
         color: Joi.object({

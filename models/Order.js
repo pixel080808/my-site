@@ -72,4 +72,33 @@ const orderSchema = new mongoose.Schema({
 
 orderSchema.index({ date: -1 });
 
-module.exports = mongoose.model('Order', orderSchema);
+const Order = mongoose.model('Order', orderSchema);
+
+// Joi-валідація (додаємо, якщо потрібно)
+const Joi = require('joi');
+const orderSchemaValidation = Joi.object({
+    id: Joi.number().integer().required(),
+    cartId: Joi.string().pattern(/^cart-[a-zA-Z0-9]{9}$/).allow('').optional(),
+    date: Joi.date().default(Date.now),
+    customer: Joi.object({
+        name: Joi.string().min(1).max(255).required(),
+        surname: Joi.string().min(1).max(255).optional(),
+        email: Joi.string().email().allow('').optional(),
+        phone: Joi.string().pattern(/^(0\d{9})$|^(\+?\d{10,15})$/).allow('').optional(),
+        address: Joi.string().allow('').optional(),
+        payment: Joi.string().allow('').optional()
+    }).required(),
+    items: Joi.array().items(
+        Joi.object({
+            id: Joi.number().integer().required(),
+            name: Joi.string().required(),
+            quantity: Joi.number().integer().min(1).required(),
+            price: Joi.number().min(0).required(),
+            photo: Joi.string().uri().allow('').optional()
+        })
+    ).required(),
+    total: Joi.number().min(0).required(),
+    status: Joi.string().valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано').default('Нове замовлення')
+});
+
+module.exports = { Order, orderSchemaValidation };

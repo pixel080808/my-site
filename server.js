@@ -2398,6 +2398,15 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
 
         let cartItems = req.body;
 
+        // Додаткова перевірка типу id
+        const invalidIds = cartItems.filter(item => typeof item.id !== 'number');
+        if (invalidIds.length > 0) {
+            logger.error('Отримано некоректні id у кошику:', invalidIds);
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ error: 'Усі id елементів кошика мають бути числами', details: invalidIds });
+        }
+
         cartItems = cartItems.map(item => {
             if (item.img && !item.photo) {
                 item.photo = item.img;
