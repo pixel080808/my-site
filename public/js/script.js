@@ -157,8 +157,19 @@ async function saveCartToServer() {
                 console.warn('Некоректний id в елементі кошика:', item);
                 return null;
             }
+            // Спробуємо отримати продукт для отримання числового id, якщо воно є
+            const product = products.find(p => p._id === item.id);
+            let numericId = null;
+            if (product && product.numericId) {
+                // Якщо у продукті є поле numericId (наприклад, додане в API)
+                numericId = product.numericId;
+            } else {
+                // Спробуємо конвертувати ObjectId у число, якщо це доречно
+                // УВАГА: Це лише приклад, потрібно перевірити, чи підходить для вашого API
+                numericId = parseInt(item.id.substring(0, 8), 16) || item.id; // Конвертація перших 8 символів ObjectId у число
+            }
             return {
-                id: item.id, // Keep id as a string, no conversion
+                id: numericId, // Використовуємо числовий id або залишаємо рядок, якщо конвертація неможлива
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -206,7 +217,10 @@ async function saveCartToServer() {
         console.log('Cart successfully saved to server:', responseBody);
 
         // Update global cart after successful save
-        cart = filteredCartItems;
+        cart = filteredCartItems.map(item => ({
+            ...item,
+            id: item.id.toString() // Конвертуємо назад у рядок для локального зберігання
+        }));
         saveToStorage('cart', cart);
         renderCart();
     } catch (error) {
