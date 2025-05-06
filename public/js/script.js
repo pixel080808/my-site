@@ -150,11 +150,11 @@ async function saveCartToServer() {
 
     const filteredCartItems = cartItems
         .map(item => {
-            if (!item.id || typeof item.id !== 'string') {
+            if (typeof item.id !== 'number') {
                 console.warn('Некоректний id в елементі кошика:', item);
                 return null;
             }
-            const product = products.find(p => p._id === item.id); // Пошук за _id
+            const product = products.find(p => p.id === item.id); // Пошук за числовим id
             if (!product) {
                 console.warn('Продукт не знайдено для id:', item.id);
                 return null;
@@ -1957,13 +1957,13 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-    if (typeof product._id !== 'string') {
-        console.error('Некоректний _id продукту:', product);
-        showNotification('Помилка: товар має некоректний ідентифікатор!', 'error');
+    if (typeof product.id !== 'number') {
+        console.error('Некоректний id продукту:', product);
+        showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
         return;
     }
     console.log('Додавання до кошика, продукт:', {
-        _id: product._id,
+        id: product.id,
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -2014,7 +2014,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product._id, // Використовуємо _id
+        id: product.id, // Використовуємо числове поле id замість _id
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2278,7 +2278,7 @@ async function renderCart() {
     await updateCartPrices();
 
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id.toString()); 
+        const product = products.find(p => p.id === item.id); // Пошук за числовим id
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
