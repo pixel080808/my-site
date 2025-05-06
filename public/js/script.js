@@ -87,6 +87,7 @@ async function loadCartFromServer() {
             localStorage.setItem('cartId', newCartId);
             cart = [];
             saveToStorage('cart', cart);
+            updateCartCount();
             return;
         }
         const response = await fetchWithRetry(`${BASE_URL}/api/cart?cartId=${cartId}`, 3, 1000);
@@ -106,8 +107,15 @@ async function loadCartFromServer() {
             throw new Error('Некоректний формат відповіді сервера');
         }
         const data = await response.json();
-        if (Array.isArray(data)) {
-            cart = data;
+        if (Array.isArray(data) && data.length > 0) {
+            cart = data.map(item => ({
+                id: item.id,
+                name: item.name || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                photo: item.photo || '',
+                color: item.color || null
+            }));
         } else {
             cart = [];
         }
@@ -119,6 +127,7 @@ async function loadCartFromServer() {
             return isValid;
         });
         saveToStorage('cart', cart);
+        updateCartCount();
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
         cart = loadFromStorage('cart', []);
@@ -136,6 +145,7 @@ async function loadCartFromServer() {
         } catch (cleanupError) {
             console.error('Помилка очищення старих кошиків:', cleanupError);
         }
+        updateCartCount();
     }
 }
 
