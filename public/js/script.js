@@ -146,7 +146,7 @@ async function loadCartFromServer() {
             return isValid;
         });
 
-        saveToStorage('cart', cart);
+        saveToStorage('cart', cart); // Зберігаємо локально
         updateCartCount();
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
@@ -158,7 +158,7 @@ async function loadCartFromServer() {
             }
             return isValid;
         });
-        saveToStorage('cart', cart);
+        saveToStorage('cart', cart); // Зберігаємо локально
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'warning');
         try {
             await triggerCleanupOldCarts();
@@ -239,10 +239,11 @@ async function saveCartToServer() {
             ...item,
             id: item.id
         }));
-        saveToStorage('cart', cart);
+        saveToStorage('cart', cart); // Зберігаємо локально
         debouncedRenderCart();
     } catch (error) {
         console.error('Error saving cart:', error);
+        saveToStorage('cart', cartItems); // Зберігаємо локально при помилці
         showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
         debouncedRenderCart();
         throw error;
@@ -2246,6 +2247,10 @@ function searchProducts() {
         isSearchActive = false;
         searchResults = [];
         baseSearchResults = [];
+        currentCategory = null;
+        currentSubcategory = null;
+        currentProduct = null;
+        showSection('catalog');
         renderCatalog();
         return;
     }
@@ -2338,12 +2343,12 @@ async function renderCart() {
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(product.slug);
+        img.onclick = () => openProduct(product.slug); // Перевірка переходу
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
-        span.onclick = () => openProduct(product.slug);
+        span.onclick = () => openProduct(product.slug); // Перевірка переходу
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
@@ -2360,7 +2365,7 @@ async function renderCart() {
         qtyInput.id = `cart-quantity-${index}`;
         qtyInput.min = '1';
         qtyInput.value = item.quantity;
-        qtyInput.readOnly = true;
+        // Видаляємо readOnly для коректного виділення
         qtyDiv.appendChild(qtyInput);
         
         const plusBtn = document.createElement('button');
@@ -2436,7 +2441,7 @@ async function renderCart() {
             input.className = 'order-input';
             input.required = f.required;
             input.value = savedValue;
-            input.oninput = (e) => localStorage.setItem(`order-${f.name}`, e.target.value);
+            input.oninput = (e) => localStorage.setItem(`order-${f.name}`, e.target.value); // Збереження при зміні
             groupDiv.appendChild(input);
         }
         form.appendChild(groupDiv);
@@ -2609,6 +2614,8 @@ async function submitOrder() {
             selectedMattressSizes = {};
             saveToStorage('selectedColors', selectedColors);
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            // Очищаємо локальні поля замовлення
+            orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
             updateCartCount();
             showNotification('Замовлення збережено локально через відсутність CSRF-токена. Зв’яжіться з підтримкою.', 'warning');
             showSection('home');
@@ -2636,7 +2643,8 @@ async function submitOrder() {
         selectedMattressSizes = {};
         saveToStorage('selectedColors', selectedColors);
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
-        updateCartCount();
+        // Очищаємо локальні поля замовлення
+        orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
         await saveCartToServer();
         showNotification('Замовлення оформлено! Дякуємо!', 'success');
         showSection('home');
