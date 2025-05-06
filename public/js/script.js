@@ -123,7 +123,7 @@ async function loadCartFromServer() {
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
             cart = data.map(item => ({
-                id: Number(item.id),
+                id: Number(item.id), // Переконуємось, що id є числом
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -132,8 +132,8 @@ async function loadCartFromServer() {
             }));
         } else {
             cart = loadFromStorage('cart', []);
+            console.log('Сервер повернув порожній кошик, використовуємо локальні дані:', cart);
             if (cart.length > 0) {
-                console.log('Сервер повернув порожній кошик, використовуємо локальні дані:', cart);
                 await saveCartToServer();
             }
         }
@@ -146,7 +146,7 @@ async function loadCartFromServer() {
             return isValid;
         });
 
-        saveToStorage('cart', cart); // Зберігаємо локально
+        saveToStorage('cart', cart);
         updateCartCount();
     } catch (e) {
         console.error('Помилка завантаження кошика:', e);
@@ -158,7 +158,7 @@ async function loadCartFromServer() {
             }
             return isValid;
         });
-        saveToStorage('cart', cart); // Зберігаємо локально
+        saveToStorage('cart', cart);
         showNotification('Не вдалося завантажити кошик із сервера. Використано локальні дані.', 'warning');
         try {
             await triggerCleanupOldCarts();
@@ -190,7 +190,7 @@ async function saveCartToServer() {
                 return null;
             }
             return {
-                id: item.id,
+                id: Number(item.id), // Переконуємось, що id є числом
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -237,13 +237,13 @@ async function saveCartToServer() {
 
         cart = filteredCartItems.map(item => ({
             ...item,
-            id: item.id
+            id: Number(item.id) // Переконуємось, що id є числом
         }));
-        saveToStorage('cart', cart); // Зберігаємо локально
+        saveToStorage('cart', cart);
         debouncedRenderCart();
     } catch (error) {
         console.error('Error saving cart:', error);
-        saveToStorage('cart', cartItems); // Зберігаємо локально при помилці
+        saveToStorage('cart', cartItems);
         showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
         debouncedRenderCart();
         throw error;
@@ -2244,7 +2244,6 @@ function searchProducts() {
     const query = searchInput.value.toLowerCase().trim();
     console.log('Пошук за запитом:', query);
     if (!query) {
-        showNotification('Введіть запит для пошуку!', 'error');
         isSearchActive = false;
         searchResults = [];
         baseSearchResults = [];
@@ -2258,13 +2257,15 @@ function searchProducts() {
     if (isSearchPending) return;
     isSearchPending = true;
 
-    // Переконуємося, що порівняння коректне
-    searchResults = products.filter(p => 
-        p.visible && 
-        (p.name?.toLowerCase().includes(query) || 
-         (p.brand || '').toLowerCase().includes(query) || 
-         (p.description || '').toLowerCase().includes(query))
-    );
+    // Фільтруємо продукти, перевіряючи наявність полів
+    searchResults = products.filter(p => {
+        if (!p.visible) return false;
+        const name = p.name ? p.name.toLowerCase() : '';
+        const brand = p.brand ? p.brand.toLowerCase() : '';
+        const description = p.description ? p.description.toLowerCase() : '';
+        return name.includes(query) || brand.includes(query) || description.includes(query);
+    });
+
     baseSearchResults = [...searchResults];
     isSearchActive = true;
     currentProduct = null;
@@ -2372,6 +2373,20 @@ async function renderCart() {
         qtyInput.id = `cart-quantity-${index}`;
         qtyInput.min = '1';
         qtyInput.value = item.quantity;
+        qtyInput.oninput = async (e) => {
+            let newQty = parseInt(e.target.value) || 1;
+            if (newQty < 1) newQty = 1;
+            cart[index].quantity = newQty;
+            saveToStorage('cart', cart);
+            updateCartCount();
+            debouncedRenderCart();
+            try {
+                await saveCartToServer();
+            } catch (error) {
+                console.error('Помилка синхронізації кошика з сервером:', error);
+                showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+            }
+        };
         qtyDiv.appendChild(qtyInput);
         
         const plusBtn = document.createElement('button');
@@ -2466,6 +2481,9 @@ async function renderCart() {
             newElement.value = activeElementValue || localStorage.getItem(activeElementId) || '';
             newElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             newElement.focus();
+            if (activeElement.selectionStart !== undefined && activeElement.selectionEnd !== undefined) {
+                newElement.setSelectionRange(activeElement.selectionStart, activeElement.selectionEnd);
+            }
         }
     }
 
@@ -2581,27 +2599,35 @@ async function submitOrder() {
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
     const orderData = {
+        cartId: localStorage.getItem('cartId') || '',
         date: new Date().toISOString(),
         status: 'Нове замовлення',
         total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            color: item.color?.name || ''
-        }))
+        items: cart.map(item => {
+            const product = products.find(p => p.id === item.id);
+            return {
+                id: Number(item.id), // Переконуємось, що id є числом
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+                photo: item.photo || (product?.photos?.[0] || '') // Переконуємось, що photo є коректним
+            };
+        })
     };
 
-    if (orderData.items) {
-        orderData.items = orderData.items.filter(item => {
-            const isValid = item && typeof item.id === 'string' && item.id;
-            if (!isValid) {
-                console.warn('Елемент замовлення видалено через некоректний id:', item);
-            }
-            return isValid;
-        });
+    // Перевірка валідності елементів замовлення
+    orderData.items = orderData.items.filter(item => {
+        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+        if (!isValid) {
+            console.warn('Елемент замовлення видалено через некоректні дані:', item);
+        }
+        return isValid;
+    });
+
+    if (orderData.items.length === 0) {
+        showNotification('Помилка: немає валідних товарів для замовлення!', 'error');
+        return;
     }
 
     console.log('Дані замовлення перед відправкою:', orderData);
@@ -2621,7 +2647,6 @@ async function submitOrder() {
             selectedMattressSizes = {};
             saveToStorage('selectedColors', selectedColors);
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
-            // Очищаємо локальні поля замовлення
             orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
             updateCartCount();
             showNotification('Замовлення збережено локально через відсутність CSRF-токена. Зв’яжіться з підтримкою.', 'warning');
@@ -2650,7 +2675,6 @@ async function submitOrder() {
         selectedMattressSizes = {};
         saveToStorage('selectedColors', selectedColors);
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
-        // Очищаємо локальні поля замовлення
         orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
         await saveCartToServer();
         showNotification('Замовлення оформлено! Дякуємо!', 'success');
