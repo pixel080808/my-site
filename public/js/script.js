@@ -150,17 +150,17 @@ async function saveCartToServer() {
 
     const filteredCartItems = cartItems
         .map(item => {
-            if (!item.id || typeof item.id !== 'number') {
+            if (!item.id || typeof item.id !== 'string') {
                 console.warn('Некоректний id в елементі кошика:', item);
                 return null;
             }
-            const product = products.find(p => p.id === item.id);
+            const product = products.find(p => p._id === item.id); // Пошук за _id
             if (!product) {
                 console.warn('Продукт не знайдено для id:', item.id);
                 return null;
             }
             return {
-                id: item.id, // Використовуємо числове поле id
+                id: item.id,
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -1957,13 +1957,13 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-    if (typeof product.id !== 'number') {
-        console.error('Некоректний id продукту:', product);
+    if (typeof product._id !== 'string') {
+        console.error('Некоректний _id продукту:', product);
         showNotification('Помилка: товар має некоректний ідентифікатор!', 'error');
         return;
     }
     console.log('Додавання до кошика, продукт:', {
-        id: product.id,
+        _id: product._id,
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -2014,7 +2014,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product.id,
+        id: product._id, // Використовуємо _id
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2230,21 +2230,21 @@ function searchProducts() {
 }
 
 async function updateCartPrices() {
-    cart.forEach(item => {
-        const product = products.find(p => p._id === item.id);
-        if (!product) return;
-        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
-        const colorIndex = selectedColors[item.id] || 0;
-        const colorPriceChange = product.colors?.[colorIndex]?.priceChange || 0;
+cart.forEach(item => {
+    const product = products.find(p => p._id === item.id); // Пошук за _id
+    if (!product) return;
+    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+    const colorIndex = selectedColors[item.id] || 0;
+    const colorPriceChange = product.colors?.[colorIndex]?.priceChange || 0;
 
-        if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
-            item.price = product.sizes.find(s => s.name === selectedMattressSizes[item.id])?.price || product.price;
-        } else if (!isOnSale && product.salePrice) {
-            item.price = product.price + colorPriceChange;
-        } else {
-            item.price = (isOnSale ? product.salePrice : product.price) + colorPriceChange;
-        }
-    });
+    if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
+        item.price = product.sizes.find(s => s.name === selectedMattressSizes[item.id])?.price || product.price;
+    } else if (!isOnSale && product.salePrice) {
+        item.price = product.price + colorPriceChange;
+    } else {
+        item.price = (isOnSale ? product.salePrice : product.price) + colorPriceChange;
+    }
+});
     saveToStorage('cart', cart);
 }
 
@@ -2278,7 +2278,7 @@ async function renderCart() {
     await updateCartPrices();
 
     cart.forEach((item, index) => {
-        const product = products.find(p => p._id === item.id.toString()); // Пошук за _id як рядок
+        const product = products.find(p => p._id === item.id.toString()); 
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
