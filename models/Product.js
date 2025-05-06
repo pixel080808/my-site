@@ -91,6 +91,5 @@ productSchema.pre('save', function(next) {
 // Індекси
 productSchema.index({ visible: 1, active: 1 });
 productSchema.index({ category: 1, subcategory: 1 });
-productSchema.index({ slug: 1 }, { unique: true }); // Явно задаємо унікальний індекс для slug
 
 module.exports = mongoose.model('Product', productSchema);
