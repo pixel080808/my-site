@@ -2214,16 +2214,26 @@ async function openProduct(slugOrId) {
 
 function searchProducts() {
     const searchInput = document.getElementById('search');
+    if (!searchInput) {
+        console.error('Поле пошуку не знайдено');
+        showNotification('Помилка пошуку!', 'error');
+        return;
+    }
     const query = searchInput.value.toLowerCase().trim();
-    console.log('Пошук за запитом:', query); // Дебагування
+    console.log('Пошук за запитом:', query);
     if (!query) {
         showNotification('Введіть запит для пошуку!', 'error');
+        isSearchActive = false;
+        searchResults = [];
+        baseSearchResults = [];
+        renderCatalog();
         return;
     }
     searchResults = products.filter(p => 
         p.visible && 
         (p.name.toLowerCase().includes(query) || 
-        (p.brand || '').toLowerCase().includes(query))
+         (p.brand || '').toLowerCase().includes(query) || 
+         (p.description || '').toLowerCase().includes(query))
     );
     baseSearchResults = [...searchResults];
     isSearchActive = true;
@@ -2275,7 +2285,7 @@ async function renderCart() {
     while (cartContent.firstChild) cartContent.removeChild(cartContent.firstChild);
 
     console.log('Відображення кошика, поточний кошик:', cart);
-    if (cart.length === 0) {
+    if (!Array.isArray(cart) || cart.length === 0) {
         const p = document.createElement('p');
         p.className = 'empty-cart';
         p.textContent = 'Кошик порожній';
@@ -2307,7 +2317,7 @@ async function renderCart() {
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
-        span.textContent = `${item.name}${item.color && item.color.name && item.color.name !== 'Not specified' ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
+        span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
         span.onclick = () => openProduct(product.slug);
         itemDiv.appendChild(span);
 
@@ -2357,7 +2367,7 @@ async function renderCart() {
 
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
-    totalP.textContent = `Загалом: ${cart.reduce((sum, item) => sum + item.price * item.quantity, 0)} грн`;
+    totalP.textContent = `Загалом: ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)} грн`;
     cartContent.appendChild(totalP);
 
     const h3 = document.createElement('h3');
@@ -2898,6 +2908,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const searchInput = document.getElementById('search');
+        const searchButton = document.querySelector('.search-btn');
         if (searchInput) {
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchProducts();
@@ -2905,8 +2916,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             console.warn('Поле пошуку не знайдено');
         }
-
-        const searchButton = document.querySelector('.search-btn');
         if (searchButton) {
             searchButton.addEventListener('click', (e) => {
                 e.preventDefault();
