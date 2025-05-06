@@ -15,7 +15,7 @@
     <link href="/css/styles.css" rel="stylesheet"/>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <!-- Основний скрипт із defer -->
-    <script type="text/javascript" src="/js/script.js?v=1.0.1" defer></script>
+    <script type="text/javascript" src="/js/script.js?v=1.0.7" defer></script>
     <!-- Google Analytics асинхронно -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
@@ -367,24 +367,23 @@
             </span>
         </div>
     </header>
-    <nav class="nav">
-        <a href="#" onclick="showSection('home'); return false;">
-            Головна
+<nav class="nav">
+    <a href="#" id="nav-home" onclick="showSection('home'); return false;">
+        Головна
+    </a>
+    <div class="catalog-menu">
+        <a href="#" id="catalog-toggle">
+            Каталог
         </a>
-        <div class="catalog-menu">
-            <a href="#" id="catalog-toggle">
-                Каталог
-            </a>
-            <div class="dropdown" id="catalog-dropdown">
-            </div>
-        </div>
-        <a href="#" onclick="showSection('contacts'); return false;">
-            Контакти
-        </a>
-        <a href="#" onclick="showSection('about'); return false;">
-            Про нас
-        </a>
-    </nav>
+        <div class="dropdown" id="catalog-dropdown"></div>
+    </div>
+    <a href="#" id="nav-contacts" onclick="showSection('contacts'); return false;">
+        Контакти
+    </a>
+    <a href="#" id="nav-about" onclick="showSection('about'); return false;">
+        Про нас
+    </a>
+</nav>
     <div class="breadcrumbs" id="breadcrumbs">
     </div>
     <div class="content">
