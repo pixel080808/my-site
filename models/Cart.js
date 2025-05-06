@@ -1,14 +1,13 @@
-const Joi = require('joi');
 const mongoose = require('mongoose');
 
 const cartSchema = new mongoose.Schema({
     cartId: { type: String, required: true, unique: true },
     items: [
         {
-            id: { type: Number, required: true }, // Змінено на Number
+            id: { type: Number, required: true },
             name: { type: String, required: true },
-            quantity: { type: Number, required: true, min: 1 },
-            price: { type: Number, required: true, min: 0 },
+            quantity: { type: Number, required: true, min: 1 }, // Додаємо валідацію для quantity
+            price: { type: Number, required: true, min: 0 }, // Додаємо валідацію для price
             photo: {
                 type: String,
                 default: '',
@@ -18,53 +17,19 @@ const cartSchema = new mongoose.Schema({
                     },
                     message: 'Photo must be a valid URL or empty string'
                 }
-            },
-            color: {
-                type: {
-                    name: { type: String },
-                    value: { type: String },
-                    priceChange: { type: Number, default: 0 },
-                    photo: {
-                        type: String,
-                        default: '',
-                        validate: {
-                            validator: function(v) {
-                                return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-                            },
-                            message: 'Color photo must be a valid URL or empty string'
-                        }
-                    }
-                },
-                default: null
             }
         }
     ],
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+// Оновлення updatedAt перед збереженням
 cartSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-cartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+// Індекс для updatedAt (залишаємо, оскільки він потрібен для сортування)
+cartSchema.index({ updatedAt: 1 });
 
-const Cart = mongoose.model('Cart', cartSchema);
-
-const cartSchemaValidation = Joi.array().items(
-    Joi.object({
-        id: Joi.number().required(), // Змінено на number
-        name: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-        price: Joi.number().min(0).required(),
-        photo: Joi.string().uri().allow('').optional(),
-        color: Joi.object({
-            name: Joi.string().allow('').optional(),
-            value: Joi.string().allow('').optional(),
-            priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null).optional()
-        }).allow(null).optional()
-    })
-);
-
-module.exports = { Cart, cartSchemaValidation };
+module.exports = mongoose.model('Cart', cartSchema);

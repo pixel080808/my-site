@@ -1618,7 +1618,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value=▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option value="▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -4522,9 +4522,11 @@ async function saveNewProduct() {
             return;
         }
 
+        // Очищення newProduct від id і _id
         delete newProduct.id;
         delete newProduct._id;
 
+        // Збір даних із форми
         const nameInput = document.getElementById('product-name');
         const slugInput = document.getElementById('product-slug');
         const brandInput = document.getElementById('product-brand');
@@ -4567,6 +4569,7 @@ async function saveNewProduct() {
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
 
+        // Перевірка обов’язкових полів
         if (!name || !slug || !category) {
             showNotification('Введіть назву, шлях товару та категорію!');
             return;
@@ -4577,6 +4580,7 @@ async function saveNewProduct() {
             return;
         }
 
+        // Перевірка унікальності slug
         const slugCheck = await fetchWithAuth(`/api/products?slug=${encodeURIComponent(slug)}`);
         const existingProducts = await slugCheck.json();
         if (!existingProducts.products || !Array.isArray(existingProducts.products)) {
@@ -4588,6 +4592,7 @@ async function saveNewProduct() {
             return;
         }
 
+        // Перевірка валідності ціни
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
             showNotification('Введіть коректну ціну для простого товару!');
             return;
@@ -4603,6 +4608,7 @@ async function saveNewProduct() {
             return;
         }
 
+        // Перевірка категорії
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
@@ -4619,6 +4625,7 @@ async function saveNewProduct() {
             subcategorySlug = subcategoryObj.slug;
         }
 
+        // Формування об’єкта продукту
         let product = {
             type: newProduct.type,
             name,
@@ -4648,6 +4655,7 @@ async function saveNewProduct() {
             visible
         };
 
+        // Обробка зображень у описі
         const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(description, 'text/html');
@@ -4688,6 +4696,7 @@ async function saveNewProduct() {
         });
         product.description = updatedDescription;
 
+        // Завантаження основних фото
         const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
         for (let file of photoFiles) {
             const validation = validateFile(file);
@@ -4713,6 +4722,7 @@ async function saveNewProduct() {
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
+        // Завантаження фото кольорів
         for (let i = 0; i < newProduct.colors.length; i++) {
             const color = newProduct.colors[i];
             if (color.photo instanceof File) {
@@ -4740,35 +4750,26 @@ async function saveNewProduct() {
             }
         }
 
+        // Видаляємо поле id явно перед відправкою
         delete product.id;
         delete product._id;
 
+        // Додаткове логування для перевірки відсутності id
         if ('id' in product) {
             console.warn('Поле id все ще присутнє перед відправкою:', product.id);
         }
 
+        // Логування перед відправкою
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
+        // Відправка запиту
         const response = await fetchWithAuth('/api/products', {
             method: 'POST',
             body: JSON.stringify(product)
         });
 
         const newProductData = await response.json();
-        console.log('Отримано відповідь від сервера:', JSON.stringify(newProductData, null, 2)); // Додано логування відповіді
-        if (!newProductData._id) {
-            console.error('Сервер не повернув _id для нового товару:', newProductData);
-            showNotification('Помилка: сервер не повернув ідентифікатор товару!');
-            return;
-        }
-
-        // Перевіряємо, чи не дублюється _id
-        if (products.some(p => p._id === newProductData._id)) {
-            console.warn('Товар з _id', newProductData._id, 'уже існує в локальному масиві');
-        } else {
-            products.push(newProductData);
-        }
-
+        products.push(newProductData);
         closeModal();
         renderAdmin('products');
         showNotification('Товар додано!');
@@ -5856,18 +5857,6 @@ function connectAdminWebSocket(attempt = 1) {
                 renderSettingsAdmin();
             } else if (type === 'products') {
                 if (Array.isArray(data)) {
-                    // Перевірка на дублікати _id
-                    const idCounts = data.reduce((acc, p) => {
-                        acc[p._id] = (acc[p._id] || 0) + 1;
-                        return acc;
-                    }, {});
-                    const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
-                    if (duplicates.length > 0) {
-                        console.error('Знайдено товари з однаковими _id:', duplicates);
-                        showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
-                        return;
-                    }
-                    console.log(`Отримано ${data.length} товарів через WebSocket`);
                     products = data;
                     if (document.querySelector('#products.active')) {
                         renderAdmin('products');
@@ -5880,6 +5869,7 @@ function connectAdminWebSocket(attempt = 1) {
                     categories = data;
                     console.log('Отримано WebSocket оновлення для categories:', categories);
                     renderCategoriesAdmin();
+                    // Оновлюємо підкатегорії в модальному вікні, якщо воно відкрите
                     const modal = document.getElementById('modal');
                     if (modal && modal.classList.contains('active')) {
                         updateSubcategories();

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const Counter = require('./Counter');
 
 const slideSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
@@ -14,7 +13,7 @@ const slideSchema = new mongoose.Schema({
         }
     },
     name: { type: String, default: '' },
-    link: {
+    link: { // Змінено з url на link (видалено поле url)
         type: String,
         default: '',
         validate: {
@@ -30,22 +29,7 @@ const slideSchema = new mongoose.Schema({
     order: { type: Number, default: 0 }
 }, { timestamps: true });
 
-slideSchema.pre('save', async function(next) {
-    try {
-        if (!this.id) {
-            const counter = await Counter.findOneAndUpdate(
-                { _id: 'slideId' },
-                { $inc: { seq: 1 } },
-                { new: true, upsert: true }
-            );
-            this.id = counter.seq;
-        }
-        next();
-    } catch (err) {
-        next(err);
-    }
-});
-
+// Індекси
 slideSchema.index({ order: 1 });
 
 module.exports = mongoose.model('Slide', slideSchema);

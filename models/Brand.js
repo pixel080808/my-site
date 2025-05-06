@@ -4,6 +4,7 @@ const brandSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, trim: true }
 }, { timestamps: true });
 
+// Перевірка унікальності name
 brandSchema.pre('save', async function(next) {
     const brand = this;
     if (brand.isModified('name')) {
