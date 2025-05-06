@@ -123,7 +123,7 @@ async function loadCartFromServer() {
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
             cart = data.map(item => ({
-                id: item.id,
+                id: Number(item.id),
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -335,10 +335,11 @@ async function fetchPublicData() {
     try {
         console.log('Fetching products...');
         const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-        if (productResponse && productResponse.ok) {
-            products = await productResponse.json();
-            console.log('Products fetched:', products.length);
-            saveToStorage('products', products);
+if (productResponse && productResponse.ok) {
+    products = await productResponse.json();
+    products = products.filter(p => p.id && p.name && p.slug && p.visible !== false);
+    console.log('Products fetched:', products.length);
+    saveToStorage('products', products);
         } else {
             console.warn('Не вдалося отримати продукти, використовуємо локальні дані');
             products = loadFromStorage('products', []);
@@ -609,7 +610,7 @@ async function initializeData() {
     }
 
     let tempCart = loadFromStorage('cart', []);
-    if (tempCart.some(item => typeof item.id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(item.id))) {
+    if (tempCart.some(item => typeof item.id !== 'number')) {
         console.warn('Corrupted cart data detected, resetting cart');
         cart = [];
         cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
@@ -1988,11 +1989,11 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-    if (typeof product.id !== 'number') {
-        console.error('Некоректний id продукту:', product);
-        showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
-        return;
-    }
+if (typeof product.id !== 'number') {
+    console.error('Некоректний id продукту:', product);
+    showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
+    return;
+}
     console.log('Додавання до кошика, продукт:', {
         id: product.id,
         name: product.name,
@@ -2256,9 +2257,11 @@ function searchProducts() {
     }
     if (isSearchPending) return;
     isSearchPending = true;
+
+    // Переконуємося, що порівняння коректне
     searchResults = products.filter(p => 
         p.visible && 
-        (p.name.toLowerCase().includes(query) || 
+        (p.name?.toLowerCase().includes(query) || 
          (p.brand || '').toLowerCase().includes(query) || 
          (p.description || '').toLowerCase().includes(query))
     );
@@ -2335,6 +2338,10 @@ async function renderCart() {
             saveToStorage('cart', cart);
             return;
         }
+        if (!product.slug) {
+            console.error(`Slug відсутній для продукту:`, product);
+            return;
+        }
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
         
@@ -2343,12 +2350,12 @@ async function renderCart() {
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(product.slug); // Перевірка переходу
+        img.onclick = () => openProduct(product.slug);
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
-        span.onclick = () => openProduct(product.slug); // Перевірка переходу
+        span.onclick = () => openProduct(product.slug);
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
@@ -2365,7 +2372,6 @@ async function renderCart() {
         qtyInput.id = `cart-quantity-${index}`;
         qtyInput.min = '1';
         qtyInput.value = item.quantity;
-        // Видаляємо readOnly для коректного виділення
         qtyDiv.appendChild(qtyInput);
         
         const plusBtn = document.createElement('button');
@@ -2441,7 +2447,7 @@ async function renderCart() {
             input.className = 'order-input';
             input.required = f.required;
             input.value = savedValue;
-            input.oninput = (e) => localStorage.setItem(`order-${f.name}`, e.target.value); // Збереження при зміні
+            input.oninput = (e) => localStorage.setItem(`order-${f.name}`, e.target.value);
             groupDiv.appendChild(input);
         }
         form.appendChild(groupDiv);
@@ -2458,6 +2464,7 @@ async function renderCart() {
         const newElement = document.getElementById(activeElementId);
         if (newElement) {
             newElement.value = activeElementValue || localStorage.getItem(activeElementId) || '';
+            newElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             newElement.focus();
         }
     }

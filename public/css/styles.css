@@ -1,4 +1,3 @@
-/* Скидаємо стандартні стилі */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -6,7 +5,6 @@
     font-family: 'Roboto', Arial, sans-serif;
 }
 
-/* Глобальні змінні */
 :root {
     --primary-color: #3182CE;
     --secondary-color: #2B6CB0;
@@ -24,7 +22,6 @@
     --category-height: 300px;
 }
 
-/* Основний фон */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -35,7 +32,6 @@ body {
     color: var(--text-color);
 }
 
-/* Шапка */
 header {
     background: var(--card-bg);
     padding: var(--base-padding) 0;

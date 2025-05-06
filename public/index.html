@@ -32,12 +32,11 @@
     background-repeat: no-repeat;
     background-position: center;
     width: 150px;
-    height: auto; /* Змінено на auto */
-    padding-top: 33.33%; /* Співвідношення сторін 150/50 = 3, тому 33.33% */
+    height: auto; 
+    padding-top: 33.33%;
     cursor: pointer;
     position: relative;
 }
-/* Попередні стилі */
 #about-text img,
 #about-text iframe {
     max-width: 100%;
@@ -153,19 +152,19 @@
 .group-product-item .group-product-info .dimensions .dimension-item,
 .product-characteristics .dimension-item {
     display: inline-block;
-    margin-right: 5px; /* Зменшуємо відступ для компактності */
+    margin-right: 5px; 
 }
 
 .group-product-item .group-product-info .dimensions .dimension-item .label,
 .product-characteristics .dimension-item .label {
     font-weight: bold;
-    margin-right: 2px; /* Зменшуємо відступ між підписом і значенням */
-    color: #555; /* Темно-сірий колір для підпунктів */
+    margin-right: 2px; 
+    color: #555; 
 }
 
 .group-product-item .group-product-info .dimensions .dimension-item .value,
 .product-characteristics .dimension-item .value {
-    margin-right: 2px; /* Зменшуємо відступ */
+    margin-right: 2px; 
 }
 
 .sale-timer {
@@ -187,23 +186,22 @@
 }
 .price-value {
     font-size: 22px;
-    color: #000; /* Змінюємо на чорний */
+    color: #000; 
     display: inline;
 }
 
-/* Стилі для цін */
 .price .regular-price {
-    color: #000; /* Звичайна ціна — чорна */
+    color: #000; 
     font-size: 18px;
 }
 .price .sale-price {
-    color: #ff4500; /* Акційна ціна — помаранчева */
+    color: #ff4500;
     font-size: 22px;
     font-weight: bold;
     margin-right: 10px;
 }
 .price s {
-    color: #999; /* Закреслена ціна — сіра */
+    color: #999;
     font-size: 16px;
 }
 
@@ -240,7 +238,6 @@
     text-decoration: underline;
 }
 
-/* Стилі для виправлення висоти фільтрів */
 .container {
     display: flex;
     flex-direction: row;
@@ -258,56 +255,57 @@
     flex-shrink: 0;
 }
 
+.cart-item-image, .cart-item span {
+    cursor: pointer;
+}
+
 .products {
     flex: 1;
     padding: 20px;
     min-width: 0;
 }
 
-/* Стилі для цін у деталях товару */
 .product-detail-price .regular-price {
-    font-size: 24px; /* Збільшуємо розмір звичайної ціни */
+    font-size: 24px; 
 }
 .product-detail-price .sale-price {
-    font-size: 28px; /* Збільшуємо розмір акційної ціни */
+    font-size: 28px; 
     color: #ff4500;
     font-weight: bold;
     margin-right: 10px;
 }
 .product-detail-price s {
-    font-size: 20px; /* Зменшуємо розмір закресленої ціни */
+    font-size: 20px; 
     color: #999;
 }
 
-/* Базові стилі для кнопки "Назад" у групових товарах */
 .back-to-group-btn {
-    background-color: #E2E8F0; /* Світлий фон для світлої теми */
-    color: #2D3748; /* Темний текст для світлої теми */
+    background-color: #E2E8F0; 
+    color: #2D3748;
     border: 1px solid var(--border-color);
     border-radius: 25px;
-    padding: 12px 20px; /* Фіксовані відступи */
+    padding: 12px 20px; 
     font-weight: 500;
-    font-size: 16px; /* Фіксований розмір шрифту */
+    font-size: 16px; 
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    width: 100%; /* Фіксована ширина */
-    max-width: 255px; /* Максимальна ширина */
-    height: 48px; /* Фіксована висота */
-    display: flex; /* Для вирівнювання тексту */
+    width: 100%; 
+    max-width: 255px; 
+    height: 48px; 
+    display: flex; 
     align-items: center;
     justify-content: center;
-    margin: 15px auto; /* Центрування */
-    box-sizing: border-box; /* Щоб padding не впливав на розміри */
+    margin: 15px auto; 
+    box-sizing: border-box;
 }
 
 .back-to-group-btn:hover {
-    background-color: #D1D5DB; /* Трохи темніший фон при наведенні */
+    background-color: #D1D5DB; 
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Стилі для соціальних мереж у секції Контакти */
 #socials {
     margin-top: 20px;
 }
