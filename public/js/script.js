@@ -158,7 +158,7 @@ async function saveCartToServer() {
                 return null;
             }
             return {
-                id: item.id, // Залишаємо id як рядок
+                id: Number(item.id), // Convert id to number
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -2063,7 +2063,7 @@ async function addGroupToCart(productId) {
         if (p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
-                id: Number(p.id), // Використовуємо числове p.id замість _id
+                id: Number(p._id), // Convert _id to number
                 name: p.name,
                 price,
                 quantity: 1,
@@ -2935,7 +2935,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showSection(link.section);
                 });
             } else {
-                console.warn(`Елемент із ID ${link.id} не знайдено`);
+                console.error(`Елемент із ID ${link.id} не знайдено в DOM`);
             }
         });
 
