@@ -2014,7 +2014,7 @@ async function addToCartWithColor(productId) {
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
-        id: product.id, // Використовуємо числове поле id
+        id: product.id,
         name: product.name,
         quantity: quantity,
         price: price,
@@ -2288,7 +2288,7 @@ async function renderCart() {
         itemDiv.className = 'cart-item';
         
         const img = document.createElement('img');
-        img.src = item.photo;
+        img.src = item.photo || (product.photos?.[0] || NO_IMAGE_URL);
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
