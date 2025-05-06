@@ -5,14 +5,14 @@ const categorySchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        maxlength: 255 // Додано обмеження довжини
+        maxlength: 255
     },
     slug: {
         type: String,
         required: true,
         unique: true,
         trim: true,
-        maxlength: 255 // Додано обмеження довжини
+        maxlength: 255
     },
     photo: { type: String, default: '' },
     visible: { type: Boolean, default: true },
@@ -21,13 +21,13 @@ const categorySchema = new mongoose.Schema({
             type: String,
             required: true,
             trim: true,
-            maxlength: 255 // Додано обмеження довжини
+            maxlength: 255
         },
         slug: {
             type: String,
             required: true,
             trim: true,
-            maxlength: 255 // Додано обмеження довжини
+            maxlength: 255
         },
         photo: { type: String, default: '' },
         order: { type: Number, required: true, default: 0 },
@@ -40,7 +40,6 @@ const categorySchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Перевірка унікальності slug категорії
 categorySchema.pre('save', async function(next) {
     const category = this;
     if (category.isModified('slug')) {
@@ -52,7 +51,6 @@ categorySchema.pre('save', async function(next) {
     next();
 });
 
-// Перевірка унікальності slug підкатегорій
 categorySchema.pre('save', async function(next) {
     const category = this;
     if (category.isModified('subcategories')) {
@@ -67,7 +65,6 @@ categorySchema.pre('save', async function(next) {
     next();
 });
 
-// Нормалізація порядку перед збереженням
 categorySchema.pre('save', async function(next) {
     const category = this;
     if (category.isModified('order')) {
@@ -79,7 +76,6 @@ categorySchema.pre('save', async function(next) {
             category.order = (maxOrder[0]?.maxOrder || 0) + 1;
         }
     }
-    // Нормалізація порядку підкатегорій
     if (category.subcategories && category.isModified('subcategories')) {
         const seenOrders = new Set();
         for (let i = 0; i < category.subcategories.length; i++) {
