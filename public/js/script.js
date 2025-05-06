@@ -2249,6 +2249,8 @@ function searchProducts() {
         renderCatalog();
         return;
     }
+    if (isSearchPending) return;
+    isSearchPending = true;
     searchResults = products.filter(p => 
         p.visible && 
         (p.name.toLowerCase().includes(query) || 
@@ -2260,7 +2262,6 @@ function searchProducts() {
     currentProduct = null;
     currentCategory = null;
     currentSubcategory = null;
-    isSearchPending = true;
 
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     document.getElementById('catalog').classList.add('active');
@@ -2410,10 +2411,12 @@ async function renderCart() {
         label.textContent = `${f.label}${f.required ? ' *' : ''}`;
         groupDiv.appendChild(label);
 
+        const savedValue = localStorage.getItem(`order-${f.name}`) || '';
         if (f.type === 'select') {
             const select = document.createElement('select');
             select.id = `order-${f.name}`;
             select.className = 'order-input custom-select';
+            select.onchange = (e) => localStorage.setItem(`order-${f.name}`, e.target.value);
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = `Оберіть ${f.label.toLowerCase()}`;
@@ -2422,6 +2425,7 @@ async function renderCart() {
                 const option = document.createElement('option');
                 option.value = opt;
                 option.textContent = opt;
+                if (savedValue === opt) option.selected = true;
                 select.appendChild(option);
             });
             groupDiv.appendChild(select);
@@ -2431,6 +2435,8 @@ async function renderCart() {
             input.id = `order-${f.name}`;
             input.className = 'order-input';
             input.required = f.required;
+            input.value = savedValue;
+            input.oninput = (e) => localStorage.setItem(`order-${f.name}`, e.target.value);
             groupDiv.appendChild(input);
         }
         form.appendChild(groupDiv);
@@ -2446,7 +2452,7 @@ async function renderCart() {
     if (activeElementId) {
         const newElement = document.getElementById(activeElementId);
         if (newElement) {
-            newElement.value = activeElementValue;
+            newElement.value = activeElementValue || localStorage.getItem(activeElementId) || '';
             newElement.focus();
         }
     }
