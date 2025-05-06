@@ -2205,6 +2205,7 @@ async function openProduct(slugOrId) {
 function searchProducts() {
     const searchInput = document.getElementById('search');
     const query = searchInput.value.toLowerCase().trim();
+    console.log('Пошук за запитом:', query); // Дебагування
     if (!query) {
         showNotification('Введіть запит для пошуку!', 'error');
         return;
@@ -2277,7 +2278,7 @@ async function renderCart() {
     await updateCartPrices();
 
     cart.forEach((item, index) => {
-        const product = products.find(p => p.id === item.id);
+        const product = products.find(p => p._id === item.id.toString()); // Пошук за _id як рядок
         if (!product) {
             console.warn(`Товар із id ${item.id} не знайдено, видаляємо з кошика`);
             cart.splice(index, 1);
