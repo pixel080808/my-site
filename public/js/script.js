@@ -198,13 +198,13 @@ async function saveCartToServer() {
             } : null;
             return {
                 id: Number(item.id),
-                _id: product._id || null,
                 name: item.name || '',
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.price) || 0,
                 photo: item.photo || '',
-                color: colorData,
-                brand: item.brand || 'Не вказано'
+                color: colorData
+                // Видалено поле brand, оскільки воно викликає помилку валідації
+                // Видалено поле _id, оскільки воно не дозволене сервером
             };
         })
         .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
@@ -2868,7 +2868,6 @@ async function submitOrder() {
         items: cart.map(item => {
             const product = products.find(p => p.id === item.id);
             let additionalInfo = {
-                brand: product?.brand || 'Не вказано',
                 color: item.color ? {
                     name: item.color.name || 'Не вказано',
                     value: item.color.value || item.color.name || '',
@@ -2897,12 +2896,12 @@ async function submitOrder() {
 
             return {
                 id: Number(item.id),
-                _id: product?._id || null,
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
                 ...additionalInfo
+                // Видалено поля _id і brand, оскільки вони не дозволені сервером
             };
         })
     };
