@@ -335,11 +335,11 @@ async function fetchPublicData() {
     try {
         console.log('Fetching products...');
         const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-if (productResponse && productResponse.ok) {
-    products = await productResponse.json();
-    products = products.filter(p => p.id && p.name && p.slug && p.visible !== false);
-    console.log('Products fetched:', products.length);
-    saveToStorage('products', products);
+        if (productResponse && productResponse.ok) {
+            products = await productResponse.json();
+            products = products.filter(p => p.id && p.name && p.slug && p.visible !== false);
+            console.log('Відфільтровані продукти:', products);
+            saveToStorage('products', products);
         } else {
             console.warn('Не вдалося отримати продукти, використовуємо локальні дані');
             products = loadFromStorage('products', []);
@@ -2226,12 +2226,22 @@ async function openProduct(slugOrId) {
 
     currentProduct = product;
     currentCategory = product.category;
-    currentSubcategory = product.subcategory;
+    currentSubcategory = product.subcategory || null;
     isSearchActive = false;
     searchResults = [];
     baseSearchResults = [];
     console.log('Set currentProduct:', currentProduct.name, 'Slug:', currentProduct.slug);
+    
     showSection('product-details');
+
+    const catSlug = transliterate(currentCategory.replace('ь', ''));
+    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
+    const newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct.slug}`;
+    history.replaceState({ sectionId: 'product-details', path: newPath }, '', newPath);
+}
+
+function normalizeString(str) {
+    return str ? str.normalize('NFC').toLowerCase() : '';
 }
 
 function searchProducts() {
@@ -2241,8 +2251,10 @@ function searchProducts() {
         showNotification('Помилка пошуку!', 'error');
         return;
     }
-    const query = searchInput.value.toLowerCase().trim();
+    const query = normalizeString(searchInput.value.trim());
     console.log('Пошук за запитом:', query);
+    console.log('Доступні продукти:', products);
+
     if (!query) {
         isSearchActive = false;
         searchResults = [];
@@ -2257,13 +2269,17 @@ function searchProducts() {
     if (isSearchPending) return;
     isSearchPending = true;
 
-    // Фільтруємо продукти, перевіряючи наявність полів
     searchResults = products.filter(p => {
-        if (!p.visible) return false;
-        const name = p.name ? p.name.toLowerCase() : '';
-        const brand = p.brand ? p.brand.toLowerCase() : '';
-        const description = p.description ? p.description.toLowerCase() : '';
-        return name.includes(query) || brand.includes(query) || description.includes(query);
+        if (!p.visible) {
+            console.log(`Продукт ${p.name} невидимий:`, p);
+            return false;
+        }
+        const name = normalizeString(p.name);
+        const brand = normalizeString(p.brand);
+        const description = normalizeString(p.description);
+        const matches = name.includes(query) || brand.includes(query) || description.includes(query);
+        console.log(`Продукт ${p.name}, збіги: ${matches}`, { name, brand, description });
+        return matches;
     });
 
     baseSearchResults = [...searchResults];
@@ -2345,18 +2361,31 @@ async function renderCart() {
         }
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
-        
+
+        // Додаємо обробник для зняття виділення при кліку на itemDiv
+        itemDiv.addEventListener('click', (e) => {
+            if (!e.target.closest('button') && !e.target.closest('input') && e.target !== img && e.target !== span) {
+                window.getSelection().removeAllRanges();
+            }
+        });
+
         const img = document.createElement('img');
         img.src = item.photo || (product.photos?.[0] || NO_IMAGE_URL);
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(product.slug);
+        img.onclick = (e) => {
+            e.preventDefault();
+            openProduct(product.slug);
+        };
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
-        span.onclick = () => openProduct(product.slug);
+        span.onclick = (e) => {
+            e.preventDefault();
+            openProduct(product.slug);
+        };
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
@@ -2367,7 +2396,7 @@ async function renderCart() {
         minusBtn.textContent = '-';
         minusBtn.onclick = () => updateCartQuantity(index, -1);
         qtyDiv.appendChild(minusBtn);
-        
+
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
         qtyInput.id = `cart-quantity-${index}`;
@@ -2388,7 +2417,7 @@ async function renderCart() {
             }
         };
         qtyDiv.appendChild(qtyInput);
-        
+
         const plusBtn = document.createElement('button');
         plusBtn.className = 'quantity-btn';
         plusBtn.setAttribute('aria-label', 'Збільшити кількість');
@@ -2428,6 +2457,12 @@ async function renderCart() {
     const form = document.createElement('div');
     form.id = 'order-form';
     form.className = 'order-form';
+
+    // Додаємо обробник для зупинки поширення подій на формі
+    form.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
     orderFields.forEach(f => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'form-group';
@@ -2442,7 +2477,9 @@ async function renderCart() {
             const select = document.createElement('select');
             select.id = `order-${f.name}`;
             select.className = 'order-input custom-select';
-            select.onchange = (e) => localStorage.setItem(`order-${f.name}`, e.target.value);
+            select.onchange = (e) => {
+                localStorage.setItem(`order-${f.name}`, e.target.value);
+            };
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = `Оберіть ${f.label.toLowerCase()}`;
