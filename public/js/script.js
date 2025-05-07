@@ -1649,27 +1649,10 @@ async function renderProductDetails() {
             rightDiv.appendChild(priceDiv);
             rightDiv.appendChild(sizeP);
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            const initialTotalPrice = product.groupProducts.reduce((total, id) => {
-                const p = products.find(p => p._id === id);
-                if (p) {
-                    const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
-                    return total + price;
-                }
-                return total;
-            }, 0);
             const groupPriceDiv = document.createElement('div');
             groupPriceDiv.className = 'group-total-price';
-            groupPriceDiv.textContent = `Загальна ціна: ${initialTotalPrice} грн`;
+            groupPriceDiv.textContent = `Загальна ціна: 0 грн`;
             rightDiv.appendChild(groupPriceDiv);
-            // Відновлюємо стан виділення після перезавантаження
-            const savedSelection = localStorage.getItem(`groupSelection_${product._id}`);
-            if (savedSelection) {
-                const selectedIds = JSON.parse(savedSelection);
-                document.querySelectorAll('.group-product-item input[type="checkbox"]').forEach(cb => {
-                    cb.checked = selectedIds.includes(cb.value);
-                });
-                updateGroupSelection(product._id);
-            }
         } else {
             if (isOnSale) {
                 const saleSpan = document.createElement('span');
@@ -1801,7 +1784,7 @@ async function renderProductDetails() {
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = p._id;
-                checkbox.checked = true; // За замовчуванням усі товари виділені
+                checkbox.checked = false; // Знімаємо автоматичні галки
                 checkbox.onchange = () => updateGroupSelection(product._id);
                 label.appendChild(checkbox);
 
@@ -2087,11 +2070,11 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
-if (typeof product.id !== 'number') {
-    console.error('Некоректний id продукту:', product);
-    showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
-    return;
-}
+    if (typeof product.id !== 'number') {
+        console.error('Некоректний id продукту:', product);
+        showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
+        return;
+    }
     console.log('Додавання до кошика, продукт:', {
         id: product.id,
         name: product.name,
@@ -2140,7 +2123,7 @@ if (typeof product.id !== 'number') {
             return;
         }
         price = sizeData.price;
-        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})` } : { name: size, value: size, priceChange: 0, photo: null };
+        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})`, size: size } : { name: size, value: size, priceChange: 0, photo: null, size: size };
     }
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
     const cartItem = {
@@ -2149,11 +2132,16 @@ if (typeof product.id !== 'number') {
         quantity: quantity,
         price: price,
         photo: product.photos?.[0] || NO_IMAGE_URL,
-        color: colorData
+        color: colorData,
+        brand: product.brand || 'Не вказано'
     };
     console.log('Створено cartItem:', cartItem);
 
-    const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && JSON.stringify(item.color) === JSON.stringify(cartItem.color));
+    const existingItemIndex = cart.findIndex(item => 
+        item.id === cartItem.id && 
+        JSON.stringify(item.color) === JSON.stringify(cartItem.color) &&
+        item.brand === cartItem.brand
+    );
     if (existingItemIndex > -1) {
         cart[existingItemIndex].quantity += cartItem.quantity;
     } else {
@@ -2505,7 +2493,6 @@ async function renderCart() {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'cart-item';
 
-        // Додаємо обробник для зняття виділення при кліку на itemDiv
         itemDiv.addEventListener('click', (e) => {
             if (!e.target.closest('button') && !e.target.closest('input') && e.target !== img && e.target !== span) {
                 window.getSelection().removeAllRanges();
@@ -2517,6 +2504,7 @@ async function renderCart() {
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
+        img.style.cursor = 'pointer';
         img.onclick = (e) => {
             e.preventDefault();
             currentProduct = product;
@@ -2528,6 +2516,7 @@ async function renderCart() {
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
+        span.style.cursor = 'pointer';
         span.onclick = (e) => {
             e.preventDefault();
             currentProduct = product;
@@ -2565,7 +2554,6 @@ async function renderCart() {
                 showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
             }
         };
-        // Видаляємо спінери (вгору/вниз) з поля введення
         qtyInput.onwheel = (e) => e.preventDefault();
         qtyInput.onkeydown = (e) => {
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
@@ -2612,7 +2600,6 @@ async function renderCart() {
     form.id = 'order-form';
     form.className = 'order-form';
 
-    // Додаємо обробник для зупинки поширення подій на формі
     form.addEventListener('click', (e) => {
         e.stopPropagation();
     });
@@ -2799,17 +2786,25 @@ async function submitOrder() {
             const product = products.find(p => p.id === item.id);
             let additionalInfo = {};
 
-            if (product.type === 'mattresses') {
-                additionalInfo.size = selectedMattressSizes[item.id] || 'Не вказано';
-            } else if (product.type === 'group') {
-                const groupItems = product.groupProducts.map(id => {
-                    const groupProduct = products.find(p => p._id === id);
-                    return groupProduct ? {
-                        name: groupProduct.name,
-                        price: groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date() ? groupProduct.salePrice : groupProduct.price
-                    } : null;
-                }).filter(Boolean);
-                additionalInfo.groupItems = groupItems;
+            if (product) {
+                additionalInfo.brand = product.brand || 'Не вказано';
+                if (item.color) {
+                    additionalInfo.color = item.color.name || 'Не вказано';
+                }
+                if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
+                    const sizeData = product.sizes.find(s => s.name === selectedMattressSizes[item.id]);
+                    additionalInfo.size = selectedMattressSizes[item.id] || 'Не вказано';
+                    additionalInfo.sizePrice = sizeData ? sizeData.price : item.price;
+                } else if (product.type === 'group') {
+                    const groupItems = product.groupProducts.map(id => {
+                        const groupProduct = products.find(p => p._id === id);
+                        return groupProduct ? {
+                            name: groupProduct.name,
+                            price: groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date() ? groupProduct.salePrice : groupProduct.price
+                        } : null;
+                    }).filter(Boolean);
+                    additionalInfo.groupItems = groupItems;
+                }
             }
 
             return {
@@ -2818,7 +2813,11 @@ async function submitOrder() {
                 quantity: item.quantity,
                 price: item.price,
                 photo: item.photo || (product?.photos?.[0] || ''),
-                ...additionalInfo
+                brand: additionalInfo.brand,
+                color: additionalInfo.color || null,
+                size: additionalInfo.size || null,
+                sizePrice: additionalInfo.sizePrice || null,
+                groupItems: additionalInfo.groupItems || null
             };
         })
     };
@@ -3194,7 +3193,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const searchButton = document.querySelector('.search-btn');
         if (searchInput) {
             searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchProducts();
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchProducts();
+                }
             });
         } else {
             console.warn('Поле пошуку не знайдено');
