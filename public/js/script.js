@@ -190,7 +190,7 @@ async function saveCartToServer() {
                 return null;
             }
             return {
-                id: Number(item.id), // Переконуємось, що id є числом
+                id: Number(item.id),
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -237,14 +237,27 @@ async function saveCartToServer() {
 
         cart = filteredCartItems.map(item => ({
             ...item,
-            id: Number(item.id) // Переконуємось, що id є числом
+            id: Number(item.id)
         }));
         saveToStorage('cart', cart);
         debouncedRenderCart();
     } catch (error) {
         console.error('Error saving cart:', error);
         saveToStorage('cart', cartItems);
-        showNotification(`Не вдалося синхронізувати кошик із сервером: ${error.message}. Дані збережено локально.`, 'warning');
+        // Додаємо затримку для стабільності при швидких діях
+        if (!activeTimers.has('saveCartRetry')) {
+            const retryTimer = setTimeout(async () => {
+                try {
+                    await saveCartToServer();
+                    activeTimers.delete('saveCartRetry');
+                } catch (retryError) {
+                    console.error('Retry failed:', retryError);
+                    showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+                    activeTimers.delete('saveCartRetry');
+                }
+            }, 1000);
+            activeTimers.set('saveCartRetry', retryTimer);
+        }
         debouncedRenderCart();
         throw error;
     }
@@ -1518,7 +1531,7 @@ const groupPrices = product.groupProducts.map(id => {
     });
 }
 
-function renderProductDetails() {
+async function renderProductDetails() {
     const productDetails = document.getElementById('product-details');
     if (!productDetails || !currentProduct) {
         console.error('Product details element or currentProduct missing:', { productDetails, currentProduct });
@@ -1627,6 +1640,15 @@ function renderProductDetails() {
             groupPriceDiv.className = 'group-total-price';
             groupPriceDiv.textContent = `Загальна ціна: ${initialTotalPrice} грн`;
             rightDiv.appendChild(groupPriceDiv);
+            // Відновлюємо стан виділення після перезавантаження
+            const savedSelection = localStorage.getItem(`groupSelection_${product._id}`);
+            if (savedSelection) {
+                const selectedIds = JSON.parse(savedSelection);
+                document.querySelectorAll('.group-product-item input[type="checkbox"]').forEach(cb => {
+                    cb.checked = selectedIds.includes(cb.value);
+                });
+                updateGroupSelection(product._id);
+            }
         } else {
             if (isOnSale) {
                 const saleSpan = document.createElement('span');
@@ -1758,14 +1780,17 @@ function renderProductDetails() {
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = p._id;
-                checkbox.checked = true;
+                checkbox.checked = true; // За замовчуванням усі товари виділені
                 checkbox.onchange = () => updateGroupSelection(product._id);
                 label.appendChild(checkbox);
 
                 const img = document.createElement('img');
                 img.src = p.photos?.[0] || NO_IMAGE_URL;
                 img.alt = p.name;
-                img.onclick = () => openProduct(p.slug);
+                img.onclick = () => {
+                    currentProduct = p;
+                    showSection('product-details');
+                };
                 label.appendChild(img);
 
                 const infoDiv = document.createElement('div');
@@ -1773,7 +1798,10 @@ function renderProductDetails() {
 
                 const h4 = document.createElement('h4');
                 h4.textContent = p.name;
-                h4.onclick = () => openProduct(p.slug);
+                h4.onclick = () => {
+                    currentProduct = p;
+                    showSection('product-details');
+                };
                 infoDiv.appendChild(h4);
 
                 const priceDiv = document.createElement('div');
@@ -2016,15 +2044,19 @@ function updateGroupSelection(productId) {
         }
     });
 
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'group-total-price';
-    priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
-    
-    const existingPriceDiv = document.querySelector('.group-total-price');
-    if (existingPriceDiv) existingPriceDiv.remove();
-    
-    const groupDiv = document.querySelector('.group-products');
-    if (groupDiv) groupDiv.insertBefore(priceDiv, groupDiv.querySelector('.buy-btn'));
+    const priceDiv = document.querySelector('.group-total-price');
+    if (priceDiv) priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
+    else {
+        const newPriceDiv = document.createElement('div');
+        newPriceDiv.className = 'group-total-price';
+        newPriceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
+        const groupDiv = document.querySelector('.group-products');
+        if (groupDiv) groupDiv.insertBefore(newPriceDiv, groupDiv.querySelector('.buy-btn'));
+    }
+
+    // Зберігаємо стан виділення для збереження після перезавантаження
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    localStorage.setItem(`groupSelection_${productId}`, JSON.stringify(selectedIds));
 }
 
 async function addToCartWithColor(productId) {
@@ -2374,6 +2406,13 @@ function searchProducts() {
     currentCategory = null;
     currentSubcategory = null;
 
+    // Додаємо можливість пошуку на всіх сторінках
+    const validSections = ['home', 'catalog', 'cart', 'contacts', 'about', 'product-details'];
+    const currentSection = document.querySelector('.section.active')?.id;
+    if (validSections.includes(currentSection)) {
+        showSection('catalog');
+    }
+
     renderCatalog();
     isSearchPending = false;
     const searchSlug = transliterate(query.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'));
@@ -2399,7 +2438,7 @@ async function updateCartPrices() {
     saveToStorage('cart', cart);
 }
 
-async function renderCart() {
+function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
@@ -2461,7 +2500,10 @@ async function renderCart() {
         img.loading = 'lazy';
         img.onclick = (e) => {
             e.preventDefault();
-            openProduct(product.slug);
+            currentProduct = product;
+            currentCategory = product.category;
+            currentSubcategory = product.subcategory || null;
+            showSection('product-details');
         };
         itemDiv.appendChild(img);
 
@@ -2469,7 +2511,10 @@ async function renderCart() {
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
         span.onclick = (e) => {
             e.preventDefault();
-            openProduct(product.slug);
+            currentProduct = product;
+            currentCategory = product.category;
+            currentSubcategory = product.subcategory || null;
+            showSection('product-details');
         };
         itemDiv.appendChild(span);
 
@@ -2500,6 +2545,11 @@ async function renderCart() {
                 console.error('Помилка синхронізації кошика з сервером:', error);
                 showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
             }
+        };
+        // Видаляємо спінери (вгору/вниз) з поля введення
+        qtyInput.onwheel = (e) => e.preventDefault();
+        qtyInput.onkeydown = (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
         };
         qtyDiv.appendChild(qtyInput);
 
