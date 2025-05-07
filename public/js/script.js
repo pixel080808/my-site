@@ -190,18 +190,21 @@ async function saveCartToServer() {
                 return null;
             }
             const colorData = item.color ? {
-                name: item.color.name || '',
+                name: item.color.name || 'Не вказано',
                 value: item.color.value || item.color.name || '',
                 priceChange: item.color.priceChange || 0,
-                photo: item.color.photo || null
+                photo: item.color.photo || null,
+                size: item.color.size || null
             } : null;
             return {
                 id: Number(item.id),
+                _id: product._id || null, // Include _id for server compatibility
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
                 photo: item.photo || '',
-                color: colorData
+                color: colorData,
+                brand: item.brand || 'Не вказано'
             };
         })
         .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
@@ -2146,8 +2149,8 @@ async function addToCartWithColor(productId) {
             return;
         }
         colorData = {
-            name: product.colors[colorIndex].name,
-            value: product.colors[colorIndex].value || product.colors[colorIndex].name,
+            name: product.colors[colorIndex].name || 'Не вказано',
+            value: product.colors[colorIndex].value || product.colors[colorIndex].name || '',
             priceChange: product.colors[colorIndex].priceChange || 0,
             photo: product.colors[colorIndex].photo || null
         };
@@ -2817,6 +2820,19 @@ async function submitOrder() {
         return;
     }
 
+    // Validate cart items
+    for (const item of cart) {
+        if (!item.id || typeof item.id !== 'number' || !item.name || typeof item.quantity !== 'number' || typeof item.price !== 'number') {
+            showNotification('Помилка: кошик містить некоректні дані!', 'error');
+            return;
+        }
+        const product = products.find(p => p.id === item.id);
+        if (!product) {
+            showNotification(`Товар "${item.name}" більше недоступний!`, 'error');
+            return;
+        }
+    }
+
     // Prepare order data
     const orderData = {
         cartId: localStorage.getItem('cartId') || '',
@@ -2826,45 +2842,47 @@ async function submitOrder() {
         customer,
         items: cart.map(item => {
             const product = products.find(p => p.id === item.id);
-            let additionalInfo = {};
+            let additionalInfo = {
+                brand: product?.brand || 'Не вказано',
+                color: item.color ? {
+                    name: item.color.name || 'Не вказано',
+                    value: item.color.value || item.color.name || '',
+                    priceChange: item.color.priceChange || 0,
+                    photo: item.color.photo || null
+                } : null,
+                size: null,
+                sizePrice: null,
+                groupItems: null
+            };
 
-            if (product) {
-                additionalInfo.brand = product.brand || 'Не вказано';
-                if (item.color) {
-                    additionalInfo.color = item.color.name || 'Не вказано';
-                }
-                if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
-                    const sizeData = product.sizes.find(s => s.name === selectedMattressSizes[item.id]);
-                    additionalInfo.size = selectedMattressSizes[item.id] || 'Не вказано';
-                    additionalInfo.sizePrice = sizeData ? sizeData.price : item.price;
-                } else if (product.type === 'group') {
-                    const groupItems = product.groupProducts.map(id => {
-                        const groupProduct = products.find(p => p._id === id);
-                        return groupProduct ? {
-                            name: groupProduct.name,
-                            price: groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date() ? groupProduct.salePrice : groupProduct.price
-                        } : null;
-                    }).filter(Boolean);
-                    additionalInfo.groupItems = groupItems;
-                }
+            if (product?.type === 'mattresses' && item.color?.size) {
+                const sizeData = product.sizes?.find(s => s.name === item.color.size);
+                additionalInfo.size = item.color.size || null;
+                additionalInfo.sizePrice = sizeData ? sizeData.price : item.price;
+            } else if (product?.type === 'group' && product.groupProducts?.length > 0) {
+                additionalInfo.groupItems = product.groupProducts.map(id => {
+                    const groupProduct = products.find(p => p._id === id);
+                    return groupProduct ? {
+                        id: groupProduct.id,
+                        name: groupProduct.name,
+                        price: groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date() ? groupProduct.salePrice : groupProduct.price
+                    } : null;
+                }).filter(Boolean);
             }
 
             return {
-                id: Number(item.id),
+                id: Number(item.id), // Ensure id is a number
+                _id: product?._id || null, // Include _id for server compatibility
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
-                photo: item.photo || (product?.photos?.[0] || ''),
-                brand: additionalInfo.brand,
-                color: additionalInfo.color || null,
-                size: additionalInfo.size || null,
-                sizePrice: additionalInfo.sizePrice || null,
-                groupItems: additionalInfo.groupItems || null
+                photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
+                ...additionalInfo
             };
         })
     };
 
-    // Filter invalid items
+    // Remove invalid items
     orderData.items = orderData.items.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
@@ -2927,7 +2945,6 @@ async function submitOrder() {
                         continue;
                     }
                 } else if (response.status === 400) {
-                    // Handle client-side errors
                     try {
                         const errorData = JSON.parse(errorText);
                         showNotification(`Помилка: ${errorData.message || 'Некоректні дані замовлення'}`, 'error');
