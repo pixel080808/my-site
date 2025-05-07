@@ -123,7 +123,7 @@ async function loadCartFromServer() {
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
             cart = data.map(item => ({
-                id: Number(item.id), // Переконуємось, що id є числом
+                id: Number(item.id),
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
@@ -316,11 +316,10 @@ async function loginUser(email, password) {
 }
 
 async function fetchWithRetry(url, options = {}, retries = 5, backoff = 500) {
-    const headers = { ...options.headers }; // Ensure headers is an object
+    const headers = { ...options.headers };
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
-            // Ensure CSRF token is available
             if (!localStorage.getItem('csrfToken')) {
                 const csrfToken = await fetchCsrfToken();
                 if (!csrfToken) {
@@ -351,10 +350,10 @@ async function fetchWithRetry(url, options = {}, retries = 5, backoff = 500) {
             if (i < retries - 1) {
                 console.log(`Retrying in ${backoff}ms...`);
                 await new Promise(resolve => setTimeout(resolve, backoff));
-                backoff *= 2; // Exponential backoff with a more aggressive multiplier
+                backoff *= 2;
             } else {
                 console.error(`All ${retries} attempts for ${url} failed`);
-                throw error; // Let the caller handle notifications
+                throw error;
             }
         }
     }
@@ -486,9 +485,9 @@ function connectPublicWebSocket() {
         ? 'ws://localhost:3000' 
         : 'wss://mebli.onrender.com';
     
-    if (ws) {
-        ws.onclose = null;
-        ws.close();
+    if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+        console.log('WebSocket уже підключено, пропускаємо повторне підключення');
+        return;
     }
 
     ws = new WebSocket(wsUrl);
@@ -592,42 +591,41 @@ function connectPublicWebSocket() {
                 renderAbout();
                 renderSlideshow();
                 const oldFavicon = document.querySelector('link[rel="icon"]');
-                if (oldFavicon) oldFavicon.remove();
-                const faviconUrl = settings.favicon || 'https://www.google.com/favicon.ico';
-                const favicon = document.createElement('link');
-                favicon.rel = 'icon';
-                favicon.type = 'image/x-icon';
-                favicon.href = faviconUrl;
-                document.head.appendChild(favicon);
+                if (oldFavicon && data.favicon) {
+                    const newFavicon = document.createElement('link');
+                    newFavicon.rel = 'icon';
+                    newFavicon.href = data.favicon;
+                    oldFavicon.parentNode.replaceChild(newFavicon, oldFavicon);
+                }
             } else if (type === 'slides') {
                 slides = data;
                 saveToStorage('slides', slides);
-                if (settings.showSlides && slides.length > 0) {
-                    renderSlideshow();
-                }
-            } else {
-                console.warn('Невідомий тип повідомлення:', type);
+                renderSlideshow();
             }
-        } catch (e) {
-            console.error('Помилка обробки WebSocket:', e);
-            showNotification('Помилка синхронізації даних!', 'error');
-        }
-    };
-
-    ws.onclose = (event) => {
-        console.log('Публічний WebSocket відключено:', { code: event.code, reason: event.reason });
-        if (event.code !== 1000 && reconnectAttempts < maxAttempts) {
-            reconnectAttempts++;
-            console.log(`Спроба перепідключення ${reconnectAttempts} з ${maxAttempts}`);
-            setTimeout(connectPublicWebSocket, 2000 * reconnectAttempts); // Експоненціальна затримка
-        } else if (reconnectAttempts >= maxAttempts) {
-            console.error('Досягнуто максимальної кількості спроб підключення');
-            showNotification('Не вдалося підключитися до сервера оновлень. Деякі дані можуть бути застарілими.', 'warning');
+        } catch (error) {
+            console.error('Помилка обробки повідомлення WebSocket:', error);
+            showNotification('Помилка обробки даних із сервера!', 'error');
         }
     };
 
     ws.onerror = (error) => {
         console.error('Помилка WebSocket:', error);
+        showNotification('Помилка з\'єднання з сервером!', 'error');
+    };
+
+    ws.onclose = (event) => {
+        console.warn('WebSocket закрито:', { code: event.code, reason: event.reason });
+        if (reconnectAttempts < maxAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Експоненціальна затримка, макс. 30 сек
+            console.log(`Спроба повторного підключення ${reconnectAttempts + 1}/${maxAttempts} через ${delay} мс`);
+            setTimeout(() => {
+                reconnectAttempts++;
+                connectPublicWebSocket();
+            }, delay);
+        } else {
+            console.error('Досягнуто максимальної кількості спроб повторного підключення');
+            showNotification('Не вдалося підключитися до сервера після кількох спроб. Будь ласка, перевірте з\'єднання.', 'error');
+        }
     };
 }
 
@@ -755,7 +753,6 @@ function showSection(sectionId) {
     if (section) {
         section.classList.add('active');
         let newPath = '/';
-        // Очищаємо поле пошуку при переході на будь-яку секцію
         const searchInput = document.getElementById('search');
         if (searchInput) {
             searchInput.value = '';
@@ -814,13 +811,13 @@ function showSection(sectionId) {
             }
             renderProductDetails();
             const catSlug = transliterate(currentCategory.replace('ь', ''));
-            const subCatSlug = transliterate(currentSubcategory.replace('ь', ''));
-            newPath = `/${catSlug}/${subCatSlug}/${currentProduct.slug}`;
+            const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
+            newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct.slug}`;
         }
         saveToStorage('currentCategory', currentCategory);
         saveToStorage('currentSubcategory', currentSubcategory);
         const stateId = `${sectionId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        history.replaceState({ sectionId, path: newPath, stateId }, '', newPath);
+        history.pushState({ sectionId, path: newPath, stateId }, '', newPath);
         updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
         renderBreadcrumbs();
         window.scrollTo(0, 0);
@@ -833,29 +830,6 @@ function showSection(sectionId) {
                 e.preventDefault();
                 searchProducts();
             };
-        }
-
-        if (sectionId === 'cart') {
-            const cartItems = document.querySelectorAll('#cart-items .cart-item');
-            cartItems.forEach(item => {
-                const productLink = item.querySelector('img, span');
-                if (productLink) {
-                    productLink.onclick = (e) => {
-                        e.preventDefault();
-                        const itemName = item.querySelector('span').textContent.split(' - ')[0].split(' (')[0];
-                        const cartItem = cart.find(i => i.name === itemName);
-                        if (cartItem) {
-                            const product = products.find(p => p.id === cartItem.id);
-                            if (product) {
-                                currentProduct = product;
-                                currentCategory = product.category;
-                                currentSubcategory = product.subcategory || null;
-                                showSection('product-details');
-                            }
-                        }
-                    };
-                }
-            });
         }
     }
 }
@@ -1018,41 +992,53 @@ function renderCategories() {
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'category';
 
+        const imgLink = document.createElement('a');
+        imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+        imgLink.onclick = (e) => {
+            e.preventDefault();
+            currentCategory = cat.name;
+            currentSubcategory = null;
+            currentProduct = null;
+            showSection('catalog');
+        };
         const img = document.createElement('img');
         img.src = cat.photo || NO_IMAGE_URL;
         img.alt = cat.name;
         img.loading = 'lazy';
         img.onerror = () => { img.src = NO_IMAGE_URL; };
-        img.onclick = () => { 
-            currentCategory = cat.name; 
-            currentSubcategory = null; 
-            currentProduct = null; 
-            showSection('catalog'); 
-        };
-        categoryDiv.appendChild(img);
+        imgLink.appendChild(img);
+        categoryDiv.appendChild(imgLink);
 
+        const pLink = document.createElement('a');
+        pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+        pLink.onclick = (e) => {
+            e.preventDefault();
+            currentCategory = cat.name;
+            currentSubcategory = null;
+            currentProduct = null;
+            showSection('catalog');
+        };
         const p = document.createElement('p');
         p.textContent = cat.name;
-        p.onclick = () => { 
-            currentCategory = cat.name; 
-            currentSubcategory = null; 
-            currentProduct = null; 
-            showSection('catalog'); 
-        };
-        categoryDiv.appendChild(p);
+        pLink.appendChild(p);
+        categoryDiv.appendChild(pLink);
 
         const subcategoriesDiv = document.createElement('div');
         subcategoriesDiv.className = 'subcategories';
         (cat.subcategories || []).forEach(sub => {
+            const subLink = document.createElement('a');
+            subLink.href = `/${transliterate(cat.name.replace('ь', ''))}/${transliterate(sub.name.replace('ь', ''))}`;
+            subLink.onclick = (e) => {
+                e.preventDefault();
+                currentCategory = cat.name;
+                currentSubcategory = sub.name;
+                currentProduct = null;
+                showSection('catalog');
+            };
             const subP = document.createElement('p');
             subP.textContent = sub.name;
-            subP.onclick = () => { 
-                currentCategory = cat.name; 
-                currentSubcategory = sub.name; 
-                currentProduct = null; 
-                showSection('catalog'); 
-            };
-            subcategoriesDiv.appendChild(subP);
+            subLink.appendChild(subP);
+            subcategoriesDiv.appendChild(subLink);
         });
         categoryDiv.appendChild(subcategoriesDiv);
 
@@ -1154,27 +1140,35 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'category-item';
 
+            const imgLink = document.createElement('a');
+            imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+            imgLink.onclick = (e) => {
+                e.preventDefault();
+                currentCategory = cat.name;
+                currentSubcategory = null;
+                currentProduct = null;
+                showSection('catalog');
+            };
             const img = document.createElement('img');
             img.src = cat.image || NO_IMAGE_URL;
             img.alt = cat.name;
             img.loading = 'lazy';
-            img.onclick = () => {
+            imgLink.appendChild(img);
+            itemDiv.appendChild(imgLink);
+
+            const pLink = document.createElement('a');
+            pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+            pLink.onclick = (e) => {
+                e.preventDefault();
                 currentCategory = cat.name;
                 currentSubcategory = null;
                 currentProduct = null;
                 showSection('catalog');
             };
-            itemDiv.appendChild(img);
-
             const p = document.createElement('p');
             p.textContent = cat.name;
-            p.onclick = () => {
-                currentCategory = cat.name;
-                currentSubcategory = null;
-                currentProduct = null;
-                showSection('catalog');
-            };
-            itemDiv.appendChild(p);
+            pLink.appendChild(p);
+            itemDiv.appendChild(pLink);
 
             categoryList.appendChild(itemDiv);
         });
@@ -1199,22 +1193,30 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             const subButtonsDiv = document.createElement('div');
             subButtonsDiv.className = 'subcategory-buttons';
 
-            const allBtn = document.createElement('button');
-            allBtn.textContent = 'Усі';
-            allBtn.onclick = () => {
+            const allBtnLink = document.createElement('a');
+            allBtnLink.href = `/${transliterate(category.replace('ь', ''))}`;
+            allBtnLink.onclick = (e) => {
+                e.preventDefault();
                 currentSubcategory = null;
                 showSection('catalog');
             };
-            subButtonsDiv.appendChild(allBtn);
+            const allBtn = document.createElement('button');
+            allBtn.textContent = 'Усі';
+            allBtnLink.appendChild(allBtn);
+            subButtonsDiv.appendChild(allBtnLink);
 
             (selectedCat.subcategories || []).forEach(sub => {
-                const btn = document.createElement('button');
-                btn.textContent = sub.name;
-                btn.onclick = () => {
+                const btnLink = document.createElement('a');
+                btnLink.href = `/${transliterate(category.replace('ь', ''))}/${transliterate(sub.name.replace('ь', ''))}`;
+                btnLink.onclick = (e) => {
+                    e.preventDefault();
                     currentSubcategory = sub.name;
                     showSection('catalog');
                 };
-                subButtonsDiv.appendChild(btn);
+                const btn = document.createElement('button');
+                btn.textContent = sub.name;
+                btnLink.appendChild(btn);
+                subButtonsDiv.appendChild(btnLink);
             });
             subFilterDiv.appendChild(subButtonsDiv);
             productsDiv.appendChild(subFilterDiv);
@@ -1458,16 +1460,29 @@ function renderProducts(filtered) {
         const productDiv = document.createElement('div');
         productDiv.className = 'product';
 
+        const imgLink = document.createElement('a');
+        imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+        imgLink.onclick = (e) => {
+            e.preventDefault();
+            openProduct(product.slug);
+        };
         const img = document.createElement('img');
         img.src = product.photos?.[0] || NO_IMAGE_URL;
         img.alt = product.name;
         img.loading = 'lazy';
-        img.onclick = () => openProduct(product.slug);
-        productDiv.appendChild(img);
+        imgLink.appendChild(img);
+        productDiv.appendChild(imgLink);
 
+        const h3Link = document.createElement('a');
+        h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+        h3Link.onclick = (e) => {
+            e.preventDefault();
+            openProduct(product.slug);
+        };
         const h3 = document.createElement('h3');
         h3.textContent = product.name;
-        productDiv.appendChild(h3);
+        h3Link.appendChild(h3);
+        productDiv.appendChild(h3Link);
 
         const priceDiv = document.createElement('div');
         priceDiv.className = 'price';
@@ -1490,10 +1505,10 @@ function renderProducts(filtered) {
                 priceDiv.appendChild(regularSpan);
             }
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-const groupPrices = product.groupProducts.map(id => {
-    const p = products.find(p => p._id === id);
-    return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
-});
+            const groupPrices = product.groupProducts.map(id => {
+                const p = products.find(p => p._id === id);
+                return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
+            });
             const minPrice = Math.min(...groupPrices);
             if (isHomePage || currentCategory) {
                 const startSpan = document.createElement('span');
@@ -1771,6 +1786,7 @@ async function renderProductDetails() {
             h3.textContent = 'Складові товари';
             groupDiv.appendChild(h3);
 
+            const savedSelection = loadFromStorage(`groupSelection_${product._id}`, []);
             product.groupProducts.forEach(id => {
                 const p = products.find(p => p._id === id);
                 if (!p) {
@@ -1784,7 +1800,7 @@ async function renderProductDetails() {
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = p._id;
-                checkbox.checked = false; // Знімаємо автоматичні галки
+                checkbox.checked = savedSelection.includes(p._id);
                 checkbox.onchange = () => updateGroupSelection(product._id);
                 label.appendChild(checkbox);
 
@@ -1792,6 +1808,8 @@ async function renderProductDetails() {
                 img.src = p.photos?.[0] || NO_IMAGE_URL;
                 img.alt = p.name;
                 img.onclick = () => {
+                    parentGroupProduct = product;
+                    saveToStorage('parentGroupProduct', parentGroupProduct);
                     currentProduct = p;
                     showSection('product-details');
                 };
@@ -1803,6 +1821,8 @@ async function renderProductDetails() {
                 const h4 = document.createElement('h4');
                 h4.textContent = p.name;
                 h4.onclick = () => {
+                    parentGroupProduct = product;
+                    saveToStorage('parentGroupProduct', parentGroupProduct);
                     currentProduct = p;
                     showSection('product-details');
                 };
@@ -2037,20 +2057,24 @@ function updateGroupSelection(productId) {
     const product = products.find(p => p._id === productId);
     if (!product || product.type !== 'group') return;
 
-    const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]:checked`);
+    const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]`);
     let totalPrice = 0;
+    const selectedIds = [];
+
     checkboxes.forEach(cb => {
-        const id = parseInt(cb.value);
+        const id = cb.value;
         const p = products.find(p => p._id === id);
-        if (p) {
+        if (cb.checked && p) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             totalPrice += price;
+            selectedIds.push(id);
         }
     });
 
     const priceDiv = document.querySelector('.group-total-price');
-    if (priceDiv) priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
-    else {
+    if (priceDiv) {
+        priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
+    } else {
         const newPriceDiv = document.createElement('div');
         newPriceDiv.className = 'group-total-price';
         newPriceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
@@ -2058,9 +2082,7 @@ function updateGroupSelection(productId) {
         if (groupDiv) groupDiv.insertBefore(newPriceDiv, groupDiv.querySelector('.buy-btn'));
     }
 
-    // Зберігаємо стан виділення для збереження після перезавантаження
-    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
-    localStorage.setItem(`groupSelection_${productId}`, JSON.stringify(selectedIds));
+    saveToStorage(`groupSelection_${productId}`, selectedIds);
 }
 
 async function addToCartWithColor(productId) {
@@ -2345,7 +2367,7 @@ async function openProduct(slugOrId) {
     if (groupProduct && currentProduct?.type === 'group') {
         parentGroupProduct = currentProduct;
         saveToStorage('parentGroupProduct', parentGroupProduct);
-    } else {
+    } else if (!parentGroupProduct) {
         parentGroupProduct = null;
         saveToStorage('parentGroupProduct', null);
     }
@@ -2359,11 +2381,6 @@ async function openProduct(slugOrId) {
     console.log('Set currentProduct:', currentProduct.name, 'Slug:', currentProduct.slug);
     
     showSection('product-details');
-
-    const catSlug = transliterate(currentCategory.replace('ь', ''));
-    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
-    const newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct.slug}`;
-    history.replaceState({ sectionId: 'product-details', path: newPath }, '', newPath);
 }
 
 function normalizeString(str) {
@@ -2382,13 +2399,7 @@ function searchProducts() {
     console.log('Доступні продукти:', products);
 
     if (!query) {
-        isSearchActive = false;
-        searchResults = [];
-        baseSearchResults = [];
-        currentCategory = null;
-        currentSubcategory = null;
-        currentProduct = null;
-        showSection('home'); // Переходимо на головну, якщо рядок порожній
+        console.log('Порожній запит пошуку, дія не виконується');
         return;
     }
     if (isSearchPending) return;
@@ -2413,7 +2424,6 @@ function searchProducts() {
     currentCategory = null;
     currentSubcategory = null;
 
-    // Додаємо можливість пошуку на всіх сторінках
     const validSections = ['home', 'catalog', 'cart', 'contacts', 'about', 'product-details'];
     const currentSection = document.querySelector('.section.active')?.id;
     if (validSections.includes(currentSection)) {
@@ -2507,10 +2517,7 @@ async function renderCart() {
         img.style.cursor = 'pointer';
         img.onclick = (e) => {
             e.preventDefault();
-            currentProduct = product;
-            currentCategory = product.category;
-            currentSubcategory = product.subcategory || null;
-            showSection('product-details');
+            openProduct(product.slug);
         };
         itemDiv.appendChild(img);
 
@@ -2519,10 +2526,7 @@ async function renderCart() {
         span.style.cursor = 'pointer';
         span.onclick = (e) => {
             e.preventDefault();
-            currentProduct = product;
-            currentCategory = product.category;
-            currentSubcategory = product.subcategory || null;
-            showSection('product-details');
+            openProduct(product.slug);
         };
         itemDiv.appendChild(span);
 
@@ -2838,25 +2842,13 @@ async function submitOrder() {
     console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
 
     try {
-        const csrfToken = localStorage.getItem('csrfToken');
+        let csrfToken = localStorage.getItem('csrfToken');
         if (!csrfToken) {
-            console.warn('CSRF-токен відсутній, замовлення збережено локально');
-            orders.push(orderData);
-            if (orders.length > 5) orders = orders.slice(-5);
-            saveToStorage('orders', orders);
-            cart = [];
-            saveToStorage('cart', cart);
-            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('cartId', newCartId);
-            selectedColors = {};
-            selectedMattressSizes = {};
-            saveToStorage('selectedColors', selectedColors);
-            saveToStorage('selectedMattressSizes', selectedMattressSizes);
-            orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
-            updateCartCount();
-            showNotification('Замовлення збережено локально через відсутність CSRF-токена. Зв’яжіться з підтримкою.', 'warning');
-            showSection('home');
-            return;
+            console.warn('CSRF-токен відсутній, намагаємося отримати новий');
+            csrfToken = await fetchCsrfToken();
+            if (!csrfToken) {
+                throw new Error('Не вдалося отримати CSRF-токен');
+            }
         }
         const response = await fetch(`${BASE_URL}/api/orders`, {
             method: 'POST',
@@ -3163,6 +3155,11 @@ async function handleNavigation(path, isPopstate = false) {
                 showNotification('Сторінку не знайдено!', 'error');
                 showSection('home');
             }
+        }
+
+        if (!isPopstate) {
+            const stateId = `nav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            history.pushState({ sectionId: document.querySelector('.section.active')?.id, path, stateId }, '', `/${path}`);
         }
     } catch (error) {
         console.error('Помилка обробки навігації:', error);
