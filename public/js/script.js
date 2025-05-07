@@ -720,8 +720,6 @@ async function updateProducts() {
     }
 }
 
-
-
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
@@ -795,6 +793,25 @@ function showSection(sectionId) {
 
         activeTimers.forEach((id) => clearInterval(id));
         activeTimers.clear();
+        // Додано обробку подій для кнопок пошуку та переходу з кошика
+        const searchButton = document.querySelector('.search-btn');
+        if (searchButton) {
+            searchButton.onclick = (e) => {
+                e.preventDefault();
+                searchProducts();
+            };
+        }
+        const cartItems = document.querySelectorAll('#cart-items .cart-item');
+        cartItems.forEach(item => {
+            const productLink = item.querySelector('img, span');
+            if (productLink) {
+                productLink.onclick = (e) => {
+                    e.preventDefault();
+                    const product = products.find(p => p.id === cart.find(i => i.name === item.querySelector('span').textContent.split(' - ')[0].split(' (')[0]).id);
+                    if (product) openProduct(product.slug);
+                };
+            }
+        });
     }
 }
 
@@ -2293,6 +2310,9 @@ function searchProducts() {
     renderCatalog();
     window.location.hash = '#catalog';
     isSearchPending = false;
+    // Додано оновлення URL для пошуку
+    const searchSlug = transliterate(query.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'));
+    history.pushState({ sectionId: 'catalog', path: `/catalog/search/${searchSlug}` }, '', `/catalog/search/${searchSlug}`);
 }
 
 async function updateCartPrices() {
