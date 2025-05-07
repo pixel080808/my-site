@@ -543,7 +543,7 @@ function connectPublicWebSocket() {
                 console.log('Оновлено продукти:', products.length, 'елементів');
                 saveToStorage('products', products);
 
-                await updateCartPrices(); // Await the async function here
+                await updateCartPrices();
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
@@ -2438,7 +2438,7 @@ async function updateCartPrices() {
     saveToStorage('cart', cart);
 }
 
-function renderCart() {
+async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
     if (!cartItems || !cartContent) {
