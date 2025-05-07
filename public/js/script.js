@@ -457,9 +457,9 @@ function connectPublicWebSocket() {
         ? 'ws://localhost:3000' 
         : 'wss://mebli.onrender.com';
     
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('Публічний WebSocket уже підключено.');
-        return;
+    if (ws) {
+        ws.onclose = null;
+        ws.close();
     }
 
     ws = new WebSocket(wsUrl);
@@ -2158,7 +2158,47 @@ async function fetchProductBySlug(slug) {
         console.log('Продукт знайдено в локальному кеші:', cachedProduct.name);
         return cachedProduct;
     }
-    return await fetchProductFromServer(slug);
+
+    try {
+        console.log('Запит продукту за slug:', slug);
+        const response = await fetchWithRetry(`${BASE_URL}/api/public/products?slug=${slug}`, 1);
+        if (!response) {
+            console.error('Відповідь від сервера відсутня для slug:', slug);
+            throw new Error('Не вдалося отримати відповідь від сервера');
+        }
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Сервер повернув не JSON:', contentType);
+            throw new Error('Некоректний формат відповіді сервера');
+        }
+        const data = await response.json();
+        console.log('Відповідь сервера:', data);
+
+        let product = null;
+        if (Array.isArray(data)) {
+            product = data.find(p => p.slug === slug) || null;
+        } else if (data.products && Array.isArray(data.products)) {
+            product = data.products.find(p => p.slug === slug) || null;
+        } else if (data.slug === slug) {
+            product = data;
+        }
+
+        if (!product) {
+            console.error('Продукт із slug не знайдено:', slug);
+            showNotification('Товар не знайдено!', 'error');
+            return null;
+        }
+
+        console.log('Знайдено продукт:', product.name, 'ID:', product._id);
+        products = products.filter(p => p._id !== product._id);
+        products.push(product);
+        saveToStorage('products', products);
+        return product;
+    } catch (error) {
+        console.error('Помилка отримання продукту за slug:', error);
+        showNotification('Не вдалося завантажити товар через помилку сервера!', 'error');
+        return null;
+    }
 }
 
 async function fetchProductFromServer(slug) {
@@ -2341,21 +2381,21 @@ function searchProducts() {
 }
 
 async function updateCartPrices() {
-cart.forEach(item => {
-    const product = products.find(p => p._id === item.id);
-    if (!product) return;
-    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
-    const colorIndex = selectedColors[item.id] || 0;
-    const colorPriceChange = product.colors?.[colorIndex]?.priceChange || 0;
+    cart.forEach(item => {
+        const product = products.find(p => p.id === item.id);
+        if (!product) return;
+        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+        const colorIndex = selectedColors[product._id] || 0;
+        const colorPriceChange = product.colors?.[colorIndex]?.priceChange || 0;
 
-    if (product.type === 'mattresses' && selectedMattressSizes[item.id]) {
-        item.price = product.sizes.find(s => s.name === selectedMattressSizes[item.id])?.price || product.price;
-    } else if (!isOnSale && product.salePrice) {
-        item.price = product.price + colorPriceChange;
-    } else {
-        item.price = (isOnSale ? product.salePrice : product.price) + colorPriceChange;
-    }
-});
+        if (product.type === 'mattresses' && selectedMattressSizes[product._id]) {
+            item.price = product.sizes.find(s => s.name === selectedMattressSizes[product._id])?.price || product.price;
+        } else if (!isOnSale && product.salePrice) {
+            item.price = product.price + colorPriceChange;
+        } else {
+            item.price = (isOnSale ? product.salePrice : product.price) + colorPriceChange;
+        }
+    });
     saveToStorage('cart', cart);
 }
 
