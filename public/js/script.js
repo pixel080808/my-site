@@ -222,6 +222,18 @@ async function saveCartToServer() {
         console.log('Generated new cartId:', cartId);
     }
 
+    let csrfToken = localStorage.getItem('csrfToken');
+    if (!csrfToken) {
+        console.warn('CSRF-токен відсутній, намагаємося отримати новий');
+        csrfToken = await fetchCsrfToken();
+        if (!csrfToken) {
+            console.error('Не вдалося отримати CSRF-токен');
+            showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+            debouncedRenderCart();
+            return;
+        }
+    }
+
     const maxRetries = 3;
     let attempt = 0;
 
@@ -231,7 +243,8 @@ async function saveCartToServer() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                    'X-CSRF-Token': csrfToken,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(filteredCartItems),
                 credentials: 'include'
@@ -240,6 +253,13 @@ async function saveCartToServer() {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`Server error: ${response.status}, Body:`, errorText);
+                if (response.status === 403) {
+                    console.warn('CSRF-токен недійсний, очищаємо та пробуємо ще раз');
+                    localStorage.removeItem('csrfToken');
+                    csrfToken = await fetchCsrfToken();
+                    if (!csrfToken) throw new Error('Не вдалося отримати новий CSRF-токен');
+                    continue;
+                }
                 throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
@@ -264,7 +284,7 @@ async function saveCartToServer() {
                 saveToStorage('cart', cartItems);
                 showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
                 debouncedRenderCart();
-                throw error;
+                return;
             }
         }
     }
@@ -447,7 +467,10 @@ async function fetchCsrfToken(retries = 3, delay = 1000) {
             console.log(`Fetching CSRF token, attempt ${i + 1}...`);
             const response = await fetch(`${BASE_URL}/api/csrf-token`, {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
             console.log(`Fetch CSRF token status: ${response.status}`);
             if (!response.ok) {
@@ -455,10 +478,7 @@ async function fetchCsrfToken(retries = 3, delay = 1000) {
                 console.error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            const contentType = response.headers.get('Content-Type');
-            console.log('Content-Type:', contentType);
             const data = await response.json();
-            console.log('Дані відповіді:', data);
             if (data.csrfToken) {
                 localStorage.setItem('csrfToken', data.csrfToken);
                 console.log('CSRF-токен отримано:', data.csrfToken);
@@ -470,8 +490,7 @@ async function fetchCsrfToken(retries = 3, delay = 1000) {
             console.error(`Attempt ${i + 1} failed:`, e);
             if (i === retries - 1) {
                 console.error('All attempts to fetch CSRF token failed');
-                localStorage.removeItem('csrfToken');
-                showNotification('Не вдалося отримати CSRF-токен. Дані будуть збережені локально.', 'warning');
+                showNotification('Не вдалося отримати CSRF-токен. Спробуйте ще раз.', 'error');
                 return null;
             }
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -994,6 +1013,7 @@ function renderCategories() {
 
         const imgLink = document.createElement('a');
         imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+        imgLink.style.textDecoration = 'none'; // Видаляємо підкреслення
         imgLink.onclick = (e) => {
             e.preventDefault();
             currentCategory = cat.name;
@@ -1011,6 +1031,7 @@ function renderCategories() {
 
         const pLink = document.createElement('a');
         pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+        pLink.style.textDecoration = 'none'; // Видаляємо підкреслення
         pLink.onclick = (e) => {
             e.preventDefault();
             currentCategory = cat.name;
@@ -1028,6 +1049,7 @@ function renderCategories() {
         (cat.subcategories || []).forEach(sub => {
             const subLink = document.createElement('a');
             subLink.href = `/${transliterate(cat.name.replace('ь', ''))}/${transliterate(sub.name.replace('ь', ''))}`;
+            subLink.style.textDecoration = 'none'; // Видаляємо підкреслення
             subLink.onclick = (e) => {
                 e.preventDefault();
                 currentCategory = cat.name;
@@ -1060,6 +1082,7 @@ function renderCatalogDropdown() {
 
         const span = document.createElement('span');
         span.textContent = cat.name;
+        span.style.textDecoration = 'none'; // Видаляємо підкреслення
         span.onclick = () => { 
             currentProduct = null; 
             currentCategory = cat.name; 
@@ -1073,6 +1096,7 @@ function renderCatalogDropdown() {
         (cat.subcategories || []).forEach(sub => {
             const p = document.createElement('p');
             p.textContent = sub.name;
+            p.style.textDecoration = 'none'; // Видаляємо підкреслення
             p.onclick = () => { 
                 currentProduct = null; 
                 currentCategory = cat.name; 
@@ -2698,6 +2722,8 @@ async function confirmRemoveFromCart() {
             console.error('Помилка синхронізації кошика з сервером:', error);
             showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
         }
+        
+        showSection('cart'); // Повернення до кошика після видалення
     } else {
         showNotification('Помилка при видаленні товару!', 'error');
     }
@@ -2854,15 +2880,43 @@ async function submitOrder() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': csrfToken,
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(orderData)
+            body: JSON.stringify(orderData),
+            credentials: 'include'
         });
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
-            throw new Error('Не вдалося оформити замовлення');
+            if (response.status === 403) {
+                console.warn('CSRF-токен недійсний, очищаємо та пробуємо ще раз');
+                localStorage.removeItem('csrfToken');
+                csrfToken = await fetchCsrfToken();
+                if (!csrfToken) throw new Error('Не вдалося отримати новий CSRF-токен');
+                const retryResponse = await fetch(`${BASE_URL}/api/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(orderData),
+                    credentials: 'include'
+                });
+                if (!retryResponse.ok) {
+                    const retryErrorText = await retryResponse.text();
+                    throw new Error(`Повторна помилка сервера: ${retryResponse.status} - ${retryErrorText}`);
+                }
+                const retryData = await retryResponse.json();
+                console.log('Замовлення успішно оформлено після повторної спроби:', retryData);
+            } else {
+                throw new Error('Не вдалося оформити замовлення');
+            }
         }
+
+        const responseData = await response.json();
+        console.log('Замовлення успішно оформлено:', responseData);
 
         cart = [];
         saveToStorage('cart', cart);
