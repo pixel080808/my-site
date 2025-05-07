@@ -189,13 +189,19 @@ async function saveCartToServer() {
                 console.warn('Продукт не знайдено для id:', item.id);
                 return null;
             }
+            const colorData = item.color ? {
+                name: item.color.name || '',
+                value: item.color.value || item.color.name || '',
+                priceChange: item.color.priceChange || 0,
+                photo: item.color.photo || null
+            } : null;
             return {
                 id: Number(item.id),
                 name: item.name || '',
                 quantity: item.quantity || 1,
                 price: item.price || 0,
                 photo: item.photo || '',
-                color: item.color || null
+                color: colorData
             };
         })
         .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);
@@ -216,50 +222,51 @@ async function saveCartToServer() {
         console.log('Generated new cartId:', cartId);
     }
 
-    try {
-        const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            },
-            body: JSON.stringify(filteredCartItems),
-            credentials: 'include'
-        });
+    const maxRetries = 3;
+    let attempt = 0;
 
-        const responseBody = await response.json();
-        if (!response.ok) {
-            console.error(`Server error: ${response.status}, Body:`, responseBody);
-            throw new Error(`Server error: ${response.status} - ${responseBody.error || 'Unknown error'} (${JSON.stringify(responseBody.details || {})})`);
+    while (attempt < maxRetries) {
+        try {
+            const response = await fetch(`${BASE_URL}/api/cart?cartId=${cartId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                },
+                body: JSON.stringify(filteredCartItems),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Server error: ${response.status}, Body:`, errorText);
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const responseBody = await response.json();
+            console.log('Cart successfully saved to server:', responseBody);
+
+            cart = filteredCartItems.map(item => ({
+                ...item,
+                id: Number(item.id)
+            }));
+            saveToStorage('cart', cart);
+            debouncedRenderCart();
+            return;
+        } catch (error) {
+            console.error(`Error saving cart (attempt ${attempt + 1}):`, error);
+            attempt++;
+            if (attempt < maxRetries) {
+                console.log(`Retrying in ${1000 * attempt}ms...`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            } else {
+                console.error('All retry attempts failed');
+                saveToStorage('cart', cartItems);
+                showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+                debouncedRenderCart();
+                throw error;
+            }
         }
-
-        console.log('Cart successfully saved to server:', responseBody);
-
-        cart = filteredCartItems.map(item => ({
-            ...item,
-            id: Number(item.id)
-        }));
-        saveToStorage('cart', cart);
-        debouncedRenderCart();
-    } catch (error) {
-        console.error('Error saving cart:', error);
-        saveToStorage('cart', cartItems);
-        // Додаємо затримку для стабільності при швидких діях
-        if (!activeTimers.has('saveCartRetry')) {
-            const retryTimer = setTimeout(async () => {
-                try {
-                    await saveCartToServer();
-                    activeTimers.delete('saveCartRetry');
-                } catch (retryError) {
-                    console.error('Retry failed:', retryError);
-                    showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
-                    activeTimers.delete('saveCartRetry');
-                }
-            }, 1000);
-            activeTimers.set('saveCartRetry', retryTimer);
-        }
-        debouncedRenderCart();
-        throw error;
     }
 }
 
@@ -308,40 +315,49 @@ async function loginUser(email, password) {
     }
 }
 
-async function fetchWithRetry(url, retries = 3, delay = 1000, options = {}) {
+async function fetchWithRetry(url, options = {}, retries = 5, backoff = 500) {
+    const headers = { ...options.headers }; // Ensure headers is an object
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`Fetching ${url}, attempt ${i + 1}`);
+            // Ensure CSRF token is available
             if (!localStorage.getItem('csrfToken')) {
-                await fetchCsrfToken();
+                const csrfToken = await fetchCsrfToken();
+                if (!csrfToken) {
+                    throw new Error('Failed to obtain CSRF token');
+                }
             }
             const response = await fetch(url, {
                 ...options,
                 headers: {
-                    ...options.headers,
-                    'X-CSRF-Token': localStorage.getItem('csrfToken')
+                    ...headers,
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
                 },
                 credentials: 'include'
             });
             console.log(`Fetch ${url} status: ${response.status}`);
             if (!response.ok) {
+                let errorMessage = `HTTP error! Status: ${response.status}`;
                 const errorText = await response.text();
-                console.error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                if (response.status === 401) errorMessage = 'Unauthorized: Invalid or missing credentials';
+                else if (response.status === 403) errorMessage = 'Forbidden: Access denied';
+                else if (response.status === 429) errorMessage = 'Too Many Requests: Please try again later';
+                console.error(`HTTP error details: ${response.status}, Body: ${errorText}`);
+                throw new Error(errorMessage);
             }
             return response;
         } catch (error) {
-            console.error(`Fetch attempt ${i + 1} failed:`, error);
-            if (i === retries - 1) {
-                console.error(`Усі ${retries} спроби для ${url} не вдалися`);
-                showNotification('Не вдалося підключитися до сервера! Спробуйте пізніше.', 'error');
-                return null;
+            console.error(`Fetch attempt ${i + 1} failed:`, error.message);
+            if (i < retries - 1) {
+                console.log(`Retrying in ${backoff}ms...`);
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                backoff *= 2; // Exponential backoff with a more aggressive multiplier
+            } else {
+                console.error(`All ${retries} attempts for ${url} failed`);
+                throw error; // Let the caller handle notifications
             }
-            console.warn(`Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    return null;
 }
 
 async function fetchPublicData() {
@@ -603,10 +619,10 @@ function connectPublicWebSocket() {
         if (event.code !== 1000 && reconnectAttempts < maxAttempts) {
             reconnectAttempts++;
             console.log(`Спроба перепідключення ${reconnectAttempts} з ${maxAttempts}`);
-            setTimeout(connectPublicWebSocket, 2000);
+            setTimeout(connectPublicWebSocket, 2000 * reconnectAttempts); // Експоненціальна затримка
         } else if (reconnectAttempts >= maxAttempts) {
             console.error('Досягнуто максимальної кількості спроб підключення');
-            showNotification('Не вдалося підключитися до сервера!', 'error');
+            showNotification('Не вдалося підключитися до сервера оновлень. Деякі дані можуть бути застарілими.', 'warning');
         }
     };
 
@@ -739,6 +755,11 @@ function showSection(sectionId) {
     if (section) {
         section.classList.add('active');
         let newPath = '/';
+        // Очищаємо поле пошуку при переході на будь-яку секцію
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
         if (sectionId === 'home') {
             currentProduct = null;
             currentCategory = null;
@@ -2379,9 +2400,7 @@ function searchProducts() {
         currentCategory = null;
         currentSubcategory = null;
         currentProduct = null;
-        showSection('catalog');
-        renderCatalog();
-        history.replaceState({ sectionId: 'catalog', path: '/catalog' }, '', '/catalog');
+        showSection('home'); // Переходимо на головну, якщо рядок порожній
         return;
     }
     if (isSearchPending) return;
@@ -2799,7 +2818,6 @@ async function submitOrder() {
                 quantity: item.quantity,
                 price: item.price,
                 photo: item.photo || (product?.photos?.[0] || ''),
-                color: item.color ? item.color.name : 'Не вказано',
                 ...additionalInfo
             };
         })
@@ -2818,7 +2836,7 @@ async function submitOrder() {
         return;
     }
 
-    console.log('Дані замовлення перед відправкою:', orderData);
+    console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
 
     try {
         const csrfToken = localStorage.getItem('csrfToken');
