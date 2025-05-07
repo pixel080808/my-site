@@ -2867,75 +2867,81 @@ async function submitOrder() {
 
     console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
 
-    try {
-        let csrfToken = localStorage.getItem('csrfToken');
-        if (!csrfToken) {
-            console.warn('CSRF-токен відсутній, намагаємося отримати новий');
-            csrfToken = await fetchCsrfToken();
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            let csrfToken = localStorage.getItem('csrfToken');
             if (!csrfToken) {
-                throw new Error('Не вдалося отримати CSRF-токен');
-            }
-        }
-        const response = await fetch(`${BASE_URL}/api/orders`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(orderData),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Помилка сервера: ${response.status}, Тіло: ${errorText}`);
-            if (response.status === 403) {
-                console.warn('CSRF-токен недійсний, очищаємо та пробуємо ще раз');
-                localStorage.removeItem('csrfToken');
+                console.warn('CSRF-токен відсутній, намагаємося отримати новий');
                 csrfToken = await fetchCsrfToken();
-                if (!csrfToken) throw new Error('Не вдалося отримати новий CSRF-токен');
-                const retryResponse = await fetch(`${BASE_URL}/api/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(orderData),
-                    credentials: 'include'
-                });
-                if (!retryResponse.ok) {
-                    const retryErrorText = await retryResponse.text();
-                    throw new Error(`Повторна помилка сервера: ${retryResponse.status} - ${retryErrorText}`);
+                if (!csrfToken) {
+                    throw new Error('Не вдалося отримати CSRF-токен');
                 }
-                const retryData = await retryResponse.json();
-                console.log('Замовлення успішно оформлено після повторної спроби:', retryData);
-            } else {
-                throw new Error('Не вдалося оформити замовлення');
             }
+
+            const response = await fetch(`${BASE_URL}/api/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(orderData),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Помилка сервера (спроба ${attempt + 1}): ${response.status}, Тіло: ${errorText}`);
+                if (response.status === 403 && attempt < maxRetries - 1) {
+                    console.warn('CSRF-токен недійсний, очищаємо та пробуємо ще раз');
+                    localStorage.removeItem('csrfToken');
+                    csrfToken = await fetchCsrfToken();
+                    if (!csrfToken) {
+                        throw new Error('Не вдалося отримати новий CSRF-токен');
+                    }
+                    attempt++;
+                    continue;
+                }
+                throw new Error(`Помилка сервера: ${response.status} - ${errorText}`);
+            }
+
+            const responseData = await response.json();
+            if (!responseData || !responseData.orderId) {
+                throw new Error('Некоректна відповідь сервера: orderId відсутній');
+            }
+
+            console.log('Замовлення успішно оформлено:', responseData);
+
+            cart = [];
+            saveToStorage('cart', cart);
+            const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cartId', newCartId);
+            selectedColors = {};
+            selectedMattressSizes = {};
+            saveToStorage('selectedColors', selectedColors);
+            saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
+            await saveCartToServer();
+            showNotification('Замовлення оформлено! Дякуємо!', 'success');
+            showSection('home');
+            return;
+
+        } catch (error) {
+            console.error(`Помилка при оформленні замовлення (спроба ${attempt + 1}):`, error);
+            attempt++;
+            if (attempt >= maxRetries) {
+                console.error('Усі спроби оформлення замовлення провалилися');
+                orders.push(orderData);
+                if (orders.length > 5) orders = orders.slice(-5);
+                saveToStorage('orders', orders);
+                showNotification('Не вдалося оформити замовлення! Дані збережено локально.', 'warning');
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
-
-        const responseData = await response.json();
-        console.log('Замовлення успішно оформлено:', responseData);
-
-        cart = [];
-        saveToStorage('cart', cart);
-        const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('cartId', newCartId);
-        selectedColors = {};
-        selectedMattressSizes = {};
-        saveToStorage('selectedColors', selectedColors);
-        saveToStorage('selectedMattressSizes', selectedMattressSizes);
-        orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
-        await saveCartToServer();
-        showNotification('Замовлення оформлено! Дякуємо!', 'success');
-        showSection('home');
-    } catch (error) {
-        console.error('Помилка при оформленні замовлення:', error);
-        orders.push(orderData);
-        if (orders.length > 5) orders = orders.slice(-5);
-        saveToStorage('orders', orders);
-        showNotification('Не вдалося оформити замовлення! Дані збережено локально.', 'warning');
     }
 }
 
@@ -3285,6 +3291,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path);
 
+        // Додано код для кошика: уникнення блокування кліків на зображення та назву
+        const cartItems = document.getElementById('cart-items');
+        if (cartItems) {
+            cartItems.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.tagName === 'IMG' || target.tagName === 'SPAN') {
+                    return; // Пропускаємо кліки на зображення та назву
+                }
+                if (!target.closest('button') && !target.closest('input')) {
+                    window.getSelection().removeAllRanges();
+                }
+            });
+        }
+
         console.log('Програма ініціалізована успішно');
     } catch (error) {
         console.error('Помилка в DOMContentLoaded:', error);
@@ -3303,3 +3323,14 @@ window.addEventListener('popstate', async (event) => {
         showSection('home');
     }
 });
+
+const style = document.createElement('style');
+style.textContent = `
+    .category a, .subcategories a, .dropdown-item span, .sub-dropdown p {
+        text-decoration: none !important;
+    }
+    .category a:hover, .subcategories a:hover, .dropdown-item span:hover, .sub-dropdown p:hover {
+        text-decoration: none !important;
+    }
+`;
+document.head.appendChild(style);
