@@ -56,6 +56,25 @@ const orderSchema = new mongoose.Schema({
                 },
                 message: 'Photo must be a valid URL or empty string'
             }
+        },
+        color: {
+            type: {
+                name: { type: String },
+                value: { type: String },
+                priceChange: { type: Number, default: 0 },
+                photo: {
+                    type: String,
+                    default: '',
+                    validate: {
+                        validator: function(v) {
+                            return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                        },
+                        message: 'Color photo must be a valid URL or empty string'
+                    }
+                },
+                size: { type: String, default: null } // Added size field
+            },
+            default: null
         }
     }],
     total: { 

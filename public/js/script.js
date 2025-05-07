@@ -2867,41 +2867,19 @@ async function submitOrder() {
         customer,
         items: cart.map(item => {
             const product = products.find(p => p.id === item.id);
-            let additionalInfo = {
-                color: item.color ? {
-                    name: item.color.name || 'Не вказано',
-                    value: item.color.value || item.color.name || '',
-                    priceChange: item.color.priceChange || 0,
-                    photo: item.color.photo || null
-                } : null,
-                size: null,
-                sizePrice: null,
-                groupItems: null
-            };
-
-            if (product?.type === 'mattresses' && item.color?.size) {
-                const sizeData = product.sizes?.find(s => s.name === item.color.size);
-                additionalInfo.size = item.color.size || null;
-                additionalInfo.sizePrice = sizeData ? sizeData.price : item.price;
-            } else if (product?.type === 'group' && product.groupProducts?.length > 0) {
-                additionalInfo.groupItems = product.groupProducts.map(id => {
-                    const groupProduct = products.find(p => p._id === id);
-                    return groupProduct ? {
-                        id: groupProduct.id,
-                        name: groupProduct.name,
-                        price: groupProduct.salePrice && new Date(groupProduct.saleEnd) > new Date() ? groupProduct.salePrice : groupProduct.price
-                    } : null;
-                }).filter(Boolean);
-            }
-
             return {
                 id: Number(item.id),
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
-                ...additionalInfo
-                // Видалено поля _id і brand, оскільки вони не дозволені сервером
+                color: item.color ? {
+                    name: item.color.name || 'Не вказано',
+                    value: item.color.value || item.color.name || '',
+                    priceChange: item.color.priceChange || 0,
+                    photo: item.color.photo || null,
+                    size: item.color.size || null
+                } : null
             };
         })
     };

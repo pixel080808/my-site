@@ -5,7 +5,7 @@ const cartSchema = new mongoose.Schema({
     cartId: { type: String, required: true, unique: true },
     items: [
         {
-            id: { type: Number, required: true }, // Змінено на Number
+            id: { type: Number, required: true },
             name: { type: String, required: true },
             quantity: { type: Number, required: true, min: 1 },
             price: { type: Number, required: true, min: 0 },
@@ -33,7 +33,8 @@ const cartSchema = new mongoose.Schema({
                             },
                             message: 'Color photo must be a valid URL or empty string'
                         }
-                    }
+                    },
+                    size: { type: String, default: null } // Added size field
                 },
                 default: null
             }
@@ -53,7 +54,7 @@ const Cart = mongoose.model('Cart', cartSchema);
 
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.number().required(), // Змінено на number
+        id: Joi.number().required(),
         name: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
@@ -62,7 +63,8 @@ const cartSchemaValidation = Joi.array().items(
             name: Joi.string().allow('').optional(),
             value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null).optional()
+            photo: Joi.string().uri().allow('', null).optional(),
+            size: Joi.string().allow('', null).optional() // Added size field
         }).allow(null).optional()
     })
 );
