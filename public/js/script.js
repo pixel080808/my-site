@@ -489,7 +489,7 @@ function connectPublicWebSocket() {
         });
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
         try {
             const message = JSON.parse(event.data);
             console.log('WebSocket message received:', { type: message.type, dataLength: message.data?.length });
@@ -543,7 +543,7 @@ function connectPublicWebSocket() {
                 console.log('Оновлено продукти:', products.length, 'елементів');
                 saveToStorage('products', products);
 
-                updateCartPrices();
+                await updateCartPrices(); // Await the async function here
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
