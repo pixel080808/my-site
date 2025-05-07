@@ -635,7 +635,7 @@ function connectPublicWebSocket() {
     ws.onclose = (event) => {
         console.warn('WebSocket закрито:', { code: event.code, reason: event.reason });
         if (reconnectAttempts < maxAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Експоненціальна затримка, макс. 30 сек
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
             console.log(`Спроба повторного підключення ${reconnectAttempts + 1}/${maxAttempts} через ${delay} мс`);
             setTimeout(() => {
                 reconnectAttempts++;
@@ -1013,7 +1013,7 @@ function renderCategories() {
 
         const imgLink = document.createElement('a');
         imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
-        imgLink.style.textDecoration = 'none'; // Видаляємо підкреслення
+        imgLink.style.textDecoration = 'none';
         imgLink.onclick = (e) => {
             e.preventDefault();
             currentCategory = cat.name;
@@ -1031,7 +1031,7 @@ function renderCategories() {
 
         const pLink = document.createElement('a');
         pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
-        pLink.style.textDecoration = 'none'; // Видаляємо підкреслення
+        pLink.style.textDecoration = 'none';
         pLink.onclick = (e) => {
             e.preventDefault();
             currentCategory = cat.name;
@@ -1049,7 +1049,7 @@ function renderCategories() {
         (cat.subcategories || []).forEach(sub => {
             const subLink = document.createElement('a');
             subLink.href = `/${transliterate(cat.name.replace('ь', ''))}/${transliterate(sub.name.replace('ь', ''))}`;
-            subLink.style.textDecoration = 'none'; // Видаляємо підкреслення
+            subLink.style.textDecoration = 'none';
             subLink.onclick = (e) => {
                 e.preventDefault();
                 currentCategory = cat.name;
@@ -1082,7 +1082,7 @@ function renderCatalogDropdown() {
 
         const span = document.createElement('span');
         span.textContent = cat.name;
-        span.style.textDecoration = 'none'; // Видаляємо підкреслення
+        span.style.textDecoration = 'none';
         span.onclick = () => { 
             currentProduct = null; 
             currentCategory = cat.name; 
@@ -1096,7 +1096,7 @@ function renderCatalogDropdown() {
         (cat.subcategories || []).forEach(sub => {
             const p = document.createElement('p');
             p.textContent = sub.name;
-            p.style.textDecoration = 'none'; // Видаляємо підкреслення
+            p.style.textDecoration = 'none';
             p.onclick = () => { 
                 currentProduct = null; 
                 currentCategory = cat.name; 
@@ -2723,7 +2723,7 @@ async function confirmRemoveFromCart() {
             showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
         }
         
-        showSection('cart'); // Повернення до кошика після видалення
+        showSection('cart');
     } else {
         showNotification('Помилка при видаленні товару!', 'error');
     }
@@ -2766,17 +2766,21 @@ async function updateCartQuantity(index, change) {
         }
 
 async function submitOrder() {
+    // Validate customer input fields
     const customer = orderFields.reduce((acc, field) => {
         const input = document.getElementById(`order-${field.name}`);
         acc[field.name] = input ? input.value.trim() : '';
         return acc;
     }, {});
 
-    if (orderFields.some(f => f.required && !customer[f.name])) {
-        showNotification('Будь ласка, заповніть усі обов\'язкові поля!', 'error');
+    // Check for required fields
+    const missingFields = orderFields.filter(f => f.required && !customer[f.name]);
+    if (missingFields.length > 0) {
+        showNotification(`Будь ласка, заповніть обов'язкові поля: ${missingFields.map(f => f.label).join(', ')}!`, 'error');
         return;
     }
 
+    // Validate name and surname (Ukrainian letters, min 2)
     const nameRegex = /^[А-ЯҐЄІЇа-яґєії]{2,}$/;
     if (!nameRegex.test(customer.name)) {
         showNotification('Ім\'я має містити щонайменше 2 українські літери!', 'error');
@@ -2787,25 +2791,33 @@ async function submitOrder() {
         return;
     }
 
+    // Validate email if provided
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (customer.email && !emailRegex.test(customer.email)) {
         showNotification('Введіть коректну email-адресу!', 'error');
         return;
     }
 
+    // Validate address (min 6 characters)
     if (customer.address.length < 6) {
         showNotification('Адреса доставки має містити щонайменше 6 символів!', 'error');
         return;
     }
 
+    // Validate phone number
     const phoneRegex = /^(0\d{9})$|^(\+?\d{10,15})$/;
     if (!phoneRegex.test(customer.phone)) {
         showNotification('Номер телефону має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX (10-15 цифр)!', 'error');
         return;
     }
 
-    if (!confirm('Підтвердити оформлення замовлення?')) return;
+    // Validate cart
+    if (!cart || cart.length === 0) {
+        showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
+        return;
+    }
 
+    // Prepare order data
     const orderData = {
         cartId: localStorage.getItem('cartId') || '',
         date: new Date().toISOString(),
@@ -2852,6 +2864,7 @@ async function submitOrder() {
         })
     };
 
+    // Filter invalid items
     orderData.items = orderData.items.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
         if (!isValid) {
@@ -2865,6 +2878,9 @@ async function submitOrder() {
         return;
     }
 
+    // Confirm order submission
+    if (!confirm('Підтвердити оформлення замовлення?')) return;
+
     console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
 
     const maxRetries = 3;
@@ -2872,6 +2888,7 @@ async function submitOrder() {
 
     while (attempt < maxRetries) {
         try {
+            // Fetch CSRF token if missing or invalid
             let csrfToken = localStorage.getItem('csrfToken');
             if (!csrfToken) {
                 console.warn('CSRF-токен відсутній, намагаємося отримати новий');
@@ -2881,6 +2898,7 @@ async function submitOrder() {
                 }
             }
 
+            // Submit order to server
             const response = await fetch(`${BASE_URL}/api/orders`, {
                 method: 'POST',
                 headers: {
@@ -2892,22 +2910,39 @@ async function submitOrder() {
                 credentials: 'include'
             });
 
+            // Handle non-OK responses
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`Помилка сервера (спроба ${attempt + 1}): ${response.status}, Тіло: ${errorText}`);
-                if (response.status === 403 && attempt < maxRetries - 1) {
+
+                if (response.status === 403) {
                     console.warn('CSRF-токен недійсний, очищаємо та пробуємо ще раз');
                     localStorage.removeItem('csrfToken');
-                    csrfToken = await fetchCsrfToken();
-                    if (!csrfToken) {
-                        throw new Error('Не вдалося отримати новий CSRF-токен');
+                    if (attempt < maxRetries - 1) {
+                        csrfToken = await fetchCsrfToken();
+                        if (!csrfToken) {
+                            throw new Error('Не вдалося отримати новий CSRF-токен');
+                        }
+                        attempt++;
+                        continue;
                     }
-                    attempt++;
-                    continue;
+                } else if (response.status === 400) {
+                    // Handle client-side errors
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        showNotification(`Помилка: ${errorData.message || 'Некоректні дані замовлення'}`, 'error');
+                    } catch (e) {
+                        showNotification(`Помилка: ${errorText}`, 'error');
+                    }
+                    return;
+                } else if (response.status === 429) {
+                    showNotification('Занадто багато запитів. Спробуйте ще раз пізніше.', 'error');
+                    return;
                 }
                 throw new Error(`Помилка сервера: ${response.status} - ${errorText}`);
             }
 
+            // Parse response
             const responseData = await response.json();
             if (!responseData || !responseData.orderId) {
                 throw new Error('Некоректна відповідь сервера: orderId відсутній');
@@ -2915,6 +2950,7 @@ async function submitOrder() {
 
             console.log('Замовлення успішно оформлено:', responseData);
 
+            // Clear cart and reset state
             cart = [];
             saveToStorage('cart', cart);
             const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
@@ -2925,6 +2961,7 @@ async function submitOrder() {
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             orderFields.forEach(f => localStorage.removeItem(`order-${f.name}`));
             await saveCartToServer();
+
             showNotification('Замовлення оформлено! Дякуємо!', 'success');
             showSection('home');
             return;
@@ -3291,13 +3328,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path);
 
-        // Додано код для кошика: уникнення блокування кліків на зображення та назву
         const cartItems = document.getElementById('cart-items');
         if (cartItems) {
             cartItems.addEventListener('click', (e) => {
                 const target = e.target;
                 if (target.tagName === 'IMG' || target.tagName === 'SPAN') {
-                    return; // Пропускаємо кліки на зображення та назву
+                    return;
                 }
                 if (!target.closest('button') && !target.closest('input')) {
                     window.getSelection().removeAllRanges();
