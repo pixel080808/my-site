@@ -64,7 +64,7 @@ const cartSchemaValidation = Joi.array().items(
             value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional(),
-            size: Joi.string().allow('', null).optional()
+            size: Joi.string().allow('', null).optional() // Дозволяємо поле size
         }).allow(null).optional()
     }).unknown(false)
 );

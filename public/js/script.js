@@ -195,12 +195,9 @@ async function saveCartToServer() {
                     name: item.color.name || 'Не вказано',
                     value: item.color.value || item.color.name || '',
                     priceChange: item.color.priceChange || 0,
-                    photo: item.color.photo || null
+                    photo: item.color.photo || ''
                 };
-                // Видаляємо поле size, якщо воно null
-                if (item.color.size === null) {
-                    delete colorData.size;
-                } else if (item.color.size) {
+                if (item.color.size) {
                     colorData.size = item.color.size;
                 }
             }
@@ -2175,7 +2172,7 @@ async function addToCartWithColor(productId) {
             name: product.colors[colorIndex].name || 'Не вказано',
             value: product.colors[colorIndex].value || product.colors[colorIndex].name || '',
             priceChange: product.colors[colorIndex].priceChange || 0,
-            photo: product.colors[colorIndex].photo || null
+            photo: product.colors[colorIndex].photo || ''
         };
         price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
         price += colorData.priceChange;
@@ -2195,8 +2192,13 @@ async function addToCartWithColor(productId) {
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             return;
         }
-        price = sizeData.price;
-        colorData = colorData ? { ...colorData, name: `${colorData.name} (${size})`, size: size } : { name: size, value: size, priceChange: 0, photo: null, size: size };
+        price = sizeData.price || 0; // Використовуємо ціну з розміру
+        colorData = {
+            name: size,
+            value: size,
+            priceChange: 0,
+            photo: product.photos?.[0] || '' // Використовуємо основне фото продукту
+        };
     }
 
     const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
@@ -2879,12 +2881,9 @@ async function submitOrder() {
                     name: item.color.name || 'Не вказано',
                     value: item.color.value || item.color.name || '',
                     priceChange: item.color.priceChange || 0,
-                    photo: item.color.photo || null
+                    photo: item.color.photo || ''
                 };
-                // Видаляємо поле size, якщо воно null
-                if (item.color.size === null) {
-                    delete colorData.size;
-                } else if (item.color.size) {
+                if (item.color.size) {
                     colorData.size = item.color.size;
                 }
             }

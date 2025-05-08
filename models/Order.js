@@ -65,12 +65,12 @@ const orderSchema = new mongoose.Schema({
                 priceChange: { type: Number, default: 0 },
                 photo: {
                     type: String,
-                    default: '',
+                    default: null, // Змінено default на null
                     validate: {
                         validator: function(v) {
-                            return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                            return v === null || v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
                         },
-                        message: 'Color photo must be a valid URL or empty string'
+                        message: 'Color photo must be a valid URL, empty string, or null'
                     }
                 },
                 size: { type: String, default: null }
@@ -119,7 +119,7 @@ const orderSchemaValidation = Joi.object({
                 value: Joi.string().allow('').optional(),
                 priceChange: Joi.number().default(0),
                 photo: Joi.string().uri().allow('', null).optional(),
-                size: Joi.string().allow('', null).optional()
+                size: Joi.string().allow('', null).optional() // Дозволяємо size
             }).allow(null).optional(),
             _id: Joi.any().optional()
         }).unknown(false)
