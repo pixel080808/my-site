@@ -2585,6 +2585,7 @@ async function renderCart() {
         img.style.cursor = 'pointer';
         img.onclick = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             openProduct(product.slug);
         };
         itemDiv.appendChild(img);
@@ -2594,6 +2595,7 @@ async function renderCart() {
         span.style.cursor = 'pointer';
         span.onclick = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             openProduct(product.slug);
         };
         itemDiv.appendChild(span);
@@ -2616,18 +2618,18 @@ async function renderCart() {
         qtyInput.style.appearance = 'none';
         qtyInput.style.MozAppearance = 'none';
         qtyInput.style.WebkitAppearance = 'none';
-        qtyInput.oninput = async (e) => {
+        qtyInput.oninput = (e) => {
             let newQty = parseInt(e.target.value) || 1;
             if (newQty < 1) newQty = 1;
-            cart[index].quantity = newQty;
-            saveToStorage('cart', cart);
-            updateCartCount();
-            debouncedRenderCart();
-            try {
-                await saveCartToServer();
-            } catch (error) {
-                console.error('Помилка синхронізації кошика з сервером:', error);
-                showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+            if (cart[index].quantity !== newQty) {
+                cart[index].quantity = newQty;
+                saveToStorage('cart', cart);
+                updateCartCount();
+                debouncedRenderCart();
+                saveCartToServer().catch(error => {
+                    console.error('Помилка синхронізації кошика з сервером:', error);
+                    showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+                });
             }
         };
         qtyInput.onwheel = (e) => e.preventDefault();
