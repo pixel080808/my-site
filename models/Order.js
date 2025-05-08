@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Joi = require('joi');
 
 const orderSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
@@ -72,9 +73,9 @@ const orderSchema = new mongoose.Schema({
                         message: 'Color photo must be a valid URL or empty string'
                     }
                 },
-                size: { type: String, default: null } // Added size field
+                size: { type: String, default: null }
             },
-            default: null
+            default: null // Додано, щоб дозволити null
         }
     }],
     total: { 
@@ -90,5 +91,43 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 orderSchema.index({ date: -1 });
+
+const orderSchemaValidation = Joi.object({
+    id: Joi.number().optional(),
+    cartId: Joi.string().default(''),
+    date: Joi.date().default(Date.now),
+    customer: Joi.object({
+        name: Joi.string().min(1).max(255).required(),
+        surname: Joi.string().min(1).max(255).optional(),
+        email: Joi.string().email().allow('').optional(),
+        phone: Joi.string()
+            .pattern(/^(0\d{9})$|^(\+?\d{10,15})$/)
+            .allow('')
+            .optional(),
+        address: Joi.string().allow('').optional(),
+        payment: Joi.string().allow('').optional()
+    }).required(),
+    items: Joi.array().items(
+        Joi.object({
+            id: Joi.number().required(),
+            name: Joi.string().required(),
+            quantity: Joi.number().min(1).required(),
+            price: Joi.number().min(0).required(),
+            photo: Joi.string().uri().allow('').optional(),
+            color: Joi.object({
+                name: Joi.string().allow('').optional(),
+                value: Joi.string().allow('').optional(),
+                priceChange: Joi.number().default(0),
+                photo: Joi.string().uri().allow('', null).optional(),
+                size: Joi.string().allow('', null).optional()
+            }).allow(null).optional(), // Оновлено, щоб дозволити null
+            _id: Joi.any().optional()
+        })
+    ).required(),
+    total: Joi.number().min(0).required(),
+    status: Joi.string()
+        .valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано')
+        .default('Нове замовлення')
+});
 
 module.exports = mongoose.model('Order', orderSchema);
