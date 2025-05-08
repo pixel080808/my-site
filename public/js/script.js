@@ -2153,14 +2153,14 @@ async function addToCartWithColor(productId) {
         type: product.type
     });
 
-    if (product.colors?.length > 1 && selectedColors[productId] === undefined) {
+    if (product.colors?.length > 1 && selectedColors[productId] === undefined && product.type !== 'mattresses') {
         showNotification('Будь ласка, виберіть колір!', 'error');
         return;
     }
 
     let price = product.price || 0;
     let colorData = null;
-    if (product.colors?.length > 0) {
+    if (product.type !== 'mattresses' && product.colors?.length > 0) {
         const colorIndex = selectedColors[productId] !== undefined ? selectedColors[productId] : 0;
         if (!product.colors[colorIndex]) {
             showNotification('Обраний колір більше недоступний!', 'error');
@@ -2192,12 +2192,13 @@ async function addToCartWithColor(productId) {
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             return;
         }
-        price = sizeData.price || 0; // Використовуємо ціну з розміру
+        price = sizeData.price || 0;
         colorData = {
             name: size,
             value: size,
             priceChange: 0,
-            photo: product.photos?.[0] || '' // Використовуємо основне фото продукту
+            photo: product.photos?.[0] || NO_IMAGE_URL,
+            size: size
         };
     }
 
@@ -2217,7 +2218,6 @@ async function addToCartWithColor(productId) {
         brand: product.brand || 'Не вказано'
     };
 
-    // Перевірка валідності cartItem
     if (!cartItem.id || !cartItem.name || !cartItem.quantity || !cartItem.price) {
         console.error('Некоректний елемент кошика:', cartItem);
         showNotification('Помилка: некоректні дані товару!', 'error');
@@ -2243,7 +2243,6 @@ async function addToCartWithColor(productId) {
     debouncedRenderCart();
     showNotification(`${product.name} додано до кошика!`, 'success');
 
-    // Спроба синхронізації з сервером
     try {
         await saveCartToServer();
     } catch (error) {

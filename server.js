@@ -2422,36 +2422,46 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
         }
 
         for (const item of cartItems) {
+            const product = await Product.findOne({ id: item.id }).session(session);
+            if (!product) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: `Продукт з id ${item.id} не знайдено` });
+            }
             if (item.color) {
-                const product = await Product.findOne({ id: item.id }).session(session);
-                if (!product) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ error: `Продукт з id ${item.id} не знайдено` });
-                }
-                const color = product.colors.find(c => c.name === item.color.name && c.value === item.color.value);
-                if (!color) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` });
-                }
-                const expectedPrice = product.price + (color.priceChange || 0);
-                if (item.price !== expectedPrice) {
-                    logger.warn(`Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
-                    item.price = expectedPrice;
-                }
-                item.color.priceChange = color.priceChange || 0;
-                item.photo = color.photo || item.photo || product.photos[0] || '';
-                if (color.photo) {
-                    logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`);
+                if (product.type === 'mattresses') {
+                    const size = product.sizes.find(s => s.name === item.color.name);
+                    if (!size) {
+                        await session.abortTransaction();
+                        session.endSession();
+                        return res.status(400).json({ error: `Розмір ${item.color.name} не доступний для продукту ${item.name}` });
+                    }
+                    const expectedPrice = size.price;
+                    if (item.price !== expectedPrice) {
+                        logger.warn(`Невідповідність ціни для продукту ${item.id}, розмір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
+                        item.price = expectedPrice;
+                    }
+                    item.color.priceChange = 0;
+                    item.photo = item.color.photo || product.photos[0] || '';
+                } else {
+                    const color = product.colors.find(c => c.name === item.color.name && c.value === item.color.value);
+                    if (!color) {
+                        await session.abortTransaction();
+                        session.endSession();
+                        return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` });
+                    }
+                    const expectedPrice = product.price + (color.priceChange || 0);
+                    if (item.price !== expectedPrice) {
+                        logger.warn(`Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
+                        item.price = expectedPrice;
+                    }
+                    item.color.priceChange = color.priceChange || 0;
+                    item.photo = color.photo || item.photo || product.photos[0] || '';
+                    if (color.photo) {
+                        logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`);
+                    }
                 }
             } else {
-                const product = await Product.findOne({ id: item.id }).session(session);
-                if (!product) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ error: `Продукт з id ${item.id} не знайдено` });
-                }
                 if (item.price !== product.price) {
                     logger.warn(`Невідповідність ціни для продукту ${item.id}: отримано ${item.price}, очікувалося ${product.price}`);
                     item.price = product.price;
