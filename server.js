@@ -2565,35 +2565,16 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
 
         let orderData = req.body;
 
-        if (orderData.items) {
-            orderData.items = orderData.items.map(item => {
-                if (item.img && !item.photo) {
-                    item.photo = item.img;
-                    delete item.img;
-                }
-                return item;
-            });
+        // Перевіряємо, чи є статус у даних
+        if (!orderData.status || !['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'].includes(orderData.status)) {
+            logger.error('Недійсний або відсутній статус:', orderData.status);
+            return res.status(400).json({ error: 'Недійсний або відсутній статус замовлення' });
         }
 
-        if (orderData.items) {
-            orderData.items = orderData.items.map(item => {
-                const { _id, ...rest } = item;
-                return rest;
-            });
-        }
-
-        const { error } = orderSchemaValidation.validate(orderData);
+        const { error } = Joi.object({ status: orderSchemaValidation.extract('status') }).validate(orderData);
         if (error) {
-            logger.error('Помилка валідації замовлення:', error.details);
+            logger.error('Помилка валідації статусу:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
-        }
-
-        if (orderData.id && orderData.id !== orderId) {
-            const existingOrder = await Order.findOne({ id: orderData.id });
-            if (existingOrder) {
-                logger.error('Замовлення з таким id уже існує:', orderData.id);
-                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
-            }
         }
 
         const session = await mongoose.startSession();
@@ -2601,7 +2582,7 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
         try {
             const order = await Order.findOneAndUpdate(
                 { id: orderId },
-                orderData,
+                { status: orderData.status },
                 { new: true, session }
             );
             if (!order) {

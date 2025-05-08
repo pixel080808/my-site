@@ -380,7 +380,7 @@ async function updateSocials() {
     }
 }
 
-async function loadOrders() {
+async function loadOrders(page = 1, limit = 10) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -391,7 +391,7 @@ async function loadOrders() {
             return;
         }
 
-        const response = await fetchWithAuth('/api/orders');
+        const response = await fetchWithAuth(`/api/orders?page=${page}&limit=${limit}`);
 
         if (!response.ok) {
             const text = await response.text();
@@ -407,17 +407,13 @@ async function loadOrders() {
         }
 
         const data = await response.json();
-        let ordersData = data;
-        if (!Array.isArray(data)) {
-            if (data.orders && Array.isArray(data.orders)) {
-                ordersData = data.orders;
-            } else {
-                console.error('Очікувався масив замовлень, отримано:', data);
-                orders = [];
-                showNotification('Отримано некоректні дані замовлень');
-                renderAdmin('orders');
-                return;
-            }
+        let ordersData = data.orders || data;
+        if (!Array.isArray(ordersData)) {
+            console.error('Очікувався масив замовлень, отримано:', data);
+            orders = [];
+            showNotification('Отримано некоректні дані замовлень');
+            renderAdmin('orders');
+            return;
         }
 
         orders = ordersData;
@@ -1802,7 +1798,7 @@ function renderAdmin(section = activeTab) {
                         <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
                         ${c.name} (${c.slug}) 
                         <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}>Видалити</button>
+                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
                     </div>
                     <div class="subcat-list">
                         ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
@@ -5648,38 +5644,8 @@ async function saveOrderStatus(index) {
             return;
         }
 
-        // Перевіряємо, чи є елементи в items
-        if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
-            showNotification('Замовлення не містить товарів! Додайте товари перед зміною статусу.');
-            return;
-        }
-
-        // Нормалізуємо items
-        const cleanedItems = order.items.map(item => {
-            const { _id, ...cleanedItem } = item;
-            return {
-                id: cleanedItem.id,
-                name: cleanedItem.name || 'Невідомий товар',
-                quantity: parseInt(cleanedItem.quantity) || 1,
-                price: parseFloat(cleanedItem.price) || 0,
-                color: cleanedItem.color || '',
-                photo: cleanedItem.photo && typeof cleanedItem.photo === 'string' && cleanedItem.photo.trim() !== '' ? cleanedItem.photo : null
-            };
-        });
-
-        // Перевіряємо, чи ціни в межах розумного
-        const hasInvalidPrice = cleanedItems.some(item => item.price < 0 || item.price > 1000000);
-        if (hasInvalidPrice) {
-            showNotification('Одна або кілька цін у замовленні мають некоректне значення (занадто велике або від’ємне).');
-            return;
-        }
-
         const updatedOrder = {
-            status: newStatus,
-            date: order.date,
-            total: parseFloat(order.total) || 0,
-            customer: order.customer,
-            items: cleanedItems
+            status: newStatus
         };
 
         const response = await fetchWithAuth(`/api/orders/${order._id}`, {
@@ -5693,7 +5659,6 @@ async function saveOrderStatus(index) {
         }
 
         const updatedOrderFromServer = await response.json();
-        // Оновлюємо локальний масив orders
         orders[index] = { ...order, ...updatedOrderFromServer };
         closeModal();
         renderAdmin('orders');
