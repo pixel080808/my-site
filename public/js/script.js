@@ -2197,8 +2197,7 @@ async function addToCartWithColor(productId) {
             name: size,
             value: size,
             priceChange: 0,
-            photo: product.photos?.[0] || NO_IMAGE_URL,
-            size: size
+            photo: product.photos?.[0] || NO_IMAGE_URL
         };
     }
 
