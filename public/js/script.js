@@ -2572,7 +2572,7 @@ async function renderCart() {
 
         itemDiv.addEventListener('click', (e) => {
             const target = e.target;
-            if (!target.closest('button') && !target.closest('input')) {
+            if (!target.closest('button') && !target.closest('input') && target.tagName !== 'IMG' && target.tagName !== 'SPAN') {
                 window.getSelection().removeAllRanges();
             }
         });
@@ -2583,19 +2583,21 @@ async function renderCart() {
         img.alt = item.name;
         img.loading = 'lazy';
         img.style.cursor = 'pointer';
-        img.addEventListener('click', (e) => {
+        img.onclick = (e) => {
+            e.preventDefault();
             e.stopPropagation();
             openProduct(product.slug);
-        });
+        };
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
         span.textContent = `${item.name}${item.color && item.color.name ? ` (${item.color.name})` : ''} - ${item.price * item.quantity} грн`;
         span.style.cursor = 'pointer';
-        span.addEventListener('click', (e) => {
+        span.onclick = (e) => {
+            e.preventDefault();
             e.stopPropagation();
             openProduct(product.slug);
-        });
+        };
         itemDiv.appendChild(span);
 
         const qtyDiv = document.createElement('div');
@@ -2619,15 +2621,16 @@ async function renderCart() {
         qtyInput.oninput = (e) => {
             let newQty = parseInt(e.target.value) || 1;
             if (newQty < 1) newQty = 1;
-            cart[index].quantity = newQty;
-            saveToStorage('cart', cart);
-            qtyInput.value = newQty; // Синхронізуємо значення
-            updateCartCount();
-            debouncedRenderCart();
-            saveCartToServer().catch(error => {
-                console.error('Помилка синхронізації кошика з сервером:', error);
-                showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
-            });
+            if (cart[index].quantity !== newQty) {
+                cart[index].quantity = newQty;
+                saveToStorage('cart', cart);
+                updateCartCount();
+                debouncedRenderCart();
+                saveCartToServer().catch(error => {
+                    console.error('Помилка синхронізації кошика з сервером:', error);
+                    showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
+                });
+            }
         };
         qtyInput.onwheel = (e) => e.preventDefault();
         qtyInput.onkeydown = (e) => {
