@@ -2571,8 +2571,7 @@ async function renderCart() {
         itemDiv.className = 'cart-item';
 
         itemDiv.addEventListener('click', (e) => {
-            const target = e.target;
-            if (!target.closest('button') && !target.closest('input') && target.tagName !== 'IMG' && target.tagName !== 'SPAN') {
+            if (!e.target.closest('button') && !e.target.closest('input') && e.target !== img && e.target !== span) {
                 window.getSelection().removeAllRanges();
             }
         });
@@ -2585,7 +2584,6 @@ async function renderCart() {
         img.style.cursor = 'pointer';
         img.onclick = (e) => {
             e.preventDefault();
-            e.stopPropagation();
             openProduct(product.slug);
         };
         itemDiv.appendChild(img);
@@ -2595,7 +2593,6 @@ async function renderCart() {
         span.style.cursor = 'pointer';
         span.onclick = (e) => {
             e.preventDefault();
-            e.stopPropagation();
             openProduct(product.slug);
         };
         itemDiv.appendChild(span);
@@ -2612,24 +2609,20 @@ async function renderCart() {
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
         qtyInput.id = `cart-quantity-${index}`;
-        qtyInput.className = 'quantity-input';
         qtyInput.min = '1';
         qtyInput.value = item.quantity;
-        qtyInput.style.appearance = 'none';
-        qtyInput.style.MozAppearance = 'none';
-        qtyInput.style.WebkitAppearance = 'none';
-        qtyInput.oninput = (e) => {
+        qtyInput.oninput = async (e) => {
             let newQty = parseInt(e.target.value) || 1;
             if (newQty < 1) newQty = 1;
-            if (cart[index].quantity !== newQty) {
-                cart[index].quantity = newQty;
-                saveToStorage('cart', cart);
-                updateCartCount();
-                debouncedRenderCart();
-                saveCartToServer().catch(error => {
-                    console.error('Помилка синхронізації кошика з сервером:', error);
-                    showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
-                });
+            cart[index].quantity = newQty;
+            saveToStorage('cart', cart);
+            updateCartCount();
+            debouncedRenderCart();
+            try {
+                await saveCartToServer();
+            } catch (error) {
+                console.error('Помилка синхронізації кошика з сервером:', error);
+                showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
             }
         };
         qtyInput.onwheel = (e) => e.preventDefault();
@@ -2745,20 +2738,6 @@ async function renderCart() {
 
     renderBreadcrumbs();
     updateCartCount();
-
-    const style = document.createElement('style');
-    style.textContent = `
-        .quantity-input::-webkit-outer-spin-button,
-        .quantity-input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .quantity-input {
-            -moz-appearance: textfield;
-            appearance: none;
-        }
-    `;
-    document.head.appendChild(style);
 }
 
         function promptRemoveFromCart(index) {
