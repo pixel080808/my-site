@@ -189,13 +189,13 @@ async function saveCartToServer() {
                 console.warn('Продукт не знайдено для id:', item.id);
                 return null;
             }
-            const colorData = item.color ? {
+            const colorData = item.color && item.color.name ? {
                 name: item.color.name || 'Не вказано',
                 value: item.color.value || item.color.name || '',
                 priceChange: item.color.priceChange || 0,
                 photo: item.color.photo || null,
                 size: item.color.size || null
-            } : null;
+            } : null; // Чітко встановлюємо null, якщо color не валідний
             return {
                 id: Number(item.id),
                 name: item.name || '',
@@ -203,8 +203,6 @@ async function saveCartToServer() {
                 price: Number(item.price) || 0,
                 photo: item.photo || '',
                 color: colorData
-                // Видалено поле brand, оскільки воно викликає помилку валідації
-                // Видалено поле _id, оскільки воно не дозволене сервером
             };
         })
         .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0);

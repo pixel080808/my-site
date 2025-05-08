@@ -352,8 +352,15 @@ const orderSchemaValidation = Joi.object({
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
             photo: Joi.string().uri().allow('').optional(),
+            color: Joi.object({
+                name: Joi.string().allow('').optional(),
+                value: Joi.string().allow('').optional(),
+                priceChange: Joi.number().default(0),
+                photo: Joi.string().uri().allow('', null).optional(),
+                size: Joi.string().allow('', null).optional()
+            }).allow(null).optional().unknown(false),
             _id: Joi.any().optional()
-        })
+        }).unknown(false)
     ).required(),
     total: Joi.number().min(0).required(),
     status: Joi.string()
