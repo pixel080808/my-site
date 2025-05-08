@@ -2571,7 +2571,8 @@ async function renderCart() {
         itemDiv.className = 'cart-item';
 
         itemDiv.addEventListener('click', (e) => {
-            if (!e.target.closest('button') && !e.target.closest('input') && e.target !== img && e.target !== span) {
+            const target = e.target;
+            if (!target.closest('button') && !target.closest('input') && target.tagName !== 'IMG' && target.tagName !== 'SPAN') {
                 window.getSelection().removeAllRanges();
             }
         });
@@ -2609,8 +2610,12 @@ async function renderCart() {
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
         qtyInput.id = `cart-quantity-${index}`;
+        qtyInput.className = 'quantity-input';
         qtyInput.min = '1';
         qtyInput.value = item.quantity;
+        qtyInput.style.appearance = 'none';
+        qtyInput.style.MozAppearance = 'none';
+        qtyInput.style.WebkitAppearance = 'none';
         qtyInput.oninput = async (e) => {
             let newQty = parseInt(e.target.value) || 1;
             if (newQty < 1) newQty = 1;
@@ -2738,6 +2743,20 @@ async function renderCart() {
 
     renderBreadcrumbs();
     updateCartCount();
+
+    const style = document.createElement('style');
+    style.textContent = `
+        .quantity-input::-webkit-outer-spin-button,
+        .quantity-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .quantity-input {
+            -moz-appearance: textfield;
+            appearance: none;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
         function promptRemoveFromCart(index) {
