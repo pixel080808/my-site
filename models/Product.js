@@ -8,7 +8,13 @@ const productSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
     subcategory: { type: String, trim: true },
-    price: { type: Number, min: 0 },
+    price: { 
+        type: Number, 
+        min: 0,
+        required: function() {
+            return this.type === 'simple';
+        }
+    },
     salePrice: { type: Number, min: 0 },
     saleEnd: { type: Date },
     brand: { type: String, trim: true },
@@ -112,7 +118,7 @@ const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),
     subcategory: Joi.string().trim().optional(),
-    price: Joi.number().min(0).required(),
+    price: Joi.number().min(0).optional(),
     salePrice: Joi.number().min(0).optional(),
     saleEnd: Joi.date().optional(),
     brand: Joi.string().trim().optional(),
