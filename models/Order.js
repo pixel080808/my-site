@@ -75,7 +75,7 @@ const orderSchema = new mongoose.Schema({
                 },
                 size: { type: String, default: null }
             },
-            default: null // Додано, щоб дозволити null
+            default: null
         }
     }],
     total: { 
@@ -120,9 +120,9 @@ const orderSchemaValidation = Joi.object({
                 priceChange: Joi.number().default(0),
                 photo: Joi.string().uri().allow('', null).optional(),
                 size: Joi.string().allow('', null).optional()
-            }).allow(null).optional(), // Оновлено, щоб дозволити null
+            }).allow(null).optional(),
             _id: Joi.any().optional()
-        })
+        }).unknown(false)
     ).required(),
     total: Joi.number().min(0).required(),
     status: Joi.string()

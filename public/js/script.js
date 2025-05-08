@@ -189,13 +189,21 @@ async function saveCartToServer() {
                 console.warn('Продукт не знайдено для id:', item.id);
                 return null;
             }
-            const colorData = item.color && item.color.name ? {
-                name: item.color.name || 'Не вказано',
-                value: item.color.value || item.color.name || '',
-                priceChange: item.color.priceChange || 0,
-                photo: item.color.photo || null,
-                size: item.color.size || null
-            } : null; // Чітко встановлюємо null, якщо color не валідний
+            let colorData = null;
+            if (item.color && item.color.name) {
+                colorData = {
+                    name: item.color.name || 'Не вказано',
+                    value: item.color.value || item.color.name || '',
+                    priceChange: item.color.priceChange || 0,
+                    photo: item.color.photo || null
+                };
+                // Видаляємо поле size, якщо воно null
+                if (item.color.size === null) {
+                    delete colorData.size;
+                } else if (item.color.size) {
+                    colorData.size = item.color.size;
+                }
+            }
             return {
                 id: Number(item.id),
                 name: item.name || '',
@@ -2865,19 +2873,28 @@ async function submitOrder() {
         customer,
         items: cart.map(item => {
             const product = products.find(p => p.id === item.id);
+            let colorData = null;
+            if (item.color && item.color.name) {
+                colorData = {
+                    name: item.color.name || 'Не вказано',
+                    value: item.color.value || item.color.name || '',
+                    priceChange: item.color.priceChange || 0,
+                    photo: item.color.photo || null
+                };
+                // Видаляємо поле size, якщо воно null
+                if (item.color.size === null) {
+                    delete colorData.size;
+                } else if (item.color.size) {
+                    colorData.size = item.color.size;
+                }
+            }
             return {
                 id: Number(item.id),
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
-                color: item.color ? {
-                    name: item.color.name || 'Не вказано',
-                    value: item.color.value || item.color.name || '',
-                    priceChange: item.color.priceChange || 0,
-                    photo: item.color.photo || null,
-                    size: item.color.size || null
-                } : null
+                color: colorData
             };
         })
     };
@@ -2955,7 +2972,7 @@ async function submitOrder() {
             }
 
             const responseData = await response.json();
-            if (!responseData || !responseData.orderId) {
+            if (!responseData || !responseData.id) {
                 throw new Error('Некоректна відповідь сервера: orderId відсутній');
             }
 

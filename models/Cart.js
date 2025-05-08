@@ -34,7 +34,7 @@ const cartSchema = new mongoose.Schema({
                             message: 'Color photo must be a valid URL or empty string'
                         }
                     },
-                    size: { type: String, default: null } // Added size field
+                    size: { type: String, default: null }
                 },
                 default: null
             }
@@ -64,9 +64,9 @@ const cartSchemaValidation = Joi.array().items(
             value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional(),
-            size: Joi.string().allow('', null).optional() // Added size field
+            size: Joi.string().allow('', null).optional()
         }).allow(null).optional()
-    })
+    }).unknown(false)
 );
 
 module.exports = { Cart, cartSchemaValidation };
