@@ -461,6 +461,23 @@ button:hover {
 .order-item button {
     margin-left: 10px;
 }
+#order-pagination {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+#order-pagination button {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+#order-pagination button.active {
+    background-color: #007bff;
+    color: white;
+}
+#order-pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
 .backup-group {
     margin-bottom: 15px;
     display: flex;
