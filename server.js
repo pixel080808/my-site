@@ -2259,25 +2259,16 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
     }
 });
 
-app.get('/api/orders', authenticateToken, csrfProtection, async (req, res) => {
+app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
-        const { page = 1, limit = 10, sort = 'date,-1' } = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (page - 1) * limit;
-
-        const orders = await Order.find()
-            .sort(sort.split(',').reduce((obj, s) => {
-                const [field, order] = s.split('-');
-                obj[field] = order === '1' ? 1 : -1;
-                return obj;
-            }, {}))
-            .skip(skip)
-            .limit(parseInt(limit));
+        const orders = await Order.find().sort({ date: -1 }).skip(skip).limit(parseInt(limit));
         const total = await Order.countDocuments();
-
-        res.json({ orders, total });
+        res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {
-        logger.error('Помилка при завантаженні замовлень:', err);
-        res.status(500).json({ error: 'Помилка сервера' });
+        logger.error('Помилка при отриманні замовлень:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
 
