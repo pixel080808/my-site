@@ -2226,34 +2226,55 @@ function renderSlidesAdmin() {
     resetInactivityTimer();
 }
 
-    function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
+function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
 
-        if (currentPage > 1) {
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = 'Попередня';
-            prevBtn.onclick = () => { currentPage--; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(prevBtn);
-        }
-
-        for (let i = 1; i <= totalPages; i++) {
-            const btn = document.createElement('button');
-            btn.textContent = i;
-            btn.className = i === currentPage ? 'active' : '';
-            btn.onclick = () => { currentPage = i; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(btn);
-        }
-
-        if (currentPage < totalPages) {
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Наступна';
-            nextBtn.onclick = () => { currentPage++; renderAdmin(containerId === 'pagination' ? 'products' : 'orders'); };
-            container.appendChild(nextBtn);
-        }
+    if (currentPage > 1) {
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = 'Попередня';
+        prevBtn.onclick = () => { 
+            currentPage--; 
+            if (containerId === 'order-pagination') {
+                loadOrders(currentPage, itemsPerPage);
+            } else {
+                renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
+            }
+        };
+        container.appendChild(prevBtn);
     }
+
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = i === currentPage ? 'active' : '';
+        btn.onclick = () => { 
+            currentPage = i; 
+            if (containerId === 'order-pagination') {
+                loadOrders(currentPage, itemsPerPage);
+            } else {
+                renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
+            }
+        };
+        container.appendChild(btn);
+    }
+
+    if (currentPage < totalPages) {
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Наступна';
+        nextBtn.onclick = () => { 
+            currentPage++; 
+            if (containerId === 'order-pagination') {
+                loadOrders(currentPage, itemsPerPage);
+            } else {
+                renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
+            }
+        };
+        container.appendChild(nextBtn);
+    }
+}
 
 function closeModal() {
     const modal = document.getElementById('modal');
