@@ -391,7 +391,8 @@ async function loadOrders(page = 1, limit = 10) {
             return;
         }
 
-        const response = await fetchWithAuth(`/api/orders?page=${page}&limit=${limit}&sort=date,-1`);
+        const response = await fetchWithAuth(`/api/orders?page=${page}&limit=${limit}`);
+
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1881,7 +1882,6 @@ function renderAdmin(section = activeTab) {
                 console.warn('Елемент #product-list-admin не знайдено');
             }
         } else if (section === 'orders') {
-            loadOrders(currentPage, ordersPerPage);
             const orderList = document.getElementById('order-list');
             if (orderList) {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -5644,11 +5644,12 @@ async function saveOrderStatus(index) {
             return;
         }
 
-        const updatedOrder = { status: newStatus };
+        const updatedOrder = {
+            status: newStatus
+        };
 
         const response = await fetchWithAuth(`/api/orders/${order._id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedOrder)
         });
 
@@ -5665,7 +5666,7 @@ async function saveOrderStatus(index) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення статусу замовлення:', err);
-        showNotification('Не вдалося оновити статус замовлення: ' + (err.message || 'Невідома помилка'));
+        showNotification('Не вдалося оновити статус замовлення: ' + err.message);
     }
 }
 
