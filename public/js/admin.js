@@ -2230,22 +2230,26 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const container = document.getElementById(containerId);
     container.innerHTML = '';
+
     if (totalPages <= 1) return;
 
-    if (currentPage > 1) {
-        const prevBtn = document.createElement('button');
-        prevBtn.textContent = 'Попередня';
-        prevBtn.onclick = () => { 
-            currentPage--; 
+    // Кнопка "Попередня"
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = 'Попередня';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { 
+        if (currentPage > 1) {
+            currentPage--;
             if (containerId === 'order-pagination') {
                 loadOrders(currentPage, itemsPerPage);
             } else {
                 renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
             }
-        };
-        container.appendChild(prevBtn);
-    }
+        }
+    };
+    container.appendChild(prevBtn);
 
+    // Номери сторінок
     for (let i = 1; i <= totalPages; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
@@ -2261,19 +2265,21 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         container.appendChild(btn);
     }
 
-    if (currentPage < totalPages) {
-        const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Наступна';
-        nextBtn.onclick = () => { 
-            currentPage++; 
+    // Кнопка "Наступна"
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Наступна';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { 
+        if (currentPage < totalPages) {
+            currentPage++;
             if (containerId === 'order-pagination') {
                 loadOrders(currentPage, itemsPerPage);
             } else {
                 renderAdmin(containerId === 'pagination' ? 'products' : 'orders');
             }
-        };
-        container.appendChild(nextBtn);
-    }
+        }
+    };
+    container.appendChild(nextBtn);
 }
 
 function closeModal() {
