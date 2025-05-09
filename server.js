@@ -2259,16 +2259,25 @@ app.put('/api/settings', authenticateToken, csrfProtection, async (req, res) => 
     }
 });
 
-app.get('/api/orders', authenticateToken, async (req, res) => {
+app.get('/api/orders', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 10, sort = 'date,-1' } = req.query;
         const skip = (page - 1) * limit;
-        const orders = await Order.find().sort({ date: -1 }).skip(skip).limit(parseInt(limit));
+
+        const orders = await Order.find()
+            .sort(sort.split(',').reduce((obj, s) => {
+                const [field, order] = s.split('-');
+                obj[field] = order === '1' ? 1 : -1;
+                return obj;
+            }, {}))
+            .skip(skip)
+            .limit(parseInt(limit));
         const total = await Order.countDocuments();
-        res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
+
+        res.json({ orders, total });
     } catch (err) {
-        logger.error('Помилка при отриманні замовлень:', err);
-        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+        logger.error('Помилка при завантаженні замовлень:', err);
+        res.status(500).json({ error: 'Помилка сервера' });
     }
 });
 
@@ -2557,15 +2566,14 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = parseInt(req.params.id);
-        if (isNaN(orderId)) {
+        const orderId = req.params.id; // Використовуємо рядковий _id замість parseInt
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
             logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
         }
 
         let orderData = req.body;
 
-        // Перевіряємо, чи є статус у даних
         if (!orderData.status || !['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'].includes(orderData.status)) {
             logger.error('Недійсний або відсутній статус:', orderData.status);
             return res.status(400).json({ error: 'Недійсний або відсутній статус замовлення' });
@@ -2581,7 +2589,7 @@ app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) =
         session.startTransaction();
         try {
             const order = await Order.findOneAndUpdate(
-                { id: orderId },
+                { _id: orderId },
                 { status: orderData.status },
                 { new: true, session }
             );
