@@ -28,6 +28,7 @@ let settings = {
     slideHeight: '',
     slideInterval: '',
 };
+let totalOrders = 0;
 let currentPage = 1;
 const productsPerPage = 20;
 const ordersPerPage = 20;
@@ -386,13 +387,12 @@ async function loadOrders(page = 1, limit = ordersPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             orders = [];
-            currentPage = 1; // Скидаємо сторінку при помилці токена
+            currentPage = 1;
             sortOrders('date-desc');
             renderAdmin('orders');
             return;
         }
 
-        // Встановлюємо поточну сторінку
         currentPage = page;
 
         const response = await fetchWithAuth(`/api/orders?page=${page}&limit=${limit}&sort=date,-1`);
@@ -421,8 +421,12 @@ async function loadOrders(page = 1, limit = ordersPerPage) {
         }
 
         orders = ordersData;
-        // Якщо сервер повертає загальну кількість, використовуємо її
-        const totalItems = data.total || orders.length;
+        // Оновлюємо totalOrders при першому завантаженні або якщо сервер повертає total
+        if (page === 1 || totalOrders === 0) {
+            totalOrders = data.total !== undefined ? data.total : orders.length * Math.ceil(page + 1); // Приблизна оцінка
+        }
+        const totalItems = totalOrders;
+        console.log('loadOrders: totalItems =', totalItems, 'currentPage =', currentPage);
         sortOrders('date-desc');
         renderAdmin('orders');
     } catch (e) {
@@ -1923,6 +1927,7 @@ function renderAdmin(section = activeTab) {
                 `;
             }).join('')
             : '<p>Замовлення відсутні</p>';
+        console.log('renderAdmin orders: filteredOrders.length =', filteredOrders.length, 'currentPage =', currentPage); // Дебагінг
         renderPagination(filteredOrders.length, ordersPerPage, 'order-pagination', currentPage);
     } else {
         console.warn('Елемент #order-list не знайдено');
