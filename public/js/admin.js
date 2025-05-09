@@ -416,8 +416,10 @@ async function loadOrders(page = 1, limit = 10) {
         }
 
         orders = ordersData;
+        // Якщо сервер повертає загальну кількість (наприклад, у data.total), використовуємо її
+        const totalItems = data.total || orders.length;
         sortOrders('date-desc');
-        renderAdmin('orders');
+        renderAdmin('orders'); // Викликаємо renderAdmin безперервно
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
         showNotification('Помилка завантаження замовлень: ' + e.message);
@@ -2237,7 +2239,7 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         const prevBtn = document.createElement('button');
         prevBtn.textContent = 'Попередня';
         prevBtn.onclick = () => { 
-            currentPage--; 
+            currentPage--;
             if (containerId === 'order-pagination') {
                 loadOrders(currentPage, itemsPerPage);
             } else {
@@ -2253,7 +2255,7 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         btn.textContent = i;
         btn.className = i === currentPage ? 'active' : '';
         btn.onclick = () => { 
-            currentPage = i; 
+            currentPage = i;
             if (containerId === 'order-pagination') {
                 loadOrders(currentPage, itemsPerPage);
             } else {
@@ -2268,7 +2270,7 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         const nextBtn = document.createElement('button');
         nextBtn.textContent = 'Наступна';
         nextBtn.onclick = () => { 
-            currentPage++; 
+            currentPage++;
             if (containerId === 'order-pagination') {
                 loadOrders(currentPage, itemsPerPage);
             } else {
