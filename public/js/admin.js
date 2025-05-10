@@ -436,7 +436,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         totalOrders = data.total !== undefined ? data.total : orders.length;
         console.log('loadOrders: totalOrders =', totalOrders, 'currentPage =', currentPage);
         sortOrders('date-desc');
-        renderAdmin('orders', data); // Передаємо data
+        renderAdmin('orders', { total: totalOrders }); // Передаємо data з коректним total
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
         showNotification('Помилка завантаження замовлень: ' + e.message);
@@ -1865,78 +1865,82 @@ function renderAdmin(section = activeTab, data = {}) {
             }
         }
 
-if (section === 'products') {
-    const productList = document.getElementById('product-list-admin');
-    if (productList) {
-        const start = (currentPage - 1) * productsPerPage;
-        const end = start + productsPerPage;
-        productList.innerHTML = Array.isArray(products) && products.length > 0
-            ? products.map(p => {
-                const priceInfo = p.type === 'simple'
-                    ? (p.salePrice && p.salePrice < p.price
-                        ? `<s>${p.price} грн</s> ${p.salePrice} грн`
-                        : `${p.price || '0'} грн`)
-                    : (p.sizes?.length > 0
-                        ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                        : 'Ціна не вказана');
-                return `
-                    <div class="product-admin-item">
-                        <span>#${p.id || p._id}</span>
-                        <span>${p.type}</span>
-                        <span>${p.name}</span>
-                        <span>${p.brand || 'Без бренду'}</span>
-                        <span>${priceInfo}</span>
-                        <span>${p.salePrice || '-'}</span>
-                        <div class="status-column">
-                            <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
-                            <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                            <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
-                        </div>
-                    </div>
-                `;
-            }).join('')
-            : '<p>Товари відсутні</p>';
-        const totalItems = data.total !== undefined ? data.total : products.length;
-        renderPagination(totalItems, productsPerPage, 'pagination', currentPage);
-    } else {
-        console.warn('Елемент #product-list-admin не знайдено');
-    }
-} else if (section === 'orders') {
-    const orderList = document.getElementById('order-list');
-    if (orderList) {
-        const statusFilter = document.getElementById('order-status-filter')?.value || '';
-        let filteredOrders = Array.isArray(orders) ? [...orders] : [];
-        const start = (currentPage - 1) * ordersPerPage;
-        const end = start + ordersPerPage;
-        const paginatedOrders = filteredOrders.slice(start, end);
-        orderList.innerHTML = paginatedOrders.length > 0
-            ? paginatedOrders.map((o, index) => {
-                const orderDate = new Date(o.date);
-                const formattedDate = orderDate.toLocaleString('uk-UA', {
-                    timeZone: settings.timezone || 'Europe/Kyiv',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                return `
-                    <div class="order-item">
-                        <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
-                        <div>
-                            <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                            <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                            <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
-                        </div>
-                    </div>
-                `;
-            }).join('')
-            : '<p>Замовлення відсутні</p>';
-        renderPagination(data.total !== undefined ? data.total : totalOrders, ordersPerPage, 'order-pagination', currentPage);
-    } else {
-        console.warn('Елемент #order-list не знайдено');
-    }
+        if (section === 'products') {
+            const productList = document.getElementById('product-list-admin');
+            if (productList) {
+                const start = (currentPage - 1) * productsPerPage;
+                const end = start + productsPerPage;
+                productList.innerHTML = Array.isArray(products) && products.length > 0
+                    ? products.map(p => {
+                        const priceInfo = p.type === 'simple'
+                            ? (p.salePrice && p.salePrice < p.price
+                                ? `<s>${p.price} грн</s> ${p.salePrice} грн`
+                                : `${p.price || '0'} грн`)
+                            : (p.sizes?.length > 0
+                                ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                                : 'Ціна не вказана');
+                        return `
+                            <div class="product-admin-item">
+                                <span>#${p.id || p._id}</span>
+                                <span>${p.type}</span>
+                                <span>${p.name}</span>
+                                <span>${p.brand || 'Без бренду'}</span>
+                                <span>${priceInfo}</span>
+                                <span>${p.salePrice || '-'}</span>
+                                <div class="status-column">
+                                    <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
+                                    <button onclick="deleteProduct('${p._id}')">Видалити</button>
+                                    <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                    : '<p>Товари відсутні</p>';
+                const totalItems = data.total !== undefined ? data.total : products.length;
+                renderPagination(totalItems, productsPerPage, 'pagination', currentPage);
+            } else {
+                console.warn('Елемент #product-list-admin не знайдено');
+            }
+        } else if (section === 'orders') {
+            const orderList = document.getElementById('order-list');
+            if (orderList) {
+                const statusFilter = document.getElementById('order-status-filter')?.value || '';
+                let filteredOrders = Array.isArray(orders) ? [...orders] : [];
+                if (statusFilter) {
+                    filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
+                }
+                const start = (currentPage - 1) * ordersPerPage;
+                const end = start + ordersPerPage;
+                const paginatedOrders = filteredOrders.slice(start, end);
+                orderList.innerHTML = paginatedOrders.length > 0
+                    ? paginatedOrders.map((o, index) => {
+                        const orderDate = new Date(o.date);
+                        const formattedDate = orderDate.toLocaleString('uk-UA', {
+                            timeZone: settings.timezone || 'Europe/Kyiv',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        return `
+                            <div class="order-item">
+                                <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
+                                <div>
+                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                    : '<p>Замовлення відсутні</p>';
+                const totalItems = data.total !== undefined ? data.total : totalOrders;
+                renderPagination(totalItems, ordersPerPage, 'order-pagination', currentPage);
+            } else {
+                console.warn('Елемент #order-list не знайдено');
+            }
         } else if (section === 'categories') {
             if (typeof renderCategoriesAdmin === 'function') {
                 renderCategoriesAdmin();
@@ -2261,12 +2265,12 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     prevBtn.disabled = currentPage <= 1;
     prevBtn.onclick = () => {
         if (currentPage > 1) {
-            currentPage--;
+            const newPage = currentPage - 1;
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                loadOrders(currentPage, itemsPerPage, statusFilter);
+                loadOrders(newPage, itemsPerPage, statusFilter);
             } else {
-                loadProducts(currentPage, itemsPerPage);
+                loadProducts(newPage, itemsPerPage);
             }
         }
     };
@@ -2280,12 +2284,11 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         btn.textContent = i;
         btn.className = i === currentPage ? 'active' : '';
         btn.onclick = () => {
-            currentPage = i;
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                loadOrders(currentPage, itemsPerPage, statusFilter);
+                loadOrders(i, itemsPerPage, statusFilter);
             } else {
-                loadProducts(currentPage, itemsPerPage);
+                loadProducts(i, itemsPerPage);
             }
         };
         container.appendChild(btn);
@@ -2297,12 +2300,12 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     nextBtn.disabled = currentPage >= totalPages;
     nextBtn.onclick = () => {
         if (currentPage < totalPages) {
-            currentPage++;
+            const newPage = currentPage + 1;
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                loadOrders(currentPage, itemsPerPage, statusFilter);
+                loadOrders(newPage, itemsPerPage, statusFilter);
             } else {
-                loadProducts(currentPage, itemsPerPage);
+                loadProducts(newPage, itemsPerPage);
             }
         }
     };
@@ -5865,44 +5868,45 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-socket.onmessage = (event) => {
-    try {
-        const { type, data } = JSON.parse(event.data);
-        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-        if (type === 'settings' && data) {
-            settings = { ...settings, ...data };
-            renderSettingsAdmin();
-        } else if (type === 'products') {
-            if (Array.isArray(data)) {
-                products = data;
-                if (document.querySelector('#products.active')) {
-                    renderAdmin('products', { total: totalProducts }); // Передаємо поточний totalProducts
+    socket.onmessage = (event) => {
+        try {
+            const { type, data } = JSON.parse(event.data);
+            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+            if (type === 'settings' && data) {
+                settings = { ...settings, ...data };
+                renderSettingsAdmin();
+            } else if (type === 'products') {
+                if (Array.isArray(data)) {
+                    products = data;
+                    if (document.querySelector('#products.active')) {
+                        renderAdmin('products', { total: totalProducts });
+                    }
+                } else {
+                    console.warn('Некоректні дані продуктів:', data);
                 }
-            } else {
-                console.warn('Некоректні дані продуктів:', data);
-            }
-        } else if (type === 'categories') {
-            if (Array.isArray(data)) {
-                categories = data;
-                console.log('Отримано WebSocket оновлення для categories:', categories);
-                renderCategoriesAdmin();
-                const modal = document.getElementById('modal');
-                if (modal && modal.classList.contains('active')) {
-                    updateSubcategories();
+            } else if (type === 'categories') {
+                if (Array.isArray(data)) {
+                    categories = data;
+                    console.log('Отримано WebSocket оновлення для categories:', categories);
+                    renderCategoriesAdmin();
+                    const modal = document.getElementById('modal');
+                    if (modal && modal.classList.contains('active')) {
+                        updateSubcategories();
+                    }
+                } else {
+                    console.warn('Некоректні дані категорій:', data);
+                    loadCategories();
                 }
-            } else {
-                console.warn('Некоректні дані категорій:', data);
-                loadCategories();
-            }
-        } else if (type === 'orders') {
-            if (Array.isArray(data)) {
-                orders = data;
-                if (document.querySelector('#orders.active')) {
-                    renderAdmin('orders', { total: totalOrders }); // Передаємо поточний totalOrders
+            } else if (type === 'orders') {
+                if (Array.isArray(data)) {
+                    orders = data;
+                    totalOrders = data.length; // Оновлюємо totalOrders
+                    if (document.querySelector('#orders.active')) {
+                        renderAdmin('orders', { total: totalOrders });
+                    }
+                } else {
+                    console.warn('Некоректні дані замовлень:', data);
                 }
-            } else {
-                console.warn('Некоректні дані замовлень:', data);
-            }
             } else if (type === 'slides') {
                 if (Array.isArray(data)) {
                     slides = data;
