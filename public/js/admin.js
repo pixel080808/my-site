@@ -83,21 +83,21 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        products = data.products || data; // Переконайтеся, що сервер повертає { products: [], total: number }
+        products = data.products || data;
         if (!Array.isArray(products)) {
             console.error('Отримано некоректні дані товарів:', products);
             products = [];
             showNotification('Отримано некоректні дані товарів');
         }
         currentPage = page;
-        totalProducts = data.total !== undefined ? data.total : products.length; // Додано тут
+        totalProducts = data.total !== undefined ? data.total : products.length;
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
-        renderAdmin('products');
+        renderAdmin('products', data); // Передаємо data
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification(e.message);
         products = [];
-        renderAdmin('products');
+        renderAdmin('products'); // Викликаємо без data, якщо помилка
     }
 }
 
@@ -436,7 +436,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         totalOrders = data.total !== undefined ? data.total : orders.length;
         console.log('loadOrders: totalOrders =', totalOrders, 'currentPage =', currentPage);
         sortOrders('date-desc');
-        renderAdmin('orders');
+        renderAdmin('orders', data); // Передаємо data
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
         showNotification('Помилка завантаження замовлень: ' + e.message);
@@ -1720,7 +1720,7 @@ async function updateAbout() {
     }
 }
 
-function renderAdmin(section = activeTab) {
+function renderAdmin(section = activeTab, data = {}) {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
 
     try {
@@ -1896,13 +1896,12 @@ if (section === 'products') {
                 `;
             }).join('')
             : '<p>Товари відсутні</p>';
-        // Використовуйте totalItems з відповіді сервера
-        const totalItems = data.total || products.length; // Припускаємо, що totalItems прийшов з сервера
+        const totalItems = data.total !== undefined ? data.total : products.length;
         renderPagination(totalItems, productsPerPage, 'pagination', currentPage);
     } else {
         console.warn('Елемент #product-list-admin не знайдено');
     }
-if (section === 'orders') {
+} else if (section === 'orders') {
     const orderList = document.getElementById('order-list');
     if (orderList) {
         const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -1934,11 +1933,10 @@ if (section === 'orders') {
                 `;
             }).join('')
             : '<p>Замовлення відсутні</p>';
-        renderPagination(totalOrders, ordersPerPage, 'order-pagination', currentPage);
+        renderPagination(data.total !== undefined ? data.total : totalOrders, ordersPerPage, 'order-pagination', currentPage);
     } else {
         console.warn('Елемент #order-list не знайдено');
     }
-}
         } else if (section === 'categories') {
             if (typeof renderCategoriesAdmin === 'function') {
                 renderCategoriesAdmin();
@@ -5867,56 +5865,44 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
-            if (type === 'settings' && data) {
-                settings = { ...settings, ...data };
-                renderSettingsAdmin();
-            } else if (type === 'products') {
-                if (Array.isArray(data)) {
-                    // Перевірка на дублікати _id
-                    const idCounts = data.reduce((acc, p) => {
-                        acc[p._id] = (acc[p._id] || 0) + 1;
-                        return acc;
-                    }, {});
-                    const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
-                    if (duplicates.length > 0) {
-                        console.error('Знайдено товари з однаковими _id:', duplicates);
-                        showNotification('Помилка: виявлено товари з однаковими ідентифікаторами!', 'error');
-                        return;
-                    }
-                    console.log(`Отримано ${data.length} товарів через WebSocket`);
-                    products = data;
-                    if (document.querySelector('#products.active')) {
-                        renderAdmin('products');
-                    }
-                } else {
-                    console.warn('Некоректні дані продуктів:', data);
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+        if (type === 'settings' && data) {
+            settings = { ...settings, ...data };
+            renderSettingsAdmin();
+        } else if (type === 'products') {
+            if (Array.isArray(data)) {
+                products = data;
+                if (document.querySelector('#products.active')) {
+                    renderAdmin('products', { total: totalProducts }); // Передаємо поточний totalProducts
                 }
-            } else if (type === 'categories') {
-                if (Array.isArray(data)) {
-                    categories = data;
-                    console.log('Отримано WebSocket оновлення для categories:', categories);
-                    renderCategoriesAdmin();
-                    const modal = document.getElementById('modal');
-                    if (modal && modal.classList.contains('active')) {
-                        updateSubcategories();
-                    }
-                } else {
-                    console.warn('Некоректні дані категорій:', data);
-                    loadCategories();
+            } else {
+                console.warn('Некоректні дані продуктів:', data);
+            }
+        } else if (type === 'categories') {
+            if (Array.isArray(data)) {
+                categories = data;
+                console.log('Отримано WebSocket оновлення для categories:', categories);
+                renderCategoriesAdmin();
+                const modal = document.getElementById('modal');
+                if (modal && modal.classList.contains('active')) {
+                    updateSubcategories();
                 }
-            } else if (type === 'orders') {
-                if (Array.isArray(data)) {
-                    orders = data;
-                    if (document.querySelector('#orders.active')) {
-                        renderAdmin('orders');
-                    }
-                } else {
-                    console.warn('Некоректні дані замовлень:', data);
+            } else {
+                console.warn('Некоректні дані категорій:', data);
+                loadCategories();
+            }
+        } else if (type === 'orders') {
+            if (Array.isArray(data)) {
+                orders = data;
+                if (document.querySelector('#orders.active')) {
+                    renderAdmin('orders', { total: totalOrders }); // Передаємо поточний totalOrders
                 }
+            } else {
+                console.warn('Некоректні дані замовлень:', data);
+            }
             } else if (type === 'slides') {
                 if (Array.isArray(data)) {
                     slides = data;
