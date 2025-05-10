@@ -389,13 +389,12 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             orders = [];
             ordersCurrentPage = 1;
-            sortOrders('date-desc');
             renderAdmin('orders');
             return;
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' });
+        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' }); // Сортування за спаданням дат
         if (statusFilter) {
             queryParams.append('status', statusFilter);
         }
@@ -418,23 +417,32 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         if (!Array.isArray(ordersData)) {
             console.error('Очікувався масив замовлень, отрирано:', data);
             orders = [];
-            showNotification('Отрирано некоректні дані замовлень');
+            showNotification('Отримано некоректні дані замовлень');
             ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
         }
 
-        orders = ordersData.map(order => {
-            if (!order.orderNumber) {
-                lastOrderNumber += 1;
-                order.orderNumber = lastOrderNumber;
-                localStorage.setItem('lastOrderNumber', lastOrderNumber);
-            }
-            return order;
+        // Сортуємо замовлення за датою в спадному порядку
+        ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Присвоюємо номери від 1 до totalOrders, базуючись на глобальному списку
+        const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1'); // Завантажуємо всі замовлення для коректної нумерації
+        const allOrdersData = await allOrdersResponse.json();
+        const allOrders = allOrdersData.orders || allOrdersData;
+        allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+        allOrders.forEach((order, idx) => {
+            order.orderNumber = idx + 1; // Номер від 1 для найновішого до totalOrders для найстарішого
         });
+
+        // Оновлюємо лише поточну сторінку
+        orders = ordersData.map(order => {
+            const fullOrder = allOrders.find(o => o._id === order._id) || order;
+            return { ...order, orderNumber: fullOrder.orderNumber };
+        });
+
         totalOrders = data.total !== undefined ? data.total : orders.length;
         console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage);
-        sortOrders('date-desc');
         renderAdmin('orders', { total: totalOrders });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
@@ -1272,6 +1280,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('about-editor')) {
         initializeEditors();
     }
+
+    // Завантаження замовлень при старті
+    if (document.getElementById('orders')) {
+        loadOrders(1, ordersPerPage);
+    }
 });
 
 async function refreshToken(attempt = 1) {
@@ -1902,6 +1915,8 @@ function renderAdmin(section = activeTab, data = {}) {
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
+                // Сортуємо замовлення за спаданням дат для відображення нових першими
+                orders.sort((a, b) => new Date(b.date) - new Date(a.date));
                 orderList.innerHTML = Array.isArray(orders) && orders.length > 0
                     ? orders.map((o, index) => {
                         const orderDate = new Date(o.date);
@@ -5893,18 +5908,7 @@ function connectAdminWebSocket(attempt = 1) {
                 }
             } else if (type === 'orders') {
                 if (Array.isArray(data)) {
-                    orders = data.map(order => {
-                        if (!order.orderNumber) {
-                            lastOrderNumber += 1;
-                            order.orderNumber = lastOrderNumber;
-                            localStorage.setItem('lastOrderNumber', lastOrderNumber);
-                        }
-                        return order;
-                    });
-                    totalOrders = data.length;
-                    if (document.querySelector('#orders.active')) {
-                        renderAdmin('orders', { total: totalOrders });
-                    }
+                    handleOrdersUpdate(data);
                 } else {
                     console.warn('Некоректні дані замовлень:', data);
                 }
@@ -5945,4 +5949,31 @@ function connectAdminWebSocket(attempt = 1) {
             showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
         }
     };
+}
+
+// Окрема асинхронна функція для обробки оновлень замовлень
+async function handleOrdersUpdate(data) {
+    // Сортуємо отримані дані
+    data.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Отримуємо всі замовлення для коректної нумерації
+    const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
+    const allOrdersData = await allOrdersResponse.json();
+    const allOrders = allOrdersData.orders || allOrdersData;
+    allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+    allOrders.forEach((order, idx) => {
+        order.orderNumber = idx + 1;
+    });
+
+    // Оновлюємо поточний масив замовлень
+    orders = data.map(order => {
+        const fullOrder = allOrders.find(o => o._id === order._id) || order;
+        return { ...order, orderNumber: fullOrder.orderNumber };
+    });
+    totalOrders = allOrders.length;
+
+    // Рендеримо, якщо вкладка активна
+    if (document.querySelector('#orders.active')) {
+        renderAdmin('orders', { total: totalOrders });
+    }
 }
