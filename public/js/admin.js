@@ -30,7 +30,8 @@ let settings = {
 };
 let totalOrders = 0;
 let totalProducts = 0;
-let currentPage = 1;
+let ordersCurrentPage = 1;
+let productsCurrentPage = 1;
 const productsPerPage = 20;
 const ordersPerPage = 20;
 const sessionTimeout = 30 * 60 * 1000;
@@ -55,20 +56,15 @@ async function loadProducts(page = 1, limit = productsPerPage) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            products = [];
+            productsCurrentPage = 1;
+            renderAdmin('products');
             return;
         }
 
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch(`/api/products?page=${page}&limit=${limit}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
+        productsCurrentPage = page;
+        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -84,20 +80,15 @@ async function loadProducts(page = 1, limit = productsPerPage) {
 
         const data = await response.json();
         products = data.products || data;
-        if (!Array.isArray(products)) {
-            console.error('Отримано некоректні дані товарів:', products);
-            products = [];
-            showNotification('Отримано некоректні дані товарів');
-        }
-        currentPage = page;
         totalProducts = data.total !== undefined ? data.total : products.length;
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
-        renderAdmin('products', data); // Передаємо data
+        renderAdmin('products', { total: totalProducts });
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
-        showNotification(e.message);
+        showNotification('Помилка завантаження товарів: ' + e.message);
         products = [];
-        renderAdmin('products'); // Викликаємо без data, якщо помилка
+        productsCurrentPage = 1;
+        renderAdmin('products');
     }
 }
 
@@ -396,13 +387,13 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             orders = [];
-            currentPage = 1;
+            ordersCurrentPage = 1;
             sortOrders('date-desc');
             renderAdmin('orders');
             return;
         }
 
-        currentPage = page;
+        ordersCurrentPage = page;
         const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' });
         if (statusFilter) {
             queryParams.append('status', statusFilter);
@@ -427,21 +418,21 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             console.error('Очікувався масив замовлень, отримано:', data);
             orders = [];
             showNotification('Отримано некоректні дані замовлень');
-            currentPage = 1;
+            ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
         }
 
         orders = ordersData;
         totalOrders = data.total !== undefined ? data.total : orders.length;
-        console.log('loadOrders: totalOrders =', totalOrders, 'currentPage =', currentPage);
+        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage);
         sortOrders('date-desc');
-        renderAdmin('orders', { total: totalOrders }); // Передаємо data з коректним total
+        renderAdmin('orders', { total: totalOrders });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
         showNotification('Помилка завантаження замовлень: ' + e.message);
         orders = [];
-        currentPage = 1;
+        ordersCurrentPage = 1;
         renderAdmin('orders');
     }
 }
@@ -1758,7 +1749,6 @@ function renderAdmin(section = activeTab, data = {}) {
         if (contactSchedule) contactSchedule.value = contacts.schedule || '';
         else console.warn('Елемент #contact-schedule не знайдено');
 
-        // Ініціалізація редактора "Про нас"
         if (document.getElementById('about-editor')) {
             if (!aboutEditor) {
                 initializeEditors();
@@ -1868,7 +1858,7 @@ function renderAdmin(section = activeTab, data = {}) {
         if (section === 'products') {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
-                const start = (currentPage - 1) * productsPerPage;
+                const start = (productsCurrentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
                 productList.innerHTML = Array.isArray(products) && products.length > 0
                     ? products.map(p => {
@@ -1897,7 +1887,7 @@ function renderAdmin(section = activeTab, data = {}) {
                     }).join('')
                     : '<p>Товари відсутні</p>';
                 const totalItems = data.total !== undefined ? data.total : products.length;
-                renderPagination(totalItems, productsPerPage, 'pagination', currentPage);
+                renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
             } else {
                 console.warn('Елемент #product-list-admin не знайдено');
             }
@@ -1909,7 +1899,7 @@ function renderAdmin(section = activeTab, data = {}) {
                 if (statusFilter) {
                     filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
                 }
-                const start = (currentPage - 1) * ordersPerPage;
+                const start = (ordersCurrentPage - 1) * ordersPerPage;
                 const end = start + ordersPerPage;
                 const paginatedOrders = filteredOrders.slice(start, end);
                 orderList.innerHTML = paginatedOrders.length > 0
@@ -1937,7 +1927,7 @@ function renderAdmin(section = activeTab, data = {}) {
                     }).join('')
                     : '<p>Замовлення відсутні</p>';
                 const totalItems = data.total !== undefined ? data.total : totalOrders;
-                renderPagination(totalItems, ordersPerPage, 'order-pagination', currentPage);
+                renderPagination(totalItems, ordersPerPage, 'order-pagination', ordersCurrentPage);
             } else {
                 console.warn('Елемент #order-list не знайдено');
             }
@@ -2259,13 +2249,16 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     container.innerHTML = '';
     if (totalPages <= 1) return;
 
+    // Використовуємо правильну змінну currentPage залежно від вкладки
+    const page = containerId === 'order-pagination' ? ordersCurrentPage : productsCurrentPage;
+
     // Кнопка "Попередня"
     const prevBtn = document.createElement('button');
     prevBtn.textContent = 'Попередня';
-    prevBtn.disabled = currentPage <= 1;
+    prevBtn.disabled = page <= 1;
     prevBtn.onclick = () => {
-        if (currentPage > 1) {
-            const newPage = currentPage - 1;
+        if (page > 1) {
+            const newPage = page - 1;
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
                 loadOrders(newPage, itemsPerPage, statusFilter);
@@ -2277,12 +2270,12 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     container.appendChild(prevBtn);
 
     // Номери сторінок
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
+    const startPage = Math.max(1, page - 2);
+    const endPage = Math.min(totalPages, page + 2);
     for (let i = startPage; i <= endPage; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
-        btn.className = i === currentPage ? 'active' : '';
+        btn.className = i === page ? 'active' : '';
         btn.onclick = () => {
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
@@ -2297,10 +2290,10 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     // Кнопка "Наступна"
     const nextBtn = document.createElement('button');
     nextBtn.textContent = 'Наступна';
-    nextBtn.disabled = currentPage >= totalPages;
+    nextBtn.disabled = page >= totalPages;
     nextBtn.onclick = () => {
-        if (currentPage < totalPages) {
-            const newPage = currentPage + 1;
+        if (page < totalPages) {
+            const newPage = page + 1;
             if (containerId === 'order-pagination') {
                 const statusFilter = document.getElementById('order-status-filter')?.value || '';
                 loadOrders(newPage, itemsPerPage, statusFilter);
@@ -5900,7 +5893,7 @@ function connectAdminWebSocket(attempt = 1) {
             } else if (type === 'orders') {
                 if (Array.isArray(data)) {
                     orders = data;
-                    totalOrders = data.length; // Оновлюємо totalOrders
+                    totalOrders = data.length;
                     if (document.querySelector('#orders.active')) {
                         renderAdmin('orders', { total: totalOrders });
                     }
