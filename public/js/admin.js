@@ -30,6 +30,7 @@ let settings = {
 };
 let totalOrders = 0;
 let totalProducts = 0;
+let lastOrderNumber = parseInt(localStorage.getItem('lastOrderNumber')) || 0;
 let ordersCurrentPage = 1;
 let productsCurrentPage = 1;
 const productsPerPage = 20;
@@ -415,15 +416,22 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         const data = await response.json();
         let ordersData = data.orders || data;
         if (!Array.isArray(ordersData)) {
-            console.error('Очікувався масив замовлень, отримано:', data);
+            console.error('Очікувався масив замовлень, отрирано:', data);
             orders = [];
-            showNotification('Отримано некоректні дані замовлень');
+            showNotification('Отрирано некоректні дані замовлень');
             ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
         }
 
-        orders = ordersData;
+        orders = ordersData.map(order => {
+            if (!order.orderNumber) {
+                lastOrderNumber += 1;
+                order.orderNumber = lastOrderNumber;
+                localStorage.setItem('lastOrderNumber', lastOrderNumber);
+            }
+            return order;
+        });
         totalOrders = data.total !== undefined ? data.total : orders.length;
         console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage);
         sortOrders('date-desc');
@@ -1894,16 +1902,8 @@ function renderAdmin(section = activeTab, data = {}) {
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
-                const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                let filteredOrders = Array.isArray(orders) ? [...orders] : [];
-                if (statusFilter) {
-                    filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
-                }
-                const start = (ordersCurrentPage - 1) * ordersPerPage;
-                const end = start + ordersPerPage;
-                const paginatedOrders = filteredOrders.slice(start, end);
-                orderList.innerHTML = paginatedOrders.length > 0
-                    ? paginatedOrders.map((o, index) => {
+                orderList.innerHTML = Array.isArray(orders) && orders.length > 0
+                    ? orders.map((o, index) => {
                         const orderDate = new Date(o.date);
                         const formattedDate = orderDate.toLocaleString('uk-UA', {
                             timeZone: settings.timezone || 'Europe/Kyiv',
@@ -1916,7 +1916,7 @@ function renderAdmin(section = activeTab, data = {}) {
                         });
                         return `
                             <div class="order-item">
-                                <span>#${start + index + 1} ${formattedDate} - ${o.total} грн (${o.status})</span>
+                                <span>#${o.orderNumber || (index + 1)} ${formattedDate} - ${o.total} грн (${o.status})</span>
                                 <div>
                                     <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
                                     <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
@@ -5596,7 +5596,6 @@ async function uploadBulkPrices() {
 function viewOrder(index) {
     const order = orders[index];
     if (order) {
-        // Форматуємо дату в локальний часовий пояс
         const orderDate = new Date(order.date);
         const formattedDate = isNaN(orderDate.getTime())
             ? 'Невідома дата'
@@ -5612,7 +5611,7 @@ function viewOrder(index) {
         const modal = document.getElementById('modal');
         modal.innerHTML = `
             <div class="modal-content">
-                <h3>Замовлення #${index + 1}</h3>
+                <h3>Замовлення #${order.orderNumber || (index + 1)}</h3>
                 <p>Дата: ${formattedDate}</p>
                 <p>Статус: ${order.status || 'Н/Д'}</p>
                 <p>Сума: ${order.total ? order.total + ' грн' : 'Н/Д'}</p>
@@ -5655,7 +5654,7 @@ function changeOrderStatus(index) {
         const modal = document.getElementById('modal');
         modal.innerHTML = `
             <div class="modal-content">
-                <h3>Змінити статус замовлення #${index + 1}</h3>
+                <h3>Змінити статус замовлення #${order.orderNumber || (index + 1)}</h3>
                 <p>Поточний статус: ${order.status || 'Н/Д'}</p>
                 <select id="new-order-status">
                     <option value="Нове замовлення" ${order.status === 'Нове замовлення' ? 'selected' : ''}>Нове замовлення</option>
@@ -5734,7 +5733,6 @@ async function deleteOrder(index) {
                 return;
             }
 
-            // Перевіряємо, чи замовлення існує на сервері
             const checkResponse = await fetchWithAuth(`/api/orders/${order._id}`, {
                 method: 'GET'
             });
@@ -5752,12 +5750,16 @@ async function deleteOrder(index) {
                 throw new Error(errorData.error || 'Не вдалося видалити замовлення');
             }
 
-            // Видаляємо замовлення з локального масиву
             const orderIndex = orders.findIndex(o => o._id === order._id);
             if (orderIndex !== -1) {
                 orders.splice(orderIndex, 1);
             } else {
                 console.warn('Замовлення не знайдено в локальному масиві після видалення');
+            }
+
+            if (orders.length === 0) {
+                lastOrderNumber = 0;
+                localStorage.setItem('lastOrderNumber', lastOrderNumber);
             }
 
             renderAdmin('orders');
@@ -5767,7 +5769,6 @@ async function deleteOrder(index) {
         } catch (err) {
             console.error('Помилка видалення замовлення:', err);
             showNotification('Не вдалося видалити замовлення: ' + err.message);
-            // Завантажуємо актуальний список замовлень з сервера
             try {
                 const response = await fetchWithAuth('/api/orders', { method: 'GET' });
                 if (response.ok) {
@@ -5864,7 +5865,7 @@ function connectAdminWebSocket(attempt = 1) {
     socket.onmessage = (event) => {
         try {
             const { type, data } = JSON.parse(event.data);
-            console.log(`Отримано WebSocket оновлення для ${type}:`, data);
+            console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
             if (type === 'settings' && data) {
                 settings = { ...settings, ...data };
                 renderSettingsAdmin();
@@ -5880,7 +5881,7 @@ function connectAdminWebSocket(attempt = 1) {
             } else if (type === 'categories') {
                 if (Array.isArray(data)) {
                     categories = data;
-                    console.log('Отримано WebSocket оновлення для categories:', categories);
+                    console.log('Отрирано WebSocket оновлення для categories:', categories);
                     renderCategoriesAdmin();
                     const modal = document.getElementById('modal');
                     if (modal && modal.classList.contains('active')) {
@@ -5892,7 +5893,14 @@ function connectAdminWebSocket(attempt = 1) {
                 }
             } else if (type === 'orders') {
                 if (Array.isArray(data)) {
-                    orders = data;
+                    orders = data.map(order => {
+                        if (!order.orderNumber) {
+                            lastOrderNumber += 1;
+                            order.orderNumber = lastOrderNumber;
+                            localStorage.setItem('lastOrderNumber', lastOrderNumber);
+                        }
+                        return order;
+                    });
                     totalOrders = data.length;
                     if (document.querySelector('#orders.active')) {
                         renderAdmin('orders', { total: totalOrders });
