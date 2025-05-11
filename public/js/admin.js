@@ -5577,7 +5577,7 @@ async function sortAdminProducts(sortType) {
             return;
         }
 
-        const response = await fetchWithAuth(`/api/products?limit=9999&sort=${sortType}`);
+        const response = await fetchWithAuth(`/api/products?limit=9999&page=${productsCurrentPage}&sort=${sortType}`);
         if (!response.ok) {
             throw new Error(`Помилка запиту: ${response.status} - ${await response.text()}`);
         }

@@ -983,9 +983,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             } else if (key === 'brand') {
                 sortOptions['brand'] = order === 'asc' ? 1 : -1;
             } else if (key === 'price') {
-                // Для сортування за ціною потрібно врахувати, що ціна може бути в sizes для товарів типу mattresses
-                // MongoDB не може сортувати напряму по обчислюваним полям, тому це потрібно обробити на клієнті або створити агрегацію
-                // Тут використаємо агрегацію для сортування
+                // Для сортування за ціною використаємо агрегацію
             }
         }
 
@@ -1032,7 +1030,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
     }
-});
+}
 
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
