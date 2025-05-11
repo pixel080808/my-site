@@ -944,9 +944,8 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         }
         if (search) {
             query.$or = [
-                { name: new RegExp(search, 'i') },
-                { brand: new RegExp(search, 'i') },
-                { _id: new RegExp(search, 'i') }
+                { name: { $regex: search, $options: 'i' } },
+                { brand: { $regex: search, $options: 'i' } }
             ];
         }
 
