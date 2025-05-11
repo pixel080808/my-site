@@ -84,11 +84,11 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!data.products || !Array.isArray(data.products)) {
             throw new Error('Некоректна структура відповіді від сервера');
         }
-        products = data.products;
+        products = data.products; // Завантажуємо лише поточну сторінку
         totalProducts = data.total !== undefined ? data.total : products.length;
 
-        // Присвоєння послідовних номерів на основі загального списку з урахуванням сторінки
-        let globalIndex = (page - 1) * limit + 1;
+        // Присвоєння послідовних номерів на основі загального списку
+        const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
         });
@@ -1933,15 +1933,16 @@ function renderAdmin(section = activeTab, data = {}) {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
                 const start = (productsCurrentPage - 1) * productsPerPage;
-                const end = start + productsPerPage;
-                // Сортуємо за датою створення або ID (новіші перші)
+                const end = Math.min(start + productsPerPage, totalProducts); // Обмежуємо end загальною кількістю
+                // Глобальне сортування перед рендерингом
                 products.sort((a, b) => (b.createdAt || b._id || b.id) - (a.createdAt || a._id || a.id));
-                // Присвоюємо номери на основі загального числа товарів
+                // Присвоєння номерів на основі загального списку
+                let globalIndex = totalProducts - start;
                 products.forEach((p, index) => {
-                    p.tempNumber = totalProducts - (start + index); // Номера від найбільшого до найменшого
+                    p.tempNumber = globalIndex - index; // Номера від найбільшого до найменшого
                 });
                 productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.slice(start, end).map(p => {
+                    ? products.slice(0, end - start).map(p => {
                         const priceInfo = p.type === 'simple'
                             ? (p.salePrice && p.salePrice < p.price
                                 ? `<s>${p.price} грн</s> ${p.salePrice} грн`
@@ -5606,11 +5607,11 @@ function searchProducts() {
             (p.brand || '').toLowerCase().includes(query)
         );
         products = filteredProducts;
-        totalProducts = filteredProducts.length; // Оновлюємо totalProducts для пагінації
-        productsCurrentPage = 1; // Скидаємо на першу сторінку при пошуку
+        totalProducts = filteredProducts.length;
+        productsCurrentPage = 1;
         renderAdmin('products', { total: totalProducts });
     } else {
-        loadProducts(productsCurrentPage, productsPerPage); // Повернення до повного списку
+        loadProducts(productsCurrentPage, productsPerPage);
     }
     resetInactivityTimer();
 }
