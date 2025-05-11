@@ -28,6 +28,7 @@ let settings = {
     slideHeight: '',
     slideInterval: '',
 };
+let orderNumberCache = new Map();
 let totalOrders = 0;
 let totalProducts = 0;
 let lastOrderNumber = parseInt(localStorage.getItem('lastOrderNumber')) || 0;
@@ -426,19 +427,21 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         // Сортуємо замовлення за датою в спадному порядку
         ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Присвоюємо номери від 1 до totalOrders, базуючись на глобальному списку
-        const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1'); // Завантажуємо всі замовлення для коректної нумерації
-        const allOrdersData = await allOrdersResponse.json();
-        const allOrders = allOrdersData.orders || allOrdersData;
-        allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-        allOrders.forEach((order, idx) => {
-            order.orderNumber = idx + 1; // Номер від 1 для найновішого до totalOrders для найстарішого
-        });
+        // Ініціалізація кешу номерів, якщо порожній
+        if (orderNumberCache.size === 0) {
+            const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
+            const allOrdersData = await allOrdersResponse.json();
+            const allOrders = allOrdersData.orders || allOrdersData;
+            allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+            allOrders.forEach((order, idx) => {
+                orderNumberCache.set(order._id, idx + 1);
+            });
+        }
 
-        // Оновлюємо лише поточну сторінку
+        // Оновлюємо лише поточну сторінку з номерами з кешу
         orders = ordersData.map(order => {
-            const fullOrder = allOrders.find(o => o._id === order._id) || order;
-            return { ...order, orderNumber: fullOrder.orderNumber };
+            const cachedNumber = orderNumberCache.get(order._id);
+            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
         });
 
         totalOrders = data.total !== undefined ? data.total : orders.length;
@@ -1645,7 +1648,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value=▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option value▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -5951,26 +5954,27 @@ function connectAdminWebSocket(attempt = 1) {
     };
 }
 
-// Окрема асинхронна функція для обробки оновлень замовлень
 async function handleOrdersUpdate(data) {
     // Сортуємо отримані дані
     data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Отримуємо всі замовлення для коректної нумерації
-    const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
-    const allOrdersData = await allOrdersResponse.json();
-    const allOrders = allOrdersData.orders || allOrdersData;
-    allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-    allOrders.forEach((order, idx) => {
-        order.orderNumber = idx + 1;
-    });
+    // Ініціалізація кешу номерів, якщо порожній
+    if (orderNumberCache.size === 0) {
+        const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
+        const allOrdersData = await allOrdersResponse.json();
+        const allOrders = allOrdersData.orders || allOrdersData;
+        allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+        allOrders.forEach((order, idx) => {
+            orderNumberCache.set(order._id, idx + 1);
+        });
+    }
 
-    // Оновлюємо поточний масив замовлень
+    // Оновлюємо поточний масив замовлень з номерами з кешу
     orders = data.map(order => {
-        const fullOrder = allOrders.find(o => o._id === order._id) || order;
-        return { ...order, orderNumber: fullOrder.orderNumber };
+        const cachedNumber = orderNumberCache.get(order._id);
+        return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
     });
-    totalOrders = allOrders.length;
+    totalOrders = orderNumberCache.size;
 
     // Рендеримо, якщо вкладка активна
     if (document.querySelector('#orders.active')) {
