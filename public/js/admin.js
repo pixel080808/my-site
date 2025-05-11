@@ -85,9 +85,9 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         totalProducts = data.total !== undefined ? data.total : products.length;
 
         // Присвоєння послідовних номерів на основі загального списку з урахуванням сторінки
-        let globalIndex = (page - 1) * limit;
+        let globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
-            p.tempNumber = ++globalIndex;
+            p.tempNumber = globalIndex + index;
         });
 
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
@@ -5478,9 +5478,9 @@ async function deleteProduct(productId) {
 
         products = products.filter(p => p._id !== productId);
         // Перерахунок номерів після видалення
-        let globalIndex = (productsCurrentPage - 1) * productsPerPage;
+        let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
         products.forEach((p, index) => {
-            p.tempNumber = ++globalIndex;
+            p.tempNumber = globalIndex + index;
         });
 
         // Оновлення групових товарів, якщо потрібно
@@ -5594,27 +5594,25 @@ function sortAdminProducts(sortType) {
 
 function searchProducts() {
     const query = document.getElementById('product-search').value.toLowerCase();
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(query) || 
-        (p._id || p.id).toString().includes(query) || 
-        (p.brand || '').toLowerCase().includes(query)
-    );
-    products = filteredProducts;
-    renderAdmin('products', { total: filteredProducts.length });
+    if (query) {
+        const filteredProducts = products.filter(p => 
+            p.name.toLowerCase().includes(query) || 
+            (p._id || p.id).toString().includes(query) || 
+            (p.brand || '').toLowerCase().includes(query)
+        );
+        products = filteredProducts;
+        renderAdmin('products', { total: filteredProducts.length });
+    } else {
+        loadProducts(productsCurrentPage, productsPerPage); // Повернення до повного списку
+    }
     resetInactivityTimer();
 }
 
 function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
-        if (!searchInput.value.trim()) {
-            products = [...originalProducts]; // Повернення до початкового списку
-            loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки
-        } else {
-            searchInput.value = '';
-            products = [...originalProducts];
-            loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки
-        }
+        searchInput.value = '';
+        loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки з усіма товарами
     }
     resetInactivityTimer();
 }
