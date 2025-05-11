@@ -5645,7 +5645,7 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки з усіма товарами
+        loadProducts(productsCurrentPage, productsPerPage);
     }
     resetInactivityTimer();
 }

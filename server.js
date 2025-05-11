@@ -934,13 +934,20 @@ app.get('/api/public/slides', async (req, res) => {
 
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
-        const { slug, page = 1, limit = 10 } = req.query;
+        const { slug, search, page = 1, limit = 10 } = req.query;
         const skip = (page - 1) * limit;
-        logger.info(`GET /api/products: slug=${slug}, page=${page}, limit=${limit}, user=${req.user.username}`);
+        logger.info(`GET /api/products: slug=${slug}, search=${search}, page=${page}, limit=${limit}, user=${req.user.username}`);
         
         let query = {};
         if (slug) {
             query.slug = slug;
+        }
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { brand: { $regex: search, $options: 'i' } },
+                { _id: { $regex: search, $options: 'i' } }
+            ];
         }
 
         const products = await Product.find(query).skip(skip).limit(parseInt(limit));
