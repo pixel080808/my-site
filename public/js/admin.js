@@ -1895,7 +1895,7 @@ function renderAdmin(section = activeTab, data = {}) {
                                 : 'Ціна не вказана');
                         return `
                             <div class="product-admin-item">
-                                <span>#${p.id || p._id}</span>
+                                <span>#${p._id || p.id}</span>
                                 <span>${p.type}</span>
                                 <span>${p.name}</span>
                                 <span>${p.brand || 'Без бренду'}</span>
@@ -1918,7 +1918,6 @@ function renderAdmin(section = activeTab, data = {}) {
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
-                // Сортуємо замовлення за спаданням дат для відображення нових першими
                 orders.sort((a, b) => new Date(b.date) - new Date(a.date));
                 orderList.innerHTML = Array.isArray(orders) && orders.length > 0
                     ? orders.map((o, index) => {
@@ -5511,9 +5510,12 @@ function sortAdminProducts(sortType) {
     const [key, order] = sortType.split('-');
     products.sort((a, b) => {
         let valA, valB;
-        if (key === '_id') {
-            valA = a._id;
-            valB = b._id;
+        if (key === 'number') {
+            valA = a._id || a.id;
+            valB = b._id || b.id;
+        } else if (key === 'type') {
+            valA = a.type.toLowerCase();
+            valB = b.type.toLowerCase();
         } else if (key === 'name') {
             valA = a.name.toLowerCase();
             valB = b.name.toLowerCase();
@@ -5529,6 +5531,18 @@ function sortAdminProducts(sortType) {
         return 0;
     });
     renderAdmin('products');
+    resetInactivityTimer();
+}
+
+function searchProducts() {
+    const query = document.getElementById('product-search').value.toLowerCase();
+    const filteredProducts = products.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p._id || p.id).toString().includes(query) || 
+        (p.brand || '').toLowerCase().includes(query)
+    );
+    products = filteredProducts;
+    renderAdmin('products', { total: filteredProducts.length });
     resetInactivityTimer();
 }
 
