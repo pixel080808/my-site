@@ -1319,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!query) {
                     clearSearch();
                 } else {
-                    searchProducts(1); // Починаємо з першої сторінки
+                    searchProducts(productsCurrentPage); // Використовуємо поточну сторінку
                 }
             }
         });
@@ -1339,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!query) {
                 clearSearch();
             } else {
-                searchProducts(1); // Починаємо з першої сторінки
+                searchProducts(productsCurrentPage); // Використовуємо поточну сторінку
             }
         });
     } else {
@@ -5621,7 +5621,7 @@ function sortAdminProducts(sortType) {
     resetInactivityTimer();
 }
 
-async function searchProducts(page = 1) {
+async function searchProducts(page = productsCurrentPage) {
     const query = document.getElementById('product-search')?.value?.trim().toLowerCase();
     if (!query) {
         clearSearch();
@@ -5636,7 +5636,7 @@ async function searchProducts(page = 1) {
             return;
         }
 
-        productsCurrentPage = page; // Оновлюємо поточну сторінку
+        productsCurrentPage = page; // Використовуємо передану сторінку або поточну
         const response = await fetchWithAuth(`/api/products?search=${encodeURIComponent(query)}&page=${page}&limit=${productsPerPage}`);
         if (!response.ok) {
             throw new Error('Не вдалося виконати пошук товарів');
@@ -5648,7 +5648,7 @@ async function searchProducts(page = 1) {
         }
 
         products = data.products;
-        totalProducts = data.total; // Оновлюємо загальну кількість товарів після пошуку
+        totalProducts = data.total; // Оновлюємо загальну кількість товарів
         const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -5666,8 +5666,8 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        productsCurrentPage = 1; // Скидаємо на першу сторінку
-        loadProducts(productsCurrentPage, productsPerPage); // Завантажуємо товари заново
+        productsCurrentPage = 1; // Повертаємося на першу сторінку при очищенні
+        loadProducts(productsCurrentPage, productsPerPage); // Завантажуємо оригінальний список
     }
     resetInactivityTimer();
 }
