@@ -61,7 +61,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             products = [];
-            originalProducts = []; // Очищаємо оригінальний список
+            originalProducts = [];
             productsCurrentPage = 1;
             renderAdmin('products');
             return;
@@ -89,18 +89,9 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         products = data.products;
         totalProducts = data.total;
 
-        // Зберігаємо оригінальний список товарів, якщо це перша сторінка
+        // Зберігаємо оригінальний список лише для першої сторінки
         if (page === 1) {
             originalProducts = [...products];
-            // Завантажуємо всі товари для пошуку
-            const totalPages = Math.ceil(totalProducts / limit);
-            for (let p = 2; p <= totalPages; p++) {
-                const nextResponse = await fetchWithAuth(`/api/products?page=${p}&limit=${limit}`);
-                const nextData = await nextResponse.json();
-                if (nextData.products && Array.isArray(nextData.products)) {
-                    originalProducts = originalProducts.concat(nextData.products);
-                }
-            }
         }
 
         const globalIndex = (page - 1) * limit + 1;
@@ -5658,6 +5649,8 @@ async function searchProducts(page = productsCurrentPage) {
     } catch (e) {
         console.error('Помилка пошуку товарів:', e);
         showNotification('Помилка пошуку товарів: ' + e.message);
+        products = [];
+        renderAdmin('products');
     }
     resetInactivityTimer();
 }
