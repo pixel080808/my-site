@@ -39,7 +39,6 @@ function observeDOMChanges(targetSelector, callback) {
         subtree: true,
     });
 
-    // Повертаємо функцію для відключення спостерігача
     return () => {
         observer.disconnect();
         console.log(`Спостерігач для ${targetSelector} відключено`);

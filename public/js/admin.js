@@ -10,12 +10,13 @@ let newProduct = {
 };
 let session;
 let products = [];
+let originalProducts = []; // Додаємо для збереження оригінального списку товарів
 let categories = [];
 let orders = [];
 let slides = [];
 let settings = {
     name: '',
-    baseUrl: '', // Додано для базового URL
+    baseUrl: '',
     logo: '',
     logoWidth: '',
     favicon: '',
@@ -49,9 +50,9 @@ const orderFields = [
     { name: 'payment', label: 'Спосіб оплати' }
 ];
 let unsavedChanges = false;
-let aboutEditor; // Глобальна змінна для редактора
-let productEditor; // Додаємо глобальну змінну для редактора товару
-let selectedMedia = null; // Додаємо змінну для зберігання вибраного медіа
+let aboutEditor;
+let productEditor;
+let selectedMedia = null;
 let socket;
 
 async function loadProducts(page = 1, limit = productsPerPage) {
@@ -60,6 +61,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             products = [];
+            originalProducts = []; // Очищаємо оригінальний список
             productsCurrentPage = 1;
             renderAdmin('products');
             return;
@@ -84,10 +86,23 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!data.products || !Array.isArray(data.products) || !data.total) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
-        products = data.products; // Оновлюємо лише поточну сторінку
+        products = data.products;
         totalProducts = data.total;
 
-        // Присвоєння послідовних номерів на основі загального списку
+        // Зберігаємо оригінальний список товарів, якщо це перша сторінка
+        if (page === 1) {
+            originalProducts = [...products];
+            // Завантажуємо всі товари для пошуку
+            const totalPages = Math.ceil(totalProducts / limit);
+            for (let p = 2; p <= totalPages; p++) {
+                const nextResponse = await fetchWithAuth(`/api/products?page=${p}&limit=${limit}`);
+                const nextData = await nextResponse.json();
+                if (nextData.products && Array.isArray(nextData.products)) {
+                    originalProducts = originalProducts.concat(nextData.products);
+                }
+            }
+        }
+
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -99,6 +114,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         console.error('Помилка завантаження товарів:', e);
         showNotification('Помилка завантаження товарів: ' + e.message);
         products = [];
+        originalProducts = [];
         productsCurrentPage = 1;
         renderAdmin('products');
     }
@@ -1228,7 +1244,6 @@ function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Ініціалізація елементів форми
     const usernameInput = document.getElementById('admin-username');
     const passwordInput = document.getElementById('admin-password');
     const loginBtn = document.getElementById('login-btn');
@@ -1259,7 +1274,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Елемент #login-btn не знайдено');
     }
 
-    // Перевірка сесії
     const storedSession = localStorage.getItem('adminSession');
     const token = localStorage.getItem('adminToken');
 
@@ -1289,17 +1303,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection('admin-login');
     }
 
-    // Ініціалізація редакторів
     if (document.getElementById('about-editor')) {
         initializeEditors();
     }
 
-    // Завантаження замовлень при старті
     if (document.getElementById('orders')) {
         loadOrders(1, ordersPerPage);
     }
 
-    // Add search event listeners
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
@@ -1317,13 +1328,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearSearch();
             }
         });
+    } else {
+        console.warn('Елемент #product-search не знайдено');
     }
 
-    // Додаємо обробник для кнопки пошуку
-    const searchButton = document.getElementById('search-button'); // Переконайтеся, що є кнопка з таким ID
+    const searchButton = document.getElementById('search-button');
     if (searchButton) {
         searchButton.addEventListener('click', () => {
-            const query = document.getElementById('product-search').value.trim();
+            const query = document.getElementById('product-search')?.value?.trim();
             if (!query) {
                 clearSearch();
             } else {
@@ -1333,8 +1345,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn('Елемент #search-button не знайдено');
     }
+});
 
-    // Store original products for reset
     if (!originalProducts) {
         originalProducts = [...products];
     }
@@ -5598,20 +5610,44 @@ function sortAdminProducts(sortType) {
     resetInactivityTimer();
 }
 
-function searchProducts() {
-    const query = document.getElementById('product-search').value.toLowerCase();
-    if (query) {
-        const filteredProducts = products.filter(p => 
-            p.name.toLowerCase().includes(query) || 
-            (p._id || p.id).toString().includes(query) || 
-            (p.brand || '').toLowerCase().includes(query)
-        );
-        products = filteredProducts;
-        totalProducts = filteredProducts.length;
+async function searchProducts() {
+    const query = document.getElementById('product-search')?.value?.trim().toLowerCase();
+    if (!query) {
+        clearSearch();
+        return;
+    }
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        const response = await fetchWithAuth(`/api/products?search=${encodeURIComponent(query)}&limit=9999`);
+        if (!response.ok) {
+            throw new Error('Не вдалося виконати пошук товарів');
+        }
+
+        const data = await response.json();
+        if (!data.products || !Array.isArray(data.products)) {
+            throw new Error('Некоректна структура відповіді від сервера');
+        }
+
+        products = data.products;
+        totalProducts = products.length;
         productsCurrentPage = 1;
+
+        const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+        products.forEach((p, index) => {
+            p.tempNumber = globalIndex + index;
+        });
+
         renderAdmin('products', { total: totalProducts });
-    } else {
-        loadProducts(productsCurrentPage, productsPerPage);
+    } catch (e) {
+        console.error('Помилка пошуку товарів:', e);
+        showNotification('Помилка пошуку товарів: ' + e.message);
     }
     resetInactivityTimer();
 }
@@ -5620,7 +5656,10 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки з усіма товарами
+        products = [...originalProducts];
+        totalProducts = originalProducts.length;
+        productsCurrentPage = 1;
+        renderAdmin('products', { total: totalProducts });
     }
     resetInactivityTimer();
 }
