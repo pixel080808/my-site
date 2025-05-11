@@ -5598,20 +5598,45 @@ function sortAdminProducts(sortType) {
     resetInactivityTimer();
 }
 
-function searchProducts() {
-    const query = document.getElementById('product-search').value.toLowerCase();
-    if (query) {
-        const filteredProducts = products.filter(p => 
-            p.name.toLowerCase().includes(query) || 
-            (p._id || p.id).toString().includes(query) || 
-            (p.brand || '').toLowerCase().includes(query)
-        );
-        products = filteredProducts;
-        totalProducts = filteredProducts.length;
-        productsCurrentPage = 1;
+async function searchProducts(page = 1) {
+    const query = document.getElementById('product-search')?.value?.trim().toLowerCase();
+    if (!query) {
+        clearSearch();
+        return;
+    }
+
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        productsCurrentPage = page;
+        const response = await fetchWithAuth(`/api/products?search=${encodeURIComponent(query)}&page=${page}&limit=${productsPerPage}`);
+        if (!response.ok) {
+            throw new Error(`Помилка запиту: ${response.status} - ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        if (!data.products || !Array.isArray(data.products) || !data.total) {
+            throw new Error('Некоректна структура відповіді від сервера');
+        }
+
+        products = data.products;
+        totalProducts = data.total;
+        const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+        products.forEach((p, index) => {
+            p.tempNumber = globalIndex + index;
+        });
+
         renderAdmin('products', { total: totalProducts });
-    } else {
-        loadProducts(productsCurrentPage, productsPerPage);
+    } catch (e) {
+        console.error('Помилка пошуку товарів:', e);
+        showNotification('Помилка пошуку товарів: ' + e.message);
+        products = [];
+        renderAdmin('products');
     }
     resetInactivityTimer();
 }
