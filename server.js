@@ -1030,7 +1030,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
     }
-}
+}); // Додано закриваючу дужку для app.get
 
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
