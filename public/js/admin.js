@@ -83,6 +83,12 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         const data = await response.json();
         products = data.products || data;
         totalProducts = data.total !== undefined ? data.total : products.length;
+
+        // Присвоєння послідовних номерів на основі загального списку
+        products.forEach((p, index) => {
+            p.tempNumber = (page - 1) * limit + index + 1;
+        });
+
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
         renderAdmin('products', { total: totalProducts });
     } catch (e) {
@@ -1294,7 +1300,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                searchProducts();
+                const query = searchInput.value.trim();
+                if (!query) {
+                    clearSearch();
+                } else {
+                    searchProducts();
+                }
             }
         });
         searchInput.addEventListener('input', () => {
@@ -1302,6 +1313,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearSearch();
             }
         });
+    }
+
+    // Додаємо обробник для кнопки пошуку
+    const searchButton = document.getElementById('search-button'); // Переконайтеся, що є кнопка з таким ID
+    if (searchButton) {
+        searchButton.addEventListener('click', () => {
+            const query = document.getElementById('product-search').value.trim();
+            if (!query) {
+                clearSearch();
+            } else {
+                searchProducts();
+            }
+        });
+    } else {
+        console.warn('Елемент #search-button не знайдено');
     }
 
     // Store original products for reset
@@ -5450,6 +5476,11 @@ async function deleteProduct(productId) {
         }
 
         products = products.filter(p => p._id !== productId);
+        products.forEach((p, index) => {
+            p.tempNumber = index + 1; // Перерахунок номерів після видалення
+        });
+
+        // Оновлення групових товарів, якщо потрібно
         products.forEach(p => {
             if (p.type === 'group' && Array.isArray(p.groupProducts)) {
                 p.groupProducts = p.groupProducts.filter(pid => pid !== productId);
@@ -5571,9 +5602,16 @@ function searchProducts() {
 }
 
 function clearSearch() {
-    document.getElementById('product-search').value = '';
-    products = [...originalProducts]; // Assuming originalProducts is a copy of the initial products array
-    renderAdmin('products', { total: products.length });
+    const searchInput = document.getElementById('product-search');
+    if (!searchInput.value) {
+        products = [...originalProducts]; // Повернення до початкового списку
+        renderAdmin('products', { total: products.length });
+    } else {
+        searchInput.value = '';
+        products = [...originalProducts];
+        renderAdmin('products', { total: products.length });
+    }
+    resetInactivityTimer();
 }
 
 function sortOrders(sortType) {
