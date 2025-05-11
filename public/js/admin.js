@@ -1345,8 +1345,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn('Елемент #search-button не знайдено');
     }
-});
 
+    // Переміщуємо ініціалізацію originalProducts всередину обробника
     if (!originalProducts) {
         originalProducts = [...products];
     }
