@@ -81,11 +81,11 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        if (!data.products || !Array.isArray(data.products)) {
-            throw new Error('Некоректна структура відповіді від сервера');
+        if (!data.products || !Array.isArray(data.products) || !data.total) {
+            throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
-        products = data.products; // Завантажуємо лише поточну сторінку
-        totalProducts = data.total !== undefined ? data.total : products.length;
+        products = data.products; // Оновлюємо лише поточну сторінку
+        totalProducts = data.total;
 
         // Присвоєння послідовних номерів на основі загального списку
         const globalIndex = (page - 1) * limit + 1;
