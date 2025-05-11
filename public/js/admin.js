@@ -84,9 +84,10 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         products = data.products || data;
         totalProducts = data.total !== undefined ? data.total : products.length;
 
-        // Присвоєння послідовних номерів на основі загального списку
+        // Присвоєння послідовних номерів на основі загального списку з урахуванням сторінки
+        let globalIndex = (page - 1) * limit;
         products.forEach((p, index) => {
-            p.tempNumber = (page - 1) * limit + index + 1;
+            p.tempNumber = ++globalIndex;
         });
 
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
@@ -5476,8 +5477,10 @@ async function deleteProduct(productId) {
         }
 
         products = products.filter(p => p._id !== productId);
+        // Перерахунок номерів після видалення
+        let globalIndex = (productsCurrentPage - 1) * productsPerPage;
         products.forEach((p, index) => {
-            p.tempNumber = index + 1; // Перерахунок номерів після видалення
+            p.tempNumber = ++globalIndex;
         });
 
         // Оновлення групових товарів, якщо потрібно
@@ -5603,13 +5606,15 @@ function searchProducts() {
 
 function clearSearch() {
     const searchInput = document.getElementById('product-search');
-    if (!searchInput.value) {
-        products = [...originalProducts]; // Повернення до початкового списку
-        renderAdmin('products', { total: products.length });
-    } else {
-        searchInput.value = '';
-        products = [...originalProducts];
-        renderAdmin('products', { total: products.length });
+    if (searchInput) {
+        if (!searchInput.value.trim()) {
+            products = [...originalProducts]; // Повернення до початкового списку
+            loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки
+        } else {
+            searchInput.value = '';
+            products = [...originalProducts];
+            loadProducts(productsCurrentPage, productsPerPage); // Перезавантаження сторінки
+        }
     }
     resetInactivityTimer();
 }
