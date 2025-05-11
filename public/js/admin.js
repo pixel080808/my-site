@@ -5213,33 +5213,36 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        let product = {
-            type: newProduct.type,
-            name,
-            slug,
-            brand: brand || '',
-            category,
-            subcategory: subcategorySlug,
-            material: material || '',
-            salePrice: salePrice || null,
-            saleEnd: saleEnd || null,
-            description,
-            widthCm,
-            depthCm,
-            heightCm,
-            lengthCm,
-            photos: [],
-            colors: validatedColors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: color.photo || null
-            })),
-            sizes: validatedSizes,
-            groupProducts: validatedGroupProducts,
-            active: newProduct.active,
-            visible
-        };
+let product = {
+    type: newProduct.type,
+    name,
+    slug,
+    brand: brand || '',
+    category,
+    subcategory: subcategorySlug,
+    material: material || '',
+    salePrice: salePrice || null,
+    saleEnd: saleEnd || null,
+    description,
+    widthCm,
+    depthCm,
+    heightCm,
+    lengthCm,
+    photos: [],
+    colors: validatedColors.map(color => ({
+        name: color.name,
+        value: color.value,
+        priceChange: color.priceChange || 0,
+        photo: color.photo || null
+    })),
+    sizes: validatedSizes.map(size => ({
+        name: size.name,
+        price: size.price
+    })),
+    groupProducts: validatedGroupProducts,
+    active: newProduct.active,
+    visible
+};
 
         if (newProduct.type === 'simple') {
             product.price = price;
