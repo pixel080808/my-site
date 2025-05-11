@@ -1933,16 +1933,14 @@ function renderAdmin(section = activeTab, data = {}) {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
                 const start = (productsCurrentPage - 1) * productsPerPage;
-                const end = Math.min(start + productsPerPage, totalProducts); // Обмежуємо end загальною кількістю
-                // Глобальне сортування перед рендерингом
-                products.sort((a, b) => (b.createdAt || b._id || b.id) - (a.createdAt || a._id || a.id));
+                const end = Math.min(start + productsPerPage, totalProducts);
                 // Присвоєння номерів на основі загального списку
                 let globalIndex = totalProducts - start;
                 products.forEach((p, index) => {
-                    p.tempNumber = globalIndex - index; // Номера від найбільшого до найменшого
+                    p.tempNumber = globalIndex - index;
                 });
                 productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.slice(0, end - start).map(p => {
+                    ? products.slice(start, end).map(p => {
                         const priceInfo = p.type === 'simple'
                             ? (p.salePrice && p.salePrice < p.price
                                 ? `<s>${p.price} грн</s> ${p.salePrice} грн`
@@ -5570,31 +5568,39 @@ async function toggleProductActive(productId, currentActive) {
     }
 }
 
-function sortAdminProducts(sortType) {
-    const [key, order] = sortType.split('-');
-    products.sort((a, b) => {
-        let valA, valB;
-        if (key === 'number') {
-            valA = a._id || a.id;
-            valB = b._id || b.id;
-        } else if (key === 'type') {
-            valA = a.type.toLowerCase();
-            valB = b.type.toLowerCase();
-        } else if (key === 'name') {
-            valA = a.name.toLowerCase();
-            valB = b.name.toLowerCase();
-        } else if (key === 'brand') {
-            valA = (a.brand || '').toLowerCase();
-            valB = (b.brand || '').toLowerCase();
-        } else if (key === 'price') {
-            valA = a.price || (a.sizes ? Math.min(...a.sizes.map(s => s.price)) : Infinity);
-            valB = b.price || (b.sizes ? Math.min(...b.sizes.map(s => s.price)) : Infinity);
+async function sortAdminProducts(sortType) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
         }
-        if (valA < valB) return order === 'asc' ? -1 : 1;
-        if (valA > valB) return order === 'asc' ? 1 : -1;
-        return 0;
-    });
-    renderAdmin('products');
+
+        const response = await fetchWithAuth(`/api/products?limit=9999&sort=${sortType}`);
+        if (!response.ok) {
+            throw new Error(`Помилка запиту: ${response.status} - ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        if (!data.products || !Array.isArray(data.products) || !data.total) {
+            throw new Error('Некоректна структура відповіді від сервера');
+        }
+
+        products = data.products;
+        totalProducts = data.total;
+
+        // Присвоєння номерів на основі загального списку
+        const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+        products.forEach((p, index) => {
+            p.tempNumber = globalIndex + index;
+        });
+
+        renderAdmin('products', { total: totalProducts });
+    } catch (e) {
+        console.error('Помилка сортування товарів:', e);
+        showNotification('Помилка сортування товарів: ' + e.message);
+    }
     resetInactivityTimer();
 }
 

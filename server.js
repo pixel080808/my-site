@@ -934,9 +934,22 @@ app.get('/api/public/slides', async (req, res) => {
 
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
-        const { slug, search, page = 1, limit = 10 } = req.query;
-        const skip = (page - 1) * limit;
-        logger.info(`GET /api/products: slug=${slug}, search=${search}, page=${page}, limit=${limit}, user=${req.user.username}`);
+        const { slug, search, page = 1, limit = 10, sort } = req.query;
+        const parsedLimit = parseInt(limit);
+        const parsedPage = parseInt(page);
+
+        // Валідація параметрів
+        if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 10000) {
+            logger.error('Невірний параметр limit:', limit);
+            return res.status(400).json({ error: 'Параметр limit повинен бути числом від 1 до 10000' });
+        }
+        if (isNaN(parsedPage) || parsedPage < 1) {
+            logger.error('Невірний параметр page:', page);
+            return res.status(400).json({ error: 'Параметр page повинен бути числом >= 1' });
+        }
+
+        const skip = (parsedPage - 1) * parsedLimit;
+        logger.info(`GET /api/products: slug=${slug}, search=${search}, page=${parsedPage}, limit=${parsedLimit}, sort=${sort}, user=${req.user.username}`);
         
         let query = {};
         if (slug) {
@@ -949,9 +962,72 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             ];
         }
 
-        const products = await Product.find(query).skip(skip).limit(parseInt(limit));
-        const total = await Product.countDocuments(query);
-        res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
+        // Обробка сортування
+        let sortOptions = {};
+        if (sort) {
+            const [key, order] = sort.split('-');
+            const validKeys = ['number', 'type', 'name', 'brand', 'price'];
+            const validOrders = ['asc', 'desc'];
+            
+            if (!validKeys.includes(key) || !validOrders.includes(order)) {
+                logger.error('Невірний формат сортування:', sort);
+                return res.status(400).json({ error: 'Невірний формат сортування. Очікується формат key-order (наприклад, price-asc)' });
+            }
+
+            if (key === 'number') {
+                sortOptions['_id'] = order === 'asc' ? 1 : -1;
+            } else if (key === 'type') {
+                sortOptions['type'] = order === 'asc' ? 1 : -1;
+            } else if (key === 'name') {
+                sortOptions['name'] = order === 'asc' ? 1 : -1;
+            } else if (key === 'brand') {
+                sortOptions['brand'] = order === 'asc' ? 1 : -1;
+            } else if (key === 'price') {
+                // Для сортування за ціною потрібно врахувати, що ціна може бути в sizes для товарів типу mattresses
+                // MongoDB не може сортувати напряму по обчислюваним полям, тому це потрібно обробити на клієнті або створити агрегацію
+                // Тут використаємо агрегацію для сортування
+            }
+        }
+
+        let products;
+        let total;
+
+        if (sort && sort.startsWith('price-')) {
+            const [_, order] = sort.split('-');
+            const pipeline = [
+                { $match: query },
+                {
+                    $addFields: {
+                        effectivePrice: {
+                            $cond: {
+                                if: { $eq: ["$type", "simple"] },
+                                then: "$price",
+                                else: { $min: "$sizes.price" }
+                            }
+                        }
+                    }
+                },
+                { $sort: { effectivePrice: order === 'asc' ? 1 : -1 } },
+                { $skip: skip },
+                { $limit: parsedLimit },
+                {
+                    $project: {
+                        effectivePrice: 0 // Видаляємо тимчасове поле
+                    }
+                }
+            ];
+
+            products = await Product.aggregate(pipeline);
+            total = await Product.countDocuments(query);
+        } else {
+            products = await Product.find(query)
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(parsedLimit);
+            total = await Product.countDocuments(query);
+        }
+
+        res.json({ products, total, page: parsedPage, limit: parsedLimit });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
