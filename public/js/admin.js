@@ -405,9 +405,9 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' }); // Сортування за спаданням дат
+        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' });
         if (statusFilter) {
-            queryParams.append('status', statusFilter);
+            queryParams.set('status', statusFilter);
         }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
@@ -426,16 +426,13 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         const data = await response.json();
         let ordersData = data.orders || data;
         if (!Array.isArray(ordersData)) {
-            console.error('Очікувався масив замовлень, отрирано:', data);
+            console.error('Очікувався масив замовлень, отримано:', data);
             orders = [];
             showNotification('Отримано некоректні дані замовлень');
             ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
         }
-
-        // Сортуємо замовлення за датою в спадному порядку
-        ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         // Ініціалізація кешу номерів, якщо порожній
         if (orderNumberCache.size === 0) {
@@ -455,7 +452,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         });
 
         totalOrders = data.total !== undefined ? data.total : orders.length;
-        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage);
+        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
         renderAdmin('orders', { total: totalOrders });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
@@ -1929,11 +1926,11 @@ function renderAdmin(section = activeTab, data = {}) {
             }
         }
 
-if (section === 'products') {
+        if (section === 'products') {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
-                const start = 0; // Оскільки сервер повертає лише товари для поточної сторінки
-                const end = products.length; // Використовуємо всю отриману частину
+                const start = 0;
+                const end = products.length;
                 let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
                 products.forEach((p, index) => {
                     p.tempNumber = globalIndex + index;
@@ -1972,7 +1969,6 @@ if (section === 'products') {
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
-                orders.sort((a, b) => new Date(b.date) - new Date(a.date));
                 orderList.innerHTML = Array.isArray(orders) && orders.length > 0
                     ? orders.map((o, index) => {
                         const orderDate = new Date(o.date);
@@ -5655,25 +5651,18 @@ function clearSearch() {
 }
 
 function sortOrders(sortType) {
-    const [key, order] = sortType.split('-');
+    const [key, direction] = sortType.split('-');
     orders.sort((a, b) => {
-        let valA, valB;
-        if (key === 'date') {
-            valA = new Date(a.date);
-            valB = new Date(b.date);
-        } else if (key === 'total') {
-            valA = a.total || 0;
-            valB = b.total || 0;
-        } else if (key === 'status') {
-            valA = (a.status || '').toLowerCase();
-            valB = (b.status || '').toLowerCase();
+        let valA = key === 'date' ? new Date(a[key]) : a[key];
+        let valB = key === 'date' ? new Date(b[key]) : b[key];
+        if (direction === 'asc') {
+            return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+        } else {
+            return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
         }
-        if (valA < valB) return order === 'asc' ? -1 : 1;
-        if (valA > valB) return order === 'asc' ? 1 : -1;
-        return 0;
     });
-    currentPage = 1;
-    renderAdmin('orders');
+    ordersCurrentPage = 1; // Оновлюємо поточну сторінку
+    renderAdmin('orders'); // Перерендерюємо з оновленим сортуванням
     resetInactivityTimer();
 }
 
@@ -6000,8 +5989,8 @@ async function deleteOrder(index) {
 
 function filterOrders() {
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
-    currentPage = 1;
-    loadOrders(currentPage, ordersPerPage, statusFilter);
+    ordersCurrentPage = 1; // Скидаємо на першу сторінку при фільтрації
+    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter); // Завантажуємо з урахуванням фільтру
     resetInactivityTimer();
 }
 
