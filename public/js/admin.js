@@ -5085,6 +5085,12 @@ async function saveEditedProduct(productId) {
         const category = document.getElementById('product-category')?.value.trim();
         const subcategory = document.getElementById('product-subcategory')?.value.trim();
         const material = document.getElementById('product-material')?.value.trim();
+        let price = null;
+        let salePrice = null;
+        if (newProduct.type === 'simple') {
+            price = parseFloat(document.getElementById('product-price')?.value) || null;
+            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+        }
         const saleEnd = document.getElementById('product-sale-end')?.value || null;
         const visible = document.getElementById('product-visible')?.value === 'true';
         const description = document.getElementById('product-description')?.value || '';
@@ -5130,6 +5136,11 @@ async function saveEditedProduct(productId) {
             subcategorySlug = subcategoryObj.slug;
         }
 
+        if (newProduct.type === 'simple' && (price === null || price < 0)) {
+            showNotification('Введіть коректну ціну для простого товару!');
+            return;
+        }
+
         if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
             showNotification('Додайте хоча б один розмір для матрацу!');
             return;
@@ -5140,7 +5151,6 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Додавання бренду, якщо він новий
         if (brand && !brands.includes(brand)) {
             try {
                 const response = await fetchWithAuth('/api/brands', {
@@ -5156,7 +5166,6 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        // Додавання матеріалу, якщо він новий
         if (material && !materials.includes(material)) {
             try {
                 const response = await fetchWithAuth('/api/materials', {
@@ -5180,6 +5189,7 @@ async function saveEditedProduct(productId) {
             category,
             subcategory: subcategorySlug,
             material: material || '',
+            salePrice: salePrice || null,
             saleEnd: saleEnd || null,
             description,
             widthCm,
@@ -5199,21 +5209,10 @@ async function saveEditedProduct(productId) {
             visible
         };
 
-        // Додаємо price і salePrice лише для типу "simple"
         if (newProduct.type === 'simple') {
-            const price = parseFloat(document.getElementById('product-price')?.value) || null;
-            const salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
-
-            if (price === null || price < 0) {
-                showNotification('Введіть коректну ціну для простого товару!');
-                return;
-            }
-
             product.price = price;
-            product.salePrice = salePrice || null;
         }
 
-        // Обробка зображень у описі
         const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(description, 'text/html');
@@ -5252,7 +5251,6 @@ async function saveEditedProduct(productId) {
         });
         product.description = updatedDescription;
 
-        // Завантаження основних фото
         const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
         for (let file of photoFiles) {
             const validation = validateFile(file);
@@ -5278,7 +5276,6 @@ async function saveEditedProduct(productId) {
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        // Завантаження фото кольорів
         for (let i = 0; i < newProduct.colors.length; i++) {
             const color = newProduct.colors[i];
             if (color.photo instanceof File) {
@@ -5306,7 +5303,6 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        // Відправка запиту на сервер
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PUT',
             body: JSON.stringify(product)
