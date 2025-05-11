@@ -4861,7 +4861,7 @@ async function openEditProductModal(productId) {
         ...product,
         colors: [...product.colors],
         photos: [...product.photos],
-        sizes: [...product.sizes],
+        sizes: product.sizes ? product.sizes.filter(size => size.name && typeof size.price === 'number' && size.price >= 0) : [],
         groupProducts: [...product.groupProducts]
     };
 
@@ -5151,6 +5151,38 @@ async function saveEditedProduct(productId) {
             return;
         }
 
+        // Валідація розмірів для типу "mattresses"
+        let validatedSizes = newProduct.sizes;
+        if (newProduct.type === 'mattresses') {
+            validatedSizes = newProduct.sizes.filter(size => {
+                const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
+                if (!isValid) {
+                    console.warn('Некоректний розмір видалено:', size);
+                }
+                return isValid;
+            });
+
+            if (validatedSizes.length === 0) {
+                showNotification('Усі розміри для матрацу некоректні! Додайте коректний розмір.');
+                return;
+            }
+        }
+
+        // Валідація кольорів
+        const validatedColors = newProduct.colors.filter(color => {
+            const isValid = color.name && color.value;
+            if (!isValid) {
+                console.warn('Некоректний колір видалено:', color);
+            }
+            return isValid;
+        });
+
+        // Валідація groupProducts
+        let validatedGroupProducts = newProduct.groupProducts;
+        if (newProduct.type !== 'group') {
+            validatedGroupProducts = []; // Очищаємо для типів, які не є "group"
+        }
+
         if (brand && !brands.includes(brand)) {
             try {
                 const response = await fetchWithAuth('/api/brands', {
@@ -5197,14 +5229,14 @@ async function saveEditedProduct(productId) {
             heightCm,
             lengthCm,
             photos: [],
-            colors: newProduct.colors.map(color => ({
+            colors: validatedColors.map(color => ({
                 name: color.name,
                 value: color.value,
                 priceChange: color.priceChange || 0,
                 photo: color.photo || null
             })),
-            sizes: newProduct.sizes,
-            groupProducts: newProduct.groupProducts,
+            sizes: validatedSizes,
+            groupProducts: validatedGroupProducts,
             active: newProduct.active,
             visible
         };
@@ -5276,8 +5308,8 @@ async function saveEditedProduct(productId) {
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        for (let i = 0; i < newProduct.colors.length; i++) {
-            const color = newProduct.colors[i];
+        for (let i = 0; i < validatedColors.length; i++) {
+            const color = validatedColors[i];
             if (color.photo instanceof File) {
                 const validation = validateFile(color.photo);
                 if (!validation.valid) {
@@ -5302,6 +5334,8 @@ async function saveEditedProduct(productId) {
                 product.colors[i].photo = color.photo;
             }
         }
+
+        console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PUT',
