@@ -81,7 +81,10 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        products = data.products || data;
+        if (!data.products || !Array.isArray(data.products)) {
+            throw new Error('Некоректна структура відповіді від сервера');
+        }
+        products = data.products;
         totalProducts = data.total !== undefined ? data.total : products.length;
 
         // Присвоєння послідовних номерів на основі загального списку з урахуванням сторінки
@@ -90,7 +93,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
             p.tempNumber = globalIndex + index;
         });
 
-        console.log('Завантажено товари:', products, 'totalItems:', totalProducts);
+        console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
         renderAdmin('products', { total: totalProducts });
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
@@ -1931,10 +1934,12 @@ function renderAdmin(section = activeTab, data = {}) {
             if (productList) {
                 const start = (productsCurrentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
-                // Sort by creation date or ID to show latest added first by default
+                // Сортуємо за датою створення або ID (новіші перші)
                 products.sort((a, b) => (b.createdAt || b._id || b.id) - (a.createdAt || a._id || a.id));
-                // Assign sequential numbers based on current order
-                products.forEach((p, index) => p.tempNumber = products.length - index);
+                // Присвоюємо номери на основі загального числа товарів
+                products.forEach((p, index) => {
+                    p.tempNumber = totalProducts - (start + index); // Номера від найбільшого до найменшого
+                });
                 productList.innerHTML = Array.isArray(products) && products.length > 0
                     ? products.slice(start, end).map(p => {
                         const priceInfo = p.type === 'simple'
@@ -1961,7 +1966,7 @@ function renderAdmin(section = activeTab, data = {}) {
                         `;
                     }).join('')
                     : '<p>Товари відсутні</p>';
-                const totalItems = data.total !== undefined ? data.total : products.length;
+                const totalItems = data.total !== undefined ? data.total : totalProducts;
                 renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
             } else {
                 console.warn('Елемент #product-list-admin не знайдено');
@@ -5601,7 +5606,9 @@ function searchProducts() {
             (p.brand || '').toLowerCase().includes(query)
         );
         products = filteredProducts;
-        renderAdmin('products', { total: filteredProducts.length });
+        totalProducts = filteredProducts.length; // Оновлюємо totalProducts для пагінації
+        productsCurrentPage = 1; // Скидаємо на першу сторінку при пошуку
+        renderAdmin('products', { total: totalProducts });
     } else {
         loadProducts(productsCurrentPage, productsPerPage); // Повернення до повного списку
     }
