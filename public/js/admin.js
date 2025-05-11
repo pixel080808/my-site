@@ -4472,36 +4472,62 @@ function renderColorsList() {
         resetInactivityTimer();
     }
 
-    function addMattressSize() {
-        const name = document.getElementById('mattress-size-name').value;
-        const price = parseFloat(document.getElementById('mattress-size-price').value);
+function addMattressSize() {
+    const name = document.getElementById('mattress-size-name').value;
+    const price = parseFloat(document.getElementById('mattress-size-price').value);
 
-        if (name && !isNaN(price) && price >= 0) {
-            newProduct.sizes.push({ name, price });
-            document.getElementById('mattress-size-name').value = '';
-            document.getElementById('mattress-size-price').value = '';
-            renderMattressSizes();
-            resetInactivityTimer();
-        } else {
-            alert('Введіть розмір та ціну!');
-        }
-    }
-
-    function renderMattressSizes() {
-        const sizeList = document.getElementById('mattress-size-list');
-        sizeList.innerHTML = newProduct.sizes.map((size, index) => `
-            <div class="mattress-size">
-                ${size.name}: ${size.price} грн
-                <button class="delete-btn" onclick="deleteMattressSize(${index})">Видалити</button>
-            </div>
-        `).join('');
-    }
-
-    function deleteMattressSize(index) {
-        newProduct.sizes.splice(index, 1);
+    if (name && !isNaN(price) && price >= 0) {
+        newProduct.sizes.push({ name, price });
+        document.getElementById('mattress-size-name').value = '';
+        document.getElementById('mattress-size-price').value = '';
         renderMattressSizes();
         resetInactivityTimer();
+    } else {
+        alert('Введіть розмір та ціну!');
     }
+}
+
+function renderMattressSizes() {
+    const sizeList = document.getElementById('mattress-size-list');
+    sizeList.innerHTML = newProduct.sizes.map((size, index) => `
+        <div class="mattress-size">
+            ${size.name}: ${size.price} грн
+            <button class="edit-btn" onclick="editMattressSize(${index})">Редагувати</button>
+            <button class="delete-btn" onclick="deleteMattressSize(${index})">Видалити</button>
+        </div>
+    `).join('');
+}
+
+function editMattressSize(index) {
+    const size = newProduct.sizes[index];
+    const sizeList = document.getElementById('mattress-size-list');
+    sizeList.children[index].innerHTML = `
+        <input type="text" id="edit-mattress-size-name-${index}" value="${size.name}" placeholder="Розмір">
+        <input type="number" id="edit-mattress-size-price-${index}" value="${size.price}" placeholder="Ціна (грн)" min="0">
+        <button class="save-btn" onclick="saveMattressSize(${index})">Зберегти</button>
+        <button class="cancel-btn" onclick="renderMattressSizes()">Скасувати</button>
+    `;
+    resetInactivityTimer();
+}
+
+function saveMattressSize(index) {
+    const newName = document.getElementById(`edit-mattress-size-name-${index}`).value;
+    const newPrice = parseFloat(document.getElementById(`edit-mattress-size-price-${index}`).value);
+
+    if (newName && !isNaN(newPrice) && newPrice >= 0) {
+        newProduct.sizes[index] = { name: newName, price: newPrice };
+        renderMattressSizes();
+        resetInactivityTimer();
+    } else {
+        alert('Введіть коректний розмір та ціну!');
+    }
+}
+
+function deleteMattressSize(index) {
+    newProduct.sizes.splice(index, 1);
+    renderMattressSizes();
+    resetInactivityTimer();
+}
 
 function searchGroupProducts() {
     const query = document.getElementById('group-product-search').value.toLowerCase();
