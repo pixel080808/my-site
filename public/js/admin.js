@@ -55,60 +55,49 @@ let productEditor;
 let selectedMedia = null;
 let socket;
 
-async function loadProducts(page = 1, limit = productsPerPage) {
+async function searchProducts(page = productsCurrentPage) {
+    const query = document.getElementById('product-search')?.value?.trim().toLowerCase();
+    if (!query) {
+        clearSearch();
+        return;
+    }
+
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            products = [];
-            originalProducts = [];
-            productsCurrentPage = 1;
-            renderAdmin('products');
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
             return;
         }
 
         productsCurrentPage = page;
-        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
+        console.log(`Пошук: query=${query}, page=${page}, limit=${productsPerPage}`);
+        const response = await fetchWithAuth(`/api/products?search=${encodeURIComponent(query)}&page=${page}&limit=${productsPerPage}`);
         if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
-            throw new Error(`Не вдалося завантажити товари: ${text}`);
+            throw new Error(`Помилка запиту: ${response.status} - ${await response.text()}`);
         }
 
         const data = await response.json();
+        console.log('Відповідь сервера:', data);
         if (!data.products || !Array.isArray(data.products) || !data.total) {
-            throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
+            throw new Error('Некоректна структура відповіді від сервера');
         }
+
         products = data.products;
         totalProducts = data.total;
-
-        // Зберігаємо оригінальний список лише для першої сторінки
-        if (page === 1) {
-            originalProducts = [...products];
-        }
-
-        const globalIndex = (page - 1) * limit + 1;
+        const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
         });
 
-        console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
         renderAdmin('products', { total: totalProducts });
     } catch (e) {
-        console.error('Помилка завантаження товарів:', e);
-        showNotification('Помилка завантаження товарів: ' + e.message);
+        console.error('Помилка пошуку товарів:', e);
+        showNotification('Помилка пошуку товарів: ' + e.message);
         products = [];
-        originalProducts = [];
-        productsCurrentPage = 1;
         renderAdmin('products');
     }
+    resetInactivityTimer();
 }
 
 async function loadCategories() {
