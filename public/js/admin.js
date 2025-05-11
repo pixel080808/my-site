@@ -5085,12 +5085,6 @@ async function saveEditedProduct(productId) {
         const category = document.getElementById('product-category')?.value.trim();
         const subcategory = document.getElementById('product-subcategory')?.value.trim();
         const material = document.getElementById('product-material')?.value.trim();
-        let price = null;
-        let salePrice = null;
-        if (newProduct.type === 'simple') {
-            price = parseFloat(document.getElementById('product-price')?.value) || null;
-            salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
-        }
         const saleEnd = document.getElementById('product-sale-end')?.value || null;
         const visible = document.getElementById('product-visible')?.value === 'true';
         const description = document.getElementById('product-description')?.value || '';
@@ -5134,11 +5128,6 @@ async function saveEditedProduct(productId) {
                 return;
             }
             subcategorySlug = subcategoryObj.slug;
-        }
-
-        if (newProduct.type === 'simple' && (price === null || price < 0)) {
-            showNotification('Введіть коректну ціну для простого товару!');
-            return;
         }
 
         if (newProduct.type === 'mattresses' && newProduct.sizes.length === 0) {
@@ -5189,10 +5178,8 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Надсилаємо slug
+            subcategory: subcategorySlug,
             material: material || '',
-            price: newProduct.type === 'simple' ? price : null,
-            salePrice: salePrice || null,
             saleEnd: saleEnd || null,
             description,
             widthCm,
@@ -5211,6 +5198,20 @@ async function saveEditedProduct(productId) {
             active: newProduct.active,
             visible
         };
+
+        // Додаємо price і salePrice лише для типу "simple"
+        if (newProduct.type === 'simple') {
+            const price = parseFloat(document.getElementById('product-price')?.value) || null;
+            const salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+
+            if (price === null || price < 0) {
+                showNotification('Введіть коректну ціну для простого товару!');
+                return;
+            }
+
+            product.price = price;
+            product.salePrice = salePrice || null;
+        }
 
         // Обробка зображень у описі
         const mediaUrls = [];
