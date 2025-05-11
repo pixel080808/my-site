@@ -1288,6 +1288,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('orders')) {
         loadOrders(1, ordersPerPage);
     }
+
+    // Add search event listeners
+    const searchInput = document.getElementById('product-search');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchProducts();
+            }
+        });
+        searchInput.addEventListener('input', () => {
+            if (!searchInput.value) {
+                clearSearch();
+            }
+        });
+    }
+
+    // Store original products for reset
+    if (!originalProducts) {
+        originalProducts = [...products];
+    }
 });
 
 async function refreshToken(attempt = 1) {
@@ -1884,8 +1904,12 @@ function renderAdmin(section = activeTab, data = {}) {
             if (productList) {
                 const start = (productsCurrentPage - 1) * productsPerPage;
                 const end = start + productsPerPage;
+                // Sort by creation date or ID to show latest added first by default
+                products.sort((a, b) => (b.createdAt || b._id || b.id) - (a.createdAt || a._id || a.id));
+                // Assign sequential numbers based on current order
+                products.forEach((p, index) => p.tempNumber = products.length - index);
                 productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.map(p => {
+                    ? products.slice(start, end).map(p => {
                         const priceInfo = p.type === 'simple'
                             ? (p.salePrice && p.salePrice < p.price
                                 ? `<s>${p.price} грн</s> ${p.salePrice} грн`
@@ -1895,7 +1919,7 @@ function renderAdmin(section = activeTab, data = {}) {
                                 : 'Ціна не вказана');
                         return `
                             <div class="product-admin-item">
-                                <span>#${p._id || p.id}</span>
+                                <span>#${p.tempNumber}</span>
                                 <span>${p.type}</span>
                                 <span>${p.name}</span>
                                 <span>${p.brand || 'Без бренду'}</span>
@@ -5544,6 +5568,12 @@ function searchProducts() {
     products = filteredProducts;
     renderAdmin('products', { total: filteredProducts.length });
     resetInactivityTimer();
+}
+
+function clearSearch() {
+    document.getElementById('product-search').value = '';
+    products = [...originalProducts]; // Assuming originalProducts is a copy of the initial products array
+    renderAdmin('products', { total: products.length });
 }
 
 function sortOrders(sortType) {
