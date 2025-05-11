@@ -65,7 +65,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
             return;
         }
 
-        productsCurrentPage = page;
+        productsCurrentPage = page; // Гарантуємо, що поточна сторінка оновлена
         const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
         if (!response.ok) {
             const text = await response.text();
@@ -87,7 +87,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         products = data.products; // Оновлюємо лише поточну сторінку
         totalProducts = data.total;
 
-        // Присвоєння послідовних номерів на основі загального списку
+        // Присвоєння послідовних номерів на основі поточної сторінки
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -1929,18 +1929,17 @@ function renderAdmin(section = activeTab, data = {}) {
             }
         }
 
-        if (section === 'products') {
+if (section === 'products') {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
-                const start = (productsCurrentPage - 1) * productsPerPage;
-                const end = Math.min(start + productsPerPage, totalProducts);
-                // Присвоєння номерів на основі загального списку
-                let globalIndex = totalProducts - start;
+                const start = 0; // Оскільки сервер повертає лише товари для поточної сторінки
+                const end = products.length; // Використовуємо всю отриману частину
+                let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
                 products.forEach((p, index) => {
-                    p.tempNumber = globalIndex - index;
+                    p.tempNumber = globalIndex + index;
                 });
                 productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.slice(start, end).map(p => {
+                    ? products.map(p => {
                         const priceInfo = p.type === 'simple'
                             ? (p.salePrice && p.salePrice < p.price
                                 ? `<s>${p.price} грн</s> ${p.salePrice} грн`
@@ -2321,7 +2320,6 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     container.innerHTML = '';
     if (totalPages <= 1) return;
 
-    // Використовуємо правильну змінну currentPage залежно від вкладки
     const page = containerId === 'order-pagination' ? ordersCurrentPage : productsCurrentPage;
 
     // Кнопка "Попередня"
