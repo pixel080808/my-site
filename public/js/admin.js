@@ -5705,6 +5705,10 @@ async function sortOrders(sortType) {
 
         totalOrders = filteredOrders.length;
 
+        // Оновлюємо глобальний масив orders з відсортованими даними
+        orders = filteredOrders;
+
+        // Застосовуємо пагінацію до відсортованого масиву
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
         orders = filteredOrders.slice(start, end).map(order => {
