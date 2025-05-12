@@ -938,7 +938,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         const parsedLimit = parseInt(limit);
         const parsedPage = parseInt(page);
 
-        // Валідація параметрів
         if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 10000) {
             logger.error('Невірний параметр limit:', limit);
             return res.status(400).json({ error: 'Параметр limit повинен бути числом від 1 до 10000' });
@@ -962,7 +961,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             ];
         }
 
-        // Обробка сортування
         let sortOptions = {};
         if (sort) {
             const [key, order] = sort.split('-');
@@ -983,7 +981,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             } else if (key === 'brand') {
                 sortOptions['brand'] = order === 'asc' ? 1 : -1;
             } else if (key === 'price') {
-                // Для сортування за ціною використаємо агрегацію
             }
         }
 
@@ -1010,7 +1007,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
                 { $limit: parsedLimit },
                 {
                     $project: {
-                        effectivePrice: 0 // Видаляємо тимчасове поле
+                        effectivePrice: 0
                     }
                 }
             ];
@@ -1030,7 +1027,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         logger.error('Помилка при отриманні товарів:', err);
         res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
     }
-}); // Додано закриваючу дужку для app.get
+});
 
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
@@ -1220,13 +1217,11 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
 
-        // Видаляємо заборонені поля
         delete productData._id;
         delete productData.__v;
         delete productData.createdAt;
         delete productData.updatedAt;
 
-        // Очищаємо вкладені об’єкти
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 const { _id, ...rest } = color;
@@ -1240,14 +1235,12 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        // Знаходимо продукт за числовим id
-        const existingProduct = await Product.findOne({ id: req.params.id }); // Змінено з parseInt на req.params.id
+        const existingProduct = await Product.findOne({ id: req.params.id });
         if (!existingProduct) {
             logger.error('Продукт не знайдено:', req.params.id);
             return res.status(404).json({ error: 'Товар не знайдено' });
         }
 
-        // Валідація лише змінених полів
         const updateSchema = Joi.object({
             name: Joi.string().min(1).max(255).trim(),
             category: Joi.string().max(100).trim(),
@@ -1297,14 +1290,12 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка унікальності slug
         const existingProductWithSlug = await Product.findOne({ slug: productData.slug, _id: { $ne: existingProduct._id } });
         if (existingProductWithSlug) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перевірка бренду
         if (productData.brand) {
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
@@ -1313,7 +1304,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        // Перевірка матеріалу
         if (productData.material) {
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
@@ -1322,7 +1312,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        // Перевірка категорії
         if (productData.category) {
             const category = await Category.findOne({ name: productData.category });
             if (!category) {
@@ -1330,7 +1319,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
                 return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
             }
 
-            // Перевірка підкатегорії
             if (productData.subcategory) {
                 const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
                 if (!subcategoryExists) {
@@ -1340,7 +1328,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        // Перевірка groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1358,7 +1345,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         const product = await Product.findOneAndUpdate(
-            { id: req.params.id }, // Змінено з parseInt(req.params.id) на req.params.id
+            { id: req.params.id },
             productData,
             { new: true, runValidators: true }
         );
@@ -2698,7 +2685,7 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = req.params.id; // Використовуємо рядковий _id замість parseInt
+        const orderId = req.params.id;
         if (!mongoose.Types.ObjectId.isValid(orderId)) {
             logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });
@@ -3119,11 +3106,9 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
         const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
         products.forEach(p => logger.info('Імпортований продукт:', p));
 
-        // Очищаємо продукти перед валідацією
         const cleanedProducts = products.map(product => {
             const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
 
-            // Очищаємо вкладені об’єкти sizes
             if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
                 cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
                     const { _id, ...cleanedSize } = size;
@@ -3131,7 +3116,6 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
                 });
             }
 
-            // Очищаємо вкладені об’єкти colors
             if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
                 cleanedProduct.colors = cleanedProduct.colors.map(color => {
                     const { _id, ...cleanedColor } = color;
@@ -3139,7 +3123,6 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
                 });
             }
 
-            // Переконуємося, що groupProducts — це масив рядків
             if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
                 cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
             }
@@ -3147,7 +3130,6 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
             return cleanedProduct;
         });
 
-        // Валідація очищених продуктів
         for (const product of cleanedProducts) {
             const { error } = productSchemaValidation.validate(product, { abortEarly: false });
             if (error) {
@@ -3156,7 +3138,6 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
             }
         }
 
-        // Видаляємо старі продукти і вставляємо нові
         await Product.deleteMany({});
         const result = await Product.insertMany(cleanedProducts);
         logger.info('Успішно імпортовано продуктів:', result.length);
