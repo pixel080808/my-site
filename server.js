@@ -1220,41 +1220,91 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
 
-        if (productData.img && !productData.photos) {
-            productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
-            delete productData.img;
-        }
-        if (productData.colors) {
-            productData.colors = productData.colors.map(color => {
-                if (color.img && !color.photo) {
-                    color.photo = color.img;
-                    delete color.img;
-                }
-                return color;
-            });
-        }
-
+        // Видаляємо заборонені поля
         delete productData._id;
         delete productData.__v;
+        delete productData.createdAt;
+        delete productData.updatedAt;
+
+        // Очищаємо вкладені об’єкти
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 const { _id, ...rest } = color;
                 return rest;
             });
         }
+        if (productData.sizes) {
+            productData.sizes = productData.sizes.map(size => {
+                const { _id, ...rest } = size;
+                return rest;
+            });
+        }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Знаходимо продукт, щоб перевірити його тип
+        const existingProduct = await Product.findById(req.params.id);
+        if (!existingProduct) {
+            logger.error('Продукт не знайдено:', req.params.id);
+            return res.status(404).json({ error: 'Товар не знайдено' });
+        }
+
+        // Валідація лише змінених полів
+        const updateSchema = Joi.object({
+            name: Joi.string().min(1).max(255).trim(),
+            category: Joi.string().max(100).trim(),
+            subcategory: Joi.string().max(255).allow('').trim(),
+            price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
+            salePrice: Joi.number().min(0).allow(null),
+            saleEnd: Joi.date().allow(null),
+            brand: Joi.string().max(100).allow('').trim(),
+            material: Joi.string().max(100).allow('').trim(),
+            filters: Joi.array().items(
+                Joi.object({
+                    name: Joi.string().required(),
+                    value: Joi.string().required()
+                })
+            ),
+            photos: Joi.array().items(Joi.string().uri().allow('')),
+            visible: Joi.boolean(),
+            active: Joi.boolean(),
+            slug: Joi.string().min(1).max(255).trim(),
+            type: Joi.string().valid('simple', 'mattresses', 'group'),
+            sizes: Joi.array().items(
+                Joi.object({
+                    name: Joi.string().max(100).required().trim(),
+                    price: Joi.number().min(0).required()
+                })
+            ),
+            colors: Joi.array().items(
+                Joi.object({
+                    name: Joi.string().max(100).required().trim(),
+                    value: Joi.string().max(100).required().trim(),
+                    priceChange: Joi.number(),
+                    photo: Joi.string().uri().allow('', null)
+                })
+            ),
+            groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
+            description: Joi.string().allow('').trim(),
+            widthCm: Joi.number().min(0).allow(null),
+            depthCm: Joi.number().min(0).allow(null),
+            heightCm: Joi.number().min(0).allow(null),
+            lengthCm: Joi.number().min(0).allow(null),
+            popularity: Joi.number().min(0)
+        }).unknown(false);
+
+        const { error } = updateSchema.validate(productData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
-        if (existingProduct) {
+        // Перевірка унікальності slug
+        const existingProductWithSlug = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+        if (existingProductWithSlug) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
+        // Перевірка бренду
         if (productData.brand) {
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
@@ -1263,6 +1313,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
+        // Перевірка матеріалу
         if (productData.material) {
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
@@ -1271,20 +1322,25 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        const category = await Category.findOne({ name: productData.category });
-        if (!category) {
-            logger.error('Категорія не знайдено:', productData.category);
-            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
-        }
+        // Перевірка категорії
+        if (productData.category) {
+            const category = await Category.findOne({ name: productData.category });
+            if (!category) {
+                logger.error('Категорія не знайдено:', productData.category);
+                return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+            }
 
-        if (productData.subcategory) {
-            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-            if (!subcategoryExists) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+            // Перевірка підкатегорії
+            if (productData.subcategory) {
+                const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+                if (!subcategoryExists) {
+                    logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                    return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
+                }
             }
         }
 
+        // Перевірка groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1301,10 +1357,10 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
-const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true, runValidators: true });
+        const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true, runValidators: true });
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
-        logger.info('Продукт після оновлення:', product); // Додайте логування
+        logger.info('Продукт після оновлення:', product);
         const products = await Product.find();
         broadcast('products', products);
         res.json(product);

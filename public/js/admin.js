@@ -5796,12 +5796,34 @@ async function uploadBulkPrices() {
                 const id = parseInt(parts[0].trim());
                 const product = products.find(p => p.id === id);
                 if (!product) continue;
+
+                // Створюємо копію продукту без заборонених полів
+                const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
+
+                // Очищаємо вкладені об’єкти sizes від _id
+                if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                    cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                        const { _id, ...cleanedSize } = size;
+                        return cleanedSize;
+                    });
+                }
+
+                // Очищаємо вкладені об’єкти colors від _id
+                if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                    cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                        const { _id, ...cleanedColor } = color;
+                        return cleanedColor;
+                    });
+                }
+
+                // Оновлюємо ціну або розміри в очищеному об’єкті
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
+                        cleanedProduct.price = price;
                         const response = await fetchWithAuth(`/api/products/${id}`, {
                             method: 'PUT',
-                            body: JSON.stringify({ price })
+                            body: JSON.stringify(cleanedProduct)
                         });
                         if (response.ok) {
                             updated++;
@@ -5815,12 +5837,12 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (sizePart.startsWith('Розмір: ')) {
                         const size = sizePart.replace('Розмір: ', '').trim();
-                        const sizeObj = product.sizes.find(s => s.name === size);
+                        const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
                             const response = await fetchWithAuth(`/api/products/${id}`, {
                                 method: 'PUT',
-                                body: JSON.stringify({ sizes: product.sizes })
+                                body: JSON.stringify(cleanedProduct)
                             });
                             if (response.ok) {
                                 updated++;
@@ -5832,7 +5854,8 @@ async function uploadBulkPrices() {
                     }
                 }
             }
-            // Reload products from server to ensure consistency
+
+            // Перезавантажуємо продукти з сервера для забезпечення консистентності
             await loadProducts(productsCurrentPage, productsPerPage);
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
