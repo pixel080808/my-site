@@ -1,6 +1,6 @@
 let activeTab = 'products';
 let newProduct = {
-    type: 'simple', 
+    type: 'simple',
     photos: [],
     colors: [],
     sizes: [],
@@ -10,12 +10,13 @@ let newProduct = {
 };
 let session;
 let products = [];
+let originalProducts = []; // Додаємо цю змінну
 let categories = [];
 let orders = [];
 let slides = [];
 let settings = {
     name: '',
-    baseUrl: '', // Додано для базового URL
+    baseUrl: '',
     logo: '',
     logoWidth: '',
     favicon: '',
@@ -60,12 +61,13 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             products = [];
+            originalProducts = []; // Ініціалізуємо порожнім масивом
             productsCurrentPage = 1;
             renderAdmin('products');
             return;
         }
 
-        productsCurrentPage = page; // Гарантуємо, що поточна сторінка оновлена
+        productsCurrentPage = page;
         const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
         if (!response.ok) {
             const text = await response.text();
@@ -84,10 +86,10 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!data.products || !Array.isArray(data.products) || !data.total) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
-        products = data.products; // Оновлюємо лише поточну сторінку
+        products = data.products;
+        originalProducts = [...products]; // Зберігаємо копію для скидання пошуку
         totalProducts = data.total;
 
-        // Присвоєння послідовних номерів на основі поточної сторінки
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -99,6 +101,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         console.error('Помилка завантаження товарів:', e);
         showNotification('Помилка завантаження товарів: ' + e.message);
         products = [];
+        originalProducts = []; // У разі помилки також скидаємо originalProducts
         productsCurrentPage = 1;
         renderAdmin('products');
     }
@@ -1331,11 +1334,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.warn('Елемент #search-button не знайдено');
-    }
-
-    // Store original products for reset
-    if (!originalProducts) {
-        originalProducts = [...products];
     }
 });
 
@@ -5667,7 +5665,8 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        loadProducts(productsCurrentPage, productsPerPage);
+        products = [...originalProducts]; // Відновлюємо оригінальний список
+        renderAdmin('products', { total: totalProducts });
     }
     resetInactivityTimer();
 }
