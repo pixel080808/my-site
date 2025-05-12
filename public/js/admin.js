@@ -442,10 +442,11 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             });
         }
 
-        // Фільтруємо замовлення, якщо є statusFilter
+        // Фільтруємо замовлення з уніфікованим списком статусів
+        const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
         let filteredOrders = statusFilter
-            ? ordersData.filter(order => order.status === statusFilter)
-            : ordersData;
+            ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
+            : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
         // Оновлюємо totalOrders для пагінації
         totalOrders = filteredOrders.length;
@@ -5678,10 +5679,11 @@ async function sortOrders(sortType) {
             throw new Error('Очікувався масив замовлень');
         }
 
-        // Фільтруємо замовлення, якщо є statusFilter
+        // Фільтруємо замовлення з уніфікованим списком статусів
+        const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
         let filteredOrders = statusFilter
-            ? ordersData.filter(order => order.status === statusFilter)
-            : ordersData;
+            ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
+            : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
         // Сортуємо всі замовлення
         filteredOrders.sort((a, b) => {
@@ -5893,6 +5895,7 @@ function changeOrderStatus(index) {
                 <h3>Змінити статус замовлення #${order.orderNumber || (index + 1)}</h3>
                 <p>Поточний статус: ${order.status || 'Н/Д'}</p>
                 <select id="new-order-status">
+                    <option value="Усі статуси" ${!order.status || order.status === 'Усі статуси' ? 'selected' : ''}>Усі статуси</option>
                     <option value="Нове замовлення" ${order.status === 'Нове замовлення' ? 'selected' : ''}>Нове замовлення</option>
                     <option value="В обробці" ${order.status === 'В обробці' ? 'selected' : ''}>В обробці</option>
                     <option value="Відправлено" ${order.status === 'Відправлено' ? 'selected' : ''}>Відправлено</option>
