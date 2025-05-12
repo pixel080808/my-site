@@ -393,7 +393,7 @@ async function updateSocials() {
     }
 }
 
-async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
+async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '', sortType = 'date-desc') {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
@@ -406,7 +406,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
 
         ordersCurrentPage = page;
         const queryParams = new URLSearchParams({ limit: 9999 });
-        if (statusFilter) {
+        if (statusFilter && statusFilter !== 'Усі статуси') {
             queryParams.set('status', encodeURIComponent(statusFilter));
         }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
@@ -442,13 +442,25 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
-        let filteredOrders = statusFilter
-            ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
-            : ordersData.filter(order => unifiedStatuses.includes(order.status));
+        let filteredOrders = ordersData.filter(order => unifiedStatuses.includes(order.status));
+
+        if (statusFilter && statusFilter !== 'Усі статуси') {
+            filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+        }
+
+        // Сортування
+        const [key, direction] = sortType.split('-');
+        filteredOrders.sort((a, b) => {
+            let valA = key === 'date' ? new Date(a[key]) : a[key];
+            let valB = key === 'date' ? new Date(b[key]) : b[key];
+            if (direction === 'asc') {
+                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+            } else {
+                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+            }
+        });
 
         totalOrders = filteredOrders.length;
-
-        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const start = (page - 1) * limit;
         const end = start + limit;
@@ -457,7 +469,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
         });
 
-        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
+        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter, 'sortType =', sortType);
         renderAdmin('orders', { total: totalOrders });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
@@ -5676,54 +5688,10 @@ function clearSearch() {
 }
 
 async function sortOrders(sortType) {
-    const [key, direction] = sortType.split('-');
-    try {
-        const statusFilter = document.getElementById('order-status-filter')?.value || '';
-        const queryParams = new URLSearchParams({ limit: 9999 });
-        if (statusFilter) {
-            queryParams.set('status', encodeURIComponent(statusFilter));
-        }
-        const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
-        if (!response.ok) {
-            throw new Error('Не вдалося завантажити замовлення для сортування');
-        }
-
-        const data = await response.json();
-        let ordersData = data.orders || data;
-        if (!Array.isArray(ordersData)) {
-            throw new Error('Очікувався масив замовлень');
-        }
-
-        const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
-        let filteredOrders = statusFilter
-            ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
-            : ordersData.filter(order => unifiedStatuses.includes(order.status));
-
-        filteredOrders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
-            if (direction === 'asc') {
-                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-            } else {
-                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
-            }
-        });
-
-        totalOrders = filteredOrders.length;
-
-        const start = (ordersCurrentPage - 1) * ordersPerPage;
-        const end = start + ordersPerPage;
-        orders = filteredOrders.slice(start, end).map(order => {
-            const cachedNumber = orderNumberCache.get(order._id);
-            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
-        });
-
-        renderAdmin('orders', { total: totalOrders });
-        resetInactivityTimer();
-    } catch (e) {
-        console.error('Помилка сортування замовлень:', e);
-        showNotification('Помилка сортування замовлень: ' + e.message);
-    }
+    const statusFilter = document.getElementById('order-status-filter')?.value || '';
+    ordersCurrentPage = 1;
+    await loadOrders(ordersCurrentPage, ordersPerPage, statusFilter, sortType);
+    resetInactivityTimer();
 }
 
 async function uploadBulkPrices() {
@@ -6050,8 +6018,9 @@ async function deleteOrder(index) {
 
 function filterOrders() {
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
+    const sortType = document.getElementById('order-sort')?.value || 'date-desc';
     ordersCurrentPage = 1;
-    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
+    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter, sortType);
     resetInactivityTimer();
 }
 
