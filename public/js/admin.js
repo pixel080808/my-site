@@ -3966,18 +3966,46 @@ async function importProductsBackup() {
                     return;
                 }
 
-                // Send to server first
+                // Очищаємо дані перед відправкою: видаляємо заборонені поля
+                const cleanedProductsData = productsData.map(product => {
+                    const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
+
+                    // Очищаємо вкладені об’єкти sizes
+                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                            const { _id, ...cleanedSize } = size;
+                            return cleanedSize;
+                        });
+                    }
+
+                    // Очищаємо вкладені об’єкти colors
+                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                            const { _id, ...cleanedColor } = color;
+                            return cleanedColor;
+                        });
+                    }
+
+                    // Очищаємо groupProducts від ObjectId (залишаємо просто рядки)
+                    if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
+                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
+                    }
+
+                    return cleanedProduct;
+                });
+
+                // Відправляємо очищені дані на сервер
                 const response = await fetchWithAuth('/api/import/products', {
                     method: 'POST',
-                    body: JSON.stringify(productsData),
+                    body: JSON.stringify(cleanedProductsData),
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!response.ok) {
                     throw new Error(await response.text());
                 }
 
-                // Sync local state and reload
-                products = productsData;
+                // Синхронізуємо локальний стан і перезавантажуємо продукти
+                products = cleanedProductsData;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
                 await loadProducts(productsCurrentPage, productsPerPage);
                 renderAdmin();

@@ -3057,19 +3057,49 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
         }
 
         const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
-        products.forEach(p => logger.info('Імпортований продукт:', p)); // Логування перед валідацією
+        products.forEach(p => logger.info('Імпортований продукт:', p));
 
-        products.forEach(product => {
+        // Очищаємо продукти перед валідацією
+        const cleanedProducts = products.map(product => {
+            const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
+
+            // Очищаємо вкладені об’єкти sizes
+            if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                    const { _id, ...cleanedSize } = size;
+                    return cleanedSize;
+                });
+            }
+
+            // Очищаємо вкладені об’єкти colors
+            if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                    const { _id, ...cleanedColor } = color;
+                    return cleanedColor;
+                });
+            }
+
+            // Переконуємося, що groupProducts — це масив рядків
+            if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
+                cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
+            }
+
+            return cleanedProduct;
+        });
+
+        // Валідація очищених продуктів
+        for (const product of cleanedProducts) {
             const { error } = productSchemaValidation.validate(product, { abortEarly: false });
             if (error) {
                 logger.error('Помилка валідації продукту при імпорті:', error.details);
                 throw new Error('Помилка валідації продуктів: ' + JSON.stringify(error.details));
             }
-        });
+        }
 
+        // Видаляємо старі продукти і вставляємо нові
         await Product.deleteMany({});
-        const result = await Product.insertMany(products);
-        logger.info('Успішно імпортовано продуктів:', result.length); // Логування результату
+        const result = await Product.insertMany(cleanedProducts);
+        logger.info('Успішно імпортовано продуктів:', result.length);
 
         try {
             await fs.promises.unlink(req.file.path);
