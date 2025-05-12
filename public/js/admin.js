@@ -405,9 +405,9 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' });
+        const queryParams = new URLSearchParams({ limit: 9999 }); // Завантажуємо всі замовлення
         if (statusFilter) {
-            queryParams.set('status', statusFilter);
+            queryParams.set('status', encodeURIComponent(statusFilter)); // Кодування для коректної передачі кирилиці
         }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
@@ -428,7 +428,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         if (!Array.isArray(ordersData)) {
             console.error('Очікувався масив замовлень, отримано:', data);
             orders = [];
-            showNotification('Отримано некоректні дані замовлень');
+            showNotification('Отрирано некоректні дані замовлень');
             ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
@@ -436,22 +436,31 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
 
         // Ініціалізація кешу номерів, якщо порожній
         if (orderNumberCache.size === 0) {
-            const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
-            const allOrdersData = await allOrdersResponse.json();
-            const allOrders = allOrdersData.orders || allOrdersData;
-            allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-            allOrders.forEach((order, idx) => {
+            ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
+            ordersData.forEach((order, idx) => {
                 orderNumberCache.set(order._id, idx + 1);
             });
         }
 
-        // Оновлюємо лише поточну сторінку з номерами з кешу
-        orders = ordersData.map(order => {
+        // Фільтруємо замовлення, якщо є statusFilter
+        let filteredOrders = statusFilter
+            ? ordersData.filter(order => order.status === statusFilter)
+            : ordersData;
+
+        // Оновлюємо totalOrders для пагінації
+        totalOrders = filteredOrders.length;
+
+        // Сортування за замовчуванням (за датою, новіші першими)
+        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Виконуємо пагінацію на клієнтській стороні
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        orders = filteredOrders.slice(start, end).map(order => {
             const cachedNumber = orderNumberCache.get(order._id);
             return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
         });
 
-        totalOrders = data.total !== undefined ? data.total : orders.length;
         console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
         renderAdmin('orders', { total: totalOrders });
     } catch (e) {
@@ -5650,20 +5659,58 @@ function clearSearch() {
     resetInactivityTimer();
 }
 
-function sortOrders(sortType) {
+async function sortOrders(sortType) {
     const [key, direction] = sortType.split('-');
-    orders.sort((a, b) => {
-        let valA = key === 'date' ? new Date(a[key]) : a[key];
-        let valB = key === 'date' ? new Date(b[key]) : b[key];
-        if (direction === 'asc') {
-            return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-        } else {
-            return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+    try {
+        const statusFilter = document.getElementById('order-status-filter')?.value || '';
+        const queryParams = new URLSearchParams({ limit: 9999 });
+        if (statusFilter) {
+            queryParams.set('status', encodeURIComponent(statusFilter));
         }
-    });
-    ordersCurrentPage = 1; // Оновлюємо поточну сторінку
-    renderAdmin('orders'); // Перерендерюємо з оновленим сортуванням
-    resetInactivityTimer();
+        const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
+        if (!response.ok) {
+            throw new Error('Не вдалося завантажити замовлення для сортування');
+        }
+
+        const data = await response.json();
+        let ordersData = data.orders || data;
+        if (!Array.isArray(ordersData)) {
+            throw new Error('Очікувався масив замовлень');
+        }
+
+        // Фільтруємо замовлення, якщо є statusFilter
+        let filteredOrders = statusFilter
+            ? ordersData.filter(order => order.status === statusFilter)
+            : ordersData;
+
+        // Сортуємо всі замовлення
+        filteredOrders.sort((a, b) => {
+            let valA = key === 'date' ? new Date(a[key]) : a[key];
+            let valB = key === 'date' ? new Date(b[key]) : b[key];
+            if (direction === 'asc') {
+                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+            } else {
+                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+            }
+        });
+
+        // Оновлюємо totalOrders
+        totalOrders = filteredOrders.length;
+
+        // Виконуємо пагінацію
+        const start = (ordersCurrentPage - 1) * ordersPerPage;
+        const end = start + ordersPerPage;
+        orders = filteredOrders.slice(start, end).map(order => {
+            const cachedNumber = orderNumberCache.get(order._id);
+            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
+        });
+
+        renderAdmin('orders', { total: totalOrders });
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка сортування замовлень:', e);
+        showNotification('Помилка сортування замовлень: ' + e.message);
+    }
 }
 
 async function uploadBulkPrices() {
