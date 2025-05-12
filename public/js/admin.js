@@ -3880,7 +3880,11 @@ async function importSiteBackup() {
             };
 
             if (cleanedData.settings) {
-                const { _id, createdAt, updatedAt, __v, ...cleanedSettings } = cleanedData.settings;
+                const { _id, createdAt, updatedAt, __v, storeName, ...cleanedSettings } = cleanedData.settings;
+                // Map storeName to name if storeName exists
+                if (storeName) {
+                    cleanedSettings.name = storeName;
+                }
                 if (cleanedSettings.socials && Array.isArray(cleanedSettings.socials)) {
                     cleanedSettings.socials = cleanedSettings.socials.map(social => {
                         const { _id, ...cleanedSocial } = social;
@@ -4041,7 +4045,12 @@ async function importOrdersBackup() {
             }
 
             const cleanedOrdersData = ordersData.map(order => {
-                const { _id, createdAt, updatedAt, __v, ...cleanedOrder } = order;
+                const { _id, createdAt, updatedAt, __v, orderNumber, ...cleanedOrder } = order;
+                // Clean customer object by removing _id
+                if (cleanedOrder.customer && typeof cleanedOrder.customer === 'object') {
+                    const { _id: customerId, ...cleanedCustomer } = cleanedOrder.customer;
+                    cleanedOrder.customer = cleanedCustomer;
+                }
                 if (cleanedOrder.items && Array.isArray(cleanedOrder.items)) {
                     cleanedOrder.items = cleanedOrder.items.map(item => {
                         const { _id, ...cleanedItem } = item;
@@ -6145,6 +6154,14 @@ function filterOrders() {
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
+function handleOrdersUpdate(data) {
+    orders = data; // Update the orders array
+    totalOrders = data.length; // Update the total orders count
+    if (document.querySelector('#orders.active')) {
+        renderAdmin('orders', { total: totalOrders });
+    }
+}
+
 function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
@@ -6219,7 +6236,7 @@ function connectAdminWebSocket(attempt = 1) {
                     updateSubcategories();
                 }
             } else if (type === 'orders' && Array.isArray(data)) {
-                handleOrdersUpdate(data);
+                handleOrdersUpdate(data); // This now works with the defined function
             } else if (type === 'slides' && Array.isArray(data)) {
                 slides = data;
                 if (document.querySelector('#site-editing.active')) {
