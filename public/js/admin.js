@@ -5797,6 +5797,12 @@ async function uploadBulkPrices() {
                 const product = products.find(p => p.id === id);
                 if (!product) continue;
 
+                // Переконуємося, що у продукту є _id
+                if (!product._id) {
+                    console.error(`Продукт з id ${id} не має _id`);
+                    continue;
+                }
+
                 // Створюємо копію продукту без заборонених полів
                 const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
 
@@ -5821,7 +5827,7 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${id}`, {
+                        const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо _id замість id
                             method: 'PUT',
                             body: JSON.stringify(cleanedProduct)
                         });
@@ -5840,7 +5846,7 @@ async function uploadBulkPrices() {
                         const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${id}`, {
+                            const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо _id замість id
                                 method: 'PUT',
                                 body: JSON.stringify(cleanedProduct)
                             });
