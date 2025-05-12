@@ -3952,15 +3952,34 @@ function importSiteBackup() {
     }
 }
 
-function importProductsBackup() {
+async function importProductsBackup() {
     const file = document.getElementById('import-products-file').files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                products = JSON.parse(e.target.result);
+                const productsData = JSON.parse(e.target.result);
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+
+                // Send to server first
+                const response = await fetchWithAuth('/api/import/products', {
+                    method: 'POST',
+                    body: JSON.stringify(productsData),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                // Sync local state and reload
+                products = productsData;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
-                await loadProducts(productsCurrentPage, productsPerPage); // Синхронізація з сервером
+                await loadProducts(productsCurrentPage, productsPerPage);
                 renderAdmin();
                 showNotification('Бекап товарів імпортовано!');
                 unsavedChanges = false;
@@ -5752,18 +5771,15 @@ async function uploadBulkPrices() {
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
-                        product.price = price;
-                        try {
-                            const response = await fetchWithAuth(`/api/products/${id}`, {
-                                method: 'PUT',
-                                body: JSON.stringify(product)
-                            });
-                            if (!response.ok) {
-                                throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
-                            }
+                        const response = await fetchWithAuth(`/api/products/${id}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ price })
+                        });
+                        if (response.ok) {
                             updated++;
-                        } catch (e) {
-                            console.error(`Помилка оновлення товару #${id}:`, e);
+                        } else {
+                            const text = await response.text();
+                            console.error(`Помилка оновлення товару #${id}: ${text}`);
                         }
                     }
                 } else if (product.type === 'mattresses') {
@@ -5774,23 +5790,21 @@ async function uploadBulkPrices() {
                         const sizeObj = product.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            try {
-                                const response = await fetchWithAuth(`/api/products/${id}`, {
-                                    method: 'PUT',
-                                    body: JSON.stringify(product)
-                                });
-                                if (!response.ok) {
-                                    throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
-                                }
+                            const response = await fetchWithAuth(`/api/products/${id}`, {
+                                method: 'PUT',
+                                body: JSON.stringify({ sizes: product.sizes })
+                            });
+                            if (response.ok) {
                                 updated++;
-                            } catch (e) {
-                                console.error(`Помилка оновлення товару #${id}:`, e);
+                            } else {
+                                const text = await response.text();
+                                console.error(`Помилка оновлення товару #${id}: ${text}`);
                             }
                         }
                     }
                 }
             }
-            // Перезавантажуємо дані з сервера
+            // Reload products from server to ensure consistency
             await loadProducts(productsCurrentPage, productsPerPage);
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
