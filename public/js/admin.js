@@ -3952,27 +3952,28 @@ function importSiteBackup() {
     }
 }
 
-    function importProductsBackup() {
-        const file = document.getElementById('import-products-file').files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    products = JSON.parse(e.target.result);
-                    localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
-                    renderAdmin();
-                    showNotification('Бекап товарів імпортовано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                } catch (err) {
-                    alert('Помилка імпорту: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        } else {
-            alert('Виберіть файл для імпорту!');
-        }
+function importProductsBackup() {
+    const file = document.getElementById('import-products-file').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                products = JSON.parse(e.target.result);
+                localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
+                await loadProducts(productsCurrentPage, productsPerPage); // Синхронізація з сервером
+                renderAdmin();
+                showNotification('Бекап товарів імпортовано!');
+                unsavedChanges = false;
+                resetInactivityTimer();
+            } catch (err) {
+                alert('Помилка імпорту: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    } else {
+        alert('Виберіть файл для імпорту!');
     }
+}
 
     function importOrdersBackup() {
         const file = document.getElementById('import-orders-file').files[0];
@@ -5789,7 +5790,8 @@ async function uploadBulkPrices() {
                     }
                 }
             }
-            renderAdmin('products');
+            // Перезавантажуємо дані з сервера
+            await loadProducts(productsCurrentPage, productsPerPage);
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
         } catch (err) {

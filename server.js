@@ -1301,9 +1301,10 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
-        const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
+const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true, runValidators: true });
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
+        logger.info('Продукт після оновлення:', product); // Додайте логування
         const products = await Product.find();
         broadcast('products', products);
         res.json(product);
@@ -3055,21 +3056,20 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
 
-        let products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
-        products = products.map(product => {
-            const { id, _id, __v, ...cleanedProduct } = product;
-            return cleanedProduct;
-        });
+        const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        products.forEach(p => logger.info('Імпортований продукт:', p)); // Логування перед валідацією
 
-        for (const product of products) {
+        products.forEach(product => {
             const { error } = productSchemaValidation.validate(product, { abortEarly: false });
             if (error) {
                 logger.error('Помилка валідації продукту при імпорті:', error.details);
-                return res.status(400).json({ error: 'Помилка валідації продуктів', details: error.details });
+                throw new Error('Помилка валідації продуктів: ' + JSON.stringify(error.details));
             }
-        }
+        });
+
         await Product.deleteMany({});
-        await Product.insertMany(products);
+        const result = await Product.insertMany(products);
+        logger.info('Успішно імпортовано продуктів:', result.length); // Логування результату
 
         try {
             await fs.promises.unlink(req.file.path);
