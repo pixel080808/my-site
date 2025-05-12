@@ -3926,31 +3926,120 @@ function exportSiteBackup() {
         resetInactivityTimer();
     }
 
-function importSiteBackup() {
-    const file = document.getElementById('import-site-file').files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                settings = data.settings || settings;
-                categories = data.categories || categories;
-                slides = data.slides || slides;
-                localStorage.setItem('settings', LZString.compressToUTF16(JSON.stringify(settings)));
-                localStorage.setItem('categories', LZString.compressToUTF16(JSON.stringify(categories)));
-                localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                renderAdmin();
-                showNotification('Бекап сайту імпортовано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } catch (err) {
-                alert('Помилка імпорту: ' + err.message);
-            }
-        };
-        reader.readAsText(file);
-    } else {
-        alert('Виберіть файл для імпорту!');
+async function importSiteBackup() {
+    const file = document.getElementById('import-site-file')?.files[0];
+    if (!file) {
+        showNotification('Виберіть файл для імпорту!');
+        return;
     }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            // Парсимо дані з файлу
+            const data = JSON.parse(e.target.result);
+            if (!data.settings && !data.categories && !data.slides) {
+                throw new Error('Файл не містить даних для імпорту (settings, categories або slides)');
+            }
+
+            // Очищаємо дані перед відправкою: видаляємо заборонені поля
+            const cleanedData = {
+                settings: data.settings || {},
+                categories: data.categories || [],
+                slides: data.slides || []
+            };
+
+            // Очищаємо settings
+            if (cleanedData.settings) {
+                const { _id, createdAt, updatedAt, __v, ...cleanedSettings } = cleanedData.settings;
+
+                // Очищаємо вкладені об’єкти socials
+                if (cleanedSettings.socials && Array.isArray(cleanedSettings.socials)) {
+                    cleanedSettings.socials = cleanedSettings.socials.map(social => {
+                        const { _id, ...cleanedSocial } = social;
+                        return cleanedSocial;
+                    });
+                }
+
+                // Очищаємо filters і orderFields
+                if (cleanedSettings.filters && Array.isArray(cleanedSettings.filters)) {
+                    cleanedSettings.filters = cleanedSettings.filters.map(filter => {
+                        const { _id, ...cleanedFilter } = filter;
+                        return cleanedFilter;
+                    });
+                }
+                if (cleanedSettings.orderFields && Array.isArray(cleanedSettings.orderFields)) {
+                    cleanedSettings.orderFields = cleanedSettings.orderFields.map(field => {
+                        const { _id, ...cleanedField } = field;
+                        return cleanedField;
+                    });
+                }
+
+                cleanedData.settings = cleanedSettings;
+            }
+
+            // Очищаємо categories
+            if (cleanedData.categories && Array.isArray(cleanedData.categories)) {
+                cleanedData.categories = cleanedData.categories.map(category => {
+                    const { _id, createdAt, updatedAt, __v, ...cleanedCategory } = category;
+                    // Очищаємо вкладені subcategories
+                    if (cleanedCategory.subcategories && Array.isArray(cleanedCategory.subcategories)) {
+                        cleanedCategory.subcategories = cleanedCategory.subcategories.map(sub => {
+                            const { _id, ...cleanedSub } = sub;
+                            return cleanedSub;
+                        });
+                    }
+                    return cleanedCategory;
+                });
+            }
+
+            // Очищаємо slides
+            if (cleanedData.slides && Array.isArray(cleanedData.slides)) {
+                cleanedData.slides = cleanedData.slides.map(slide => {
+                    const { _id, createdAt, updatedAt, __v, ...cleanedSlide } = slide;
+                    return cleanedSlide;
+                });
+            }
+
+            // Відправляємо дані на сервер через FormData, оскільки ендпоінт очікує файл
+            const formData = new FormData();
+            const blob = new Blob([JSON.stringify(cleanedData)], { type: 'application/json' });
+            formData.append('file', blob, 'site-backup.json');
+
+            const response = await fetchWithAuth('/api/import/site', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`Помилка імпорту даних сайту: ${errorData}`);
+            }
+
+            // Синхронізуємо локальний стан із сервером
+            await Promise.all([
+                loadSettings(),
+                loadCategories(),
+                loadSlides()
+            ]);
+
+            renderAdmin();
+            showNotification('Бекап сайту імпортовано!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка імпорту сайту:', err);
+            showNotification('Помилка імпорту сайту: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
 }
 
 async function importProductsBackup() {
@@ -4023,27 +4112,79 @@ async function importProductsBackup() {
     }
 }
 
-    function importOrdersBackup() {
-        const file = document.getElementById('import-orders-file').files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    orders = JSON.parse(e.target.result);
-                    localStorage.setItem('orders', LZString.compressToUTF16(JSON.stringify(orders)));
-                    renderAdmin();
-                    showNotification('Бекап замовлень імпортовано!');
-                    unsavedChanges = false;
-                    resetInactivityTimer();
-                } catch (err) {
-                    alert('Помилка імпорту: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        } else {
-            alert('Виберіть файл для імпорту!');
-        }
+async function importOrdersBackup() {
+    const file = document.getElementById('import-orders-file')?.files[0];
+    if (!file) {
+        showNotification('Виберіть файл для імпорту!');
+        return;
     }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            // Парсимо дані з файлу
+            const ordersData = JSON.parse(e.target.result);
+            if (!Array.isArray(ordersData)) {
+                throw new Error('Файл не містить масиву замовлень');
+            }
+
+            // Очищаємо дані перед відправкою: видаляємо заборонені поля
+            const cleanedOrdersData = ordersData.map(order => {
+                const { _id, createdAt, updatedAt, __v, ...cleanedOrder } = order;
+
+                // Очищаємо вкладені об’єкти items
+                if (cleanedOrder.items && Array.isArray(cleanedOrder.items)) {
+                    cleanedOrder.items = cleanedOrder.items.map(item => {
+                        const { _id, ...cleanedItem } = item;
+                        // Очищаємо вкладений об’єкт color у item
+                        if (cleanedItem.color && typeof cleanedItem.color === 'object') {
+                            const { _id: colorId, ...cleanedColor } = cleanedItem.color;
+                            cleanedItem.color = cleanedColor;
+                        }
+                        return cleanedItem;
+                    });
+                }
+
+                return cleanedOrder;
+            });
+
+            // Відправляємо дані на сервер через FormData, оскільки ендпоінт очікує файл
+            const formData = new FormData();
+            const blob = new Blob([JSON.stringify(cleanedOrdersData)], { type: 'application/json' });
+            formData.append('file', blob, 'orders-backup.json');
+
+            const response = await fetchWithAuth('/api/import/orders', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`Помилка імпорту замовлень: ${errorData}`);
+            }
+
+            // Синхронізуємо локальний стан із сервером
+            const statusFilter = document.getElementById('order-status-filter')?.value || '';
+            await loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
+
+            renderAdmin();
+            showNotification('Бекап замовлень імпортовано!');
+            unsavedChanges = false;
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка імпорту замовлень:', err);
+            showNotification('Помилка імпорту замовлень: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
 
     function generateSitemap() {
         const baseUrl = settings.baseUrl || 'https://www.example.com';
