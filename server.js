@@ -1241,7 +1241,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         // Знаходимо продукт за числовим id
-        const existingProduct = await Product.findOne({ id: parseInt(req.params.id) });
+        const existingProduct = await Product.findOne({ id: req.params.id }); // Змінено з parseInt на req.params.id
         if (!existingProduct) {
             logger.error('Продукт не знайдено:', req.params.id);
             return res.status(404).json({ error: 'Товар не знайдено' });
@@ -1358,7 +1358,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         const product = await Product.findOneAndUpdate(
-            { id: parseInt(req.params.id) }, // Оновлюємо за числовим id
+            { id: req.params.id }, // Змінено з parseInt(req.params.id) на req.params.id
             productData,
             { new: true, runValidators: true }
         );

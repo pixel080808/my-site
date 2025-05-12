@@ -61,14 +61,15 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             products = [];
-            originalProducts = []; // Ініціалізуємо порожнім масивом
+            originalProducts = [];
             productsCurrentPage = 1;
             renderAdmin('products');
             return;
         }
 
         productsCurrentPage = page;
-        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
+        // Завантажуємо всі продукти для обробки цін
+        const response = await fetchWithAuth(`/api/products?page=1&limit=10000`); // Збільшуємо ліміт
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -87,7 +88,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
         products = data.products;
-        originalProducts = [...products]; // Зберігаємо копію для скидання пошуку
+        originalProducts = [...products];
         totalProducts = data.total;
 
         const globalIndex = (page - 1) * limit + 1;
@@ -101,7 +102,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         console.error('Помилка завантаження товарів:', e);
         showNotification('Помилка завантаження товарів: ' + e.message);
         products = [];
-        originalProducts = []; // У разі помилки також скидаємо originalProducts
+        originalProducts = [];
         productsCurrentPage = 1;
         renderAdmin('products');
     }
@@ -5794,10 +5795,13 @@ async function uploadBulkPrices() {
                 const parts = line.split(',');
                 if (parts.length < 4) continue;
                 const id = parseInt(parts[0].trim());
-                const product = products.find(p => p.id === id);
-                if (!product) continue;
+                const product = products.find(p => p.id === id); // Шукаємо за числовим id
+                if (!product) {
+                    console.error(`Продукт з id ${id} не знайдено в масиві products`);
+                    continue;
+                }
 
-                // Переконуємося, що у продукту є _id
+                // Переконуємося, що у продукту є _id (для логів, але не використовуємо в URL)
                 if (!product._id) {
                     console.error(`Продукт з id ${id} не має _id`);
                     continue;
@@ -5827,7 +5831,7 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо product._id замість id
+                        const response = await fetchWithAuth(`/api/products/${id}`, { // Використовуємо id замість product._id
                             method: 'PUT',
                             body: JSON.stringify(cleanedProduct)
                         });
@@ -5846,7 +5850,7 @@ async function uploadBulkPrices() {
                         const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо product._id замість id
+                            const response = await fetchWithAuth(`/api/products/${id}`, { // Використовуємо id замість product._id
                                 method: 'PUT',
                                 body: JSON.stringify(cleanedProduct)
                             });
