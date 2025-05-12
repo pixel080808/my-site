@@ -5827,7 +5827,7 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${product._id}`, {
+                        const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо product._id замість id
                             method: 'PUT',
                             body: JSON.stringify(cleanedProduct)
                         });
@@ -5846,7 +5846,7 @@ async function uploadBulkPrices() {
                         const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${product._id}`, {
+                            const response = await fetchWithAuth(`/api/products/${product._id}`, { // Використовуємо product._id замість id
                                 method: 'PUT',
                                 body: JSON.stringify(cleanedProduct)
                             });

@@ -1240,8 +1240,8 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        // Знаходимо продукт, щоб перевірити його тип
-        const existingProduct = await Product.findById(req.params.id);
+        // Знаходимо продукт за числовим id
+        const existingProduct = await Product.findOne({ id: parseInt(req.params.id) });
         if (!existingProduct) {
             logger.error('Продукт не знайдено:', req.params.id);
             return res.status(404).json({ error: 'Товар не знайдено' });
@@ -1298,7 +1298,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         }
 
         // Перевірка унікальності slug
-        const existingProductWithSlug = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+        const existingProductWithSlug = await Product.findOne({ slug: productData.slug, _id: { $ne: existingProduct._id } });
         if (existingProductWithSlug) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
@@ -1357,7 +1357,11 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
-        const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true, runValidators: true });
+        const product = await Product.findOneAndUpdate(
+            { id: parseInt(req.params.id) }, // Оновлюємо за числовим id
+            productData,
+            { new: true, runValidators: true }
+        );
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
         logger.info('Продукт після оновлення:', product);
