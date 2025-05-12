@@ -405,9 +405,9 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ limit: 9999 }); // Завантажуємо всі замовлення
+        const queryParams = new URLSearchParams({ limit: 9999 });
         if (statusFilter) {
-            queryParams.set('status', encodeURIComponent(statusFilter)); // Кодування для коректної передачі кирилиці
+            queryParams.set('status', encodeURIComponent(statusFilter));
         }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
@@ -434,7 +434,6 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             return;
         }
 
-        // Ініціалізація кешу номерів, якщо порожній
         if (orderNumberCache.size === 0) {
             ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
             ordersData.forEach((order, idx) => {
@@ -442,19 +441,15 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             });
         }
 
-        // Фільтруємо замовлення з уніфікованим списком статусів
         const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
         let filteredOrders = statusFilter
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        // Оновлюємо totalOrders для пагінації
         totalOrders = filteredOrders.length;
 
-        // Сортування за замовчуванням (за датою, новіші першими)
         filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Виконуємо пагінацію на клієнтській стороні
         const start = (page - 1) * limit;
         const end = start + limit;
         orders = filteredOrders.slice(start, end).map(order => {
@@ -1796,7 +1791,6 @@ function renderAdmin(section = activeTab, data = {}) {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
 
     try {
-        // Оновлення полів налаштувань
         const storeName = document.getElementById('store-name');
         if (storeName) storeName.value = settings.name || '';
         else console.warn('Елемент #store-name не знайдено');
@@ -2003,6 +1997,27 @@ function renderAdmin(section = activeTab, data = {}) {
                         `;
                     }).join('')
                     : '<p>Замовлення відсутні</p>';
+
+                const orderControls = document.getElementById('order-controls');
+                if (orderControls) {
+                    orderControls.innerHTML = `
+                        <select id="order-status-filter" onchange="filterOrders()">
+                            <option value="Усі статуси">Усі статуси</option>
+                            <option value="Нове замовлення">Нове замовлення</option>
+                            <option value="В обробці">В обробці</option>
+                            <option value="Відправлено">Відправлено</option>
+                            <option value="Доставлено">Доставлено</option>
+                            <option value="Скасовано">Скасовано</option>
+                        </select>
+                        <select id="order-sort" onchange="sortOrders(this.value)">
+                            <option value="date-desc">Дата (новіші)</option>
+                            <option value="date-asc">Дата (старіші)</option>
+                            <option value="total-desc">Сума (спадання)</option>
+                            <option value="total-asc">Сума (зростання)</option>
+                        </select>
+                    `;
+                }
+
                 const totalItems = data.total !== undefined ? data.total : totalOrders;
                 renderPagination(totalItems, ordersPerPage, 'order-pagination', ordersCurrentPage);
             } else {
@@ -5679,13 +5694,11 @@ async function sortOrders(sortType) {
             throw new Error('Очікувався масив замовлень');
         }
 
-        // Фільтруємо замовлення з уніфікованим списком статусів
         const unifiedStatuses = ['Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано'];
         let filteredOrders = statusFilter
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        // Сортуємо всі замовлення
         filteredOrders.sort((a, b) => {
             let valA = key === 'date' ? new Date(a[key]) : a[key];
             let valB = key === 'date' ? new Date(b[key]) : b[key];
@@ -5696,10 +5709,8 @@ async function sortOrders(sortType) {
             }
         });
 
-        // Оновлюємо totalOrders
         totalOrders = filteredOrders.length;
 
-        // Виконуємо пагінацію
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
         orders = filteredOrders.slice(start, end).map(order => {
@@ -6039,8 +6050,8 @@ async function deleteOrder(index) {
 
 function filterOrders() {
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
-    ordersCurrentPage = 1; // Скидаємо на першу сторінку при фільтрації
-    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter); // Завантажуємо з урахуванням фільтру
+    ordersCurrentPage = 1;
+    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
     resetInactivityTimer();
 }
 
