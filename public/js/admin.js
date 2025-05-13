@@ -2583,12 +2583,12 @@ async function saveEditedCategory(categoryId) {
 
         console.log('Значення полів форми:', { name, slug, photo, visible });
 
-        if (!name) {
+        if (!name || name === '') {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug) {
+        if (!slug || slug === '') {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
@@ -2967,7 +2967,7 @@ async function moveCategoryUp(index) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
@@ -3018,7 +3018,7 @@ async function moveCategoryDown(index) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
@@ -3113,12 +3113,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         console.log('Значення полів форми:', { name, slug, photo, visible });
 
-        if (!name) {
+        if (!name || name === '') {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug) {
+        if (!slug || slug === '') {
             showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
