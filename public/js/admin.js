@@ -2948,6 +2948,17 @@ async function moveCategoryUp(index) {
             return;
         }
 
+        // Перевірка унікальності order
+        const orders = categories.map(c => c.order);
+        const newOrders = [...orders];
+        newOrders[index] = index - 1;
+        newOrders[index - 1] = index;
+        if (new Set(newOrders).size !== newOrders.length) {
+            console.error('Дублювання значень order у категоріях:', newOrders);
+            showNotification('Значення order повинні бути унікальними.');
+            return;
+        }
+
         const categoryOrder = {
             categories: [
                 { _id: category1._id, order: index - 1 },
@@ -2996,6 +3007,17 @@ async function moveCategoryDown(index) {
         if (!isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
+            return;
+        }
+
+        // Перевірка унікальності order
+        const orders = categories.map(c => c.order);
+        const newOrders = [...orders];
+        newOrders[index] = index + 1;
+        newOrders[index + 1] = index;
+        if (new Set(newOrders).size !== newOrders.length) {
+            console.error('Дублювання значень order у категоріях:', newOrders);
+            showNotification('Значення order повинні бути унікальними.');
             return;
         }
 
@@ -3591,6 +3613,17 @@ async function moveSubcategoryUp(categoryId, subIndex) {
             return;
         }
 
+        // Перевірка унікальності order
+        const orders = category.subcategories.map(s => s.order);
+        const newOrders = [...orders];
+        newOrders[subIndex] = subIndex - 1;
+        newOrders[subIndex - 1] = subIndex;
+        if (new Set(newOrders).size !== newOrders.length) {
+            console.error('Дублювання значень order у підкатегоріях:', newOrders);
+            showNotification('Значення order повинні бути унікальними.');
+            return;
+        }
+
         const subcategoriesOrder = {
             subcategories: [
                 { _id: sub1._id, order: subIndex - 1 },
@@ -3643,6 +3676,17 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
+            return;
+        }
+
+        // Перевірка унікальності order
+        const orders = category.subcategories.map(s => s.order);
+        const newOrders = [...orders];
+        newOrders[subIndex] = subIndex + 1;
+        newOrders[subIndex + 1] = subIndex;
+        if (new Set(newOrders).size !== newOrders.length) {
+            console.error('Дублювання значень order у підкатегоріях:', newOrders);
+            showNotification('Значення order повинні бути унікальними.');
             return;
         }
 
