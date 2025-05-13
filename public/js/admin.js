@@ -2582,12 +2582,12 @@ async function saveEditedCategory(categoryId) {
 
         console.log('Значення полів форми:', { name, slug, photo, visible });
 
-        if (!name || name === '') {
+        if (!name || name.trim().length === 0) {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug === '') {
+        if (!slug || slug.trim().length === 0) {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
@@ -2975,10 +2975,9 @@ async function moveCategoryUp(index) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
@@ -3036,10 +3035,9 @@ async function moveCategoryDown(index) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
+            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
 
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
@@ -3131,12 +3129,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         console.log('Значення полів форми:', { name, slug, photo, visible });
 
-        if (!name || name === '') {
+        if (!name || name.trim().length === 0) {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug === '') {
+        if (!slug || slug.trim().length === 0) {
             showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
@@ -3637,10 +3635,9 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
@@ -3702,10 +3699,9 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [

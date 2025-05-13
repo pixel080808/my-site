@@ -1733,9 +1733,17 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: 'Значення order повинні бути унікальними' });
         }
 
+        // Перевірка формату ObjectId
+        for (const id of categoryIds) {
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                logger.error(`Невірний формат ID категорії: ${id}`);
+                return res.status(400).json({ error: `Невірний формат ID категорії: ${id}` });
+            }
+        }
+
         const bulkOps = categories.map(({ _id, order }) => ({
             updateOne: {
-                filter: { _id },
+                filter: { _id: mongoose.Types.ObjectId(_id) },
                 update: { $set: { order } }
             }
         }));
@@ -2018,6 +2026,14 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         }
 
         const subcategoryIds = subcategories.map(item => item._id);
+        // Перевірка формату ObjectId для підкатегорій
+        for (const id of subcategoryIds) {
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                logger.error(`Невірний формат ID підкатегорії: ${id}`);
+                return res.status(400).json({ error: `Невірний формат ID підкатегорії: ${id}` });
+            }
+        }
+
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
             logger.error('Не всі підкатегорії знайдені:', {
