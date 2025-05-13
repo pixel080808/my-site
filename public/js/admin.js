@@ -3558,7 +3558,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
@@ -3602,7 +3602,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
             throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
         }
