@@ -2555,7 +2555,6 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Додаємо затримку для гарантії, що DOM оновлено
         await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('category-name');
@@ -2681,7 +2680,7 @@ async function saveEditedCategory(categoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
-        showNotification('Не вдалося оновити категорію: ' + err.message);
+        showNotification('Не вдалося оновити категорію: ' + (err.message || 'Невідома помилка'));
     }
 }
 
@@ -2940,7 +2939,6 @@ async function moveCategoryUp(index) {
         const category1 = categories[index];
         const category2 = categories[index - 1];
 
-        // Перевірка формату ID
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         if (!isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
@@ -2948,7 +2946,6 @@ async function moveCategoryUp(index) {
             return;
         }
 
-        // Перевірка унікальності order
         const orders = categories.map(c => c.order);
         const newOrders = [...orders];
         newOrders[index] = index - 1;
@@ -2978,9 +2975,10 @@ async function moveCategoryUp(index) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
@@ -3002,7 +3000,6 @@ async function moveCategoryDown(index) {
         const category1 = categories[index];
         const category2 = categories[index + 1];
 
-        // Перевірка формату ID
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         if (!isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
@@ -3010,7 +3007,6 @@ async function moveCategoryDown(index) {
             return;
         }
 
-        // Перевірка унікальності order
         const orders = categories.map(c => c.order);
         const newOrders = [...orders];
         newOrders[index] = index + 1;
@@ -3040,9 +3036,10 @@ async function moveCategoryDown(index) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
@@ -3107,7 +3104,6 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        // Додаємо затримку для гарантії, що DOM оновлено
         await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('subcategory-name');
@@ -3229,7 +3225,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
-        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
+        showNotification('Не вдалося оновити підкатегорію: ' + (err.message || 'Невідома помилка'));
     }
 }
 
@@ -3605,7 +3601,6 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         const sub1 = category.subcategories[subIndex];
         const sub2 = category.subcategories[subIndex - 1];
 
-        // Перевірка формату ID
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
@@ -3613,7 +3608,6 @@ async function moveSubcategoryUp(categoryId, subIndex) {
             return;
         }
 
-        // Перевірка унікальності order
         const orders = category.subcategories.map(s => s.order);
         const newOrders = [...orders];
         newOrders[subIndex] = subIndex - 1;
@@ -3643,9 +3637,10 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
@@ -3671,7 +3666,6 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         const sub1 = category.subcategories[subIndex];
         const sub2 = category.subcategories[subIndex + 1];
 
-        // Перевірка формату ID
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
@@ -3679,7 +3673,6 @@ async function moveSubcategoryDown(categoryId, subIndex) {
             return;
         }
 
-        // Перевірка унікальності order
         const orders = category.subcategories.map(s => s.order);
         const newOrders = [...orders];
         newOrders[subIndex] = subIndex + 1;
@@ -3709,9 +3702,10 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
