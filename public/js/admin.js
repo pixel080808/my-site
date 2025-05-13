@@ -2368,34 +2368,60 @@ function validateFile(file) {
 
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
-    if (category) {
-        const modal = document.getElementById('modal');
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Редагувати категорію #${categoryId}</h3>
-                <input type="text" id="category-name" value="${category.name}"><br/>
-                <label for="category-name">Назва категорії</label>
-                <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input type="text" id="category-photo-url" value="${category.photo || ''}" placeholder="URL фотографії"><br/>
-                <label for="category-photo-url">URL фотографії</label>
-                <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-                <label for="category-photo-file">Завантажте фотографію</label>
-                <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="category-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
-                    <button onclick="closeModal()">Скасувати</button>
-                </div>
-            </div>
-        `;
-        modal.classList.add('active');
-        console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
-        resetInactivityTimer();
+    if (!category) {
+        showNotification('Категорія не знайдена!');
+        return;
     }
+
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        console.error('Модальне вікно не знайдено!');
+        showNotification('Модальне вікно не знайдено.');
+        return;
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати категорію</h3>
+            <input type="text" id="category-name" value="${category.name || ''}"><br/>
+            <label for="category-name">Назва категорії</label>
+            <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
+            <label for="category-slug">Шлях категорії</label>
+            <input type="text" id="category-photo-url" value="${category.photo || ''}"><br/>
+            <label for="category-photo-url">URL фотографії</label>
+            <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <label for="category-photo-file">Завантажте фотографію</label>
+            <select id="category-visible">
+                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+            </select><br/>
+            <label for="category-visible">Видимість</label>
+            <div class="modal-actions">
+                <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
+                <button onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
+
+    // Додаємо перевірку ініціалізації елементів
+    setTimeout(() => {
+        const nameInput = document.getElementById('category-name');
+        const slugInput = document.getElementById('category-slug');
+        const photoUrlInput = document.getElementById('category-photo-url');
+        const photoFileInput = document.getElementById('category-photo-file');
+        const visibleSelect = document.getElementById('category-visible');
+        console.log('Елементи форми після відкриття модального вікна:', {
+            nameInput: nameInput ? nameInput.value : null,
+            slugInput: slugInput ? slugInput.value : null,
+            photoUrlInput: photoUrlInput ? photoUrlInput.value : null,
+            photoFileInput: !!photoFileInput,
+            visibleSelect: visibleSelect ? visibleSelect.value : null
+        });
+    }, 0);
+
+    resetInactivityTimer();
 }
 
 function openAddCategoryModal() {
@@ -2538,6 +2564,8 @@ async function saveEditedCategory(categoryId) {
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
+
+        console.log('Значення полів форми:', { name, slug, photo, visible });
 
         if (!name) {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
@@ -3042,6 +3070,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
+        console.log('Значення полів форми:', { name, slug, photo, visible });
+
         if (!name) {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
@@ -3283,9 +3313,9 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати підкатегорію</h3>
-            <input type="text" id="subcategory-name" value="${subcategory.name}"><br/>
+            <input type="text" id="subcategory-name" value="${subcategory.name || ''}"><br/>
             <label for="subcategory-name">Назва підкатегорії</label>
-            <input type="text" id="subcategory-slug" value="${subcategory.slug}"><br/>
+            <input type="text" id="subcategory-slug" value="${subcategory.slug || ''}"><br/>
             <label for="subcategory-slug">Шлях підкатегорії</label>
             <input type="text" id="subcategory-photo-url" value="${subcategory.photo || ''}"><br/>
             <label for="subcategory-photo-url">URL фотографії</label>
@@ -3304,6 +3334,23 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     `;
     modal.classList.add('active');
     console.log('Модальне вікно для редагування підкатегорії відкрито:', { categoryId, subcategoryId });
+
+    // Додаємо перевірку ініціалізації елементів
+    setTimeout(() => {
+        const nameInput = document.getElementById('subcategory-name');
+        const slugInput = document.getElementById('subcategory-slug');
+        const photoUrlInput = document.getElementById('subcategory-photo-url');
+        const photoFileInput = document.getElementById('subcategory-photo-file');
+        const visibleSelect = document.getElementById('subcategory-visible');
+        console.log('Елементи форми після відкриття модального вікна:', {
+            nameInput: nameInput ? nameInput.value : null,
+            slugInput: slugInput ? slugInput.value : null,
+            photoUrlInput: photoUrlInput ? photoUrlInput.value : null,
+            photoFileInput: !!photoFileInput,
+            visibleSelect: visibleSelect ? visibleSelect.value : null
+        });
+    }, 0);
+
     resetInactivityTimer();
 }
 

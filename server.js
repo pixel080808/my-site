@@ -1666,11 +1666,42 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 const categoryOrderSchema = Joi.object({
     categories: Joi.array().items(
         Joi.object({
-            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-            order: Joi.number().integer().min(0).required()
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+                'string.pattern.base': 'Невірний формат ID категорії: {#value}',
+                'any.required': 'ID категорії є обов’язковим'
+            }),
+            order: Joi.number().integer().min(0).required().messages({
+                'number.base': 'Порядок категорії має бути числом',
+                'number.integer': 'Порядок категорії має бути цілим числом',
+                'number.min': 'Порядок категорії не може бути меншим за 0',
+                'any.required': 'Порядок категорії є обов’язковим'
+            })
         })
-    ).required()
-});
+    ).min(1).required().messages({
+        'array.min': 'Має бути принаймні одна категорія для оновлення порядку',
+        'any.required': 'Масив категорій є обов’язковим'
+    })
+}).options({ stripUnknown: true });
+
+const subcategoryOrderSchemaValidation = Joi.object({
+    subcategories: Joi.array().items(
+        Joi.object({
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+                'string.pattern.base': 'Невірний формат ID підкатегорії: {#value}',
+                'any.required': 'ID підкатегорії є обов’язковим'
+            }),
+            order: Joi.number().integer().min(0).required().messages({
+                'number.base': 'Порядок підкатегорії має бути числом',
+                'number.integer': 'Порядок підкатегорії має бути цілим числом',
+                'number.min': 'Порядок підкатегорії не може бути меншим за 0',
+                'any.required': 'Порядок підкатегорії є обов’язковим'
+            })
+        })
+    ).min(1).required().messages({
+        'array.min': 'Має бути принаймні одна підкатегорія для оновлення порядку',
+        'any.required': 'Масив підкатегорій є обов’язковим'
+    })
+}).options({ stripUnknown: true });
 
 app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
@@ -1876,15 +1907,6 @@ app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection,
         logger.error('Помилка при додаванні підкатегорії:', err);
         res.status(400).json({ error: 'Невірні дані', details: err.message });
     }
-});
-
-const subcategoryOrderSchemaValidation = Joi.object({
-    subcategories: Joi.array().items(
-        Joi.object({
-            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-            order: Joi.number().integer().min(0).required()
-        })
-    ).required()
 });
 
 app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticateToken, csrfProtection, async (req, res) => {
