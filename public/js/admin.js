@@ -1997,11 +1997,20 @@ function renderCategoriesAdmin() {
         return;
     }
 
-    categoryList.innerHTML = categories.map((category, index) => `
+    // Сортуємо категорії за полем order
+    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+
+    categoryList.innerHTML = sortedCategories.map((category, index) => {
+        // Сортуємо підкатегорії за полем order
+        const sortedSubcategories = (category.subcategories && Array.isArray(category.subcategories) 
+            ? [...category.subcategories].sort((a, b) => a.order - b.order) 
+            : []);
+
+        return `
         <div class="category-item">
             <div class="category-order-controls">
                 <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
+                <button class="move-btn move-down" data-index="${index}" ${index === sortedCategories.length - 1 ? 'disabled' : ''}>↓</button>
             </div>
             ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
             <div class="category-details">
@@ -2012,11 +2021,11 @@ function renderCategoriesAdmin() {
                 </div>
             </div>
             <div class="subcategories">
-                ${category.subcategories && Array.isArray(category.subcategories) && category.subcategories.length > 0 ? category.subcategories.map((sub, subIndex) => `
+                ${sortedSubcategories.length > 0 ? sortedSubcategories.map((sub, subIndex) => `
                     <div class="subcategory-item">
                         <div class="subcategory-order-controls">
                             <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === (category.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
+                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === sortedSubcategories.length - 1 ? 'disabled' : ''}>↓</button>
                         </div>
                         ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
                         <div class="subcategory-details">
@@ -2030,7 +2039,7 @@ function renderCategoriesAdmin() {
                 `).join('') : '<p>Підкатегорії відсутні</p>'}
             </div>
         </div>
-    `).join('');
+    `}).join('');
 
     const newCategoryList = categoryList.cloneNode(true);
     categoryList.parentNode.replaceChild(newCategoryList, categoryList);
@@ -2052,7 +2061,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
+            const category = sortedCategories.find(c => c._id === catId);
             if (category && category.subcategories) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2062,7 +2071,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
+            const category = sortedCategories.find(c => c._id === catId);
             if (category && category.subcategories) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2084,7 +2093,7 @@ function renderCategoriesAdmin() {
     if (subcatSelect) {
         const currentValue = subcatSelect.value;
         subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
-            categories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+            sortedCategories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
         subcatSelect.value = currentValue || '';
     }
 
@@ -2092,7 +2101,7 @@ function renderCategoriesAdmin() {
     if (productCatSelect) {
         const currentValue = productCatSelect.value;
         productCatSelect.innerHTML = '<option value="">Без категорії</option>' +
-            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            sortedCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
         productCatSelect.value = currentValue || '';
         updateSubcategories();
     }
@@ -2603,7 +2612,7 @@ async function saveEditedCategory(categoryId) {
             }))
         };
 
-        console.log('Надсилаємо дані для оновлення категорії:', JSON.stringify(updatedCategory, null, 2));
+        console.log('Надсилаємо запит на оновлення категорії:', JSON.stringify(updatedCategory, null, 2));
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2614,13 +2623,9 @@ async function saveEditedCategory(categoryId) {
             body: JSON.stringify(updatedCategory)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити категорію: ${errorData.error || response.statusText}`);
-        }
-
         const updatedCategoryData = await response.json();
+        console.log('Отримано оновлені дані категорії:', updatedCategoryData);
+
         const index = categories.findIndex(c => c._id === categoryId);
         if (index !== -1) {
             categories[index] = updatedCategoryData;
@@ -3106,7 +3111,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             order: subcategory.order || 0
         };
 
-        console.log('Надсилаємо дані для оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
+        console.log('Надсилаємо запит на оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3117,13 +3122,9 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             body: JSON.stringify(updatedSubcategory)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося оновити підкатегорію: ${errorData.error || response.statusText}`);
-        }
-
         const updatedCategory = await response.json();
+        console.log('Отримано оновлені дані категорії:', updatedCategory);
+
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
             categories[catIndex] = updatedCategory;
@@ -6160,9 +6161,20 @@ function filterOrders() {
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
+function handleCategoriesUpdate(data) {
+    categories = data; // Оновлюємо масив категорій
+    console.log('Оновлено categories:', categories);
+    renderCategoriesAdmin(); // Оновлюємо відображення категорій
+    const modal = document.getElementById('modal');
+    if (modal && modal.classList.contains('active')) {
+        updateSubcategories(); // Оновлюємо підкатегорії в модальному вікні, якщо воно відкрите
+    }
+}
+
 function handleOrdersUpdate(data) {
-    orders = data; // Update the orders array
-    totalOrders = data.length; // Update the total orders count
+    orders = data; // Оновлюємо масив замовлень
+    totalOrders = data.length; // Оновлюємо кількість замовлень
+    console.log('Оновлено orders:', orders);
     if (document.querySelector('#orders.active')) {
         renderAdmin('orders', { total: totalOrders });
     }
@@ -6228,31 +6240,31 @@ function connectAdminWebSocket(attempt = 1) {
             console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
             if (type === 'settings' && data) {
                 settings = { ...settings, ...data };
+                console.log('Оновлено settings:', settings);
                 renderSettingsAdmin();
             } else if (type === 'products' && Array.isArray(data)) {
                 products = data;
+                console.log('Оновлено products:', products);
                 if (document.querySelector('#products.active')) {
                     renderAdmin('products', { total: totalProducts });
                 }
             } else if (type === 'categories' && Array.isArray(data)) {
-                categories = data;
-                renderCategoriesAdmin();
-                const modal = document.getElementById('modal');
-                if (modal && modal.classList.contains('active')) {
-                    updateSubcategories();
-                }
+                handleCategoriesUpdate(data); // Використовуємо функцію для обробки оновлення категорій
             } else if (type === 'orders' && Array.isArray(data)) {
-                handleOrdersUpdate(data); // This now works with the defined function
+                handleOrdersUpdate(data); // Уже використовується
             } else if (type === 'slides' && Array.isArray(data)) {
                 slides = data;
+                console.log('Оновлено slides:', slides);
                 if (document.querySelector('#site-editing.active')) {
                     renderSlidesAdmin();
                 }
             } else if (type === 'materials' && Array.isArray(data)) {
                 materials = data;
+                console.log('Оновлено materials:', materials);
                 updateMaterialOptions();
             } else if (type === 'brands' && Array.isArray(data)) {
                 brands = data;
+                console.log('Оновлено brands:', brands);
                 updateBrandOptions();
             } else if (type === 'error') {
                 console.error('WebSocket помилка від сервера:', data);

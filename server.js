@@ -1554,24 +1554,21 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         let categoryData = { ...req.body };
         logger.info('Отримано дані для оновлення категорії:', JSON.stringify(categoryData, null, 2));
 
-        // Перейменовуємо img у photo, якщо img є, а photo немає
         if (categoryData.img && !categoryData.photo) {
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
 
-        // Обробка subcategories: дозволяємо часткове оновлення
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
                     sub.photo = sub.img;
                     delete sub.img;
                 }
-                return { ...sub }; // Дозволяємо часткове оновлення
+                return { ...sub };
             });
         }
 
-        // Видаляємо зайві поля
         delete categoryData._id;
         delete categoryData.__v;
 
@@ -1643,7 +1640,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        // Оновлюємо поля категорії
         category.name = categoryData.name || category.name;
         category.slug = categoryData.slug || category.slug;
         category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;
