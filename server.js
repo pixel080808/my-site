@@ -1464,9 +1464,9 @@ const categorySchemaValidation = Joi.object({
             photo: Joi.string().uri().allow('').optional(),
             visible: Joi.boolean().default(true),
             order: Joi.number().integer().min(0).default(0)
-        })
-    ).default([])
-});
+        }).unknown(true)
+    ).default([]).optional()
+}).unknown(true);
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),

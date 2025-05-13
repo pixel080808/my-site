@@ -2531,7 +2531,7 @@ async function saveEditedCategory(categoryId) {
         let photo = photoUrlInput.value.trim();
 
         if (!name) {
-            showNotification('Назва категорії є обов’язковою!');
+            showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
@@ -2549,6 +2549,11 @@ async function saveEditedCategory(categoryId) {
         const existingCategories = await slugCheck.json();
         if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
             showNotification('Шлях категорії має бути унікальним!');
+            return;
+        }
+
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
@@ -2593,7 +2598,7 @@ async function saveEditedCategory(categoryId) {
                 name: sub.name,
                 slug: sub.slug,
                 photo: sub.photo || '',
-                visible: sub.visible,
+                visible: sub.visible !== undefined ? sub.visible : true,
                 order: sub.order || 0
             }))
         };
@@ -2884,10 +2889,10 @@ async function moveCategoryUp(index) {
     if (index <= 0 || index >= categories.length) return;
     try {
         const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx === index ? idx - 1 : idx === index - 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            categories: [
+                { _id: categories[index]._id, order: index - 1 },
+                { _id: categories[index - 1]._id, order: index }
+            ]
         };
 
         console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
@@ -2908,9 +2913,8 @@ async function moveCategoryUp(index) {
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
-        categories.forEach((cat, idx) => {
-            cat.order = idx;
-        });
+        categories[index].order = index;
+        categories[index - 1].order = index - 1;
 
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
@@ -2925,10 +2929,10 @@ async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
         const categoryOrder = {
-            categories: categories.map((cat, idx) => ({
-                _id: cat._id,
-                order: idx === index ? idx + 1 : idx === index + 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            categories: [
+                { _id: categories[index]._id, order: index + 1 },
+                { _id: categories[index + 1]._id, order: index }
+            ]
         };
 
         console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
@@ -2949,9 +2953,8 @@ async function moveCategoryDown(index) {
         }
 
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
-        categories.forEach((cat, idx) => {
-            cat.order = idx;
-        });
+        categories[index].order = index;
+        categories[index + 1].order = index + 1;
 
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
@@ -3035,7 +3038,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         let photo = photoUrlInput.value.trim();
 
         if (!name) {
-            showNotification('Назва підкатегорії є обов’язковою!');
+            showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
@@ -3046,6 +3049,11 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
@@ -3484,10 +3492,10 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     if (!category || subIndex <= 0 || subIndex >= category.subcategories.length) return;
     try {
         const subcategoriesOrder = {
-            subcategories: category.subcategories.map((subcat, idx) => ({
-                _id: subcat._id,
-                order: idx === subIndex ? idx - 1 : idx === subIndex - 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            subcategories: [
+                { _id: category.subcategories[subIndex]._id, order: subIndex - 1 },
+                { _id: category.subcategories[subIndex - 1]._id, order: subIndex }
+            ]
         };
 
         console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
@@ -3511,9 +3519,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
             category.subcategories[subIndex - 1],
             category.subcategories[subIndex]
         ];
-        category.subcategories.forEach((subcat, idx) => {
-            subcat.order = idx;
-        });
+        category.subcategories[subIndex].order = subIndex;
+        category.subcategories[subIndex - 1].order = subIndex - 1;
 
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
@@ -3529,10 +3536,10 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     if (!category || subIndex >= category.subcategories.length - 1 || subIndex < 0) return;
     try {
         const subcategoriesOrder = {
-            subcategories: category.subcategories.map((subcat, idx) => ({
-                _id: subcat._id,
-                order: idx === subIndex ? idx + 1 : idx === subIndex + 1 ? idx : idx
-            })).filter(item => item._id && /^[0-9a-fA-F]{24}$/.test(item._id))
+            subcategories: [
+                { _id: category.subcategories[subIndex]._id, order: subIndex + 1 },
+                { _id: category.subcategories[subIndex + 1]._id, order: subIndex }
+            ]
         };
 
         console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
@@ -3556,9 +3563,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
             category.subcategories[subIndex + 1],
             category.subcategories[subIndex]
         ];
-        category.subcategories.forEach((subcat, idx) => {
-            subcat.order = idx;
-        });
+        category.subcategories[subIndex].order = subIndex;
+        category.subcategories[subIndex + 1].order = subIndex + 1;
 
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
