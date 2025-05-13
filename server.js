@@ -1708,6 +1708,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
     session.startTransaction();
     try {
         const { categories } = req.body;
+        logger.info('Отримано дані для оновлення порядку категорій:', JSON.stringify(categories, null, 2));
 
         const { error } = categoryOrderSchema.validate({ categories }, { abortEarly: false });
         if (error) {
@@ -2002,6 +2003,8 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         }
 
         const { subcategories } = req.body;
+        logger.info('Отримано дані для оновлення порядку підкатегорій:', JSON.stringify(subcategories, null, 2));
+
         const { error } = subcategoryOrderSchemaValidation.validate({ subcategories }, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації порядку підкатегорій:', error.details);

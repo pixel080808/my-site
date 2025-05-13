@@ -151,6 +151,19 @@ async function loadCategories() {
             showNotification('Отримано некоректні дані категорій');
         } else {
             categories = data;
+            // Додаємо перевірку формату ID
+            const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+            const invalidCategories = categories.filter(cat => !isValidId(cat._id));
+            const invalidSubcategories = categories.flatMap(cat => 
+                (cat.subcategories || []).filter(sub => !isValidId(sub._id))
+            );
+            if (invalidCategories.length > 0 || invalidSubcategories.length > 0) {
+                console.error('Знайдено категорії або підкатегорії з некоректним форматом ID:', {
+                    invalidCategories,
+                    invalidSubcategories
+                });
+                showNotification('Деякі категорії або підкатегорії мають некоректний формат ID.');
+            }
             console.log('Категорії завантажено:', categories);
             renderCategoriesAdmin();
         }
@@ -2542,6 +2555,9 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
+        // Додаємо затримку для гарантії, що DOM оновлено
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
@@ -2921,10 +2937,21 @@ async function saveCategoryEdit(categoryId) {
 async function moveCategoryUp(index) {
     if (index <= 0 || index >= categories.length) return;
     try {
+        const category1 = categories[index];
+        const category2 = categories[index - 1];
+
+        // Перевірка формату ID
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        if (!isValidId(category1._id) || !isValidId(category2._id)) {
+            console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
+            showNotification('Невірний формат ID категорії. Перевірте дані.');
+            return;
+        }
+
         const categoryOrder = {
             categories: [
-                { _id: categories[index]._id, order: index - 1 },
-                { _id: categories[index - 1]._id, order: index }
+                { _id: category1._id, order: index - 1 },
+                { _id: category2._id, order: index }
             ]
         };
 
@@ -2961,10 +2988,21 @@ async function moveCategoryUp(index) {
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
+        const category1 = categories[index];
+        const category2 = categories[index + 1];
+
+        // Перевірка формату ID
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        if (!isValidId(category1._id) || !isValidId(category2._id)) {
+            console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
+            showNotification('Невірний формат ID категорії. Перевірте дані.');
+            return;
+        }
+
         const categoryOrder = {
             categories: [
-                { _id: categories[index]._id, order: index + 1 },
-                { _id: categories[index + 1]._id, order: index }
+                { _id: category1._id, order: index + 1 },
+                { _id: category2._id, order: index }
             ]
         };
 
@@ -3046,6 +3084,9 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             showSection('admin-login');
             return;
         }
+
+        // Додаємо затримку для гарантії, що DOM оновлено
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3539,10 +3580,21 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex <= 0 || subIndex >= category.subcategories.length) return;
     try {
+        const sub1 = category.subcategories[subIndex];
+        const sub2 = category.subcategories[subIndex - 1];
+
+        // Перевірка формату ID
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
+            console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
+            showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
+            return;
+        }
+
         const subcategoriesOrder = {
             subcategories: [
-                { _id: category.subcategories[subIndex]._id, order: subIndex - 1 },
-                { _id: category.subcategories[subIndex - 1]._id, order: subIndex }
+                { _id: sub1._id, order: subIndex - 1 },
+                { _id: sub2._id, order: subIndex }
             ]
         };
 
@@ -3583,10 +3635,21 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex >= category.subcategories.length - 1 || subIndex < 0) return;
     try {
+        const sub1 = category.subcategories[subIndex];
+        const sub2 = category.subcategories[subIndex + 1];
+
+        // Перевірка формату ID
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
+            console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
+            showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
+            return;
+        }
+
         const subcategoriesOrder = {
             subcategories: [
-                { _id: category.subcategories[subIndex]._id, order: subIndex + 1 },
-                { _id: category.subcategories[subIndex + 1]._id, order: subIndex }
+                { _id: sub1._id, order: subIndex + 1 },
+                { _id: sub2._id, order: subIndex }
             ]
         };
 
