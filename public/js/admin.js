@@ -2895,13 +2895,10 @@ async function moveCategoryUp(index) {
     try {
         const categoryOrder = {
             categories: [
-                { _id: categories[index]._id, order: index - 1, name: categories[index].name, slug: categories[index].slug },
-                { _id: categories[index - 1]._id, order: index, name: categories[index - 1].name, slug: categories[index - 1].slug }
+                { _id: categories[index]._id, order: index - 1 },
+                { _id: categories[index - 1]._id, order: index }
             ]
         };
-
-        console.log('Надсилаємо дані для зміни порядку категорій:', JSON.stringify(categoryOrder, null, 2));
-
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             headers: {
@@ -2910,20 +2907,12 @@ async function moveCategoryUp(index) {
             },
             body: JSON.stringify(categoryOrder)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error((await response.json()).error || 'Не вдалося змінити порядок');
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
         categories[index].order = index;
         categories[index - 1].order = index - 1;
-
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -3494,13 +3483,10 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     try {
         const subcategoriesOrder = {
             subcategories: [
-                { _id: category.subcategories[subIndex]._id, order: subIndex - 1, name: category.subcategories[subIndex].name, slug: category.subcategories[subIndex].slug },
-                { _id: category.subcategories[subIndex - 1]._id, order: subIndex, name: category.subcategories[subIndex - 1].name, slug: category.subcategories[subIndex - 1].slug }
+                { _id: category.subcategories[subIndex]._id, order: subIndex - 1 },
+                { _id: category.subcategories[subIndex - 1]._id, order: subIndex }
             ]
         };
-
-        console.log('Надсилаємо дані для зміни порядку підкатегорій:', JSON.stringify(subcategoriesOrder, null, 2));
-
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
@@ -3509,23 +3495,15 @@ async function moveSubcategoryUp(categoryId, subIndex) {
             },
             body: JSON.stringify(subcategoriesOrder)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error((await response.json()).error || 'Не вдалося змінити порядок');
         [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
             category.subcategories[subIndex - 1],
             category.subcategories[subIndex]
         ];
         category.subcategories[subIndex].order = subIndex;
         category.subcategories[subIndex - 1].order = subIndex - 1;
-
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);

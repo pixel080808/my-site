@@ -1667,7 +1667,7 @@ const categoryOrderSchema = Joi.object({
     categories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
-            order: Joi.number().required()
+            order: Joi.number().integer().min(0).required()
         })
     ).required()
 });
