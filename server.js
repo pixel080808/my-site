@@ -1431,17 +1431,15 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
 });
 
 const categorySchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(255).required().messages({
+    name: Joi.string().trim().min(1).max(255).optional().messages({
         'string.empty': 'Назва категорії є обов’язковою',
         'string.min': 'Назва категорії повинна містити хоча б 1 символ',
-        'string.max': 'Назва категорії не може перевищувати 255 символів',
-        'any.required': 'Назва категорії є обов’язковою'
+        'string.max': 'Назва категорії не може перевищувати 255 символів'
     }),
-    slug: Joi.string().trim().min(1).max(255).required().messages({
+    slug: Joi.string().trim().min(1).max(255).optional().messages({
         'string.empty': 'Шлях категорії є обов’язковим',
         'string.min': 'Шлях категорії повинен містити хоча б 1 символ',
-        'string.max': 'Шлях категорії не може перевищувати 255 символів',
-        'any.required': 'Шлях категорії є обов’язковим'
+        'string.max': 'Шлях категорії не може перевищувати 255 символів'
     }),
     photo: Joi.string().uri().allow('').optional(),
     visible: Joi.boolean().default(true),
@@ -1449,43 +1447,39 @@ const categorySchemaValidation = Joi.object({
     subcategories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-            name: Joi.string().trim().min(1).max(255).required().messages({
+            name: Joi.string().trim().min(1).max(255).optional().messages({
                 'string.empty': 'Назва підкатегорії є обов’язковою',
                 'string.min': 'Назва підкатегорії повинна містити хоча б 1 символ',
-                'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
-                'any.required': 'Назва підкатегорії є обов’язковою'
+                'string.max': 'Назва підкатегорії не може перевищувати 255 символів'
             }),
-            slug: Joi.string().trim().min(1).max(255).required().messages({
+            slug: Joi.string().trim().min(1).max(255).optional().messages({
                 'string.empty': 'Шлях підкатегорії є обов’язковим',
                 'string.min': 'Шлях підкатегорії повинен містити хоча б 1 символ',
-                'string.max': 'Шлях підкатегорії не може перевищувати 255 символів',
-                'any.required': 'Шлях підкатегорії є обов’язковим'
+                'string.max': 'Шлях підкатегорії не може перевищувати 255 символів'
             }),
             photo: Joi.string().uri().allow('').optional(),
             visible: Joi.boolean().default(true),
             order: Joi.number().integer().min(0).default(0)
         }).unknown(true)
     ).default([]).optional()
-}).unknown(true);
+}).unknown(true).options({ stripUnknown: true });
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-    name: Joi.string().trim().min(1).max(255).required().messages({
+    name: Joi.string().trim().min(1).max(255).optional().messages({
         'string.empty': 'Назва підкатегорії є обов’язковою',
         'string.min': 'Назва підкатегорії повинна містити хоча б 1 символ',
-        'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
-        'any.required': 'Назва підкатегорії є обов’язковою'
+        'string.max': 'Назва підкатегорії не може перевищувати 255 символів'
     }),
-    slug: Joi.string().trim().min(1).max(255).required().messages({
+    slug: Joi.string().trim().min(1).max(255).optional().messages({
         'string.empty': 'Шлях підкатегорії є обов’язковим',
         'string.min': 'Шлях підкатегорії повинен містити хоча б 1 символ',
-        'string.max': 'Шлях підкатегорії не може перевищувати 255 символів',
-        'any.required': 'Шлях підкатегорії є обов’язковим'
+        'string.max': 'Шлях підкатегорії не може перевищувати 255 символів'
     }),
     photo: Joi.string().uri().allow('').optional(),
     visible: Joi.boolean().default(true),
     order: Joi.number().integer().min(0).default(0)
-});
+}).options({ stripUnknown: true });
 
 app.get('/api/categories', async (req, res) => {
     try {
@@ -1560,28 +1554,26 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         let categoryData = { ...req.body };
         logger.info('Отримано дані для оновлення категорії:', JSON.stringify(categoryData, null, 2));
 
+        // Перейменовуємо img у photo, якщо img є, а photo немає
         if (categoryData.img && !categoryData.photo) {
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
+
+        // Обробка subcategories: дозволяємо часткове оновлення
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
                     sub.photo = sub.img;
                     delete sub.img;
                 }
-                return sub;
+                return { ...sub }; // Дозволяємо часткове оновлення
             });
         }
 
+        // Видаляємо зайві поля
         delete categoryData._id;
         delete categoryData.__v;
-        if (categoryData.subcategories) {
-            categoryData.subcategories = categoryData.subcategories.map(sub => {
-                const { _id, ...rest } = sub;
-                return rest;
-            });
-        }
 
         const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
         if (error) {
@@ -1651,6 +1643,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Оновлюємо поля категорії
         category.name = categoryData.name || category.name;
         category.slug = categoryData.slug || category.slug;
         category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;

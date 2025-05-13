@@ -2890,8 +2890,8 @@ async function moveCategoryUp(index) {
     try {
         const categoryOrder = {
             categories: [
-                { _id: categories[index]._id, order: index - 1 },
-                { _id: categories[index - 1]._id, order: index }
+                { _id: categories[index]._id, order: index - 1, name: categories[index].name, slug: categories[index].slug },
+                { _id: categories[index - 1]._id, order: index, name: categories[index - 1].name, slug: categories[index - 1].slug }
             ]
         };
 
@@ -2930,8 +2930,8 @@ async function moveCategoryDown(index) {
     try {
         const categoryOrder = {
             categories: [
-                { _id: categories[index]._id, order: index + 1 },
-                { _id: categories[index + 1]._id, order: index }
+                { _id: categories[index]._id, order: index + 1, name: categories[index].name, slug: categories[index].slug },
+                { _id: categories[index + 1]._id, order: index, name: categories[index + 1].name, slug: categories[index + 1].slug }
             ]
         };
 
@@ -3493,8 +3493,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     try {
         const subcategoriesOrder = {
             subcategories: [
-                { _id: category.subcategories[subIndex]._id, order: subIndex - 1 },
-                { _id: category.subcategories[subIndex - 1]._id, order: subIndex }
+                { _id: category.subcategories[subIndex]._id, order: subIndex - 1, name: category.subcategories[subIndex].name, slug: category.subcategories[subIndex].slug },
+                { _id: category.subcategories[subIndex - 1]._id, order: subIndex, name: category.subcategories[subIndex - 1].name, slug: category.subcategories[subIndex - 1].slug }
             ]
         };
 
@@ -3537,8 +3537,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     try {
         const subcategoriesOrder = {
             subcategories: [
-                { _id: category.subcategories[subIndex]._id, order: subIndex + 1 },
-                { _id: category.subcategories[subIndex + 1]._id, order: subIndex }
+                { _id: category.subcategories[subIndex]._id, order: subIndex + 1, name: category.subcategories[subIndex].name, slug: category.subcategories[subIndex].slug },
+                { _id: category.subcategories[subIndex + 1]._id, order: subIndex, name: category.subcategories[subIndex + 1].name, slug: category.subcategories[subIndex + 1].slug }
             ]
         };
 
