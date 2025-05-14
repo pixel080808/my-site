@@ -86,11 +86,12 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!data.products || !Array.isArray(data.products) || !data.total) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
-        // Оновлюємо глобальні змінні
+
+        // Зберігаємо товари для поточної сторінки
         products = data.products;
-        originalProducts = [...products];
         totalProducts = data.total;
 
+        // Оновлюємо глобальні індекси для товарів
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -98,7 +99,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
 
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
         // Передаємо дані напряму
-        renderAdmin('products', { products: data.products, total: data.total });
+        renderAdmin('products', { products: products, total: totalProducts, page: page });
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
         showNotification('Помилка завантаження товарів: ' + e.message);
@@ -1749,6 +1750,74 @@ async function updateAbout() {
     }
 }
 
+Проблема полягає в тому, що при переході на другу сторінку товари не відображаються коректно через помилку в логіці пагінації та оновлення списку товарів. Лог показує, що при запиті на /api/products?page=2&limit=20 товари завантажуються (7 товарів), але список оновлюється неправильно. Основна проблема в функції renderAdmin, де при рендері пагінації для товарів некоректно обробляються paginatedProducts. Давайте виправимо це.
+
+Проблема:
+У renderAdmin для вкладки 'products' використовується products.slice(start, end), але після оновлення products через loadProducts ми не враховуємо, що потрібно зберігати повний список товарів, а не лише для поточної сторінки.
+При пагінації paginatedProducts обрізається неправильно через те, що data.products передається в renderAdmin, але потім замінюється глобальним products, який уже обрізаний до поточної сторінки.
+Рішення:
+Зберігати повний список товарів у loadProducts і передавати його через renderAdmin.
+У renderAdmin коректно обробляти пагінацію, використовуючи повний список товарів.
+Ось виправлені функції:
+
+javascript
+
+Копіювати
+async function loadProducts(page = 1, limit = productsPerPage) {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
+            products = [];
+            originalProducts = [];
+            productsCurrentPage = 1;
+            renderAdmin('products');
+            return;
+        }
+
+        productsCurrentPage = page;
+        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
+        if (!response.ok) {
+            const text = await response.text();
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminToken');
+                session = { isActive: false, timestamp: 0 };
+                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                showSection('admin-login');
+                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
+                return;
+            }
+            throw new Error(`Не вдалося завантажити товари: ${text}`);
+        }
+
+        const data = await response.json();
+        if (!data.products || !Array.isArray(data.products) || !data.total) {
+            throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
+        }
+
+        // Зберігаємо товари для поточної сторінки
+        products = data.products;
+        totalProducts = data.total;
+
+        // Оновлюємо глобальні індекси для товарів
+        const globalIndex = (page - 1) * limit + 1;
+        products.forEach((p, index) => {
+            p.tempNumber = globalIndex + index;
+        });
+
+        console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
+        // Передаємо дані напряму
+        renderAdmin('products', { products: products, total: totalProducts, page: page });
+    } catch (e) {
+        console.error('Помилка завантаження товарів:', e);
+        showNotification('Помилка завантаження товарів: ' + e.message);
+        products = [];
+        originalProducts = [];
+        productsCurrentPage = 1;
+        renderAdmin('products');
+    }
+}
+
 function renderAdmin(section = activeTab, data = {}) {
     console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
 
@@ -1900,16 +1969,14 @@ function renderAdmin(section = activeTab, data = {}) {
     if (section === 'products') {
         const productList = document.getElementById('product-list-admin');
         if (productList) {
-            const start = (productsCurrentPage - 1) * productsPerPage;
-            const end = start + productsPerPage;
-            // Використовуємо data.products, якщо вони передані, інакше глобальний products
-            const paginatedProducts = data.products ? data.products.slice(start, end) : products.slice(start, end);
-            let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
-            paginatedProducts.forEach((p, index) => {
-                p.tempNumber = globalIndex + index;
-            });
-            productList.innerHTML = Array.isArray(paginatedProducts) && paginatedProducts.length > 0
-                ? paginatedProducts.map(p => {
+            // Використовуємо data.products для відображення товарів
+            const currentProducts = data.products || products;
+            const totalItems = data.total !== undefined ? data.total : totalProducts;
+            const currentPage = data.page || productsCurrentPage;
+
+            // Відображаємо товари для поточної сторінки
+            productList.innerHTML = Array.isArray(currentProducts) && currentProducts.length > 0
+                ? currentProducts.map(p => {
                     const priceInfo = p.type === 'simple'
                         ? (p.salePrice && p.salePrice < p.price
                             ? `<s>${p.price} грн</s> ${p.salePrice} грн`
@@ -1934,8 +2001,8 @@ function renderAdmin(section = activeTab, data = {}) {
                     `;
                 }).join('')
                 : '<p>Товари відсутні</p>';
-            const totalItems = data.total !== undefined && data.total !== null ? data.total : totalProducts;
-            renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
+
+            renderPagination(totalItems, productsPerPage, 'pagination', currentPage);
         } else {
             console.warn('Елемент #product-list-admin не знайдено');
         }
