@@ -94,7 +94,13 @@ orderSchema.index({ date: -1 });
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
-    cartId: Joi.string().default(''),
+    cartId: Joi.string()
+        .pattern(/^cart-[a-zA-Z0-9]{9}$/)
+        .allow('')
+        .optional()
+        .messages({
+            'string.pattern.base': 'cartId must be in format cart-xxxxxxxxx (9 alphanumeric characters) or empty string'
+        }),
     date: Joi.date().default(Date.now),
     customer: Joi.object({
         name: Joi.string().min(1).max(255).required(),
@@ -119,7 +125,7 @@ const orderSchemaValidation = Joi.object({
                 value: Joi.string().allow('').optional(),
                 priceChange: Joi.number().default(0),
                 photo: Joi.string().uri().allow('', null).optional(),
-                size: Joi.string().allow('', null).optional() // Дозволяємо size
+                size: Joi.string().allow('', null).optional()
             }).allow(null).optional(),
             _id: Joi.any().optional()
         }).unknown(false)
