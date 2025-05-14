@@ -90,6 +90,8 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         originalProducts = [...products];
         totalProducts = data.total;
 
+        console.log('originalProducts ініціалізовано:', originalProducts);
+
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -678,6 +680,40 @@ async function checkAuth() {
             connectAdminWebSocket();
             startTokenRefreshTimer();
             resetInactivityTimer();
+
+            // Ініціалізація обробників пошуку після завантаження даних
+            const searchInput = document.getElementById('product-search');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const query = searchInput.value.trim();
+                        if (!query) {
+                            clearSearch();
+                        } else {
+                            searchProducts();
+                        }
+                    }
+                });
+                searchInput.addEventListener('input', () => {
+                    if (!searchInput.value) {
+                        clearSearch();
+                    }
+                });
+            }
+
+            const searchButton = document.getElementById('search-button');
+            if (searchButton) {
+                searchButton.addEventListener('click', () => {
+                    const query = document.getElementById('product-search').value.trim();
+                    if (!query) {
+                        clearSearch();
+                    } else {
+                        searchProducts();
+                    }
+                });
+            } else {
+                console.warn('Елемент #search-button не знайдено');
+            }
         } else {
             showSection('admin-login');
             if (response.status === 401 || response.status === 403) {
@@ -5935,10 +5971,15 @@ async function searchProducts(page = 1) {
     resetInactivityTimer();
 }
 
-function clearSearch() {
+async function clearSearch() {
+    console.log('Виклик clearSearch, стан originalProducts:', originalProducts);
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
+        if (typeof originalProducts === 'undefined' || !Array.isArray(originalProducts)) {
+            console.warn('originalProducts не ініціалізований, завантажуємо продукти');
+            await loadProducts(productsCurrentPage, productsPerPage);
+        }
         products = [...originalProducts];
         renderAdmin('products', { total: totalProducts });
     }
