@@ -88,7 +88,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
         products = data.products;
-        originalProducts = [...products];
+        originalProducts = Array.isArray(data.products) ? [...data.products] : [];
         totalProducts = data.total;
 
         console.log('originalProducts ініціалізовано:', originalProducts);
@@ -5977,11 +5977,11 @@ async function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        if (typeof window.originalProducts === 'undefined' || !Array.isArray(window.originalProducts)) {
-            console.warn('originalProducts не ініціалізований, завантажуємо продукти');
+        if (!Array.isArray(originalProducts)) {
+            console.warn('originalProducts не є масивом, завантажуємо продукти');
             await loadProducts(productsCurrentPage, productsPerPage);
         }
-        products = [...window.originalProducts];
+        products = Array.isArray(originalProducts) ? [...originalProducts] : [];
         renderAdmin('products', { total: totalProducts });
     }
     resetInactivityTimer();
@@ -6467,50 +6467,52 @@ function connectAdminWebSocket(attempt = 1) {
         });
     };
 
-    socket.onmessage = (event) => {
-        try {
-            const { type, data } = JSON.parse(event.data);
-            console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
-            if (type === 'settings' && data) {
-                settings = { ...settings, ...data };
-                console.log('Оновлено settings:', settings);
-                renderSettingsAdmin();
-            } else if (type === 'products' && Array.isArray(data)) {
-                products = data;
-                console.log('Оновлено products:', products);
-                if (document.querySelector('#products.active')) {
-                    renderAdmin('products', { total: totalProducts });
-                }
-            } else if (type === 'categories' && Array.isArray(data)) {
-                handleCategoriesUpdate(data); // Використовуємо функцію для обробки оновлення категорій
-            } else if (type === 'orders' && Array.isArray(data)) {
-                handleOrdersUpdate(data); // Уже використовується
-            } else if (type === 'slides' && Array.isArray(data)) {
-                slides = data;
-                console.log('Оновлено slides:', slides);
-                if (document.querySelector('#site-editing.active')) {
-                    renderSlidesAdmin();
-                }
-            } else if (type === 'materials' && Array.isArray(data)) {
-                materials = data;
-                console.log('Оновлено materials:', materials);
-                updateMaterialOptions();
-            } else if (type === 'brands' && Array.isArray(data)) {
-                brands = data;
-                console.log('Оновлено brands:', brands);
-                updateBrandOptions();
-            } else if (type === 'error') {
-                console.error('WebSocket помилка від сервера:', data);
-                showNotification('Помилка WebSocket: ' + data.error);
-                if (data.error.includes('неавторизований')) {
-                    localStorage.removeItem('adminToken');
-                    localStorage.removeItem('adminSession');
-                    showSection('admin-login');
-                }
+socket.onmessage = (event) => {
+    try {
+        const { type, data } = JSON.parse(event.data);
+        console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
+        if (type === 'settings' && data) {
+            settings = { ...settings, ...data };
+            console.log('Оновлено settings:', settings);
+            renderSettingsAdmin();
+        } else if (type === 'products' && Array.isArray(data)) {
+            products = data;
+            originalProducts = [...data]; // Синхронізуємо originalProducts
+            console.log('Оновлено products:', products);
+            console.log('Оновлено originalProducts:', originalProducts);
+            if (document.querySelector('#products.active')) {
+                renderAdmin('products', { total: totalProducts });
             }
-        } catch (e) {
-            console.error('Помилка обробки WebSocket-повідомлення:', e);
-            showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+        } else if (type === 'categories' && Array.isArray(data)) {
+            handleCategoriesUpdate(data);
+        } else if (type === 'orders' && Array.isArray(data)) {
+            handleOrdersUpdate(data);
+        } else if (type === 'slides' && Array.isArray(data)) {
+            slides = data;
+            console.log('Оновлено slides:', slides);
+            if (document.querySelector('#site-editing.active')) {
+                renderSlidesAdmin();
+            }
+        } else if (type === 'materials' && Array.isArray(data)) {
+            materials = data;
+            console.log('Оновлено materials:', materials);
+            updateMaterialOptions();
+        } else if (type === 'brands' && Array.isArray(data)) {
+            brands = data;
+            console.log('Оновлено brands:', brands);
+            updateBrandOptions();
+        } else if (type === 'error') {
+            console.error('WebSocket помилка від сервера:', data);
+            showNotification('Помилка WebSocket: ' + data.error);
+            if (data.error.includes('неавторизований')) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminSession');
+                showSection('admin-login');
+            }
         }
-    };
+    } catch (e) {
+        console.error('Помилка обробки WebSocket-повідомлення:', e);
+        showNotification('Помилка обробки WebSocket-повідомлення: ' + e.message);
+    }
+};
 }
