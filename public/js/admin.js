@@ -68,7 +68,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         productsCurrentPage = page;
-        const response = await fetchWithAuth(`/api/products?page=1&limit=10000`);
+        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -1890,46 +1890,48 @@ function renderAdmin(section = activeTab, data = {}) {
             }
         }
 
-        if (section === 'products') {
-            const productList = document.getElementById('product-list-admin');
-            if (productList) {
-                const start = 0;
-                const end = products.length;
-                let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
-                products.forEach((p, index) => {
-                    p.tempNumber = globalIndex + index;
-                });
-                productList.innerHTML = Array.isArray(products) && products.length > 0
-                    ? products.map(p => {
-                        const priceInfo = p.type === 'simple'
-                            ? (p.salePrice && p.salePrice < p.price
-                                ? `<s>${p.price} грн</s> ${p.salePrice} грн`
-                                : `${p.price || '0'} грн`)
-                            : (p.sizes?.length > 0
-                                ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                                : 'Ціна не вказана');
-                        return `
-                            <div class="product-admin-item">
-                                <span>#${p.tempNumber}</span>
-                                <span>${p.type}</span>
-                                <span>${p.name}</span>
-                                <span>${p.brand || 'Без бренду'}</span>
-                                <span>${priceInfo}</span>
-                                <span>${p.salePrice || '-'}</span>
-                                <div class="status-column">
-                                    <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
-                                    <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                                    <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')
-                    : '<p>Товари відсутні</p>';
-                const totalItems = data.total !== undefined ? data.total : totalProducts;
-                renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
-            } else {
-                console.warn('Елемент #product-list-admin не знайдено');
-            }
+if (section === 'products') {
+    const productList = document.getElementById('product-list-admin');
+    if (productList) {
+        const start = (productsCurrentPage - 1) * productsPerPage;
+        const end = start + productsPerPage;
+        const paginatedProducts = products.slice(start, end); // Відображаємо лише товари для поточної сторінки
+        let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+        paginatedProducts.forEach((p, index) => {
+            p.tempNumber = globalIndex + index;
+        });
+        productList.innerHTML = Array.isArray(paginatedProducts) && paginatedProducts.length > 0
+            ? paginatedProducts.map(p => {
+                const priceInfo = p.type === 'simple'
+                    ? (p.salePrice && p.salePrice < p.price
+                        ? `<s>${p.price} грн</s> ${p.salePrice} грн`
+                        : `${p.price || '0'} грн`)
+                    : (p.sizes?.length > 0
+                        ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                        : 'Ціна не вказана');
+                return `
+                    <div class="product-admin-item">
+                        <span>#${p.tempNumber}</span>
+                        <span>${p.type}</span>
+                        <span>${p.name}</span>
+                        <span>${p.brand || 'Без бренду'}</span>
+                        <span>${priceInfo}</span>
+                        <span>${p.salePrice || '-'}</span>
+                        <div class="status-column">
+                            <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
+                            <button onclick="deleteProduct('${p._id}')">Видалити</button>
+                            <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                        </div>
+                    </div>
+                `;
+            }).join('')
+            : '<p>Товари відсутні</p>';
+        const totalItems = data.total !== undefined ? data.total : totalProducts;
+        renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
+    } else {
+        console.warn('Елемент #product-list-admin не знайдено');
+    }
+}
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
