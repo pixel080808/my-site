@@ -1431,15 +1431,17 @@ app.patch('/api/products/:id/toggle-active', authenticateToken, csrfProtection, 
 });
 
 const categorySchemaValidation = Joi.object({
-    name: Joi.string().trim().min(1).max(255).optional().messages({
+    name: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'Назва категорії є обов’язковою',
         'string.min': 'Назва категорії повинна містити хоча б 1 символ',
-        'string.max': 'Назва категорії не може перевищувати 255 символів'
+        'string.max': 'Назва категорії не може перевищувати 255 символів',
+        'any.required': 'Назва категорії є обов’язковою'
     }),
-    slug: Joi.string().trim().min(1).max(255).optional().messages({
+    slug: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'Шлях категорії є обов’язковим',
         'string.min': 'Шлях категорії повинен містити хоча б 1 символ',
-        'string.max': 'Шлях категорії не може перевищувати 255 символів'
+        'string.max': 'Шлях категорії не може перевищувати 255 символів',
+        'any.required': 'Шлях категорії є обов’язковим'
     }),
     photo: Joi.string().uri().allow('').optional(),
     visible: Joi.boolean().default(true),
@@ -1447,39 +1449,43 @@ const categorySchemaValidation = Joi.object({
     subcategories: Joi.array().items(
         Joi.object({
             _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-            name: Joi.string().trim().min(1).max(255).optional().messages({
+            name: Joi.string().trim().min(1).max(255).required().messages({
                 'string.empty': 'Назва підкатегорії є обов’язковою',
                 'string.min': 'Назва підкатегорії повинна містити хоча б 1 символ',
-                'string.max': 'Назва підкатегорії не може перевищувати 255 символів'
+                'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
+                'any.required': 'Назва підкатегорії є обов’язковою'
             }),
-            slug: Joi.string().trim().min(1).max(255).optional().messages({
+            slug: Joi.string().trim().min(1).max(255).required().messages({
                 'string.empty': 'Шлях підкатегорії є обов’язковим',
                 'string.min': 'Шлях підкатегорії повинен містити хоча б 1 символ',
-                'string.max': 'Шлях підкатегорії не може перевищувати 255 символів'
+                'string.max': 'Шлях підкатегорії не може перевищувати 255 символів',
+                'any.required': 'Шлях підкатегорії є обов’язковим'
             }),
             photo: Joi.string().uri().allow('').optional(),
             visible: Joi.boolean().default(true),
             order: Joi.number().integer().min(0).default(0)
-        }).unknown(true)
-    ).default([]).optional()
-}).unknown(true).options({ stripUnknown: true });
+        })
+    ).default([])
+});
 
 const subcategorySchemaValidation = Joi.object({
     _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
-    name: Joi.string().trim().min(1).max(255).optional().messages({
+    name: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'Назва підкатегорії є обов’язковою',
         'string.min': 'Назва підкатегорії повинна містити хоча б 1 символ',
-        'string.max': 'Назва підкатегорії не може перевищувати 255 символів'
+        'string.max': 'Назва підкатегорії не може перевищувати 255 символів',
+        'any.required': 'Назва підкатегорії є обов’язковою'
     }),
-    slug: Joi.string().trim().min(1).max(255).optional().messages({
+    slug: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'Шлях підкатегорії є обов’язковим',
         'string.min': 'Шлях підкатегорії повинен містити хоча б 1 символ',
-        'string.max': 'Шлях підкатегорії не може перевищувати 255 символів'
+        'string.max': 'Шлях підкатегорії не може перевищувати 255 символів',
+        'any.required': 'Шлях підкатегорії є обов’язковим'
     }),
     photo: Joi.string().uri().allow('').optional(),
     visible: Joi.boolean().default(true),
     order: Joi.number().integer().min(0).default(0)
-}).options({ stripUnknown: true });
+});
 
 app.get('/api/categories', async (req, res) => {
     try {
@@ -1558,19 +1564,24 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
-
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
                     sub.photo = sub.img;
                     delete sub.img;
                 }
-                return { ...sub };
+                return sub;
             });
         }
 
         delete categoryData._id;
         delete categoryData.__v;
+        if (categoryData.subcategories) {
+            categoryData.subcategories = categoryData.subcategories.map(sub => {
+                const { _id, ...rest } = sub;
+                return rest;
+            });
+        }
 
         const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
         if (error) {
@@ -1666,49 +1677,17 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 const categoryOrderSchema = Joi.object({
     categories: Joi.array().items(
         Joi.object({
-            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
-                'string.pattern.base': 'Невірний формат ID категорії: {#value}',
-                'any.required': 'ID категорії є обов’язковим'
-            }),
-            order: Joi.number().integer().min(0).required().messages({
-                'number.base': 'Порядок категорії має бути числом',
-                'number.integer': 'Порядок категорії має бути цілим числом',
-                'number.min': 'Порядок категорії не може бути меншим за 0',
-                'any.required': 'Порядок категорії є обов’язковим'
-            })
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+            order: Joi.number().required()
         })
-    ).min(1).required().messages({
-        'array.min': 'Має бути принаймні одна категорія для оновлення порядку',
-        'any.required': 'Масив категорій є обов’язковим'
-    })
-}).options({ stripUnknown: true });
-
-const subcategoryOrderSchemaValidation = Joi.object({
-    subcategories: Joi.array().items(
-        Joi.object({
-            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
-                'string.pattern.base': 'Невірний формат ID підкатегорії: {#value}',
-                'any.required': 'ID підкатегорії є обов’язковим'
-            }),
-            order: Joi.number().integer().min(0).required().messages({
-                'number.base': 'Порядок підкатегорії має бути числом',
-                'number.integer': 'Порядок підкатегорії має бути цілим числом',
-                'number.min': 'Порядок підкатегорії не може бути меншим за 0',
-                'any.required': 'Порядок підкатегорії є обов’язковим'
-            })
-        })
-    ).min(1).required().messages({
-        'array.min': 'Має бути принаймні одна підкатегорія для оновлення порядку',
-        'any.required': 'Масив підкатегорій є обов’язковим'
-    })
-}).options({ stripUnknown: true });
+    ).required()
+});
 
 app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
         const { categories } = req.body;
-        logger.info('Отримано дані для оновлення порядку категорій:', JSON.stringify(categories, null, 2));
 
         const { error } = categoryOrderSchema.validate({ categories }, { abortEarly: false });
         if (error) {
@@ -1717,13 +1696,6 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
         }
 
         const categoryIds = categories.map(item => item._id);
-        for (const id of categoryIds) {
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                logger.error(`Невірний формат ID категорії: ${id}`);
-                return res.status(400).json({ error: `Невірний формат ID категорії: ${id}` });
-            }
-        }
-
         const foundCategories = await Category.find({ _id: { $in: categoryIds } }).session(session);
         if (foundCategories.length !== categoryIds.length) {
             logger.error('Не всі категорії знайдені:', {
@@ -1742,7 +1714,7 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
 
         const bulkOps = categories.map(({ _id, order }) => ({
             updateOne: {
-                filter: { _id: mongoose.Types.ObjectId(_id) },
+                filter: { _id },
                 update: { $set: { order } }
             }
         }));
@@ -1917,6 +1889,15 @@ app.post('/api/categories/:id/subcategories', authenticateToken, csrfProtection,
     }
 });
 
+const subcategoryOrderSchemaValidation = Joi.object({
+    subcategories: Joi.array().items(
+        Joi.object({
+            _id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+            order: Joi.number().integer().min(0).required()
+        })
+    ).required()
+});
+
 app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticateToken, csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -2010,20 +1991,10 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
         }
 
         const { subcategories } = req.body;
-        logger.info('Отримано дані для оновлення порядку підкатегорій:', JSON.stringify(subcategories, null, 2));
-
         const { error } = subcategoryOrderSchemaValidation.validate({ subcategories }, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації порядку підкатегорій:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
-        }
-
-        const subcategoryIds = subcategories.map(item => item._id);
-        for (const id of subcategoryIds) {
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                logger.error(`Невірний формат ID підкатегорії: ${id}`);
-                return res.status(400).json({ error: `Невірний формат ID підкатегорії: ${id}` });
-            }
         }
 
         const category = await Category.findById(categoryId).session(session);
@@ -2032,6 +2003,7 @@ app.put('/api/categories/:categoryId/subcategories/order', authenticateToken, cs
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
+        const subcategoryIds = subcategories.map(item => item._id);
         const existingSubcategories = category.subcategories.filter(sub => subcategoryIds.includes(sub._id.toString()));
         if (existingSubcategories.length !== subcategoryIds.length) {
             logger.error('Не всі підкатегорії знайдені:', {
