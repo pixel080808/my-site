@@ -1220,91 +1220,41 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
         let productData = { ...req.body };
         logger.info('Отримано дані для оновлення продукту:', productData);
 
-        // Видаляємо заборонені поля
+        if (productData.img && !productData.photos) {
+            productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
+            delete productData.img;
+        }
+        if (productData.colors) {
+            productData.colors = productData.colors.map(color => {
+                if (color.img && !color.photo) {
+                    color.photo = color.img;
+                    delete color.img;
+                }
+                return color;
+            });
+        }
+
         delete productData._id;
         delete productData.__v;
-        delete productData.createdAt;
-        delete productData.updatedAt;
-
-        // Очищаємо вкладені об’єкти
         if (productData.colors) {
             productData.colors = productData.colors.map(color => {
                 const { _id, ...rest } = color;
                 return rest;
             });
         }
-        if (productData.sizes) {
-            productData.sizes = productData.sizes.map(size => {
-                const { _id, ...rest } = size;
-                return rest;
-            });
-        }
 
-        // Знаходимо продукт за числовим id
-        const existingProduct = await Product.findOne({ id: req.params.id }); // Змінено з parseInt на req.params.id
-        if (!existingProduct) {
-            logger.error('Продукт не знайдено:', req.params.id);
-            return res.status(404).json({ error: 'Товар не знайдено' });
-        }
-
-        // Валідація лише змінених полів
-        const updateSchema = Joi.object({
-            name: Joi.string().min(1).max(255).trim(),
-            category: Joi.string().max(100).trim(),
-            subcategory: Joi.string().max(255).allow('').trim(),
-            price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-            salePrice: Joi.number().min(0).allow(null),
-            saleEnd: Joi.date().allow(null),
-            brand: Joi.string().max(100).allow('').trim(),
-            material: Joi.string().max(100).allow('').trim(),
-            filters: Joi.array().items(
-                Joi.object({
-                    name: Joi.string().required(),
-                    value: Joi.string().required()
-                })
-            ),
-            photos: Joi.array().items(Joi.string().uri().allow('')),
-            visible: Joi.boolean(),
-            active: Joi.boolean(),
-            slug: Joi.string().min(1).max(255).trim(),
-            type: Joi.string().valid('simple', 'mattresses', 'group'),
-            sizes: Joi.array().items(
-                Joi.object({
-                    name: Joi.string().max(100).required().trim(),
-                    price: Joi.number().min(0).required()
-                })
-            ),
-            colors: Joi.array().items(
-                Joi.object({
-                    name: Joi.string().max(100).required().trim(),
-                    value: Joi.string().max(100).required().trim(),
-                    priceChange: Joi.number(),
-                    photo: Joi.string().uri().allow('', null)
-                })
-            ),
-            groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
-            description: Joi.string().allow('').trim(),
-            widthCm: Joi.number().min(0).allow(null),
-            depthCm: Joi.number().min(0).allow(null),
-            heightCm: Joi.number().min(0).allow(null),
-            lengthCm: Joi.number().min(0).allow(null),
-            popularity: Joi.number().min(0)
-        }).unknown(false);
-
-        const { error } = updateSchema.validate(productData, { abortEarly: false });
+        const { error } = productSchemaValidation.validate(productData);
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Перевірка унікальності slug
-        const existingProductWithSlug = await Product.findOne({ slug: productData.slug, _id: { $ne: existingProduct._id } });
-        if (existingProductWithSlug) {
+        const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+        if (existingProduct) {
             logger.error('Продукт з таким slug вже існує:', productData.slug);
             return res.status(400).json({ error: 'Продукт з таким slug вже існує' });
         }
 
-        // Перевірка бренду
         if (productData.brand) {
             const brand = await Brand.findOne({ name: productData.brand });
             if (!brand) {
@@ -1313,7 +1263,6 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        // Перевірка матеріалу
         if (productData.material) {
             const material = await Material.findOne({ name: productData.material });
             if (!material) {
@@ -1322,25 +1271,20 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             }
         }
 
-        // Перевірка категорії
-        if (productData.category) {
-            const category = await Category.findOne({ name: productData.category });
-            if (!category) {
-                logger.error('Категорія не знайдено:', productData.category);
-                return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
-            }
+        const category = await Category.findOne({ name: productData.category });
+        if (!category) {
+            logger.error('Категорія не знайдено:', productData.category);
+            return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+        }
 
-            // Перевірка підкатегорії
-            if (productData.subcategory) {
-                const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-                if (!subcategoryExists) {
-                    logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                    return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
-                }
+        if (productData.subcategory) {
+            const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+            if (!subcategoryExists) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({ error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"` });
             }
         }
 
-        // Перевірка groupProducts
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
             if (invalidIds.length > 0) {
@@ -1357,14 +1301,9 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             productData.groupProducts = productData.groupProducts.map(id => mongoose.Types.ObjectId(id));
         }
 
-        const product = await Product.findOneAndUpdate(
-            { id: req.params.id }, // Змінено з parseInt(req.params.id) на req.params.id
-            productData,
-            { new: true, runValidators: true }
-        );
+        const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
         if (!product) return res.status(404).json({ error: 'Товар не знайдено' });
 
-        logger.info('Продукт після оновлення:', product);
         const products = await Product.find();
         broadcast('products', products);
         res.json(product);
@@ -3116,50 +3055,21 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
 
-        const products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
-        products.forEach(p => logger.info('Імпортований продукт:', p));
-
-        // Очищаємо продукти перед валідацією
-        const cleanedProducts = products.map(product => {
-            const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
-
-            // Очищаємо вкладені об’єкти sizes
-            if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                    const { _id, ...cleanedSize } = size;
-                    return cleanedSize;
-                });
-            }
-
-            // Очищаємо вкладені об’єкти colors
-            if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                    const { _id, ...cleanedColor } = color;
-                    return cleanedColor;
-                });
-            }
-
-            // Переконуємося, що groupProducts — це масив рядків
-            if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
-            }
-
+        let products = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
+        products = products.map(product => {
+            const { id, _id, __v, ...cleanedProduct } = product;
             return cleanedProduct;
         });
 
-        // Валідація очищених продуктів
-        for (const product of cleanedProducts) {
+        for (const product of products) {
             const { error } = productSchemaValidation.validate(product, { abortEarly: false });
             if (error) {
                 logger.error('Помилка валідації продукту при імпорті:', error.details);
-                throw new Error('Помилка валідації продуктів: ' + JSON.stringify(error.details));
+                return res.status(400).json({ error: 'Помилка валідації продуктів', details: error.details });
             }
         }
-
-        // Видаляємо старі продукти і вставляємо нові
         await Product.deleteMany({});
-        const result = await Product.insertMany(cleanedProducts);
-        logger.info('Успішно імпортовано продуктів:', result.length);
+        await Product.insertMany(products);
 
         try {
             await fs.promises.unlink(req.file.path);
