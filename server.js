@@ -3167,50 +3167,40 @@ app.post('/api/import/products', authenticateToken, csrfProtection, importUpload
 });
 
 app.post('/api/import/orders', authenticateToken, csrfProtection, importUpload.single('file'), async (req, res) => {
-    let filePath;
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Файл не завантажено' });
         }
 
-        filePath = req.file.path;
-
-        const orders = JSON.parse(await fs.promises.readFile(filePath, 'utf8'));
+        const orders = JSON.parse(await fs.promises.readFile(req.file.path, 'utf8'));
         for (const order of orders) {
-            // Дозволяємо cartId бути порожнім, узгоджуючи з orderSchemaValidation
             const { error } = orderSchemaValidation.validate(order, { abortEarly: false });
             if (error) {
                 logger.error('Помилка валідації замовлення при імпорті:', error.details);
                 return res.status(400).json({ error: 'Помилка валідації замовлень', details: error.details });
             }
         }
-
-        // Очищаємо існуючі замовлення перед імпортом
         await Order.deleteMany({});
-        // Вставляємо нові замовлення
         await Order.insertMany(orders);
 
-        // Видаляємо тимчасовий файл
         try {
-            await fs.promises.unlink(filePath);
-            logger.info(`Тимчасовий файл видалено: ${filePath}`);
+            await fs.promises.unlink(req.file.path);
+            logger.info(`Тимчасовий файл видалено: ${req.file.path}`);
         } catch (unlinkErr) {
-            logger.error(`Не вдалося видалити тимчасовий файл ${filePath}:`, unlinkErr);
+            logger.error(`Не вдалося видалити тимчасовий файл ${req.file.path}:`, unlinkErr);
         }
 
-        // Оновлюємо клієнтів через WebSocket
         const updatedOrders = await Order.find();
         broadcast('orders', updatedOrders);
-
         res.json({ message: 'Замовлення імпортовано' });
     } catch (err) {
         logger.error('Помилка при імпорті замовлень:', err);
-        if (filePath) {
+        if (req.file) {
             try {
-                await fs.promises.unlink(filePath);
-                logger.info(`Тимчасовий файл видалено після помилки: ${filePath}`);
+                await fs.promises.unlink(req.file.path);
+                logger.info(`Тимчасовий файл видалено після помилки: ${req.file.path}`);
             } catch (unlinkErr) {
-                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${filePath}:`, unlinkErr);
+                logger.error(`Не вдалося видалити тимчасовий файл після помилки ${req.file.path}:`, unlinkErr);
             }
         }
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
