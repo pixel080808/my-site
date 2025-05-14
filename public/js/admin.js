@@ -259,9 +259,23 @@ async function fetchWithAuth(url, options = {}) {
 
     let csrfToken = localStorage.getItem('csrfToken');
     if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        csrfToken = await refreshCsrfToken();
-        if (!csrfToken) {
-            throw new Error('Не вдалося отримати CSRF-токен');
+        try {
+            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            });
+            if (!csrfResponse.ok) {
+                throw new Error('Не вдалося отримати CSRF-токен');
+            }
+            const csrfData = await csrfResponse.json();
+            csrfToken = csrfData.csrfToken;
+            localStorage.setItem('csrfToken', csrfToken);
+        } catch (err) {
+            console.error('Помилка отримання CSRF-токена:', err);
+            throw err;
         }
     }
 
@@ -300,9 +314,19 @@ async function fetchWithAuth(url, options = {}) {
             return newResponse;
         }
     } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        csrfToken = await refreshCsrfToken();
-        if (csrfToken) {
-            return fetchWithAuth(url, options);
+        try {
+            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include'
+            });
+            if (csrfResponse.ok) {
+                const csrfData = await csrfResponse.json();
+                localStorage.setItem('csrfToken', csrfData.csrfToken);
+                return fetchWithAuth(url, options);
+            }
+        } catch (err) {
+            console.error('Помилка повторного отримання CSRF-токена:', err);
         }
     }
 
@@ -1301,9 +1325,19 @@ async function refreshToken(attempt = 1) {
             return false;
         }
 
-        const csrfToken = await refreshCsrfToken();
+        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!csrfResponse.ok) {
+            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
+        }
+
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.csrfToken;
         if (!csrfToken) {
-            throw new Error('Не вдалося отримати CSRF-токен');
+            throw new Error('CSRF-токен не отримано');
         }
 
         const response = await fetch('/api/auth/refresh', {
@@ -1344,45 +1378,6 @@ async function refreshToken(attempt = 1) {
             showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
         return false;
-    }
-}
-
-async function refreshCsrfToken() {
-    try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            console.warn('Токен відсутній для отримання CSRF-токена.');
-            throw new Error('Токен відсутній');
-        }
-
-        const response = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            console.error('Не вдалося отримати CSRF-токен:', {
-                status: response.status,
-                statusText: response.statusText
-            });
-            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
-        }
-
-        const { csrfToken } = await response.json();
-        if (!csrfToken) {
-            console.error('CSRF-токен не отримано у відповіді сервера');
-            throw new Error('CSRF-токен не отримано');
-        }
-
-        localStorage.setItem('csrfToken', csrfToken);
-        console.log('CSRF-токен успішно оновлено');
-        return csrfToken;
-    } catch (err) {
-        console.error('Помилка отримання CSRF-токена:', err.message);
-        throw err;
     }
 }
 
@@ -1667,7 +1662,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option value▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option valu▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
