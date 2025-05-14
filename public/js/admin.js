@@ -1864,150 +1864,150 @@ function renderAdmin(section = activeTab, data = {}) {
         } else {
             console.warn('Елемент #category-list-admin не знайдено');
         }
-
-        function handleCatListClick(event) {
-            const target = event.target;
-            const categoryId = target.dataset.id;
-            const subName = target.dataset.subName;
-            const catId = target.dataset.catId;
-            const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
-            const index = target.dataset.index ? parseInt(target.dataset.index) : null;
-
-            if (target.classList.contains('move-up') && index !== null) {
-                moveCategoryUp(index);
-            } else if (target.classList.contains('move-down') && index !== null) {
-                moveCategoryDown(index);
-            } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
-                openEditCategoryModal(categoryId);
-            } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
-                deleteCategory(categoryId);
-            } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
-                moveSubcategoryUp(catId, subIndex);
-            } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
-                moveSubcategoryDown(catId, subIndex);
-            } else if (target.classList.contains('sub-edit') && catId && subName) {
-                openEditSubcategoryModal(catId, subName);
-            } else if (target.classList.contains('sub-delete') && catId && subName) {
-                deleteSubcategory(catId, subName);
-            }
-        }
-
-if (section === 'products') {
-    const productList = document.getElementById('product-list-admin');
-    if (productList) {
-        const start = (productsCurrentPage - 1) * productsPerPage;
-        const end = start + productsPerPage;
-        // Використовуємо data.products, якщо вони передані, інакше глобальний products
-        const paginatedProducts = data.products ? data.products.slice(start, end) : products.slice(start, end);
-        let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
-        paginatedProducts.forEach((p, index) => {
-            p.tempNumber = globalIndex + index;
-        });
-        productList.innerHTML = Array.isArray(paginatedProducts) && paginatedProducts.length > 0
-            ? paginatedProducts.map(p => {
-                const priceInfo = p.type === 'simple'
-                    ? (p.salePrice && p.salePrice < p.price
-                        ? `<s>${p.price} грн</s> ${p.salePrice} грн`
-                        : `${p.price || '0'} грн`)
-                    : (p.sizes?.length > 0
-                        ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                        : 'Ціна не вказана');
-                return `
-                    <div class="product-admin-item">
-                        <span>#${p.tempNumber}</span>
-                        <span>${p.type}</span>
-                        <span>${p.name}</span>
-                        <span>${p.brand || 'Без бренду'}</span>
-                        <span>${priceInfo}</span>
-                        <span>${p.salePrice || '-'}</span>
-                        <div class="status-column">
-                            <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
-                            <button onclick="deleteProduct('${p._id}')">Видалити</button>
-                            <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
-                        </div>
-                    </div>
-                `;
-            }).join('')
-            : '<p>Товари відсутні</p>';
-        const totalItems = data.total !== undefined && data.total !== null ? data.total : totalProducts;
-        renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
-    } else {
-        console.warn('Елемент #product-list-admin не знайдено');
-    }
-}
-        } else if (section === 'orders') {
-            const orderList = document.getElementById('order-list');
-            if (orderList) {
-                orderList.innerHTML = Array.isArray(orders) && orders.length > 0
-                    ? orders.map((o, index) => {
-                        const orderDate = o.date ? new Date(o.date) : new Date(); // Додаємо захист від undefined
-                        const formattedDate = isNaN(orderDate.getTime()) 
-                            ? 'Невідома дата' 
-                            : orderDate.toLocaleString('uk-UA', {
-                                timeZone: settings.timezone || 'Europe/Kyiv',
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                            });
-                        return `
-                            <div class="order-item">
-                                <span>#${o.orderNumber || (index + 1)} ${formattedDate} - ${o.total || '0'} грн (${o.status || 'Н/Д'})</span>
-                                <div>
-                                    <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
-                                    <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
-                                    <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')
-                    : '<p>Замовлення відсутні</p>';
-
-                const orderControls = document.getElementById('order-controls');
-                if (orderControls) {
-                    orderControls.innerHTML = `
-                        <select id="order-status-filter" onchange="filterOrders()">
-                            <option value="Усі статуси">Усі статуси</option>
-                            <option value="Нове замовлення">Нове замовлення</option>
-                            <option value="В обробці">В обробці</option>
-                            <option value="Відправлено">Відправлено</option>
-                            <option value="Доставлено">Доставлено</option>
-                            <option value="Скасовано">Скасовано</option>
-                        </select>
-                        <select id="order-sort" onchange="sortOrders(this.value)">
-                            <option value="date-desc">Дата (новіші)</option>
-                            <option value="date-asc">Дата (старіші)</option>
-                            <option value="total-desc">Сума (спадання)</option>
-                            <option value="total-asc">Сума (зростання)</option>
-                        </select>
-                    `;
-                }
-
-                const totalItems = data.total !== undefined && data.total !== null ? data.total : totalOrders;
-                renderPagination(totalItems, ordersPerPage, 'order-pagination', ordersCurrentPage);
-            } else {
-                console.warn('Елемент #order-list не знайдено');
-            }
-        } else if (section === 'categories') {
-            if (typeof renderCategoriesAdmin === 'function') {
-                renderCategoriesAdmin();
-            } else {
-                console.warn('Функція renderCategoriesAdmin не визначена');
-            }
-        } else if (section === 'site-editing') {
-            if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
-            if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
-        } else {
-            console.warn(`Невідома вкладка: ${section}`);
-        }
-
-        resetInactivityTimer();
     } catch (e) {
         console.error(`Помилка рендерингу вкладки ${section}:`, e);
         showNotification(`Помилка рендерингу вкладки ${section}: ${e.message}`);
     }
+
+    // Визначаємо handleCatListClick поза блоком try
+    function handleCatListClick(event) {
+        const target = event.target;
+        const categoryId = target.dataset.id;
+        const subName = target.dataset.subName;
+        const catId = target.dataset.catId;
+        const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
+        const index = target.dataset.index ? parseInt(target.dataset.index) : null;
+
+        if (target.classList.contains('move-up') && index !== null) {
+            moveCategoryUp(index);
+        } else if (target.classList.contains('move-down') && index !== null) {
+            moveCategoryDown(index);
+        } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
+            openEditCategoryModal(categoryId);
+        } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
+            deleteCategory(categoryId);
+        } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
+            moveSubcategoryUp(catId, subIndex);
+        } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
+            moveSubcategoryDown(catId, subIndex);
+        } else if (target.classList.contains('sub-edit') && catId && subName) {
+            openEditSubcategoryModal(catId, subName);
+        } else if (target.classList.contains('sub-delete') && catId && subName) {
+            deleteSubcategory(catId, subName);
+        }
+    }
+
+    if (section === 'products') {
+        const productList = document.getElementById('product-list-admin');
+        if (productList) {
+            const start = (productsCurrentPage - 1) * productsPerPage;
+            const end = start + productsPerPage;
+            // Використовуємо data.products, якщо вони передані, інакше глобальний products
+            const paginatedProducts = data.products ? data.products.slice(start, end) : products.slice(start, end);
+            let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+            paginatedProducts.forEach((p, index) => {
+                p.tempNumber = globalIndex + index;
+            });
+            productList.innerHTML = Array.isArray(paginatedProducts) && paginatedProducts.length > 0
+                ? paginatedProducts.map(p => {
+                    const priceInfo = p.type === 'simple'
+                        ? (p.salePrice && p.salePrice < p.price
+                            ? `<s>${p.price} грн</s> ${p.salePrice} грн`
+                            : `${p.price || '0'} грн`)
+                        : (p.sizes?.length > 0
+                            ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                            : 'Ціна не вказана');
+                    return `
+                        <div class="product-admin-item">
+                            <span>#${p.tempNumber}</span>
+                            <span>${p.type}</span>
+                            <span>${p.name}</span>
+                            <span>${p.brand || 'Без бренду'}</span>
+                            <span>${priceInfo}</span>
+                            <span>${p.salePrice || '-'}</span>
+                            <div class="status-column">
+                                <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
+                                <button onclick="deleteProduct('${p._id}')">Видалити</button>
+                                <button onclick="toggleProductActive('${p._id}', ${p.active})">${p.active ? 'Деактивувати' : 'Активувати'}</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : '<p>Товари відсутні</p>';
+            const totalItems = data.total !== undefined && data.total !== null ? data.total : totalProducts;
+            renderPagination(totalItems, productsPerPage, 'pagination', productsCurrentPage);
+        } else {
+            console.warn('Елемент #product-list-admin не знайдено');
+        }
+    } else if (section === 'orders') {
+        const orderList = document.getElementById('order-list');
+        if (orderList) {
+            orderList.innerHTML = Array.isArray(orders) && orders.length > 0
+                ? orders.map((o, index) => {
+                    const orderDate = o.date ? new Date(o.date) : new Date();
+                    const formattedDate = isNaN(orderDate.getTime())
+                        ? 'Невідома дата'
+                        : orderDate.toLocaleString('uk-UA', {
+                            timeZone: settings.timezone || 'Europe/Kyiv',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                    return `
+                        <div class="order-item">
+                            <span>#${o.orderNumber || (index + 1)} ${formattedDate} - ${o.total || '0'} грн (${o.status || 'Н/Д'})</span>
+                            <div>
+                                <button class="edit-btn" onclick="viewOrder(${orders.indexOf(o)})">Переглянути</button>
+                                <button class="toggle-btn" onclick="changeOrderStatus(${orders.indexOf(o)})">Змінити статус</button>
+                                <button class="delete-btn" onclick="deleteOrder(${orders.indexOf(o)})">Видалити</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : '<p>Замовлення відсутні</p>';
+
+            const orderControls = document.getElementById('order-controls');
+            if (orderControls) {
+                orderControls.innerHTML = `
+                    <select id="order-status-filter" onchange="filterOrders()">
+                        <option value="Усі статуси">Усі статуси</option>
+                        <option value="Нове замовлення">Нове замовлення</option>
+                        <option value="В обробці">В обробці</option>
+                        <option value="Відправлено">Відправлено</option>
+                        <option value="Доставлено">Доставлено</option>
+                        <option value="Скасовано">Скасовано</option>
+                    </select>
+                    <select id="order-sort" onchange="sortOrders(this.value)">
+                        <option value="date-desc">Дата (новіші)</option>
+                        <option value="date-asc">Дата (старіші)</option>
+                        <option value="total-desc">Сума (спадання)</option>
+                        <option value="total-asc">Сума (зростання)</option>
+                    </select>
+                `;
+            }
+
+            const totalItems = data.total !== undefined && data.total !== null ? data.total : totalOrders;
+            renderPagination(totalItems, ordersPerPage, 'order-pagination', ordersCurrentPage);
+        } else {
+            console.warn('Елемент #order-list не знайдено');
+        }
+    } else if (section === 'categories') {
+        if (typeof renderCategoriesAdmin === 'function') {
+            renderCategoriesAdmin();
+        } else {
+            console.warn('Функція renderCategoriesAdmin не визначена');
+        }
+    } else if (section === 'site-editing') {
+        if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
+        if (typeof renderSlidesAdmin === 'function') renderSlidesAdmin();
+    } else {
+        console.warn(`Невідома вкладка: ${section}`);
+    }
+
+    resetInactivityTimer();
 }
 
 function renderCategoriesAdmin() {
