@@ -2555,8 +2555,6 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
-
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
@@ -2580,14 +2578,12 @@ async function saveEditedCategory(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        console.log('Значення полів форми:', { name, slug, photo, visible });
-
-        if (!name || name.trim().length === 0) {
+        if (!name || name.length === 0) {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug.trim().length === 0) {
+        if (!slug || slug.length === 0) {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
@@ -2609,7 +2605,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        if (photoFileInput.files[0]) {
+        if (photoFileInput.files[0]) 
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -2665,6 +2661,11 @@ async function saveEditedCategory(categoryId) {
             },
             body: JSON.stringify(updatedCategory)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
+        }
 
         const updatedCategoryData = await response.json();
         console.log('Отримано оновлені дані категорії:', updatedCategoryData);
@@ -2977,7 +2978,7 @@ async function moveCategoryUp(index) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            throw new Error(errorData.error || 'Не вдалося змінити порядок');
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
@@ -3037,7 +3038,7 @@ async function moveCategoryDown(index) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            throw new Error(errorData.error || 'Не вдалося змінити порядок');
         }
 
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
@@ -3102,8 +3103,6 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
-
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
         const photoUrlInput = document.getElementById('subcategory-photo-url');
@@ -3127,14 +3126,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        console.log('Значення полів форми:', { name, slug, photo, visible });
-
-        if (!name || name.trim().length === 0) {
+        if (!name || name.length === 0) {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug.trim().length === 0) {
+        if (!slug || slug.length === 0) {
             showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
@@ -3209,6 +3206,11 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             body: JSON.stringify(updatedSubcategory)
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
+        }
+
         const updatedCategory = await response.json();
         console.log('Отримано оновлені дані категорії:', updatedCategory);
 
@@ -3219,7 +3221,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Підкатегорію оновлено!');
+        showわざって、showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
@@ -3637,7 +3639,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            throw new Error(errorData.error || 'Не вдалося змінити порядок');
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
@@ -3701,7 +3703,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText}`);
+            throw new Error(errorData.error || 'Не вдалося змінити порядок');
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
