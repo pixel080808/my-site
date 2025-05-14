@@ -259,23 +259,9 @@ async function fetchWithAuth(url, options = {}) {
 
     let csrfToken = localStorage.getItem('csrfToken');
     if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include'
-            });
-            if (!csrfResponse.ok) {
-                throw new Error('Не вдалося отримати CSRF-токен');
-            }
-            const csrfData = await csrfResponse.json();
-            csrfToken = csrfData.csrfToken;
-            localStorage.setItem('csrfToken', csrfToken);
-        } catch (err) {
-            console.error('Помилка отримання CSRF-токена:', err);
-            throw err;
+        csrfToken = await refreshCsrfToken();
+        if (!csrfToken) {
+            throw new Error('Не вдалося отримати CSRF-токен');
         }
     }
 
@@ -314,19 +300,9 @@ async function fetchWithAuth(url, options = {}) {
             return newResponse;
         }
     } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` },
-                credentials: 'include'
-            });
-            if (csrfResponse.ok) {
-                const csrfData = await csrfResponse.json();
-                localStorage.setItem('csrfToken', csrfData.csrfToken);
-                return fetchWithAuth(url, options);
-            }
-        } catch (err) {
-            console.error('Помилка повторного отримання CSRF-токена:', err);
+        csrfToken = await refreshCsrfToken();
+        if (csrfToken) {
+            return fetchWithAuth(url, options);
         }
     }
 
@@ -1325,19 +1301,9 @@ async function refreshToken(attempt = 1) {
             return false;
         }
 
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        if (!csrfResponse.ok) {
-            throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
-        }
-
-        const csrfData = await csrfResponse.json();
-        const csrfToken = csrfData.csrfToken;
+        const csrfToken = await refreshCsrfToken();
         if (!csrfToken) {
-            throw new Error('CSRF-токен не отримано');
+            throw new Error('Не вдалося отримати CSRF-токен');
         }
 
         const response = await fetch('/api/auth/refresh', {
@@ -1378,6 +1344,45 @@ async function refreshToken(attempt = 1) {
             showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
         }
         return false;
+    }
+}
+
+async function refreshCsrfToken() {
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            console.warn('Токен відсутній для отримання CSRF-токена.');
+            throw new Error('Токен відсутній');
+        }
+
+        const response = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            console.error('Не вдалося отримати CSRF-токен:', {
+                status: response.status,
+                statusText: response.statusText
+            });
+            throw new Error(`Не вдалося отримати CSRF-токен: ${response.statusText}`);
+        }
+
+        const { csrfToken } = await response.json();
+        if (!csrfToken) {
+            console.error('CSRF-токен не отримано у відповіді сервера');
+            throw new Error('CSRF-токен не отримано');
+        }
+
+        localStorage.setItem('csrfToken', csrfToken);
+        console.log('CSRF-токен успішно оновлено');
+        return csrfToken;
+    } catch (err) {
+        console.error('Помилка отримання CSRF-токена:', err.message);
+        throw err;
     }
 }
 
@@ -2550,7 +2555,7 @@ async function saveEditedCategory(categoryId) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
             showSection('admin-login');
             return;
         }
@@ -2578,12 +2583,12 @@ async function saveEditedCategory(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        if (!name || name.length === 0) {
+        if (!name || name === '') {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug.length === 0) {
+        if (!slug || slug === '') {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
@@ -2982,7 +2987,7 @@ async function moveCategoryUp(index) {
         const category2 = categories[index - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!isValidId(category1._id) || !isValidId(category2._id)) {
+        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
@@ -3042,7 +3047,7 @@ async function moveCategoryDown(index) {
         const category2 = categories[index + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!isValidId(category1._id) || !isValidId(category2._id)) {
+        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
@@ -3167,12 +3172,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        if (!name || name.length === 0) {
+        if (!name || name === '') {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug.length === 0) {
+        if (!slug || slug === '') {
             showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
@@ -3643,7 +3648,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         const sub2 = category.subcategories[subIndex - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
+        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
@@ -3707,7 +3712,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         const sub2 = category.subcategories[subIndex + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
+        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
@@ -6349,12 +6354,16 @@ document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
 function handleCategoriesUpdate(data) {
-    categories = data; // Оновлюємо масив категорій
+    const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+    categories = data.filter(cat => isValidId(cat._id)).map(cat => ({
+        ...cat,
+        subcategories: (cat.subcategories || []).filter(sub => isValidId(sub._id))
+    }));
     console.log('Оновлено categories:', categories);
-    renderCategoriesAdmin(); // Оновлюємо відображення категорій
+    renderCategoriesAdmin();
     const modal = document.getElementById('modal');
     if (modal && modal.classList.contains('active')) {
-        updateSubcategories(); // Оновлюємо підкатегорії в модальному вікні, якщо воно відкрите
+        updateSubcategories();
     }
 }
 
