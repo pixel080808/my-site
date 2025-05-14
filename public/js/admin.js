@@ -2605,7 +2605,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        if (photoFileInput.files[0]) 
+        if (photoFileInput.files[0]) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -2713,7 +2713,7 @@ async function addCategory() {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim();
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
@@ -2754,7 +2754,10 @@ async function addCategory() {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -2781,7 +2784,7 @@ async function addCategory() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken')
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
             body: JSON.stringify(category)
         });
@@ -2811,23 +2814,23 @@ async function addCategory() {
 }
 
 async function editCategory(categoryId) {
-    const nameInput = document.getElementById('category-name');
-    if (!nameInput) {
-        showNotification('Елемент форми для назви категорії не знайдено. Перевірте HTML.');
-        return;
-    }
-
-    const name = nameInput.value.trim();
-    if (!name) {
-        showNotification('Введіть назву категорії!');
-        return;
-    }
-
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
+            return;
+        }
+
+        const nameInput = document.getElementById('category-name');
+        if (!nameInput) {
+            showNotification('Елемент форми для назви категорії не знайдено. Перевірте HTML.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        if (!name) {
+            showNotification('Введіть назву категорії!');
             return;
         }
 
@@ -2840,6 +2843,10 @@ async function editCategory(categoryId) {
         const updatedCategory = { ...category, name };
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(updatedCategory)
         });
 
@@ -2864,43 +2871,7 @@ async function editCategory(categoryId) {
 }
 
 async function saveCategoryEdit(categoryId) {
-    const nameInput = document.getElementById('cat-name');
-    const slugInput = document.getElementById('cat-slug');
-    const imgUrlInput = document.getElementById('cat-img-url');
-    const imgFileInput = document.getElementById('cat-img-file');
-
-    if (!nameInput || !slugInput || !imgUrlInput || !imgFileInput) {
-        console.error('Елементи форми не знайдено:', {
-            nameInput: !!nameInput,
-            slugInput: !!slugInput,
-            imgUrlInput: !!imgUrlInput,
-            imgFileInput: !!imgFileInput
-        });
-        showNotification('Елементи форми для категорії не знайдено. Перевірте HTML.');
-        return;
-    }
-
-    const name = nameInput.value.trim();
-    const slug = slugInput.value.trim();
-    let photo = imgUrlInput.value.trim();
-
-    if (!name || !slug) {
-        showNotification('Назва та шлях категорії обов’язкові!');
-        return;
-    }
-
     try {
-        if (imgFileInput.files.length > 0) {
-            const formData = new FormData();
-            formData.append('file', imgFileInput.files[0]);
-            const uploadResponse = await fetchWithAuth('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const uploadData = await uploadResponse.json();
-            photo = uploadData.url;
-        }
-
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Увійдіть знову.');
@@ -2908,8 +2879,78 @@ async function saveCategoryEdit(categoryId) {
             return;
         }
 
+        const nameInput = document.getElementById('cat-name');
+        const slugInput = document.getElementById('cat-slug');
+        const imgUrlInput = document.getElementById('cat-img-url');
+        const imgFileInput = document.getElementById('cat-img-file');
+
+        if (!nameInput || !slugInput || !imgUrlInput || !imgFileInput) {
+            console.error('Елементи форми не знайдено:', {
+                nameInput: !!nameInput,
+                slugInput: !!slugInput,
+                imgUrlInput: !!imgUrlInput,
+                imgFileInput: !!imgFileInput
+            });
+            showNotification('Елементи форми для категорії не знайдено. Перевірте HTML.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        let photo = imgUrlInput.value.trim();
+
+        if (!name || !slug) {
+            showNotification('Назва та шлях категорії обов’язкові!');
+            return;
+        }
+
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
+            return;
+        }
+
+        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+            showNotification('Шлях категорії має бути унікальним!');
+            return;
+        }
+
+        if (imgFileInput.files.length > 0) {
+            const file = imgFileInput.files[0];
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadResponse = await fetchWithAuth('/api/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
+            });
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                throw new Error(`Помилка завантаження зображення: ${errorData.error || uploadResponse.statusText}`);
+            }
+            const uploadData = await uploadResponse.json();
+            photo = uploadData.url;
+        }
+
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify({ name, slug, photo })
         });
 
@@ -3221,7 +3262,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showわざって、showNotification('Підкатегорію оновлено!');
+        showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
