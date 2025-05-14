@@ -2550,10 +2550,12 @@ async function saveEditedCategory(categoryId) {
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2577,6 +2579,8 @@ async function saveEditedCategory(categoryId) {
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
+
+        console.log('Значення полів форми:', { name, slug, photo, visible });
 
         if (!name || name === '') {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
@@ -2661,11 +2665,6 @@ async function saveEditedCategory(categoryId) {
             },
             body: JSON.stringify(updatedCategory)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
-        }
 
         const updatedCategoryData = await response.json();
         console.log('Отримано оновлені дані категорії:', updatedCategoryData);
@@ -2982,7 +2981,7 @@ async function moveCategoryUp(index) {
         const category2 = categories[index - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
+        if (!isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
@@ -3017,9 +3016,10 @@ async function moveCategoryUp(index) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
@@ -3042,7 +3042,7 @@ async function moveCategoryDown(index) {
         const category2 = categories[index + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
+        if (!isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
@@ -3077,9 +3077,10 @@ async function moveCategoryDown(index) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера:', JSON.stringify(errorData, null, 2));
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
@@ -3144,6 +3145,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
         const photoUrlInput = document.getElementById('subcategory-photo-url');
@@ -3166,6 +3169,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
+
+        console.log('Значення полів форми:', { name, slug, photo, visible });
 
         if (!name || name === '') {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
@@ -3246,11 +3251,6 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             },
             body: JSON.stringify(updatedSubcategory)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
-        }
 
         const updatedCategory = await response.json();
         console.log('Отримано оновлені дані категорії:', updatedCategory);
@@ -3643,7 +3643,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         const sub2 = category.subcategories[subIndex - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
+        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
@@ -3678,9 +3678,10 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex - 1]] = [
@@ -3707,7 +3708,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         const sub2 = category.subcategories[subIndex + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
+        if (!isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
@@ -3742,9 +3743,10 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             const errorData = await response.json().catch(() => ({}));
-            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            console.error('Помилка сервера при зміні порядку:', { status: response.status, errorText, errorData });
+            throw new Error(`Не вдалося змінити порядок: ${errorData.error || response.statusText || 'Невідома помилка'}`);
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
