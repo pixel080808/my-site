@@ -1,6 +1,6 @@
 let activeTab = 'products';
 let newProduct = {
-    type: 'simple',
+    type: 'simple', 
     photos: [],
     colors: [],
     sizes: [],
@@ -10,13 +10,12 @@ let newProduct = {
 };
 let session;
 let products = [];
-let originalProducts = []; // Додаємо цю змінну
 let categories = [];
 let orders = [];
 let slides = [];
 let settings = {
     name: '',
-    baseUrl: '',
+    baseUrl: '', // Додано для базового URL
     logo: '',
     logoWidth: '',
     favicon: '',
@@ -61,15 +60,13 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
             products = [];
-            originalProducts = [];
             productsCurrentPage = 1;
             renderAdmin('products');
             return;
         }
 
-        productsCurrentPage = page;
-        // Завантажуємо всі продукти для обробки цін
-        const response = await fetchWithAuth(`/api/products?page=1&limit=10000`); // Збільшуємо ліміт
+        productsCurrentPage = page; // Гарантуємо, що поточна сторінка оновлена
+        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
         if (!response.ok) {
             const text = await response.text();
             if (response.status === 401 || response.status === 403) {
@@ -87,10 +84,10 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         if (!data.products || !Array.isArray(data.products) || !data.total) {
             throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
         }
-        products = data.products;
-        originalProducts = [...products];
+        products = data.products; // Оновлюємо лише поточну сторінку
         totalProducts = data.total;
 
+        // Присвоєння послідовних номерів на основі поточної сторінки
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             p.tempNumber = globalIndex + index;
@@ -102,7 +99,6 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         console.error('Помилка завантаження товарів:', e);
         showNotification('Помилка завантаження товарів: ' + e.message);
         products = [];
-        originalProducts = [];
         productsCurrentPage = 1;
         renderAdmin('products');
     }
@@ -1335,6 +1331,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.warn('Елемент #search-button не знайдено');
+    }
+
+    // Store original products for reset
+    if (!originalProducts) {
+        originalProducts = [...products];
     }
 });
 
@@ -3953,75 +3954,27 @@ function importSiteBackup() {
     }
 }
 
-async function importProductsBackup() {
-    const file = document.getElementById('import-products-file').files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const productsData = JSON.parse(e.target.result);
-                const tokenRefreshed = await refreshToken();
-                if (!tokenRefreshed) {
-                    showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
-                    showSection('admin-login');
-                    return;
+    function importProductsBackup() {
+        const file = document.getElementById('import-products-file').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    products = JSON.parse(e.target.result);
+                    localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
+                    renderAdmin();
+                    showNotification('Бекап товарів імпортовано!');
+                    unsavedChanges = false;
+                    resetInactivityTimer();
+                } catch (err) {
+                    alert('Помилка імпорту: ' + err.message);
                 }
-
-                // Очищаємо дані перед відправкою: видаляємо заборонені поля
-                const cleanedProductsData = productsData.map(product => {
-                    const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
-
-                    // Очищаємо вкладені об’єкти sizes
-                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                            const { _id, ...cleanedSize } = size;
-                            return cleanedSize;
-                        });
-                    }
-
-                    // Очищаємо вкладені об’єкти colors
-                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                            const { _id, ...cleanedColor } = color;
-                            return cleanedColor;
-                        });
-                    }
-
-                    // Очищаємо groupProducts від ObjectId (залишаємо просто рядки)
-                    if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
-                    }
-
-                    return cleanedProduct;
-                });
-
-                // Відправляємо очищені дані на сервер
-                const response = await fetchWithAuth('/api/import/products', {
-                    method: 'POST',
-                    body: JSON.stringify(cleanedProductsData),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (!response.ok) {
-                    throw new Error(await response.text());
-                }
-
-                // Синхронізуємо локальний стан і перезавантажуємо продукти
-                products = cleanedProductsData;
-                localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
-                await loadProducts(productsCurrentPage, productsPerPage);
-                renderAdmin();
-                showNotification('Бекап товарів імпортовано!');
-                unsavedChanges = false;
-                resetInactivityTimer();
-            } catch (err) {
-                alert('Помилка імпорту: ' + err.message);
-            }
-        };
-        reader.readAsText(file);
-    } else {
-        alert('Виберіть файл для імпорту!');
+            };
+            reader.readAsText(file);
+        } else {
+            alert('Виберіть файл для імпорту!');
+        }
     }
-}
 
     function importOrdersBackup() {
         const file = document.getElementById('import-orders-file').files[0];
@@ -5714,8 +5667,7 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        products = [...originalProducts]; // Відновлюємо оригінальний список
-        renderAdmin('products', { total: totalProducts });
+        loadProducts(productsCurrentPage, productsPerPage);
     }
     resetInactivityTimer();
 }
@@ -5795,51 +5747,23 @@ async function uploadBulkPrices() {
                 const parts = line.split(',');
                 if (parts.length < 4) continue;
                 const id = parseInt(parts[0].trim());
-                const product = products.find(p => p.id === id); // Шукаємо за числовим id
-                if (!product) {
-                    console.error(`Продукт з id ${id} не знайдено в масиві products`);
-                    continue;
-                }
-
-                // Переконуємося, що у продукту є _id (для логів, але не використовуємо в URL)
-                if (!product._id) {
-                    console.error(`Продукт з id ${id} не має _id`);
-                    continue;
-                }
-
-                // Створюємо копію продукту без заборонених полів
-                const { _id, createdAt, updatedAt, __v, id: productId, tempNumber, ...cleanedProduct } = product;
-
-                // Очищаємо вкладені об’єкти sizes від _id
-                if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                    cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                        const { _id, ...cleanedSize } = size;
-                        return cleanedSize;
-                    });
-                }
-
-                // Очищаємо вкладені об’єкти colors від _id
-                if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                    cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                        const { _id, ...cleanedColor } = color;
-                        return cleanedColor;
-                    });
-                }
-
-                // Оновлюємо ціну або розміри в очищеному об’єкті
+                const product = products.find(p => p.id === id);
+                if (!product) continue;
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
-                        cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${id}`, { // Використовуємо id замість product._id
-                            method: 'PUT',
-                            body: JSON.stringify(cleanedProduct)
-                        });
-                        if (response.ok) {
+                        product.price = price;
+                        try {
+                            const response = await fetchWithAuth(`/api/products/${id}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(product)
+                            });
+                            if (!response.ok) {
+                                throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                            }
                             updated++;
-                        } else {
-                            const text = await response.text();
-                            console.error(`Помилка оновлення товару #${id}: ${text}`);
+                        } catch (e) {
+                            console.error(`Помилка оновлення товару #${id}:`, e);
                         }
                     }
                 } else if (product.type === 'mattresses') {
@@ -5847,26 +5771,26 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (sizePart.startsWith('Розмір: ')) {
                         const size = sizePart.replace('Розмір: ', '').trim();
-                        const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
+                        const sizeObj = product.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${id}`, { // Використовуємо id замість product._id
-                                method: 'PUT',
-                                body: JSON.stringify(cleanedProduct)
-                            });
-                            if (response.ok) {
+                            try {
+                                const response = await fetchWithAuth(`/api/products/${id}`, {
+                                    method: 'PUT',
+                                    body: JSON.stringify(product)
+                                });
+                                if (!response.ok) {
+                                    throw new Error(`Помилка оновлення товару #${id}: ${response.statusText}`);
+                                }
                                 updated++;
-                            } else {
-                                const text = await response.text();
-                                console.error(`Помилка оновлення товару #${id}: ${text}`);
+                            } catch (e) {
+                                console.error(`Помилка оновлення товару #${id}:`, e);
                             }
                         }
                     }
                 }
             }
-
-            // Перезавантажуємо продукти з сервера для забезпечення консистентності
-            await loadProducts(productsCurrentPage, productsPerPage);
+            renderAdmin('products');
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
         } catch (err) {
