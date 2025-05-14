@@ -11,6 +11,7 @@ let newProduct = {
 let session;
 let products = [];
 let originalProducts = [];
+console.log('admin.js завантажено, originalProducts визначено:', typeof originalProducts !== 'undefined');
 let categories = [];
 let orders = [];
 let slides = [];
@@ -676,7 +677,7 @@ async function checkAuth() {
 
         if (response.ok) {
             showSection('admin-panel');
-            await initializeData();
+            await initializeData(); // Гарантує виклик loadProducts
             connectAdminWebSocket();
             startTokenRefreshTimer();
             resetInactivityTimer();
@@ -5972,15 +5973,15 @@ async function searchProducts(page = 1) {
 }
 
 async function clearSearch() {
-    console.log('Виклик clearSearch, стан originalProducts:', originalProducts);
+    console.log('Виклик clearSearch');
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        if (typeof originalProducts === 'undefined' || !Array.isArray(originalProducts)) {
+        if (typeof window.originalProducts === 'undefined' || !Array.isArray(window.originalProducts)) {
             console.warn('originalProducts не ініціалізований, завантажуємо продукти');
             await loadProducts(productsCurrentPage, productsPerPage);
         }
-        products = [...originalProducts];
+        products = [...window.originalProducts];
         renderAdmin('products', { total: totalProducts });
     }
     resetInactivityTimer();
