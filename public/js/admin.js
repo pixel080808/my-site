@@ -405,9 +405,9 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ page, limit, sort: 'date,-1' }); // Сортування за спаданням дат
+        const queryParams = new URLSearchParams({ limit: 9999 }); // Завантажуємо всі замовлення
         if (statusFilter) {
-            queryParams.append('status', statusFilter);
+            queryParams.set('status', encodeURIComponent(statusFilter)); // Кодування для коректної передачі кирилиці
         }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
@@ -426,36 +426,42 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         const data = await response.json();
         let ordersData = data.orders || data;
         if (!Array.isArray(ordersData)) {
-            console.error('Очікувався масив замовлень, отрирано:', data);
+            console.error('Очікувався масив замовлень, отримано:', data);
             orders = [];
-            showNotification('Отримано некоректні дані замовлень');
+            showNotification('Отрирано некоректні дані замовлень');
             ordersCurrentPage = 1;
             renderAdmin('orders');
             return;
         }
 
-        // Сортуємо замовлення за датою в спадному порядку
-        ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
         // Ініціалізація кешу номерів, якщо порожній
         if (orderNumberCache.size === 0) {
-            const allOrdersResponse = await fetchWithAuth('/api/orders?limit=9999&sort=date,-1');
-            const allOrdersData = await allOrdersResponse.json();
-            const allOrders = allOrdersData.orders || allOrdersData;
-            allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-            allOrders.forEach((order, idx) => {
+            ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
+            ordersData.forEach((order, idx) => {
                 orderNumberCache.set(order._id, idx + 1);
             });
         }
 
-        // Оновлюємо лише поточну сторінку з номерами з кешу
-        orders = ordersData.map(order => {
+        // Фільтруємо замовлення, якщо є statusFilter
+        let filteredOrders = statusFilter
+            ? ordersData.filter(order => order.status === statusFilter)
+            : ordersData;
+
+        // Оновлюємо totalOrders для пагінації
+        totalOrders = filteredOrders.length;
+
+        // Сортування за замовчуванням (за датою, новіші першими)
+        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Виконуємо пагінацію на клієнтській стороні
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        orders = filteredOrders.slice(start, end).map(order => {
             const cachedNumber = orderNumberCache.get(order._id);
             return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
         });
 
-        totalOrders = data.total !== undefined ? data.total : orders.length;
-        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage);
+        console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
         renderAdmin('orders', { total: totalOrders });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
@@ -1929,11 +1935,11 @@ function renderAdmin(section = activeTab, data = {}) {
             }
         }
 
-if (section === 'products') {
+        if (section === 'products') {
             const productList = document.getElementById('product-list-admin');
             if (productList) {
-                const start = 0; // Оскільки сервер повертає лише товари для поточної сторінки
-                const end = products.length; // Використовуємо всю отриману частину
+                const start = 0;
+                const end = products.length;
                 let globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
                 products.forEach((p, index) => {
                     p.tempNumber = globalIndex + index;
@@ -1972,7 +1978,6 @@ if (section === 'products') {
         } else if (section === 'orders') {
             const orderList = document.getElementById('order-list');
             if (orderList) {
-                orders.sort((a, b) => new Date(b.date) - new Date(a.date));
                 orderList.innerHTML = Array.isArray(orders) && orders.length > 0
                     ? orders.map((o, index) => {
                         const orderDate = new Date(o.date);
@@ -5654,27 +5659,58 @@ function clearSearch() {
     resetInactivityTimer();
 }
 
-function sortOrders(sortType) {
-    const [key, order] = sortType.split('-');
-    orders.sort((a, b) => {
-        let valA, valB;
-        if (key === 'date') {
-            valA = new Date(a.date);
-            valB = new Date(b.date);
-        } else if (key === 'total') {
-            valA = a.total || 0;
-            valB = b.total || 0;
-        } else if (key === 'status') {
-            valA = (a.status || '').toLowerCase();
-            valB = (b.status || '').toLowerCase();
+async function sortOrders(sortType) {
+    const [key, direction] = sortType.split('-');
+    try {
+        const statusFilter = document.getElementById('order-status-filter')?.value || '';
+        const queryParams = new URLSearchParams({ limit: 9999 });
+        if (statusFilter) {
+            queryParams.set('status', encodeURIComponent(statusFilter));
         }
-        if (valA < valB) return order === 'asc' ? -1 : 1;
-        if (valA > valB) return order === 'asc' ? 1 : -1;
-        return 0;
-    });
-    currentPage = 1;
-    renderAdmin('orders');
-    resetInactivityTimer();
+        const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
+        if (!response.ok) {
+            throw new Error('Не вдалося завантажити замовлення для сортування');
+        }
+
+        const data = await response.json();
+        let ordersData = data.orders || data;
+        if (!Array.isArray(ordersData)) {
+            throw new Error('Очікувався масив замовлень');
+        }
+
+        // Фільтруємо замовлення, якщо є statusFilter
+        let filteredOrders = statusFilter
+            ? ordersData.filter(order => order.status === statusFilter)
+            : ordersData;
+
+        // Сортуємо всі замовлення
+        filteredOrders.sort((a, b) => {
+            let valA = key === 'date' ? new Date(a[key]) : a[key];
+            let valB = key === 'date' ? new Date(b[key]) : b[key];
+            if (direction === 'asc') {
+                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+            } else {
+                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+            }
+        });
+
+        // Оновлюємо totalOrders
+        totalOrders = filteredOrders.length;
+
+        // Виконуємо пагінацію
+        const start = (ordersCurrentPage - 1) * ordersPerPage;
+        const end = start + ordersPerPage;
+        orders = filteredOrders.slice(start, end).map(order => {
+            const cachedNumber = orderNumberCache.get(order._id);
+            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
+        });
+
+        renderAdmin('orders', { total: totalOrders });
+        resetInactivityTimer();
+    } catch (e) {
+        console.error('Помилка сортування замовлень:', e);
+        showNotification('Помилка сортування замовлень: ' + e.message);
+    }
 }
 
 async function uploadBulkPrices() {
@@ -6000,8 +6036,8 @@ async function deleteOrder(index) {
 
 function filterOrders() {
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
-    currentPage = 1;
-    loadOrders(currentPage, ordersPerPage, statusFilter);
+    ordersCurrentPage = 1; // Скидаємо на першу сторінку при фільтрації
+    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter); // Завантажуємо з урахуванням фільтру
     resetInactivityTimer();
 }
 
