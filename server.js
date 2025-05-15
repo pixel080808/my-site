@@ -894,7 +894,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
         const parsedLimit = parseInt(limit);
         const parsedPage = parseInt(page);
 
-        // Валідація параметрів
         if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 10000) {
             logger.error('Невірний параметр limit:', limit);
             return res.status(400).json({ error: 'Параметр limit повинен бути числом від 1 до 10000' });
@@ -918,7 +917,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             ];
         }
 
-        // Обробка сортування
         let sortOptions = {};
         if (sort) {
             const [key, order] = sort.split('-');
@@ -981,12 +979,18 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             total = await Product.countDocuments(query);
         }
 
-        res.json({ products, total, page: parsedPage, limit: parsedLimit });
+        // Гарантуємо коректну відповідь навіть при порожньому результаті
+        res.json({
+            products: products || [],
+            total: total || 0,
+            page: parsedPage,
+            limit: parsedLimit
+        });
     } catch (err) {
         logger.error('Помилка при отриманні товарів:', err);
-        res.status(500).json({ products: [], error: 'Помилка сервера', details: err.message });
+        res.status(500).json({ products: [], total: 0, error: 'Помилка сервера', details: err.message });
     }
-}); // Додано закриваючу дужку для app.get
+});
 
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;

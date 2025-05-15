@@ -60,7 +60,7 @@ let socket;
 
 async function loadProducts(page = 1, limit = productsPerPage) {
     try {
-        isLoadingProducts = true; // Встановлюємо прапорець перед завантаженням
+        isLoadingProducts = true;
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
@@ -87,15 +87,19 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        if (!data.products || !Array.isArray(data.products) || !data.total) {
-            throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
+        // Перевірка структури з гнучкішою обробкою
+        if (!data.products || !Array.isArray(data.products)) {
+            products = [];
+            totalProducts = data.total || 0;
+        } else {
+            products = data.products;
+            totalProducts = data.total || products.length;
         }
 
-        // Зберігаємо товари для поточної сторінки
-        products = data.products;
-        totalProducts = data.total;
+        if (!totalProducts && products.length === 0) {
+            totalProducts = 0;
+        }
 
-        // Оновлюємо глобальні індекси для товарів
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
             if (!p.tempNumber) {
@@ -103,7 +107,6 @@ async function loadProducts(page = 1, limit = productsPerPage) {
             }
         });
 
-        // Зберігаємо копію для пошуку
         originalProducts = [...products];
 
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
@@ -116,7 +119,7 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         productsCurrentPage = 1;
         renderAdmin('products');
     } finally {
-        isLoadingProducts = false; // Скидаємо прапорець після завершення
+        isLoadingProducts = false;
     }
 }
 
