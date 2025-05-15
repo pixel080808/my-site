@@ -1913,19 +1913,27 @@ function renderAdmin(section = activeTab, data = {}) {
     }
 
     if (section === 'products') {
-        // Якщо масив products містить більше товарів, ніж productsPerPage, або data.products не передано,
-        // викликаємо loadProducts для коректного завантаження з пагінацією
-        if (!data.products && products.length > productsPerPage) {
+        let currentProducts = data.products || products;
+        let totalItems = data.total !== undefined ? data.total : totalProducts;
+        let currentPage = data.page || productsCurrentPage;
+
+        // Якщо data.products не передано і products містить більше товарів, ніж потрібно для пагінації,
+        // або якщо products порожній, викликаємо loadProducts
+        if (!data.products && (products.length === 0 || products.length !== productsPerPage)) {
             loadProducts(productsCurrentPage, productsPerPage);
             return; // Чекаємо, поки loadProducts завершить рендеринг
         }
 
         const productList = document.getElementById('product-list-admin');
         if (productList) {
-            // Використовуємо data.products для відображення товарів
-            const currentProducts = data.products || products;
-            const totalItems = data.total !== undefined ? data.total : totalProducts;
-            const currentPage = data.page || productsCurrentPage;
+            // Застосовуємо пагінацію до products, якщо data.products не передано
+            if (!data.products) {
+                const start = (productsCurrentPage - 1) * productsPerPage;
+                const end = start + productsPerPage;
+                currentProducts = products.slice(start, end);
+                totalItems = totalProducts; // Використовуємо загальну кількість товарів
+                currentPage = productsCurrentPage;
+            }
 
             // Відображаємо товари для поточної сторінки
             productList.innerHTML = Array.isArray(currentProducts) && currentProducts.length > 0
@@ -6483,12 +6491,9 @@ function connectAdminWebSocket(attempt = 1) {
                     p.tempNumber = globalIndex + index;
                 });
 
-                // Якщо вкладка "Товари" активна, застосовуємо пагінацію і рендеримо
+                // Якщо вкладка "Товари" активна, викликаємо loadProducts для коректної пагінації
                 if (document.querySelector('#products.active')) {
-                    const start = (productsCurrentPage - 1) * productsPerPage;
-                    const end = start + productsPerPage;
-                    const paginatedProducts = products.slice(start, end);
-                    renderAdmin('products', { products: paginatedProducts, total: totalProducts, page: productsCurrentPage });
+                    loadProducts(productsCurrentPage, productsPerPage);
                 }
             } else if (type === 'categories' && Array.isArray(data)) {
                 handleCategoriesUpdate(data);
