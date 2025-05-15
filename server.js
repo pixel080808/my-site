@@ -17,7 +17,7 @@ const rateLimit = require('express-rate-limit');
 const csurf = require('csurf');
 const winston = require('winston');
 
-const { Product } = require('./models/Product');
+const { Product, productSchemaValidation, productPartialSchemaValidation } = require('./models/Product');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
@@ -1214,8 +1214,6 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
     }
 });
-
-const { Product, productSchemaValidation, productPartialSchemaValidation } = require('./models/Product');
 
 app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
