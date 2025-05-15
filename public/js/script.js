@@ -2434,15 +2434,18 @@ async function openProduct(slugOrId) {
         return;
     }
 
-const subCategoryExists = product.subcategory ? 
-    categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : 
-    true;
-if (!subCategoryExists) {
-    console.warn('Subcategory does not exist:', product.subcategory, 'Clearing subcategory for product:', product.name);
-    product.subcategory = null;
-    currentSubcategory = null;
-    showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
-}
+    const subCategoryExists = product.subcategory 
+        ? categories
+            .filter(cat => cat.name === product.category)
+            .flatMap(cat => cat.subcategories || [])
+            .some(sub => sub.slug === product.subcategory)
+        : true;
+    if (!subCategoryExists) {
+        console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
+        product.subcategory = null;
+        currentSubcategory = null;
+        showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
+    }
 
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(product._id));
     if (groupProduct && currentProduct?.type === 'group') {
