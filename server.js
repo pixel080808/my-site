@@ -286,50 +286,6 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-const productSchemaValidation = Joi.object({
-    id: Joi.number().optional(),
-    name: Joi.string().min(1).max(255).required().trim(),
-    category: Joi.string().max(100).required().trim(),
-    subcategory: Joi.string().max(255).optional().allow('').trim(),
-    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
-    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
-    saleEnd: Joi.date().allow(null),
-    brand: Joi.string().max(100).allow('').trim(),
-    material: Joi.string().max(100).allow('').trim(),
-    filters: Joi.array().items(
-        Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required()
-        })
-    ).default([]),
-    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
-    visible: Joi.boolean().default(true),
-    active: Joi.boolean().default(true),
-    slug: Joi.string().min(1).max(255).required().trim(),
-    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
-    sizes: Joi.array().items(
-        Joi.object({
-            name: Joi.string().max(100).required().trim(),
-            price: Joi.number().min(0).required()
-        })
-    ).default([]),
-    colors: Joi.array().items(
-        Joi.object({
-            name: Joi.string().max(100).required().trim(),
-            value: Joi.string().max(100).required().trim(),
-            priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null)
-        })
-    ).default([]),
-    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-    description: Joi.string().allow('').trim(),
-    widthCm: Joi.number().min(0).allow(null),
-    depthCm: Joi.number().min(0).allow(null),
-    heightCm: Joi.number().min(0).allow(null),
-    lengthCm: Joi.number().min(0).allow(null),
-    popularity: Joi.number().min(0).default(0)
-}).unknown(false);
-
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
     cartId: Joi.string().default(''),
