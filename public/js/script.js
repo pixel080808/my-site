@@ -62,7 +62,20 @@ function loadFromStorage(key, defaultValue) {
             localStorage.removeItem(key);
             return defaultValue;
         }
-        return JSON.parse(decompressed) || defaultValue;
+        const data = JSON.parse(decompressed) || defaultValue;
+        if (key === 'products') {
+            // Валідація підкатегорій
+            const validCategories = categories.map(cat => cat.name);
+            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
+            return data.map(product => {
+                if (product.subcategory && !validSubcategories.includes(product.subcategory)) {
+                    console.warn(`Очищаємо невалідну підкатегорію ${product.subcategory} для товару ${product.name}`);
+                    return { ...product, subcategory: null };
+                }
+                return product;
+            });
+        }
+        return data;
     } catch (e) {
         console.error(`Помилка парсингу ${key}:`, e);
         localStorage.removeItem(key);

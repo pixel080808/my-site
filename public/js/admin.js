@@ -3623,7 +3623,7 @@ async function saveSubcategoryEdit(categoryId, originalSubcatName) {
     }
 }
 
-async function deleteSubcategory(categoryId, subcatName) {
+async function deleteSubcategory(categoryId, subcategoryId) {
     if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив’язку до неї.')) {
         return;
     }
@@ -3642,21 +3642,17 @@ async function deleteSubcategory(categoryId, subcatName) {
             return;
         }
 
-        const subcategory = category.subcategories.find(s => s.name === subcatName);
+        const subcategory = category.subcategories.find(s => s._id === subcategoryId);
         if (!subcategory) {
             showNotification('Підкатегорія не знайдена!');
             return;
         }
 
-        category.subcategories = category.subcategories.filter(s => s.name !== subcatName);
-
-        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
-            method: 'PUT',
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+            method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken')
-            },
-            body: JSON.stringify(category)
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            }
         });
 
         if (!response.ok) {
@@ -3668,10 +3664,14 @@ async function deleteSubcategory(categoryId, subcatName) {
         const index = categories.findIndex(c => c._id === categoryId);
         categories[index] = updatedCategory;
 
-        products.forEach(p => {
-            if (p.subcategory === subcatName && p.category === category.name) {
-                p.subcategory = '';
-            }
+        // Оновлюємо товари через API
+        await fetchWithAuth(`/api/products/subcategory/${encodeURIComponent(subcategory.name)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
+            body: JSON.stringify({ category: category.name })
         });
 
         renderCategoriesAdmin();
@@ -4661,7 +4661,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.slug;
+                option.value = sub.name; // Змінено з sub.slug на sub.name
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -4680,9 +4680,9 @@ function updateSubcategories() {
                         name: newSubcategory,
                         slug: newSubcategory.toLowerCase().replace(/\s+/g, '-'),
                         order: category.subcategories.length,
-                        visible: true
+                        visible: true,
+                        photo: ''
                     };
-                    category.subcategories.push(newSub);
                     saveSubcategory(category._id, newSub)
                         .then(() => {
                             updateSubcategories();
@@ -4704,23 +4704,41 @@ function updateSubcategories() {
 
 async function saveSubcategory(categoryId, subcategory) {
     try {
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch(`/api/categories/${categoryId}/subcategories`, {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            throw new Error('Токен відсутній або недійсний');
+        }
+
+        const category = categories.find(c => c._id === categoryId);
+        if (!category) {
+            throw new Error('Категорія не знайдена');
+        }
+
+        if (category.subcategories.some(s => s.slug === subcategory.slug)) {
+            throw new Error('Шлях підкатегорії має бути унікальним');
+        }
+
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(subcategory),
-            credentials: 'include'
+            body: JSON.stringify(subcategory)
         });
+
         if (!response.ok) {
-            throw new Error('Не вдалося зберегти підкатегорію');
+            const errorData = await response.json();
+            throw new Error(`Не вдалося додати підкатегорію: ${errorData.error || response.statusText}`);
         }
-        showNotification('Підкатегорію додано');
-    } catch (e) {
-        console.error('Помилка збереження підкатегорії:', e);
-        showNotification('Помилка: ' + e.message);
+
+        const updatedCategory = await response.json();
+        const index = categories.findIndex(c => c._id === categoryId);
+        categories[index] = updatedCategory;
+        return updatedCategory;
+    } catch (err) {
+        console.error('Помилка збереження підкатегорії:', err);
+        throw err;
     }
 }
 
@@ -6417,9 +6435,12 @@ function handleCategoriesUpdate(data) {
     const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
     categories = data.filter(cat => isValidId(cat._id)).map(cat => ({
         ...cat,
-        subcategories: (cat.subcategories || []).filter(sub => isValidId(sub._id))
+        subcategories: (cat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
     }));
     console.log('Оновлено categories:', categories);
+    // Очищаємо локальний кеш для продуктів і категорій
+    localStorage.removeItem('products');
+    localStorage.removeItem('categories');
     renderCategoriesAdmin();
     const modal = document.getElementById('modal');
     if (modal && modal.classList.contains('active')) {
