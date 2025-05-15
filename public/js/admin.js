@@ -6033,7 +6033,8 @@ async function sortOrders(sortType) {
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        // Сортуємо всі замовлення
+        // Завжди оновлюємо orderNumberCache при сортуванні
+        orderNumberCache.clear();
         filteredOrders.sort((a, b) => {
             let valA = key === 'date' ? new Date(a[key] || 0) : (a[key] || (typeof a[key] === 'number' ? 0 : ''));
             let valB = key === 'date' ? new Date(b[key] || 0) : (b[key] || (typeof b[key] === 'number' ? 0 : ''));
@@ -6048,14 +6049,10 @@ async function sortOrders(sortType) {
             }
         });
 
-        // Оновлюємо orderNumberCache лише якщо порядок змінився
-        const shouldUpdateCache = key !== 'date' || direction !== 'desc'; // За замовчуванням сервер сортує date-desc
-        if (shouldUpdateCache) {
-            orderNumberCache.clear();
-            filteredOrders.forEach((order, idx) => {
-                orderNumberCache.set(order._id, idx + 1);
-            });
-        }
+        // Призначаємо нові номери в orderNumberCache після сортування
+        filteredOrders.forEach((order, idx) => {
+            orderNumberCache.set(order._id, idx + 1);
+        });
 
         totalOrders = filteredOrders.length;
 
@@ -6065,7 +6062,7 @@ async function sortOrders(sortType) {
         const globalIndex = start + 1;
         orders = filteredOrders.slice(start, end).map((order, index) => {
             const cachedNumber = orderNumberCache.get(order._id);
-            return { ...order, orderNumber: cachedNumber || (globalIndex + index) };
+            return { ...order, orderNumber: cachedNumber };
         });
 
         renderAdmin('orders', { total: totalOrders });
