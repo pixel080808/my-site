@@ -64,7 +64,6 @@ function loadFromStorage(key, defaultValue) {
         }
         const data = JSON.parse(decompressed) || defaultValue;
         if (key === 'products') {
-            // Валідація підкатегорій
             const validCategories = categories.map(cat => cat.name);
             const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
             return data.map(product => {
@@ -1297,12 +1296,30 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         productList.className = 'product-grid';
         productsDiv.appendChild(productList);
 
+        // Знаходимо slug підкатегорії на основі її назви
+        let subcategorySlug = null;
+        if (subcategory) {
+            const subCat = (selectedCat.subcategories || []).find(sub => sub.name === subcategory);
+            if (subCat) {
+                subcategorySlug = subCat.slug; // Використовуємо slug підкатегорії
+            } else {
+                console.warn(`Підкатегорія з назвою "${subcategory}" не знайдена в категорії "${category}"`);
+            }
+        }
+
         filteredProducts = products.filter(p => 
             p.category === category && 
-            (!subcategory || p.subcategory === subcategory) &&
+            (!subcategorySlug || p.subcategory === subcategorySlug) && // Порівнюємо slug підкатегорії
             p.visible
         );
-        renderProducts(filteredProducts);
+
+        if (filteredProducts.length === 0) {
+            const p = document.createElement('p');
+            p.textContent = 'Нічого не знайдено';
+            productList.appendChild(p);
+        } else {
+            renderProducts(filteredProducts);
+        }
     }
     renderFilters();
     renderBreadcrumbs();
@@ -3290,14 +3307,16 @@ async function handleNavigation(path, isPopstate = false) {
                 if (parts[1]) {
                     const subCat = cat.subcategories?.find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
                     if (subCat) {
-                        currentSubcategory = subCat.name;
+                        currentSubcategory = subCat.name; // Зберігаємо назву для відображення
                     }
                     if (parts[2]) {
                         const product = await fetchProductBySlug(parts[2]);
                         if (product) {
                             currentProduct = product;
                             currentCategory = product.category;
-                            currentSubcategory = product.subcategory || null;
+                            currentSubcategory = product.subcategory 
+                                ? cat.subcategories?.find(sc => sc.slug === product.subcategory)?.name || null
+                                : null;
                             showSection('product-details');
                             return;
                         } else {
