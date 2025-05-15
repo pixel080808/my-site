@@ -38,6 +38,7 @@ let productsCurrentPage = 1;
 const productsPerPage = 20;
 const ordersPerPage = 20;
 const sessionTimeout = 30 * 60 * 1000;
+let lastPageBeforeSearch = 1;
 let inactivityTimer;
 let materials = [];
 let brands = [];
@@ -94,11 +95,15 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         // Оновлюємо глобальні індекси для товарів
         const globalIndex = (page - 1) * limit + 1;
         products.forEach((p, index) => {
-            p.tempNumber = globalIndex + index;
+            if (!p.tempNumber) {
+                p.tempNumber = globalIndex + index;
+            }
         });
 
+        // Зберігаємо копію для пошуку
+        originalProducts = [...products];
+
         console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
-        // Передаємо дані напряму
         renderAdmin('products', { products: products, total: totalProducts, page: page });
     } catch (e) {
         console.error('Помилка завантаження товарів:', e);
@@ -1747,61 +1752,6 @@ async function updateAbout() {
     } catch (err) {
         console.error('Помилка оновлення "Про нас":', err);
         showNotification('Помилка оновлення "Про нас": ' + err.message);
-    }
-}
-
-async function loadProducts(page = 1, limit = productsPerPage) {
-    try {
-        const tokenRefreshed = await refreshToken();
-        if (!tokenRefreshed) {
-            console.warn('Токен відсутній. Завантаження локальних даних для тестування.');
-            products = [];
-            originalProducts = [];
-            productsCurrentPage = 1;
-            renderAdmin('products');
-            return;
-        }
-
-        productsCurrentPage = page;
-        const response = await fetchWithAuth(`/api/products?page=${page}&limit=${limit}`);
-        if (!response.ok) {
-            const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('adminToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
-                showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
-            }
-            throw new Error(`Не вдалося завантажити товари: ${text}`);
-        }
-
-        const data = await response.json();
-        if (!data.products || !Array.isArray(data.products) || !data.total) {
-            throw new Error('Некоректна структура відповіді від сервера: products або total відсутні');
-        }
-
-        // Зберігаємо товари для поточної сторінки
-        products = data.products;
-        totalProducts = data.total;
-
-        // Оновлюємо глобальні індекси для товарів
-        const globalIndex = (page - 1) * limit + 1;
-        products.forEach((p, index) => {
-            p.tempNumber = globalIndex + index;
-        });
-
-        console.log('Завантажено товари:', products, 'totalItems:', totalProducts, 'page:', page);
-        // Передаємо дані напряму
-        renderAdmin('products', { products: products, total: totalProducts, page: page });
-    } catch (e) {
-        console.error('Помилка завантаження товарів:', e);
-        showNotification('Помилка завантаження товарів: ' + e.message);
-        products = [];
-        originalProducts = [];
-        productsCurrentPage = 1;
-        renderAdmin('products');
     }
 }
 
@@ -5927,7 +5877,7 @@ async function sortAdminProducts(sortType) {
             return;
         }
 
-        const response = await fetchWithAuth(`/api/products?limit=9999&page=${productsCurrentPage}&sort=${sortType}`);
+        const response = await fetchWithAuth(`/api/products?page=${productsCurrentPage}&limit=${productsPerPage}&sort=${sortType}`);
         if (!response.ok) {
             throw new Error(`Помилка запиту: ${response.status} - ${await response.text()}`);
         }
@@ -5945,7 +5895,7 @@ async function sortAdminProducts(sortType) {
             p.tempNumber = globalIndex + index;
         });
 
-        renderAdmin('products', { total: totalProducts });
+        renderAdmin('products', { products: products, total: totalProducts, page: productsCurrentPage });
     } catch (e) {
         console.error('Помилка сортування товарів:', e);
         showNotification('Помилка сортування товарів: ' + e.message);
@@ -5968,6 +5918,11 @@ async function searchProducts(page = 1) {
             return;
         }
 
+        // Зберігаємо сторінку перед початком пошуку
+        if (page === 1) {
+            lastPageBeforeSearch = productsCurrentPage;
+        }
+
         productsCurrentPage = page;
         const response = await fetchWithAuth(`/api/products?search=${encodeURIComponent(query)}&page=${page}&limit=${productsPerPage}`);
         if (!response.ok) {
@@ -5986,7 +5941,7 @@ async function searchProducts(page = 1) {
             p.tempNumber = globalIndex + index;
         });
 
-        renderAdmin('products', { total: totalProducts });
+        renderAdmin('products', { products: products, total: totalProducts, page: productsCurrentPage });
     } catch (e) {
         console.error('Помилка пошуку товарів:', e);
         showNotification('Помилка пошуку товарів: ' + e.message);
@@ -6000,8 +5955,9 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        products = [...originalProducts];
-        renderAdmin('products', { total: totalProducts });
+        // Повертаємося до сторінки, з якої почали пошук
+        productsCurrentPage = lastPageBeforeSearch;
+        loadProducts(productsCurrentPage, productsPerPage);
     }
     resetInactivityTimer();
 }
@@ -6489,17 +6445,29 @@ function connectAdminWebSocket(attempt = 1) {
 socket.onmessage = (event) => {
     try {
         const { type, data } = JSON.parse(event.data);
-        console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
+        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
         if (type === 'settings' && data) {
             settings = { ...settings, ...data };
             console.log('Оновлено settings:', settings);
             renderSettingsAdmin();
         } else if (type === 'products' && Array.isArray(data)) {
-            products = data; // Оновлюємо повний масив
-            totalProducts = data.length; // Оновлюємо загальну кількість
+            products = data;
+            totalProducts = data.length;
             console.log('Оновлено products:', products);
+
+            // Додаємо tempNumber для продуктів із урахуванням пагінації
+            const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
+            products.forEach((p, index) => {
+                p.tempNumber = globalIndex + index;
+            });
+
+            // Застосовуємо пагінацію після оновлення
+            const start = (productsCurrentPage - 1) * productsPerPage;
+            const end = start + productsPerPage;
+            const paginatedProducts = products.slice(start, end);
+
             if (document.querySelector('#products.active')) {
-                renderAdmin('products', { products: data, total: totalProducts }); // Передаємо оновлені дані
+                renderAdmin('products', { products: paginatedProducts, total: totalProducts, page: productsCurrentPage });
             }
         } else if (type === 'categories' && Array.isArray(data)) {
             handleCategoriesUpdate(data);
