@@ -1215,6 +1215,8 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
     }
 });
 
+const { Product, productSchemaValidation, productPartialSchemaValidation } = require('./models/Product');
+
 app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
         let productData = { ...req.body };
@@ -1243,7 +1245,8 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        const { error } = productSchemaValidation.validate(productData);
+        // Використовуємо схему для часткового оновлення
+        const { error } = productPartialSchemaValidation.validate(productData);
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });

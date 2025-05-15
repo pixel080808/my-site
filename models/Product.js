@@ -161,4 +161,47 @@ const productSchemaValidation = Joi.object({
     popularity: Joi.number().min(0).default(0)
 });
 
-module.exports = { Product, productSchemaValidation };
+const productPartialSchemaValidation = Joi.object({
+    name: Joi.string().min(1).max(255).trim(),
+    category: Joi.string().max(100).trim(),
+    subcategory: Joi.string().max(255).allow('').trim(),
+    price: Joi.number().min(0),
+    salePrice: Joi.number().min(0),
+    saleEnd: Joi.date().allow(null),
+    brand: Joi.string().max(100).allow('').trim(),
+    material: Joi.string().max(100).allow('').trim(),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required()
+        })
+    ),
+    photos: Joi.array().items(Joi.string().uri().allow('')),
+    visible: Joi.boolean(),
+    active: Joi.boolean(),
+    slug: Joi.string().min(1).max(255).trim(),
+    type: Joi.string().valid('simple', 'mattresses', 'group'),
+    sizes: Joi.array().items(
+        Joi.object({
+            name: Joi.string().max(100).required().trim(),
+            price: Joi.number().min(0).required()
+        })
+    ),
+    colors: Joi.array().items(
+        Joi.object({
+            name: Joi.string().max(100).required().trim(),
+            value: Joi.string().max(100).required().trim(),
+            priceChange: Joi.number().default(0),
+            photo: Joi.string().uri().allow('', null)
+        })
+    ),
+    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
+    description: Joi.string().allow('').trim(),
+    widthCm: Joi.number().min(0).allow(null),
+    depthCm: Joi.number().min(0).allow(null),
+    heightCm: Joi.number().min(0).allow(null),
+    lengthCm: Joi.number().min(0).allow(null),
+    popularity: Joi.number().min(0)
+}).unknown(false);
+
+module.exports = { Product, productSchemaValidation, productPartialSchemaValidation };
