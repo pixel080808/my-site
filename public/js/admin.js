@@ -4661,7 +4661,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.name; // Змінено з sub.slug на sub.name
+                option.value = sub.slug; // Використовуємо slug замість name
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -5415,88 +5415,76 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    setTimeout(() => {
-        const categorySelect = document.getElementById('product-category');
-        if (categorySelect) {
-            categorySelect.addEventListener('change', updateSubcategories);
-            updateSubcategories();
-        } else {
-            console.warn('Елемент #product-category не знайдено');
-        }
+setTimeout(() => {
+    const categorySelect = document.getElementById('product-category');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', updateSubcategories);
+        updateSubcategories();
+    } else {
+        console.warn('Елемент #product-category не знайдено');
+    }
 
-        const subcatSelect = document.getElementById('product-subcategory');
-        if (product.subcategory && subcatSelect) {
-            const category = categories.find(c => c.name === product.category);
-            if (category) {
-                const subcat = category.subcategories.find(sub => sub.slug === product.subcategory);
-                if (subcat) {
-                    subcatSelect.value = subcat.slug;
-                } else {
-                    console.warn(`Підкатегорія ${product.subcategory} не знайдена в категорії ${product.category}`);
-                    subcatSelect.value = '';
+    const subcatSelect = document.getElementById('product-subcategory');
+    if (product.subcategory && subcatSelect) {
+        subcatSelect.value = product.subcategory; // Використовуємо slug напряму
+    }
+
+    renderColorsList();
+    renderPhotoList();
+    renderMattressSizes();
+    renderGroupProducts();
+
+    const photoInput = document.getElementById('product-photo-file');
+    if (photoInput) {
+        photoInput.addEventListener('change', () => {
+            const files = photoInput.files;
+            Array.from(files).forEach(file => {
+                if (!newProduct.photos.includes(file)) {
+                    newProduct.photos.push(file);
                 }
-            } else {
-                console.warn(`Категорія ${product.category} не знайдена`);
-                subcatSelect.value = '';
+            });
+            renderPhotoList();
+            resetInactivityTimer();
+        });
+    }
+
+    const colorPhotoInput = document.getElementById('product-color-photo-file');
+    if (colorPhotoInput) {
+        colorPhotoInput.addEventListener('change', () => {
+            const file = colorPhotoInput.files[0];
+            if (file) {
+                const name = document.getElementById('product-color-name').value;
+                const value = document.getElementById('product-color-value').value;
+                const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+                if (name && value) {
+                    const color = { name, value, priceChange, photo: file };
+                    newProduct.colors.push(color);
+                    document.getElementById('product-color-name').value = '';
+                    document.getElementById('product-color-value').value = '#000000';
+                    document.getElementById('product-color-price-change').value = '';
+                    document.getElementById('product-color-photo-url').value = '';
+                    document.getElementById('product-color-photo-file').value = '';
+                    renderColorsList();
+                    resetInactivityTimer();
+                }
             }
-        }
+        });
+    }
 
-        renderColorsList();
-        renderPhotoList();
-        renderMattressSizes();
-        renderGroupProducts();
+    const saveButton = document.getElementById('save-product-btn');
+    if (saveButton) {
+        saveButton.addEventListener('click', () => saveEditedProduct(productId));
+    } else {
+        console.warn('Кнопка #save-product-btn не знайдена');
+    }
 
-        const photoInput = document.getElementById('product-photo-file');
-        if (photoInput) {
-            photoInput.addEventListener('change', () => {
-                const files = photoInput.files;
-                Array.from(files).forEach(file => {
-                    if (!newProduct.photos.includes(file)) {
-                        newProduct.photos.push(file);
-                    }
-                });
-                renderPhotoList();
-                resetInactivityTimer();
-            });
-        }
-
-        const colorPhotoInput = document.getElementById('product-color-photo-file');
-        if (colorPhotoInput) {
-            colorPhotoInput.addEventListener('change', () => {
-                const file = colorPhotoInput.files[0];
-                if (file) {
-                    const name = document.getElementById('product-color-name').value;
-                    const value = document.getElementById('product-color-value').value;
-                    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-                    if (name && value) {
-                        const color = { name, value, priceChange, photo: file };
-                        newProduct.colors.push(color);
-                        document.getElementById('product-color-name').value = '';
-                        document.getElementById('product-color-value').value = '#000000';
-                        document.getElementById('product-color-price-change').value = '';
-                        document.getElementById('product-color-photo-url').value = '';
-                        document.getElementById('product-color-photo-file').value = '';
-                        renderColorsList();
-                        resetInactivityTimer();
-                    }
-                }
-            });
-        }
-
-        const saveButton = document.getElementById('save-product-btn');
-        if (saveButton) {
-            saveButton.addEventListener('click', () => saveEditedProduct(productId));
-        } else {
-            console.warn('Кнопка #save-product-btn не знайдена');
-        }
-
-        const cancelButton = document.getElementById('cancel-product-btn');
-        if (cancelButton) {
-            cancelButton.addEventListener('click', closeModal);
-        } else {
-            console.warn('Кнопка #cancel-product-btn не знайдена');
-        }
-    }, 0);
+    const cancelButton = document.getElementById('cancel-product-btn');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', closeModal);
+    } else {
+        console.warn('Кнопка #cancel-product-btn не знайдена');
+    }
+}, 0);
 
     resetInactivityTimer();
 }

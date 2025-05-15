@@ -7,7 +7,11 @@ const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
     name: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
-    subcategory: { type: String, trim: true },
+    subcategory: { 
+        type: String, 
+        trim: true,
+        // Note: Stores the slug of the subcategory, not the name
+    },
     price: { 
         type: Number, 
         min: 0,
