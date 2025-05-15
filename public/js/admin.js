@@ -5105,9 +5105,9 @@ async function saveNewProduct() {
 
         let subcategorySlug = '';
         if (subcategory) {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory || sub.slug === subcategory);
             if (!subcategoryObj) {
-                showNotification('Обрана підкатегорія не існує в цій категорії!');
+                showNotification(`Підкатегорія "${subcategory}" не існує в категорії "${category}"!`);
                 return;
             }
             subcategorySlug = subcategoryObj.slug;
@@ -5119,7 +5119,7 @@ async function saveNewProduct() {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug,
+            subcategory: subcategorySlug || '',
             material: material || '',
             price: newProduct.type === 'simple' ? price : null,
             salePrice,
@@ -5142,11 +5142,11 @@ async function saveNewProduct() {
             visible
         };
 
+        // Обробка зображень в описі
         const mediaUrls = [];
         const parser = new DOMParser();
         const doc = parser.parseFromString(description, 'text/html');
         const images = doc.querySelectorAll('img');
-
         for (let img of images) {
             const src = img.getAttribute('src');
             if (src && src.startsWith('blob:')) {
@@ -5182,6 +5182,7 @@ async function saveNewProduct() {
         });
         product.description = updatedDescription;
 
+        // Обробка фотографій продукту
         const photoFiles = newProduct.photos.filter(photo => photo instanceof File);
         for (let file of photoFiles) {
             const validation = validateFile(file);
@@ -5204,9 +5205,9 @@ async function saveNewProduct() {
                 return;
             }
         }
-
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
+        // Обробка фотографій кольорів
         for (let i = 0; i < newProduct.colors.length; i++) {
             const color = newProduct.colors[i];
             if (color.photo instanceof File) {
@@ -5237,10 +5238,6 @@ async function saveNewProduct() {
         delete product.id;
         delete product._id;
 
-        if ('id' in product) {
-            console.warn('Поле id все ще присутнє перед відправкою:', product.id);
-        }
-
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
         const response = await fetchWithAuth('/api/products', {
@@ -5248,8 +5245,13 @@ async function saveNewProduct() {
             body: JSON.stringify(product)
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Деталі помилки від сервера:', errorData);
+            throw new Error(`Помилка сервера: ${errorData.error || 'Невідома помилка'}`);
+        }
+
         const newProductData = await response.json();
-        console.log('Отримано відповідь від сервера:', JSON.stringify(newProductData, null, 2));
         if (!newProductData._id) {
             console.error('Сервер не повернув _id для нового товару:', newProductData);
             showNotification('Помилка: сервер не повернув ідентифікатор товару!');
@@ -5269,9 +5271,9 @@ async function saveNewProduct() {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при додаванні товару:', err);
-        if (err.errorData) {
-            console.error('Деталі помилки від сервера:', err.errorData);
-            showNotification(`Не вдалося додати товар: ${err.errorData.error || err.message}`);
+        if (err.errorData && Array.isArray(err.errorData.details)) {
+            console.error('Деталі помилки:', err.errorData.details);
+            showNotification(`Помилка валідації: ${err.errorData.error}. Деталі: ${err.errorData.details.join(', ')}`);
         } else {
             showNotification('Не вдалося додати товар: ' + err.message);
         }
