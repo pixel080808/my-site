@@ -118,7 +118,11 @@ const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),
     subcategory: Joi.string().trim().optional(),
-    price: Joi.number().min(0).optional(),
+    price: Joi.number().min(0).required().when('type', {
+        is: 'simple',
+        then: Joi.required(),
+        otherwise: Joi.allow(null)
+    }),
     salePrice: Joi.number().min(0).optional(),
     saleEnd: Joi.date().optional(),
     brand: Joi.string().trim().optional(),
@@ -131,7 +135,7 @@ const productSchemaValidation = Joi.object({
     ).optional(),
     photos: Joi.array().items(
         Joi.string().uri().allow('').optional()
-    ).optional(),
+    ).min(1).required(), // Додано min(1), щоб вимагати хоча б одне фото
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
     slug: Joi.string().required().trim(),
