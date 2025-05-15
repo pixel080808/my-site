@@ -6035,8 +6035,12 @@ async function sortOrders(sortType) {
 
         // Сортуємо всі замовлення
         filteredOrders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
+            let valA = key === 'date' ? new Date(a[key] || 0) : (a[key] || (typeof a[key] === 'number' ? 0 : ''));
+            let valB = key === 'date' ? new Date(b[key] || 0) : (b[key] || (typeof b[key] === 'number' ? 0 : ''));
+            if (key === 'date') {
+                valA = valA.getTime();
+                valB = valB.getTime();
+            }
             if (direction === 'asc') {
                 return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
             } else {
@@ -6044,11 +6048,14 @@ async function sortOrders(sortType) {
             }
         });
 
-        // Оновлюємо orderNumberCache після сортування
-        orderNumberCache.clear();
-        filteredOrders.forEach((order, idx) => {
-            orderNumberCache.set(order._id, idx + 1);
-        });
+        // Оновлюємо orderNumberCache лише якщо порядок змінився
+        const shouldUpdateCache = key !== 'date' || direction !== 'desc'; // За замовчуванням сервер сортує date-desc
+        if (shouldUpdateCache) {
+            orderNumberCache.clear();
+            filteredOrders.forEach((order, idx) => {
+                orderNumberCache.set(order._id, idx + 1);
+            });
+        }
 
         totalOrders = filteredOrders.length;
 
