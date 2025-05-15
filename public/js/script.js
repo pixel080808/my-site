@@ -1158,6 +1158,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
 
     if (isSearchActive) {
+        // Логіка для пошуку залишається без змін
         const query = document.getElementById('search').value.toLowerCase().trim();
         const h2 = document.createElement('h2');
         h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
@@ -1188,6 +1189,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             productList.appendChild(p);
         }
     } else if (!category) {
+        // Логіка для головної сторінки каталогу
         const h2 = document.createElement('h2');
         h2.textContent = 'Виберіть категорію';
         productsDiv.appendChild(h2);
@@ -1301,7 +1303,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         if (subcategory) {
             const subCat = (selectedCat.subcategories || []).find(sub => sub.name === subcategory);
             if (subCat) {
-                subcategorySlug = subCat.slug; // Використовуємо slug підкатегорії
+                subcategorySlug = subCat.slug;
             } else {
                 console.warn(`Підкатегорія з назвою "${subcategory}" не знайдена в категорії "${category}"`);
             }
@@ -1309,7 +1311,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
 
         filteredProducts = products.filter(p => 
             p.category === category && 
-            (!subcategorySlug || p.subcategory === subcategorySlug) && // Порівнюємо slug підкатегорії
+            (!subcategorySlug || p.subcategory === subcategorySlug) && 
             p.visible
         );
 
@@ -1441,11 +1443,18 @@ function createFilterBlock(title, name, options) {
 }
 
 function filterProducts() {
-    let base = isSearchActive ? [...baseSearchResults] : products.filter(p => 
-        p.category === currentCategory && 
-        (!currentSubcategory || p.subcategory === currentSubcategory) &&
-        p.visible
-    );
+    let base = isSearchActive ? [...baseSearchResults] : products.filter(p => {
+        const categoryMatch = p.category === currentCategory;
+        let subcategoryMatch = true;
+        if (currentSubcategory) {
+            const selectedCat = categories.find(c => c.name === currentCategory);
+            const subCat = selectedCat?.subcategories?.find(sub => sub.name === currentSubcategory);
+            const subcategorySlug = subCat ? subCat.slug : null;
+            subcategoryMatch = !subcategorySlug || p.subcategory === subcategorySlug;
+        }
+        return categoryMatch && subcategoryMatch && p.visible;
+    });
+
     let filtered = [...base];
     let hasActiveFilters = false;
 
@@ -1470,7 +1479,11 @@ function filterProducts() {
         }
     });
 
-    if (!hasActiveFilters && isSearchActive) filtered = [...baseSearchResults];
+    // Якщо немає активних фільтрів, повертаємо базовий список товарів
+    if (!hasActiveFilters) {
+        filtered = [...base];
+    }
+
     filteredProducts = filtered;
     if (isSearchActive) searchResults = filtered;
     renderProducts(filtered);
