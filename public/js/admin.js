@@ -5269,11 +5269,11 @@ async function saveNewProduct() {
         showNotification('Товар додано!');
         unsavedChanges = false;
         resetInactivityTimer();
-    } catch (err) {
+} catch (err) {
         console.error('Помилка при додаванні товару:', err);
         if (err.errorData && Array.isArray(err.errorData.details)) {
-            console.error('Деталі помилки:', err.errorData.details);
-            showNotification(`Помилка валідації: ${err.errorData.error}. Деталі: ${err.errorData.details.join(', ')}`);
+            console.error('Деталі помилки:', err.errorData.details.map(d => `${d.path}: ${d.message}`).join(', '));
+            showNotification(`Помилка валідації: ${err.errorData.error}. Деталі: ${err.errorData.details.map(d => d.message).join(', ')}`);
         } else {
             showNotification('Не вдалося додати товар: ' + err.message);
         }

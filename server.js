@@ -1070,19 +1070,24 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, field: 'category' });
         }
 
-        if (productData.subcategory && productData.subcategory.trim()) {
-            const categoryWithSub = await Category.findOne({
-                name: productData.category,
-                'subcategories.slug': productData.subcategory
-            });
-            if (!categoryWithSub) {
-                logger.error('Підкатегорія не знайдено:', productData.subcategory);
-                return res.status(400).json({
-                    error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
-                    field: 'subcategory'
-                });
-            }
-        }
+if (productData.subcategory && productData.subcategory.trim()) {
+    logger.info('Перевірка підкатегорії:', {
+        category: productData.category,
+        subcategory: productData.subcategory,
+        availableSubcategories: (await Category.findOne({ name: productData.category })).subcategories
+    });
+    const categoryWithSub = await Category.findOne({
+        name: productData.category,
+        'subcategories.slug': productData.subcategory
+    });
+    if (!categoryWithSub) {
+        logger.error('Підкатегорія не знайдено:', productData.subcategory);
+        return res.status(400).json({
+            error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+            field: 'subcategory'
+        });
+    }
+}
 
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
