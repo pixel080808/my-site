@@ -6092,9 +6092,14 @@ async function uploadBulkPrices() {
 
             const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
             let updated = 0;
+
             for (const line of lines) {
                 const parts = line.split(',');
-                if (parts.length < 4) continue;
+                if (parts.length < 4) {
+                    console.warn(`Некоректний формат рядка: ${line}`);
+                    continue;
+                }
+
                 const productId = parts[0].trim(); // First column as _id
                 const name = parts[1].trim(); // Second column as name
                 const brand = parts[2].trim(); // Third column as brand
@@ -6105,10 +6110,10 @@ async function uploadBulkPrices() {
                     continue;
                 }
 
-                // Find product by _id or name and brand if _id doesn't match
+                // Find the product
                 let product = products.find(p => p._id === productId);
                 if (!product && products.length === 1) {
-                    product = products[0]; // Fallback to the only product if _id doesn't match
+                    product = products[0]; // Fallback to the only product
                     console.warn(`Product ID ${productId} not found, using the only product: ${product.name}`);
                 }
 
@@ -6117,39 +6122,35 @@ async function uploadBulkPrices() {
                     continue;
                 }
 
-                const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
-
-                if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                    cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                        const { _id, ...cleanedSize } = size;
-                        return cleanedSize;
-                    });
+                if (product.type !== 'simple') {
+                    console.warn(`Товар ${productId} не є простим товаром, пропускаємо`);
+                    continue;
                 }
 
-                if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                    cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                        const { _id, ...cleanedColor } = color;
-                        return cleanedColor;
-                    });
-                }
+                // Prepare a minimal update object with only the price
+                const updateData = { price };
 
-                if (product.type === 'simple') {
-                    cleanedProduct.price = price;
-                    const response = await fetchWithAuth(`/api/products/${_id}`, {
+                try {
+                    const response = await fetchWithAuth(`/api/products/${product._id}`, {
                         method: 'PUT',
-                        body: JSON.stringify(cleanedProduct)
+                        body: JSON.stringify(updateData)
                     });
+
                     if (response.ok) {
                         updated++;
                         // Update local products array
-                        const index = products.findIndex(p => p._id === _id);
+                        const index = products.findIndex(p => p._id === product._id);
                         if (index !== -1) {
                             products[index].price = price;
                         }
                     } else {
-                        const text = await response.text();
-                        console.error(`Помилка оновлення товару #${_id}: ${text}`);
+                        const errorData = await response.json();
+                        console.error(`Помилка оновлення товару #${product._id}:`, errorData);
+                        showNotification(`Помилка оновлення товару #${product._id}: ${errorData.error || 'Невідома помилка'}`);
                     }
+                } catch (err) {
+                    console.error(`Помилка при оновленні товару ${product._id}:`, err);
+                    showNotification(`Помилка при оновленні товару #${product._id}: ${err.message}`);
                 }
             }
 
