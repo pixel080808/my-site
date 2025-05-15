@@ -429,7 +429,10 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         }
 
         ordersCurrentPage = page;
-        const queryParams = new URLSearchParams({ limit: 9999 });
+        const queryParams = new URLSearchParams({ page: page, limit: limit });
+        if (statusFilter && statusFilter !== 'Усі статуси') {
+            queryParams.append('status', statusFilter);
+        }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
             const text = await response.text();
@@ -467,19 +470,15 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        totalOrders = filteredOrders.length;
+        totalOrders = data.total || filteredOrders.length;
 
-        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const start = (page - 1) * limit;
-        const end = start + limit;
-        orders = filteredOrders.slice(start, end).map(order => {
+        orders = filteredOrders.map(order => {
             const cachedNumber = orderNumberCache.get(order._id);
             return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
         });
 
         console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
-        renderAdmin('orders', { total: totalOrders });
+        renderAdmin('orders', { total: totalOrders, page: page });
     } catch (e) {
         console.error('Помилка завантаження замовлень:', e);
         showNotification('Помилка завантаження замовлень: ' + e.message);
@@ -1913,27 +1912,19 @@ function renderAdmin(section = activeTab, data = {}) {
     }
 
     if (section === 'products') {
-        let currentProducts = data.products || products;
-        let totalItems = data.total !== undefined ? data.total : totalProducts;
-        let currentPage = data.page || productsCurrentPage;
-
-        // Якщо data.products не передано і products містить більше товарів, ніж потрібно для пагінації,
-        // або якщо products порожній, викликаємо loadProducts
-        if (!data.products && (products.length === 0 || products.length !== productsPerPage)) {
+        // Якщо масив products містить більше товарів, ніж productsPerPage, або data.products не передано,
+        // викликаємо loadProducts для коректного завантаження з пагінацією
+        if (!data.products && (products.length === 0 || products.length > productsPerPage)) {
             loadProducts(productsCurrentPage, productsPerPage);
             return; // Чекаємо, поки loadProducts завершить рендеринг
         }
 
         const productList = document.getElementById('product-list-admin');
         if (productList) {
-            // Застосовуємо пагінацію до products, якщо data.products не передано
-            if (!data.products) {
-                const start = (productsCurrentPage - 1) * productsPerPage;
-                const end = start + productsPerPage;
-                currentProducts = products.slice(start, end);
-                totalItems = totalProducts; // Використовуємо загальну кількість товарів
-                currentPage = productsCurrentPage;
-            }
+            // Використовуємо data.products для відображення товарів
+            const currentProducts = data.products || products;
+            const totalItems = data.total !== undefined ? data.total : totalProducts;
+            const currentPage = data.page || productsCurrentPage;
 
             // Відображаємо товари для поточної сторінки
             productList.innerHTML = Array.isArray(currentProducts) && currentProducts.length > 0
@@ -1968,6 +1959,14 @@ function renderAdmin(section = activeTab, data = {}) {
             console.warn('Елемент #product-list-admin не знайдено');
         }
     } else if (section === 'orders') {
+        // Якщо масив orders містить більше замовлень, ніж ordersPerPage, або data.products не передано,
+        // викликаємо loadOrders для коректного завантаження з пагінацією
+        if (!data.products && (orders.length === 0 || orders.length > ordersPerPage)) {
+            const statusFilter = document.getElementById('order-status-filter')?.value || '';
+            loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
+            return; // Чекаємо, поки loadOrders завершить рендеринг
+        }
+
         const orderList = document.getElementById('order-list');
         if (orderList) {
             orderList.innerHTML = Array.isArray(orders) && orders.length > 0
@@ -5989,8 +5988,18 @@ function clearSearch() {
 async function sortOrders(sortType) {
     const [key, direction] = sortType.split('-');
     try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
         const statusFilter = document.getElementById('order-status-filter')?.value || '';
         const queryParams = new URLSearchParams({ limit: 9999 });
+        if (statusFilter && statusFilter !== 'Усі статуси') {
+            queryParams.append('status', statusFilter);
+        }
         const response = await fetchWithAuth(`/api/orders?${queryParams.toString()}`);
         if (!response.ok) {
             throw new Error('Не вдалося завантажити замовлення для сортування');
@@ -6018,8 +6027,6 @@ async function sortOrders(sortType) {
         });
 
         totalOrders = filteredOrders.length;
-
-        orders = filteredOrders;
 
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
@@ -6498,7 +6505,13 @@ function connectAdminWebSocket(attempt = 1) {
             } else if (type === 'categories' && Array.isArray(data)) {
                 handleCategoriesUpdate(data);
             } else if (type === 'orders' && Array.isArray(data)) {
-                handleOrdersUpdate(data);
+                orders = data;
+                totalOrders = data.length;
+                console.log('Оновлено orders:', orders);
+                if (document.querySelector('#orders.active')) {
+                    const statusFilter = document.getElementById('order-status-filter')?.value || '';
+                    loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
+                }
             } else if (type === 'slides' && Array.isArray(data)) {
                 slides = data;
                 console.log('Оновлено slides:', slides);
