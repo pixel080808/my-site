@@ -457,7 +457,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
         const data = await response.json();
         let ordersData = data.orders || data;
         if (!Array.isArray(ordersData)) {
-            console.error('Очікувався масив замовлень, отримано:', data);
+            console.error('Очікувався масив замовлень, отрирано:', data);
             orders = [];
             showNotification('Отрирано некоректні дані замовлень');
             ordersCurrentPage = 1;
@@ -465,9 +465,17 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             return;
         }
 
+        // Ініціалізація orderNumberCache, якщо він порожній
         if (orderNumberCache.size === 0) {
-            ordersData.sort((a, b) => new Date(b.date) - new Date(a.date));
-            ordersData.forEach((order, idx) => {
+            // Завантажуємо всі замовлення для ініціалізації кешу
+            const allOrdersResponse = await fetchWithAuth(`/api/orders?limit=9999`);
+            if (!allOrdersResponse.ok) {
+                throw new Error('Не вдалося завантажити всі замовлення для кешу');
+            }
+            const allOrdersData = await allOrdersResponse.json();
+            let allOrders = allOrdersData.orders || allOrdersData;
+            allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+            allOrders.forEach((order, idx) => {
                 orderNumberCache.set(order._id, idx + 1);
             });
         }
@@ -479,9 +487,11 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
 
         totalOrders = data.total || filteredOrders.length;
 
-        orders = filteredOrders.map(order => {
+        // Призначаємо orderNumber з урахуванням пагінації
+        const globalIndex = (page - 1) * limit + 1;
+        orders = filteredOrders.map((order, index) => {
             const cachedNumber = orderNumberCache.get(order._id);
-            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
+            return { ...order, orderNumber: cachedNumber || (globalIndex + index) };
         });
 
         console.log('loadOrders: totalOrders =', totalOrders, 'ordersCurrentPage =', ordersCurrentPage, 'statusFilter =', statusFilter);
@@ -6023,6 +6033,7 @@ async function sortOrders(sortType) {
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
+        // Сортуємо всі замовлення
         filteredOrders.sort((a, b) => {
             let valA = key === 'date' ? new Date(a[key]) : a[key];
             let valB = key === 'date' ? new Date(b[key]) : b[key];
@@ -6033,13 +6044,21 @@ async function sortOrders(sortType) {
             }
         });
 
+        // Оновлюємо orderNumberCache після сортування
+        orderNumberCache.clear();
+        filteredOrders.forEach((order, idx) => {
+            orderNumberCache.set(order._id, idx + 1);
+        });
+
         totalOrders = filteredOrders.length;
 
+        // Обрізаємо до поточної сторінки
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
-        orders = filteredOrders.slice(start, end).map(order => {
+        const globalIndex = start + 1;
+        orders = filteredOrders.slice(start, end).map((order, index) => {
             const cachedNumber = orderNumberCache.get(order._id);
-            return { ...order, orderNumber: cachedNumber || orderNumberCache.size + 1 };
+            return { ...order, orderNumber: cachedNumber || (globalIndex + index) };
         });
 
         renderAdmin('orders', { total: totalOrders });
