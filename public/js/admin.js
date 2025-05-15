@@ -6095,10 +6095,25 @@ async function uploadBulkPrices() {
             for (const line of lines) {
                 const parts = line.split(',');
                 if (parts.length < 4) continue;
-                const productId = parts[0].trim(); // Очікуємо _id
-                const product = products.find(p => p._id === productId);
+                const productId = parts[0].trim(); // First column as _id
+                const name = parts[1].trim(); // Second column as name
+                const brand = parts[2].trim(); // Third column as brand
+                const price = parseFloat(parts[3].trim()); // Fourth column as price
+
+                if (isNaN(price) || price < 0) {
+                    console.error(`Некоректна ціна для товару ${productId}: ${parts[3]}`);
+                    continue;
+                }
+
+                // Find product by _id or name and brand if _id doesn't match
+                let product = products.find(p => p._id === productId);
+                if (!product && products.length === 1) {
+                    product = products[0]; // Fallback to the only product if _id doesn't match
+                    console.warn(`Product ID ${productId} not found, using the only product: ${product.name}`);
+                }
+
                 if (!product) {
-                    console.error(`Продукт з _id ${productId} не знайдено в масиві products`);
+                    console.error(`Продукт з _id ${productId} не знайдено`);
                     continue;
                 }
 
@@ -6119,39 +6134,21 @@ async function uploadBulkPrices() {
                 }
 
                 if (product.type === 'simple') {
-                    const price = parseFloat(parts[parts.length - 1].trim());
-                    if (!isNaN(price) && price >= 0) {
-                        cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${_id}`, {
-                            method: 'PUT',
-                            body: JSON.stringify(cleanedProduct)
-                        });
-                        if (response.ok) {
-                            updated++;
-                        } else {
-                            const text = await response.text();
-                            console.error(`Помилка оновлення товару #${_id}: ${text}`);
+                    cleanedProduct.price = price;
+                    const response = await fetchWithAuth(`/api/products/${_id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(cleanedProduct)
+                    });
+                    if (response.ok) {
+                        updated++;
+                        // Update local products array
+                        const index = products.findIndex(p => p._id === _id);
+                        if (index !== -1) {
+                            products[index].price = price;
                         }
-                    }
-                } else if (product.type === 'mattresses') {
-                    const sizePart = parts[parts.length - 2].trim();
-                    const price = parseFloat(parts[parts.length - 1].trim());
-                    if (sizePart.startsWith('Розмір: ')) {
-                        const size = sizePart.replace('Розмір: ', '').trim();
-                        const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
-                        if (sizeObj && !isNaN(price) && price >= 0) {
-                            sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${_id}`, {
-                                method: 'PUT',
-                                body: JSON.stringify(cleanedProduct)
-                            });
-                            if (response.ok) {
-                                updated++;
-                            } else {
-                                const text = await response.text();
-                                console.error(`Помилка оновлення товару #${_id}: ${text}`);
-                            }
-                        }
+                    } else {
+                        const text = await response.text();
+                        console.error(`Помилка оновлення товару #${_id}: ${text}`);
                     }
                 }
             }
