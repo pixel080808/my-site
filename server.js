@@ -17,7 +17,7 @@ const rateLimit = require('express-rate-limit');
 const csurf = require('csurf');
 const winston = require('winston');
 
-const { Product, productSchemaValidation, productPartialSchemaValidation } = require('./models/Product');
+const { Product } = require('./models/Product');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
@@ -285,6 +285,50 @@ mongoose.connect(process.env.MONGO_URI)
         });
         process.exit(1);
     });
+
+const productSchemaValidation = Joi.object({
+    id: Joi.number().optional(),
+    name: Joi.string().min(1).max(255).required().trim(),
+    category: Joi.string().max(100).required().trim(),
+    subcategory: Joi.string().max(255).optional().allow('').trim(),
+    price: Joi.number().min(0).when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null) }),
+    salePrice: Joi.number().min(0).when('type', { is: 'simple', then: Joi.allow(null), otherwise: Joi.allow(null) }),
+    saleEnd: Joi.date().allow(null),
+    brand: Joi.string().max(100).allow('').trim(),
+    material: Joi.string().max(100).allow('').trim(),
+    filters: Joi.array().items(
+        Joi.object({
+            name: Joi.string().required(),
+            value: Joi.string().required()
+        })
+    ).default([]),
+    photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
+    visible: Joi.boolean().default(true),
+    active: Joi.boolean().default(true),
+    slug: Joi.string().min(1).max(255).required().trim(),
+    type: Joi.string().valid('simple', 'mattresses', 'group').required(),
+    sizes: Joi.array().items(
+        Joi.object({
+            name: Joi.string().max(100).required().trim(),
+            price: Joi.number().min(0).required()
+        })
+    ).default([]),
+    colors: Joi.array().items(
+        Joi.object({
+            name: Joi.string().max(100).required().trim(),
+            value: Joi.string().max(100).required().trim(),
+            priceChange: Joi.number().default(0),
+            photo: Joi.string().uri().allow('', null)
+        })
+    ).default([]),
+    groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
+    description: Joi.string().allow('').trim(),
+    widthCm: Joi.number().min(0).allow(null),
+    depthCm: Joi.number().min(0).allow(null),
+    heightCm: Joi.number().min(0).allow(null),
+    lengthCm: Joi.number().min(0).allow(null),
+    popularity: Joi.number().min(0).default(0)
+}).unknown(false);
 
 const orderSchemaValidation = Joi.object({
     id: Joi.number().optional(),
@@ -1070,24 +1114,19 @@ app.post('/api/products', authenticateToken, csrfProtection, async (req, res) =>
             return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, field: 'category' });
         }
 
-if (productData.subcategory && productData.subcategory.trim()) {
-    logger.info('Перевірка підкатегорії:', {
-        category: productData.category,
-        subcategory: productData.subcategory,
-        availableSubcategories: (await Category.findOne({ name: productData.category })).subcategories
-    });
-    const categoryWithSub = await Category.findOne({
-        name: productData.category,
-        'subcategories.slug': productData.subcategory
-    });
-    if (!categoryWithSub) {
-        logger.error('Підкатегорія не знайдено:', productData.subcategory);
-        return res.status(400).json({
-            error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
-            field: 'subcategory'
-        });
-    }
-}
+        if (productData.subcategory && productData.subcategory.trim()) {
+            const categoryWithSub = await Category.findOne({
+                name: productData.category,
+                'subcategories.slug': productData.subcategory
+            });
+            if (!categoryWithSub) {
+                logger.error('Підкатегорія не знайдено:', productData.subcategory);
+                return res.status(400).json({
+                    error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+                    field: 'subcategory'
+                });
+            }
+        }
 
         if (productData.groupProducts && productData.groupProducts.length > 0) {
             const invalidIds = productData.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
@@ -1208,8 +1247,7 @@ app.put('/api/products/:id', authenticateToken, csrfProtection, async (req, res)
             });
         }
 
-        // Використовуємо схему для часткового оновлення
-        const { error } = productPartialSchemaValidation.validate(productData);
+        const { error } = productSchemaValidation.validate(productData);
         if (error) {
             logger.error('Помилка валідації продукту:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
