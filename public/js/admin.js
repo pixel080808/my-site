@@ -6095,19 +6095,14 @@ async function uploadBulkPrices() {
             for (const line of lines) {
                 const parts = line.split(',');
                 if (parts.length < 4) continue;
-                const id = parseInt(parts[0].trim());
-                const product = products.find(p => p.id === id);
+                const productId = parts[0].trim(); // Очікуємо _id
+                const product = products.find(p => p._id === productId);
                 if (!product) {
-                    console.error(`Продукт з id ${id} не знайдено в масиві products`);
+                    console.error(`Продукт з _id ${productId} не знайдено в масиві products`);
                     continue;
                 }
 
-                if (!product._id) {
-                    console.error(`Продукт з id ${id} не має _id`);
-                    continue;
-                }
-
-                const { _id, createdAt, updatedAt, __v, id: productId, tempNumber, ...cleanedProduct } = product;
+                const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
 
                 if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
                     cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
@@ -6127,7 +6122,7 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${id}`, {
+                        const response = await fetchWithAuth(`/api/products/${_id}`, {
                             method: 'PUT',
                             body: JSON.stringify(cleanedProduct)
                         });
@@ -6135,7 +6130,7 @@ async function uploadBulkPrices() {
                             updated++;
                         } else {
                             const text = await response.text();
-                            console.error(`Помилка оновлення товару #${id}: ${text}`);
+                            console.error(`Помилка оновлення товару #${_id}: ${text}`);
                         }
                     }
                 } else if (product.type === 'mattresses') {
@@ -6146,7 +6141,7 @@ async function uploadBulkPrices() {
                         const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${id}`, {
+                            const response = await fetchWithAuth(`/api/products/${_id}`, {
                                 method: 'PUT',
                                 body: JSON.stringify(cleanedProduct)
                             });
@@ -6154,7 +6149,7 @@ async function uploadBulkPrices() {
                                 updated++;
                             } else {
                                 const text = await response.text();
-                                console.error(`Помилка оновлення товару #${id}: ${text}`);
+                                console.error(`Помилка оновлення товару #${_id}: ${text}`);
                             }
                         }
                     }
@@ -6172,29 +6167,29 @@ async function uploadBulkPrices() {
     reader.readAsText(file);
 }
 
-    function exportPrices() {
-        const exportData = products
-            .filter(p => p.active && p.type !== 'group')
-            .map(p => {
-                if (p.type === 'simple') {
-                    return `${p.id},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}`;
-                } else if (p.type === 'mattresses') {
-                    return p.sizes.map(s => `${p.id},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}`).join('\n');
-                }
-                return '';
-            })
-            .filter(line => line)
-            .join('\n');
-        const blob = new Blob([exportData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'prices-export.txt';
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Ціни експортовано!');
-        resetInactivityTimer();
-    }
+function exportPrices() {
+    const exportData = products
+        .filter(p => p.active && p.type !== 'group')
+        .map(p => {
+            if (p.type === 'simple') {
+                return `${p._id},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}`;
+            } else if (p.type === 'mattresses') {
+                return p.sizes.map(s => `${p._id},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}`).join('\n');
+            }
+            return '';
+        })
+        .filter(line => line)
+        .join('\n');
+    const blob = new Blob([exportData], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'prices-export.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Ціни експортовано!');
+    resetInactivityTimer();
+}
 
     function renderCountdown(product) {
         if (product.saleEnd) {
