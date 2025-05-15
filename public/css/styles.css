@@ -2203,14 +2203,14 @@ h3:hover {
     }
 
     .product-grid {
-        gap: 8px;
-        justify-content: center;
+        gap: 10px;
+        justify-content: space-between;
     }
 
     .product {
-        width: 100%;
-        max-width: 280px;
-        margin: 4px auto;
+        width: calc(50% - 5px);
+        max-width: 300px;
+        margin: 5px 0;
     }
 
     .product-detail-top {
@@ -2551,13 +2551,13 @@ h3:hover {
 
     .product-grid {
         gap: 10px;
-        justify-content: center;
+        justify-content: space-between;
     }
 
-    .product {
-        width: 100%;
+     .product {
+        width: calc(50% - 5px);
         max-width: 300px;
-        margin: 5px auto;
+        margin: 5px 0;
     }
 
     .product-detail-top {
@@ -2854,8 +2854,10 @@ h3:hover {
     }
 
     .filters {
-        width: 100%;
-        padding: 10px;
+        width: 100vw;
+        margin: 0;
+        padding: 10px 15px;
+        box-sizing: border-box;
     }
 
     .products {
@@ -2886,11 +2888,11 @@ h3:hover {
 
     .product-grid {
         gap: 10px;
-        justify-content: center;
+        justify-content: space-between;
     }
 
     .product {
-        width: calc(50% - 10px);
+    width: calc(50% - 5px);
         max-width: 300px;
         margin: 5px 0;
     }
