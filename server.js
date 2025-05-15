@@ -847,15 +847,24 @@ app.get('/api/public/products', async (req, res) => {
             .limit(parsedLimit + 1)
             .lean();
 
+        // Валідація підкатегорій
+        const categories = await Category.find().lean();
+        products = products.map(product => {
+            if (product.subcategory) {
+                const category = categories.find(cat => cat.name === product.category);
+                if (!category || !category.subcategories?.some(sub => sub.name === product.subcategory)) {
+                    logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`);
+                    product.subcategory = null; // Очищаємо неіснуючу підкатегорію
+                }
+            }
+            const { __v, ...cleanedProduct } = product;
+            return cleanedProduct;
+        });
+
         if (products.length > parsedLimit) {
             nextCursor = products[products.length - 1]._id.toString();
             products = products.slice(0, parsedLimit);
         }
-
-        products = products.map(product => {
-            const { __v, ...cleanedProduct } = product;
-            return cleanedProduct;
-        });
 
         const total = await ProductModel.countDocuments(query);
         res.json({ products, total, nextCursor, limit: parsedLimit });

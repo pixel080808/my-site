@@ -415,16 +415,16 @@ async function fetchPublicData() {
             products = loadFromStorage('products', []);
         }
 
-        console.log('Fetching categories...');
-        const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
-        if (catResponse && catResponse.ok) {
-            categories = await catResponse.json();
-            console.log('Categories fetched:', categories.length);
-            saveToStorage('categories', categories);
-        } else {
-            console.warn('Не вдалося отримати категорії, використовуємо локальні дані');
-            categories = loadFromStorage('categories', []);
-        }
+console.log('Fetching categories...');
+const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
+if (catResponse && catResponse.ok) {
+    categories = await catResponse.json();
+    console.log('Categories fetched:', categories.length, 'Details:', JSON.stringify(categories, null, 2));
+    saveToStorage('categories', categories);
+} else {
+    console.warn('Не вдалося отримати категорії, використовуємо локальні дані');
+    categories = loadFromStorage('categories', []);
+}
 
         console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
@@ -2386,6 +2386,7 @@ async function openProduct(slugOrId) {
 
     if (!product && typeof slugOrId === 'string') {
         product = await fetchProductBySlug(slugOrId);
+        console.log('Fetched product from server:', product);
     }
 
     if (!product) {
@@ -2420,15 +2421,15 @@ async function openProduct(slugOrId) {
         return;
     }
 
-    const subCategoryExists = product.subcategory ? 
-        categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : 
-        true;
-    if (!subCategoryExists) {
-        console.error('Subcategory does not exist:', product.subcategory);
-        showNotification('Підкатегорія товару більше не існує!', 'error');
-        showSection('home');
-        return;
-    }
+const subCategoryExists = product.subcategory ? 
+    categories.flatMap(cat => cat.subcategories || []).some(sub => sub.name === product.subcategory) : 
+    true;
+if (!subCategoryExists) {
+    console.warn('Subcategory does not exist:', product.subcategory, 'Clearing subcategory for product:', product.name);
+    product.subcategory = null;
+    currentSubcategory = null;
+    showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
+}
 
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(product._id));
     if (groupProduct && currentProduct?.type === 'group') {
