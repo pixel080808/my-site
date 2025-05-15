@@ -6403,22 +6403,6 @@ async function deleteOrder(index) {
     }
 }
 
-    function sortOrders(criteria) {
-        const [key, direction] = criteria.split('-');
-        orders.sort((a, b) => {
-            let valA = key === 'date' ? new Date(a[key]) : a[key];
-            let valB = key === 'date' ? new Date(b[key]) : b[key];
-            if (direction === 'asc') {
-                return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
-            } else {
-                return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
-            }
-        });
-        currentPage = 1;
-        renderAdmin('orders');
-        resetInactivityTimer();
-    }
-
 function filterOrders() {
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
     ordersCurrentPage = 1;
