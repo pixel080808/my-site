@@ -755,6 +755,7 @@ h3:hover {
     flex-direction: column;
     align-items: flex-start;
     min-width: 0;
+    margin-top: 60px; /* Додаємо відступ для фіксованого блоку */
 }
 
 #catalog .container.no-filters .products {
@@ -822,23 +823,47 @@ h3:hover {
 }
 
 .catalog-controls {
+    display: none; /* Прибираємо старий контейнер */
+}
+
+.fixed-controls {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    z-index: 99;
+    padding: 10px 0;
     margin-bottom: 15px;
-    gap: 15px;
-    margin-top: -15px;
-    padding-right: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     width: 100%;
 }
 
-.sort-menu,
-.per-page-menu {
-    position: relative;
+.filter-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
-.sort-btn,
-.per-page-btn {
+.filter-btn:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+.fixed-controls .sort-menu {
+    margin-left: auto;
+    position: relative;
+    display: inline-block; /* Забезпечуємо коректне розташування */
+}
+
+.fixed-controls .sort-btn {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     padding: 10px 20px;
@@ -850,45 +875,33 @@ h3:hover {
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
 }
 
-.sort-btn:hover,
-.per-page-btn:hover {
+.fixed-controls .sort-btn:hover {
     background: #EBF8FF;
     transform: translateY(-2px);
     border-color: var(--primary-color);
 }
 
-.sort-btn:focus,
-.per-page-btn:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.sort-dropdown,
-.per-page-dropdown {
-    display: none;
+.fixed-controls .sort-dropdown {
+    display: none; /* Зберігаємо базове приховування */
     position: absolute;
     top: 100%;
-    right: 50%;
-    transform: translateX(50%);
+    right: 0;
+    transform: none;
     background: var(--card-bg);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     z-index: 10;
-    min-width: 120px;
-    width: 100%;
-    max-width: 150px;
+    min-width: 150px;
     padding: 5px 0;
     transition: opacity var(--transition-speed) ease;
+    opacity: 0; /* Додаємо для плавного переходу */
 }
-
-.sort-menu:hover .sort-dropdown,
-.per-page-menu:hover .per-page-dropdown {
-    display: block;
+.fixed-controls .sort-menu:hover .sort-dropdown {
+    display: block; /* Показуємо при наведенні */
     opacity: 1;
 }
 
-.sort-dropdown button,
-.per-page-dropdown button {
+.fixed-controls .sort-dropdown button {
     display: block;
     width: 100%;
     padding: 10px 20px;
@@ -896,19 +909,38 @@ h3:hover {
     border: none;
     color: var(--primary-color);
     font-size: 14px;
+    text-align: left;
     cursor: pointer;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
-.sort-dropdown button:hover,
-.per-page-dropdown button:hover {
+.fixed-controls .sort-dropdown button:hover {
     background: #EBF8FF;
     color: var(--secondary-color);
 }
 
-.sort-dropdown button:focus {
-    outline: none;
-    background: #E6F0FA;
+.show-more-btn {
+    display: block;
+    margin: 20px auto;
+    padding: 12px 30px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.show-more-btn:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+.show-more-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
 }
 
 #per-page {
@@ -2212,12 +2244,21 @@ h3:hover {
         justify-content: space-between;
     }
 
-    .product {
-        width: calc(50% - 2px);
-        padding: 8px;
-        margin: 3px 0;
-        border-radius: 8px;
-    }
+.product {
+    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
+    padding: 8px;
+    margin: 0; /* Прибираємо зайві відступи */
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.product img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    margin: 0 0 10px 0;
+}
 
     .product img {
         margin: 0 auto 10px auto;
@@ -2452,6 +2493,45 @@ h3:hover {
         padding: 5px 10px;
     }
 
+.fixed-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+    .fixed-controls .filter-btn,
+    .fixed-controls .sort-btn {
+        width: 100%;
+        max-width: 200px;
+        font-size: 13px;
+        padding: 8px 15px;
+    }
+
+.fixed-controls .sort-menu {
+    margin-left: 0;
+    width: 100%;
+    max-width: 200px;
+    display: inline-block; /* Забезпечуємо видимість */
+    text-align: center;
+}
+
+.fixed-controls .sort-dropdown {
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    display: block; /* Забезпечуємо базову видимість */
+    opacity: 0; /* Приховуємо за замовчуванням, показуємо при :hover */
+    transition: opacity var(--transition-speed) ease;
+}
+.fixed-controls .sort-menu:hover .sort-dropdown {
+    opacity: 1; /* Показуємо при наведенні */
+}
+
     #catalog-dropdown,
     .dropdown {
         min-width: 200px;
@@ -2541,15 +2621,132 @@ h3:hover {
         margin: 0 auto;
     }
 
-    #catalog .container {
-        flex-direction: column;
-        padding: 5px;
-    }
+#catalog .container {
+    flex-direction: column;
+    padding: 0; /* Remove padding to eliminate side margins */
+    width: 100%;
+    box-sizing: border-box;
+    position: relative; /* Для позиціонування кнопки */
+}
+#catalog .container .filter-toggle {
+    display: block;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin: 10px 0;
+    transition: background var(--transition-speed) ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#catalog .container .filter-toggle:hover {
+    background: var(--secondary-color);
+}
 
-    .filters {
-        width: 100%;
-        padding: 10px;
-    }
+.filters {
+    width: 100%;
+    padding: 10px;
+    display: none; /* Hide filter by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: var(--card-bg);
+    height: 100%;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform var(--transition-speed) ease;
+}
+
+.filters.active {
+    transform: translateX(0); /* Show filter when active */
+}
+
+/* Add confirm and back buttons */
+.filters .confirm-btn,
+.filters .back-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0 0;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.filters .confirm-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.filters .confirm-btn:hover {
+    background: var(--secondary-color);
+}
+
+.filters .back-btn {
+    background: #E53E3E;
+    color: white;
+}
+
+.filters .back-btn:hover {
+    background: #C53030;
+}
+
+/* Add toggle button styling (insert before .products media query block) */
+.filter-toggle {
+    display: block;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin: 10px 0;
+    transition: background var(--transition-speed) ease;
+}
+
+.filter-toggle:hover {
+    background: var(--secondary-color);
+}
+
+/* Add confirm and back buttons (insert after .filters.active) */
+.filters .confirm-btn,
+.filters .back-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0 0;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.filters .confirm-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.filters .confirm-btn:hover {
+    background: var(--secondary-color);
+}
+
+.filters .back-btn {
+    background: #E53E3E;
+    color: white;
+}
+
+.filters .back-btn:hover {
+    background: #C53030;
+}
 
     .products {
         width: 100%;
@@ -2584,12 +2781,13 @@ h3:hover {
         justify-content: space-between;
     }
 
-    .product {
-        width: calc(50% - 3px);
-        padding: 8px;
-        margin: 3px 0;
-        border-radius: 8px;
-    }
+.product {
+    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
+    padding: 8px;
+    margin: 0; /* Прибираємо зайві відступи */
+    border-radius: 8px;
+    box-sizing: border-box;
+}
 
     .product img {
         margin: 0 auto 10px auto;
@@ -2903,17 +3101,84 @@ h3:hover {
         max-width: 300px;
     }
 
-    #catalog .container {
-        flex-direction: column;
-        padding: 5px;
-    }
+#catalog .container {
+    flex-direction: column;
+    padding: 0; /* Remove padding to eliminate side margins */
+    width: 100%;
+    box-sizing: border-box;
+    position: relative; /* Для позиціонування кнопки */
+}
+#catalog .container .filter-toggle {
+    display: block;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin: 10px 0;
+    transition: background var(--transition-speed) ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#catalog .container .filter-toggle:hover {
+    background: var(--secondary-color);
+}
 
-    .filters {
-        width: 100vw;
-        margin: 0;
-        padding: 10px 15px;
-        box-sizing: border-box;
-    }
+.filters {
+    width: 100vw;
+    margin: 0;
+    padding: 10px 15px;
+    display: none; /* Hide filter by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: var(--card-bg);
+    height: 100%;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform var(--transition-speed) ease;
+    box-sizing: border-box;
+}
+
+.filters.active {
+    transform: translateX(0); /* Show filter when active */
+}
+
+/* Add confirm and back buttons */
+.filters .confirm-btn,
+.filters .back-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0 0;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.filters .confirm-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.filters .confirm-btn:hover {
+    background: var(--secondary-color);
+}
+
+.filters .back-btn {
+    background: #E53E3E;
+    color: white;
+}
+
+.filters .back-btn:hover {
+    background: #C53030;
+}
 
     .products {
         width: 100%;
@@ -2946,12 +3211,13 @@ h3:hover {
         justify-content: space-between;
     }
 
-    .product {
-        width: calc(50% - 3px);
-        padding: 8px;
-        margin: 3px 0;
-        border-radius: 8px;
-    }
+.product {
+    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
+    padding: 8px;
+    margin: 0; /* Прибираємо зайві відступи */
+    border-radius: 8px;
+    box-sizing: border-box;
+}
 
     .product img {
         margin: 0 auto 10px auto;
@@ -3226,15 +3492,82 @@ h3:hover {
         max-width: 280px;
     }
 
-    #catalog .container {
-        flex-direction: row;
-        padding: 15px;
-    }
+#catalog .container {
+    flex-direction: column;
+    padding: 0; /* Remove padding to eliminate side margins */
+    width: 100%;
+    box-sizing: border-box;
+    position: relative; /* Для позиціонування кнопки */
+}
+#catalog .container .filter-toggle {
+    display: block;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin: 10px 0;
+    transition: background var(--transition-speed) ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#catalog .container .filter-toggle:hover {
+    background: var(--secondary-color);
+}
 
-    .filters {
-        width: 250px;
-        padding: 15px;
-    }
+.filters {
+    width: 250px;
+    padding: 15px;
+    display: none; /* Hide filter by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: var(--card-bg);
+    height: 100%;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform var(--transition-speed) ease;
+}
+
+.filters.active {
+    transform: translateX(0); /* Show filter when active */
+}
+
+/* Add confirm and back buttons */
+.filters .confirm-btn,
+.filters .back-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0 0;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease;
+}
+
+.filters .confirm-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.filters .confirm-btn:hover {
+    background: var(--secondary-color);
+}
+
+.filters .back-btn {
+    background: #E53E3E;
+    color: white;
+}
+
+.filters .back-btn:hover {
+    background: #C53030;
+}
 
     .products {
         width: calc(100% - 270px);
@@ -3260,10 +3593,12 @@ h3:hover {
         gap: 15px;
     }
 
-    .product {
-        width: calc(50% - 15px);
-        max-width: 300px;
-    }
+.product {
+    width: calc(33.33% - 4px); /* 3 стовпчики на середніх екранах */
+    padding: 8px;
+    margin: 0;
+    border-radius: 8px;
+}
 
     .product-detail-top {
         flex-direction: row;
@@ -3484,10 +3819,11 @@ h3:hover {
         padding: 0 var(--base-padding);
     }
 
-    .filters {
-        width: 300px;
-        padding: var(--base-padding) calc(var(--base-padding) + 20px);
-    }
+.filters {
+    width: 300px;
+    padding: var(--base-padding) calc(var(--base-padding) + 20px);
+    display: block; /* Show filter by default on wide screens */
+}
 
     .products {
         width: calc(100% - 320px);
@@ -3513,10 +3849,12 @@ h3:hover {
         gap: 20px;
     }
 
-    .product {
-        width: calc(33.33% - 20px);
-        max-width: 300px;
-    }
+.product {
+    width: calc(25% - 11.25px); /* 4 стовпчики на планшетах типу iPad */
+    max-width: 300px;
+    padding: 8px;
+    margin: 0;
+}
 
     .product-detail-top {
         flex-direction: row;
@@ -3642,10 +3980,12 @@ h3:hover {
         width: calc(100% - 320px);
     }
 
-    .product {
-        width: calc(25% - 15px);
-        max-width: 300px;
-    }
+.product {
+    width: calc(20% - 16px); /* 5 стовпчиків на великих екранах */
+    max-width: 300px;
+    padding: 8px;
+    margin: 0;
+}
 
     .product-detail-left {
         max-width: 600px;
@@ -3741,6 +4081,45 @@ h3:hover {
 
     #product-details .product-detail-right .price .regular-price {
         color: #FFFFFF !important;
+    }
+
+@media (prefers-color-scheme: dark) {
+    .fixed-controls {
+        background: var(--card-bg);
+        box-shadow: 0 2px 6px rgba(255, 255, 255, 0.05);
+    }
+
+    .fixed-controls .filter-btn {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .fixed-controls .filter-btn:hover {
+        background: var(--secondary-color);
+    }
+
+    .fixed-controls .sort-btn {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--primary-color);
+    }
+
+    .fixed-controls .sort-btn:hover {
+        background: #4A5568;
+        border-color: var(--primary-color);
+    }
+
+    .fixed-controls .sort-dropdown {
+        background: var(--card-bg);
+    }
+
+    .fixed-controls .sort-dropdown button {
+        color: var(--primary-color);
+    }
+
+    .fixed-controls .sort-dropdown button:hover {
+        background: #4A5568;
+        color: var(--secondary-color);
     }
 
 @media (prefers-color-scheme: dark) {
