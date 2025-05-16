@@ -22,7 +22,6 @@ let isSearchPending = false;
 let filteredProducts = [];
 let selectedColors = {};
 let ws;
-let displayedProducts = 20; // Початкова кількість товарів
 const productsPerLoad = 20; // Кількість товарів для завантаження
 const activeTimers = new Map();
 let parentGroupProduct = null;
