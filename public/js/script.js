@@ -804,14 +804,18 @@ async function updateProducts() {
 
 function loadMoreProducts() {
     const productGrid = document.querySelector('.product-grid');
+    if (!productGrid) {
+        console.warn('Елемент .product-grid не знайдено');
+        return;
+    }
     let allProducts = [];
     try {
         const storedProducts = localStorage.getItem('products');
         allProducts = storedProducts ? JSON.parse(storedProducts) : [];
     } catch (e) {
         console.error('Помилка парсингу продуктів з localStorage:', e);
-        allProducts = []; // Використовуйте порожній масив у разі помилки
-        localStorage.removeItem('products'); // Очистіть пошкоджені дані
+        allProducts = [];
+        localStorage.removeItem('products'); // Очищаємо пошкоджені дані
     }
     const nextProducts = allProducts.slice(displayedProducts, displayedProducts + productsPerLoad);
 
@@ -831,8 +835,11 @@ function loadMoreProducts() {
     displayedProducts += productsPerLoad;
 
     if (displayedProducts >= allProducts.length) {
-        document.querySelector('.show-more-btn').disabled = true;
-        document.querySelector('.show-more-btn').textContent = 'Більше немає товарів';
+        const showMoreBtn = document.querySelector('.show-more-btn');
+        if (showMoreBtn) {
+            showMoreBtn.disabled = true;
+            showMoreBtn.textContent = 'Більше немає товарів';
+        }
     }
 }
 
