@@ -859,64 +859,6 @@ h3:hover {
 
 .fixed-controls .sort-menu {
     margin-left: auto;
-    position: relative;
-    display: inline-block; /* Забезпечуємо коректне розташування */
-}
-
-.fixed-controls .sort-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    color: var(--primary-color);
-    cursor: pointer;
-    font-weight: 500;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
-}
-
-.fixed-controls .sort-btn:hover {
-    background: #EBF8FF;
-    transform: translateY(-2px);
-    border-color: var(--primary-color);
-}
-
-.fixed-controls .sort-dropdown {
-    display: none; /* Зберігаємо базове приховування */
-    position: absolute;
-    top: 100%;
-    right: 0;
-    transform: none;
-    background: var(--card-bg);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    z-index: 10;
-    min-width: 150px;
-    padding: 5px 0;
-    transition: opacity var(--transition-speed) ease;
-    opacity: 0; /* Додаємо для плавного переходу */
-}
-.fixed-controls .sort-menu:hover .sort-dropdown {
-    display: block; /* Показуємо при наведенні */
-    opacity: 1;
-}
-
-.fixed-controls .sort-dropdown button {
-    display: block;
-    width: 100%;
-    padding: 10px 20px;
-    background: none;
-    border: none;
-    color: var(--primary-color);
-    font-size: 14px;
-    text-align: left;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.fixed-controls .sort-dropdown button:hover {
-    background: #EBF8FF;
-    color: var(--secondary-color);
 }
 
 .show-more-btn {
@@ -941,6 +883,85 @@ h3:hover {
 .show-more-btn:disabled {
     background: #ccc;
     cursor: not-allowed;
+}
+
+.sort-menu,
+.per-page-menu {
+    position: relative;
+}
+
+.sort-btn,
+.per-page-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.sort-btn:hover,
+.per-page-btn:hover {
+    background: #EBF8FF;
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+}
+
+.sort-btn:focus,
+.per-page-btn:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.sort-dropdown,
+.per-page-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 50%;
+    transform: translateX(50%);
+    background: var(--card-bg);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    z-index: 10;
+    min-width: 120px;
+    width: 100%;
+    max-width: 150px;
+    padding: 5px 0;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.sort-menu:hover .sort-dropdown,
+.per-page-menu:hover .per-page-dropdown {
+    display: block;
+    opacity: 1;
+}
+
+.sort-dropdown button,
+.per-page-dropdown button {
+    display: block;
+    width: 100%;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.sort-dropdown button:hover,
+.per-page-dropdown button:hover {
+    background: #EBF8FF;
+    color: var(--secondary-color);
+}
+
+.sort-dropdown button:focus {
+    outline: none;
+    background: #E6F0FA;
 }
 
 #per-page {
@@ -2493,45 +2514,6 @@ h3:hover {
         padding: 5px 10px;
     }
 
-.fixed-controls {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-    .fixed-controls .filter-btn,
-    .fixed-controls .sort-btn {
-        width: 100%;
-        max-width: 200px;
-        font-size: 13px;
-        padding: 8px 15px;
-    }
-
-.fixed-controls .sort-menu {
-    margin-left: 0;
-    width: 100%;
-    max-width: 200px;
-    display: inline-block; /* Забезпечуємо видимість */
-    text-align: center;
-}
-
-.fixed-controls .sort-dropdown {
-    right: 0;
-    left: 0;
-    width: 100%;
-    max-width: 200px;
-    margin: 0 auto;
-    display: block; /* Забезпечуємо базову видимість */
-    opacity: 0; /* Приховуємо за замовчуванням, показуємо при :hover */
-    transition: opacity var(--transition-speed) ease;
-}
-.fixed-controls .sort-menu:hover .sort-dropdown {
-    opacity: 1; /* Показуємо при наведенні */
-}
-
     #catalog-dropdown,
     .dropdown {
         min-width: 200px;
@@ -4081,45 +4063,6 @@ h3:hover {
 
     #product-details .product-detail-right .price .regular-price {
         color: #FFFFFF !important;
-    }
-
-@media (prefers-color-scheme: dark) {
-    .fixed-controls {
-        background: var(--card-bg);
-        box-shadow: 0 2px 6px rgba(255, 255, 255, 0.05);
-    }
-
-    .fixed-controls .filter-btn {
-        background: var(--primary-color);
-        color: white;
-    }
-
-    .fixed-controls .filter-btn:hover {
-        background: var(--secondary-color);
-    }
-
-    .fixed-controls .sort-btn {
-        background: var(--card-bg);
-        border-color: var(--border-color);
-        color: var(--primary-color);
-    }
-
-    .fixed-controls .sort-btn:hover {
-        background: #4A5568;
-        border-color: var(--primary-color);
-    }
-
-    .fixed-controls .sort-dropdown {
-        background: var(--card-bg);
-    }
-
-    .fixed-controls .sort-dropdown button {
-        color: var(--primary-color);
-    }
-
-    .fixed-controls .sort-dropdown button:hover {
-        background: #4A5568;
-        color: var(--secondary-color);
     }
 
 @media (prefers-color-scheme: dark) {
