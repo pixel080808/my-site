@@ -755,7 +755,6 @@ h3:hover {
     flex-direction: column;
     align-items: flex-start;
     min-width: 0;
-    margin-top: 60px; /* Додаємо відступ для фіксованого блоку */
 }
 
 #catalog .container.no-filters .products {
@@ -823,66 +822,14 @@ h3:hover {
 }
 
 .catalog-controls {
-    display: none; /* Прибираємо старий контейнер */
-}
-
-.fixed-controls {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
-    position: sticky;
-    top: 0;
-    background: var(--card-bg);
-    z-index: 99;
-    padding: 10px 0;
     margin-bottom: 15px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    gap: 15px;
+    margin-top: -15px;
+    padding-right: 0;
     width: 100%;
-}
-
-.filter-btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
-}
-
-.filter-btn:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-.fixed-controls .sort-menu {
-    margin-left: auto;
-}
-
-.show-more-btn {
-    display: block;
-    margin: 20px auto;
-    padding: 12px 30px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 25px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
-}
-
-.show-more-btn:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-.show-more-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
 }
 
 .sort-menu,
@@ -2255,54 +2202,15 @@ h3:hover {
         padding: 6px 12px;
     }
 
-    #catalog .container {
-        flex-direction: column;
-        padding: 5px;
-    }
-
     .product-grid {
-        gap: 4px;
-        justify-content: space-between;
+        gap: 8px;
+        justify-content: center;
     }
 
-.product {
-    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
-    padding: 8px;
-    margin: 0; /* Прибираємо зайві відступи */
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.product img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    margin: 0 0 10px 0;
-}
-
-    .product img {
-        margin: 0 auto 10px auto;
-    }
-
-    .product h3 {
-        font-size: 16px;
-        margin: 8px 0;
-    }
-
-    .product .price {
-        font-size: 20px;
-        margin: 8px 0;
-    }
-
-    .product .buy-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-
-    .product .details-btn {
-        padding: 8px;
-        font-size: 13px;
+    .product {
+        width: 100%;
+        max-width: 280px;
+        margin: 4px auto;
     }
 
     .product-detail-top {
@@ -2603,132 +2511,15 @@ h3:hover {
         margin: 0 auto;
     }
 
-#catalog .container {
-    flex-direction: column;
-    padding: 0; /* Remove padding to eliminate side margins */
-    width: 100%;
-    box-sizing: border-box;
-    position: relative; /* Для позиціонування кнопки */
-}
-#catalog .container .filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-}
-#catalog .container .filter-toggle:hover {
-    background: var(--secondary-color);
-}
+    #catalog .container {
+        flex-direction: column;
+        padding: 10px;
+    }
 
-.filters {
-    width: 100%;
-    padding: 10px;
-    display: none; /* Hide filter by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: var(--card-bg);
-    height: 100%;
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform var(--transition-speed) ease;
-}
-
-.filters.active {
-    transform: translateX(0); /* Show filter when active */
-}
-
-/* Add confirm and back buttons */
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
-
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
-
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
-
-.filters .back-btn:hover {
-    background: #C53030;
-}
-
-/* Add toggle button styling (insert before .products media query block) */
-.filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-}
-
-.filter-toggle:hover {
-    background: var(--secondary-color);
-}
-
-/* Add confirm and back buttons (insert after .filters.active) */
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
-
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
-
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
-
-.filters .back-btn:hover {
-    background: #C53030;
-}
+    .filters {
+        width: 100%;
+        padding: 10px;
+    }
 
     .products {
         width: 100%;
@@ -2759,40 +2550,14 @@ h3:hover {
     }
 
     .product-grid {
-    gap: 6px;
-        justify-content: space-between;
+        gap: 10px;
+        justify-content: center;
     }
 
-.product {
-    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
-    padding: 8px;
-    margin: 0; /* Прибираємо зайві відступи */
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-    .product img {
-        margin: 0 auto 10px auto;
-    }
-
-    .product h3 {
-        font-size: 16px;
-        margin: 8px 0;
-    }
-
-    .product .price {
-        font-size: 20px;
-        margin: 8px 0;
-    }
-
-    .product .buy-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-
-    .product .details-btn {
-        padding: 8px;
-        font-size: 13px;
+    .product {
+        width: 100%;
+        max-width: 300px;
+        margin: 5px auto;
     }
 
     .product-detail-top {
@@ -3083,84 +2848,15 @@ h3:hover {
         max-width: 300px;
     }
 
-#catalog .container {
-    flex-direction: column;
-    padding: 0; /* Remove padding to eliminate side margins */
-    width: 100%;
-    box-sizing: border-box;
-    position: relative; /* Для позиціонування кнопки */
-}
-#catalog .container .filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-}
-#catalog .container .filter-toggle:hover {
-    background: var(--secondary-color);
-}
+    #catalog .container {
+        flex-direction: column;
+        padding: 10px;
+    }
 
-.filters {
-    width: 100vw;
-    margin: 0;
-    padding: 10px 15px;
-    display: none; /* Hide filter by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: var(--card-bg);
-    height: 100%;
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform var(--transition-speed) ease;
-    box-sizing: border-box;
-}
-
-.filters.active {
-    transform: translateX(0); /* Show filter when active */
-}
-
-/* Add confirm and back buttons */
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
-
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
-
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
-
-.filters .back-btn:hover {
-    background: #C53030;
-}
+    .filters {
+        width: 100%;
+        padding: 10px;
+    }
 
     .products {
         width: 100%;
@@ -3189,40 +2885,14 @@ h3:hover {
     }
 
     .product-grid {
-        gap: 6px;
-        justify-content: space-between;
+        gap: 10px;
+        justify-content: center;
     }
 
-.product {
-    width: calc(50% - 6px); /* 2 стовпчики з урахуванням gap */
-    padding: 8px;
-    margin: 0; /* Прибираємо зайві відступи */
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-    .product img {
-        margin: 0 auto 10px auto;
-    }
-
-    .product h3 {
-        font-size: 16px;
-        margin: 8px 0;
-    }
-
-    .product .price {
-        font-size: 20px;
-        margin: 8px 0;
-    }
-
-    .product .buy-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-
-    .product .details-btn {
-        padding: 8px;
-        font-size: 13px;
+    .product {
+        width: calc(50% - 10px);
+        max-width: 300px;
+        margin: 5px 0;
     }
 
     .product-detail-top {
@@ -3474,82 +3144,15 @@ h3:hover {
         max-width: 280px;
     }
 
-#catalog .container {
-    flex-direction: column;
-    padding: 0; /* Remove padding to eliminate side margins */
-    width: 100%;
-    box-sizing: border-box;
-    position: relative; /* Для позиціонування кнопки */
-}
-#catalog .container .filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-}
-#catalog .container .filter-toggle:hover {
-    background: var(--secondary-color);
-}
+    #catalog .container {
+        flex-direction: row;
+        padding: 15px;
+    }
 
-.filters {
-    width: 250px;
-    padding: 15px;
-    display: none; /* Hide filter by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: var(--card-bg);
-    height: 100%;
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform var(--transition-speed) ease;
-}
-
-.filters.active {
-    transform: translateX(0); /* Show filter when active */
-}
-
-/* Add confirm and back buttons */
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
-
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
-
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
-
-.filters .back-btn:hover {
-    background: #C53030;
-}
+    .filters {
+        width: 250px;
+        padding: 15px;
+    }
 
     .products {
         width: calc(100% - 270px);
@@ -3575,12 +3178,10 @@ h3:hover {
         gap: 15px;
     }
 
-.product {
-    width: calc(33.33% - 4px); /* 3 стовпчики на середніх екранах */
-    padding: 8px;
-    margin: 0;
-    border-radius: 8px;
-}
+    .product {
+        width: calc(50% - 15px);
+        max-width: 300px;
+    }
 
     .product-detail-top {
         flex-direction: row;
@@ -3801,11 +3402,10 @@ h3:hover {
         padding: 0 var(--base-padding);
     }
 
-.filters {
-    width: 300px;
-    padding: var(--base-padding) calc(var(--base-padding) + 20px);
-    display: block; /* Show filter by default on wide screens */
-}
+    .filters {
+        width: 300px;
+        padding: var(--base-padding) calc(var(--base-padding) + 20px);
+    }
 
     .products {
         width: calc(100% - 320px);
@@ -3831,12 +3431,10 @@ h3:hover {
         gap: 20px;
     }
 
-.product {
-    width: calc(25% - 11.25px); /* 4 стовпчики на планшетах типу iPad */
-    max-width: 300px;
-    padding: 8px;
-    margin: 0;
-}
+    .product {
+        width: calc(33.33% - 20px);
+        max-width: 300px;
+    }
 
     .product-detail-top {
         flex-direction: row;
@@ -3962,12 +3560,10 @@ h3:hover {
         width: calc(100% - 320px);
     }
 
-.product {
-    width: calc(20% - 16px); /* 5 стовпчиків на великих екранах */
-    max-width: 300px;
-    padding: 8px;
-    margin: 0;
-}
+    .product {
+        width: calc(25% - 15px);
+        max-width: 300px;
+    }
 
     .product-detail-left {
         max-width: 600px;

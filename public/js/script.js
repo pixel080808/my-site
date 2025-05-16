@@ -22,8 +22,6 @@ let isSearchPending = false;
 let filteredProducts = [];
 let selectedColors = {};
 let ws;
-let displayedProducts = 20; // Початкова кількість товарів
-const productsPerLoad = 20; // Кількість товарів для завантаження
 const activeTimers = new Map();
 let parentGroupProduct = null;
 const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
@@ -91,18 +89,12 @@ function saveToStorage(key, value) {
             console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
             return;
         }
-        const compressed = LZString.compressToUTF16(testStringify);
-        if (!compressed) {
-            console.error(`Помилка стиснення даних для ${key}`);
-            return;
-        }
-        localStorage.setItem(key, compressed);
+        localStorage.setItem(key, LZString.compressToUTF16(testStringify));
     } catch (e) {
         console.error(`Помилка збереження ${key}:`, e);
         if (e.name === 'QuotaExceededError') {
             localStorage.clear();
-            const compressed = LZString.compressToUTF16(JSON.stringify(value));
-            localStorage.setItem(key, compressed);
+            localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
             showNotification('Локальне сховище очищено через перевищення квоти.', 'error');
         }
     }
@@ -808,39 +800,6 @@ async function updateProducts() {
     }
 }
 
-function loadMoreProducts() {
-    const productGrid = document.querySelector('.product-grid');
-    if (!productGrid) {
-        console.warn('Елемент .product-grid не знайдено');
-        return;
-    }
-    let allProducts = loadFromStorage('products', []); // Використовуємо loadFromStorage
-    const nextProducts = allProducts.slice(displayedProducts, displayedProducts + productsPerLoad);
-
-    nextProducts.forEach(product => {
-        const productElement = document.createElement('div');
-        productElement.classList.add('product');
-        productElement.innerHTML = `
-            <img src="${product.image || NO_IMAGE_URL}" alt="${product.name}">
-            <h3>${product.name}</h3>
-            <div class="price">${product.price || 'N/A'} грн</div>
-            <button class="buy-btn" onclick="addToCart(${product.id || 0})">Купити</button>
-            <button class="details-btn" onclick="showProductDetails(${product.id || 0})">Деталі</button>
-        `;
-        productGrid.appendChild(productElement);
-    });
-
-    displayedProducts += productsPerLoad;
-
-    if (displayedProducts >= allProducts.length) {
-        const showMoreBtn = document.querySelector('.show-more-btn');
-        if (showMoreBtn) {
-            showMoreBtn.disabled = true;
-            showMoreBtn.textContent = 'Більше немає товарів';
-        }
-    }
-}
-
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
     const section = document.getElementById(sectionId);
@@ -1199,7 +1158,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
 
     if (isSearchActive) {
-        // Логіка для пошуку залишається без змін
         const query = document.getElementById('search').value.toLowerCase().trim();
         const h2 = document.createElement('h2');
         h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
@@ -1230,7 +1188,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             productList.appendChild(p);
         }
     } else if (!category) {
-        // Логіка для головної сторінки каталогу
         const h2 = document.createElement('h2');
         h2.textContent = 'Виберіть категорію';
         productsDiv.appendChild(h2);
@@ -1344,7 +1301,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         if (subcategory) {
             const subCat = (selectedCat.subcategories || []).find(sub => sub.name === subcategory);
             if (subCat) {
-                subcategorySlug = subCat.slug;
+                subcategorySlug = subCat.slug; // Використовуємо slug підкатегорії
             } else {
                 console.warn(`Підкатегорія з назвою "${subcategory}" не знайдена в категорії "${category}"`);
             }
@@ -1352,7 +1309,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
 
         filteredProducts = products.filter(p => 
             p.category === category && 
-            (!subcategorySlug || p.subcategory === subcategorySlug) && 
+            (!subcategorySlug || p.subcategory === subcategorySlug) && // Порівнюємо slug підкатегорії
             p.visible
         );
 
@@ -1484,18 +1441,11 @@ function createFilterBlock(title, name, options) {
 }
 
 function filterProducts() {
-    let base = isSearchActive ? [...baseSearchResults] : products.filter(p => {
-        const categoryMatch = p.category === currentCategory;
-        let subcategoryMatch = true;
-        if (currentSubcategory) {
-            const selectedCat = categories.find(c => c.name === currentCategory);
-            const subCat = selectedCat?.subcategories?.find(sub => sub.name === currentSubcategory);
-            const subcategorySlug = subCat ? subCat.slug : null;
-            subcategoryMatch = !subcategorySlug || p.subcategory === subcategorySlug;
-        }
-        return categoryMatch && subcategoryMatch && p.visible;
-    });
-
+    let base = isSearchActive ? [...baseSearchResults] : products.filter(p => 
+        p.category === currentCategory && 
+        (!currentSubcategory || p.subcategory === currentSubcategory) &&
+        p.visible
+    );
     let filtered = [...base];
     let hasActiveFilters = false;
 
@@ -1520,11 +1470,7 @@ function filterProducts() {
         }
     });
 
-    // Якщо немає активних фільтрів, повертаємо базовий список товарів
-    if (!hasActiveFilters) {
-        filtered = [...base];
-    }
-
+    if (!hasActiveFilters && isSearchActive) filtered = [...baseSearchResults];
     filteredProducts = filtered;
     if (isSearchActive) searchResults = filtered;
     renderProducts(filtered);
@@ -3407,7 +3353,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateHeader();
         updateCartCount();
 
-        // Налаштування каталогу
         const catalogToggle = document.getElementById('catalog-toggle');
         const catalogDropdown = document.getElementById('catalog-dropdown');
         if (catalogToggle && catalogDropdown) {
@@ -3419,7 +3364,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Елементи catalog-toggle або catalog-dropdown не знайдено');
         }
 
-        // Налаштування пошуку
         const searchInput = document.getElementById('search');
         const searchButton = document.querySelector('.search-btn');
         if (searchInput) {
@@ -3441,7 +3385,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Кнопка пошуку не знайдено');
         }
 
-        // Налаштування навігації
         const navLinks = [
             { id: 'nav-home', section: 'home' },
             { id: 'nav-contacts', section: 'contacts' },
@@ -3462,12 +3405,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Обробка початкового шляху
         const path = window.location.pathname.slice(1) || '';
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path);
 
-        // Обробка кліків у кошику
         const cartItems = document.getElementById('cart-items');
         if (cartItems) {
             cartItems.addEventListener('click', (e) => {
@@ -3479,70 +3420,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.getSelection().removeAllRanges();
                 }
             });
-        }
-
-        // Логіка фільтрів
-        const filterToggle = document.querySelector('.filter-toggle');
-        const filterBtn = document.querySelector('.filter-btn');
-        const filters = document.querySelector('.filters');
-        const confirmBtn = document.querySelector('.filters .confirm-btn');
-        const backBtn = document.querySelector('.filters .back-btn');
-
-        if (filterToggle) {
-            filterToggle.addEventListener('click', () => filters.classList.toggle('active'));
-        }
-        if (filterBtn) {
-            filterBtn.addEventListener('click', () => filters.classList.toggle('active'));
-        }
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => filters.classList.remove('active'));
-        }
-        if (backBtn) {
-            backBtn.addEventListener('click', () => filters.classList.remove('active'));
-        }
-
-        // Логіка для "Показати ще"
-        window.loadMoreProducts = () => {
-            const productGrid = document.querySelector('#product-grid');
-            const allProducts = loadFromStorage('products', []); // Використовуємо loadFromStorage
-            const nextProducts = allProducts.slice(displayedProducts, displayedProducts + productsPerLoad);
-
-            nextProducts.forEach(product => {
-                const productElement = document.createElement('div');
-                productElement.classList.add('product');
-                productElement.innerHTML = `
-                    <img src="${product.image || NO_IMAGE_URL}" alt="${product.name}">
-                    <h3>${product.name}</h3>
-                    <div class="price">${product.price || 'N/A'} грн</div>
-                    <button class="buy-btn" onclick="addToCart(${product.id || 0})">Купити</button>
-                    <button class="details-btn" onclick="showProductDetails(${product.id || 0})">Деталі</button>
-                `;
-                productGrid.appendChild(productElement);
-            });
-
-            displayedProducts += productsPerLoad;
-
-            // Якщо більше немає товарів для завантаження, відключаємо кнопку
-            if (displayedProducts >= allProducts.length) {
-                const showMoreBtn = document.querySelector('.show-more-btn');
-                if (showMoreBtn) {
-                    showMoreBtn.disabled = true;
-                    showMoreBtn.textContent = 'Більше немає товарів';
-                }
-            }
-        };
-
-        // Початкове завантаження товарів
-        displayedProducts = 0; // Скидаємо перед першим завантаженням
-        window.loadMoreProducts();
-
-        // Ініціалізація даних, якщо їх немає
-        if (!localStorage.getItem('products')) {
-            const initialProducts = [
-                { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
-                // Додайте інші товари за потребою
-            ];
-            saveToStorage('products', initialProducts); // Використовуємо saveToStorage
         }
 
         console.log('Програма ініціалізована успішно');
@@ -3574,35 +3451,3 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-window.sortProducts = (sortType) => {
-    const productGrid = document.querySelector('#product-grid');
-    let allProducts = loadFromStorage('products', []); // Використовуємо loadFromStorage
-    switch (sortType) {
-        case 'price-asc':
-            allProducts.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-            break;
-        case 'price-desc':
-            allProducts.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-            break;
-        case 'name-asc':
-            allProducts.sort((a, b) => a.name.localeCompare(b.name));
-            break;
-        case 'name-desc':
-            allProducts.sort((a, b) => b.name.localeCompare(a.name));
-            break;
-    }
-    productGrid.innerHTML = '';
-    allProducts.slice(0, displayedProducts).forEach(product => {
-        const productElement = document.createElement('div');
-        productElement.classList.add('product');
-        productElement.innerHTML = `
-            <img src="${product.image || NO_IMAGE_URL}" alt="${product.name}">
-            <h3>${product.name}</h3>
-            <div class="price">${product.price || 'N/A'} грн</div>
-            <button class="buy-btn" onclick="addToCart(${product.id || 0})">Купити</button>
-            <button class="details-btn" onclick="showProductDetails(${product.id || 0})">Деталі</button>
-        `;
-        productGrid.appendChild(productElement);
-    });
-};

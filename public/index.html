@@ -263,7 +263,6 @@
     flex: 1;
     padding: 20px;
     min-width: 0;
-    margin-top: 60px; /* Додаємо відступ для фіксованого блоку */
 }
 
 .product-detail-price .regular-price {
@@ -395,31 +394,14 @@
             </div>
         </div>
         <div class="section" id="catalog">
-<div class="container">
-    <button class="filter-toggle">Фільтр</button>
-<div class="filters">
-    <div id="filter-list">
-    </div>
-    <button class="confirm-btn">Підтвердити</button>
-    <button class="back-btn">Назад</button>
-</div>
-    <div class="products" id="products">
-        <div class="fixed-controls">
-            <button class="filter-btn">Фільтр</button>
-            <div class="sort-menu">
-                <button class="sort-btn">Сортувати</button>
-                <div class="sort-dropdown">
-                    <button onclick="sortProducts('price-asc')">За ціною: від найнижчої</button>
-                    <button onclick="sortProducts('price-desc')">За ціною: від найвищої</button>
-                    <button onclick="sortProducts('name-asc')">За назвою: А-Я</button>
-                    <button onclick="sortProducts('name-desc')">За назвою: Я-А</button>
+            <div class="container">
+                <div class="filters">
+                    <div id="filter-list">
+                    </div>
+                </div>
+                <div class="products" id="products">
                 </div>
             </div>
-        </div>
-        <div class="product-grid" id="product-grid"></div>
-        <button class="show-more-btn" onclick="loadMoreProducts()">Показати ще</button>
-    </div>
-</div>
         </div>
         <div class="section" id="cart">
             <div id="cart-items">
