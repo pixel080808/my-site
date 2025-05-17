@@ -9,6 +9,9 @@ let settings = {};
 let currentProduct = null;
 let currentCategory = null;
 let currentSubcategory = null;
+let currentSort = '';
+let perPage = 20;
+let currentPage = 1;
 let selectedMattressSizes = {};
 let currentSlideIndex = 0;
 let slideInterval;
@@ -22,6 +25,8 @@ let isSearchPending = false;
 let filteredProducts = [];
 let selectedColors = {};
 let ws;
+let displayedProducts = 20; // Початкова кількість товарів
+const productsPerLoad = 20; // Кількість товарів для завантаження
 const activeTimers = new Map();
 let parentGroupProduct = null;
 const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
@@ -89,12 +94,18 @@ function saveToStorage(key, value) {
             console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
             return;
         }
-        localStorage.setItem(key, LZString.compressToUTF16(testStringify));
+        const compressed = LZString.compressToUTF16(testStringify);
+        if (!compressed) {
+            console.error(`Помилка стиснення даних для ${key}`);
+            return;
+        }
+        localStorage.setItem(key, compressed);
     } catch (e) {
         console.error(`Помилка збереження ${key}:`, e);
         if (e.name === 'QuotaExceededError') {
             localStorage.clear();
-            localStorage.setItem(key, LZString.compressToUTF16(JSON.stringify(value)));
+            const compressed = LZString.compressToUTF16(JSON.stringify(value));
+            localStorage.setItem(key, compressed);
             showNotification('Локальне сховище очищено через перевищення квоти.', 'error');
         }
     }
@@ -705,6 +716,7 @@ async function initializeData() {
     parentGroupProduct = loadFromStorage('parentGroupProduct', null);
     currentCategory = loadFromStorage('currentCategory', null);
     currentSubcategory = loadFromStorage('currentSubcategory', null);
+    currentSort = loadFromStorage('currentSort', ''); // Завантажуємо збережене сортування
 
     orderFields = loadFromStorage('orderFields', [
         { name: 'name', label: 'Ім\'я', type: 'text', required: true },
@@ -797,6 +809,39 @@ async function updateProducts() {
     } catch (error) {
         console.error('Error fetching products:', error);
         products = loadFromStorage('products', []);
+    }
+}
+
+function loadMoreProducts() {
+    const productGrid = document.querySelector('.product-grid');
+    if (!productGrid) {
+        console.warn('Елемент .product-grid не знайдено');
+        return;
+    }
+    let allProducts = loadFromStorage('products', []); // Використовуємо loadFromStorage
+    const nextProducts = allProducts.slice(displayedProducts, displayedProducts + productsPerLoad);
+
+    nextProducts.forEach(product => {
+        const productElement = document.createElement('div');
+        productElement.classList.add('product');
+        productElement.innerHTML = `
+            <img src="${product.image || NO_IMAGE_URL}" alt="${product.name}">
+            <h3>${product.name}</h3>
+            <div class="price">${product.price || 'N/A'} грн</div>
+            <button class="buy-btn" onclick="addToCart(${product.id || 0})">Купити</button>
+            <button class="details-btn" onclick="showProductDetails(${product.id || 0})">Деталі</button>
+        `;
+        productGrid.appendChild(productElement);
+    });
+
+    displayedProducts += productsPerLoad;
+
+    if (displayedProducts >= allProducts.length) {
+        const showMoreBtn = document.querySelector('.show-more-btn');
+        if (showMoreBtn) {
+            showMoreBtn.disabled = true;
+            showMoreBtn.textContent = 'Більше немає товарів';
+        }
     }
 }
 
@@ -1158,7 +1203,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
 
     if (isSearchActive) {
-        // Логіка для пошуку залишається без змін
         const query = document.getElementById('search').value.toLowerCase().trim();
         const h2 = document.createElement('h2');
         h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
@@ -1189,7 +1233,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             productList.appendChild(p);
         }
     } else if (!category) {
-        // Логіка для головної сторінки каталогу
         const h2 = document.createElement('h2');
         h2.textContent = 'Виберіть категорію';
         productsDiv.appendChild(h2);
@@ -1298,7 +1341,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         productList.className = 'product-grid';
         productsDiv.appendChild(productList);
 
-        // Знаходимо slug підкатегорії на основі її назви
         let subcategorySlug = null;
         if (subcategory) {
             const subCat = (selectedCat.subcategories || []).find(sub => sub.name === subcategory);
@@ -1353,9 +1395,13 @@ function createSortMenu() {
     sortOptions.forEach(opt => {
         const btn = document.createElement('button');
         btn.textContent = opt.text;
+        btn.className = currentSort === opt.value ? 'selected' : '';
         btn.onclick = () => {
             sortProducts(opt.value);
             sortDropdown.style.display = 'none';
+            // Оновлюємо стиль вибраного пункту
+            sortDropdown.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
         };
         sortDropdown.appendChild(btn);
     });
@@ -1489,8 +1535,15 @@ function filterProducts() {
     renderProducts(filtered);
 }
 
-function sortProducts(sortType = 'name-asc') {
+function sortProducts(sortType) {
+    // Зберігаємо вибраний тип сортування
+    currentSort = sortType;
+    saveToStorage('currentSort', currentSort); // Зберігаємо в localStorage для стійкості
+
+    // Вибираємо масив для сортування
     let filtered = isSearchActive ? [...searchResults] : [...filteredProducts];
+
+    // Виконуємо сортування
     if (sortType === 'name-asc') {
         filtered.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortType === 'name-desc') {
@@ -1510,15 +1563,20 @@ function sortProducts(sortType = 'name-asc') {
     } else if (sortType === 'popularity') {
         filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     }
+
+    // Оновлюємо глобальні змінні
     filteredProducts = filtered;
     if (isSearchActive) searchResults = filtered;
-    renderProducts(filtered);
+
+    // Оновлюємо відображення
+    renderProducts(isSearchActive ? searchResults : filteredProducts);
 }
 
 function renderProducts(filtered) {
     const productList = document.getElementById('product-list');
     if (!productList) return;
 
+    // Очищаємо таймери
     const existingTimers = productList.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
         if (timer.dataset.intervalId) {
@@ -1534,8 +1592,32 @@ function renderProducts(filtered) {
         return;
     }
 
+    // Застосовуємо сортування, якщо currentSort встановлено
+    let activeProducts = [...filtered];
+    if (currentSort) {
+        if (currentSort === 'name-asc') {
+            activeProducts.sort((a, b) => a.name.localeCompare(b.name));
+        } else if (currentSort === 'name-desc') {
+            activeProducts.sort((a, b) => b.name.localeCompare(a.name));
+        } else if (currentSort === 'price-asc') {
+            activeProducts.sort((a, b) => {
+                const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
+                const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+                return priceA - priceB;
+            });
+        } else if (currentSort === 'price-desc') {
+            activeProducts.sort((a, b) => {
+                const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
+                const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+                return priceB - priceA;
+            });
+        } else if (currentSort === 'popularity') {
+            activeProducts.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        }
+    }
+
     const perPage = parseInt(document.getElementById('per-page-hidden')?.value) || 20;
-    const activeProducts = filtered.slice(0, perPage);
+    activeProducts = activeProducts.slice(0, perPage);
     const isHomePage = !currentCategory && !isSearchActive;
 
     if (activeProducts.length === 0) {
@@ -1565,6 +1647,8 @@ function renderProducts(filtered) {
         const h3Link = document.createElement('a');
         h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
         h3Link.onclick = (e) => {
+
+
             e.preventDefault();
             openProduct(product.slug);
         };
@@ -3366,6 +3450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateHeader();
         updateCartCount();
 
+        // Налаштування каталогу
         const catalogToggle = document.getElementById('catalog-toggle');
         const catalogDropdown = document.getElementById('catalog-dropdown');
         if (catalogToggle && catalogDropdown) {
@@ -3377,6 +3462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Елементи catalog-toggle або catalog-dropdown не знайдено');
         }
 
+        // Налаштування пошуку
         const searchInput = document.getElementById('search');
         const searchButton = document.querySelector('.search-btn');
         if (searchInput) {
@@ -3398,6 +3484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Кнопка пошуку не знайдено');
         }
 
+        // Налаштування навігації
         const navLinks = [
             { id: 'nav-home', section: 'home' },
             { id: 'nav-contacts', section: 'contacts' },
@@ -3418,10 +3505,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        // Обробка початкового шляху
         const path = window.location.pathname.slice(1) || '';
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path);
 
+        // Обробка кліків у кошику
         const cartItems = document.getElementById('cart-items');
         if (cartItems) {
             cartItems.addEventListener('click', (e) => {
@@ -3433,6 +3522,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.getSelection().removeAllRanges();
                 }
             });
+        }
+
+        // Логіка фільтрів
+        const filterToggle = document.querySelector('.filter-toggle');
+        const filterBtn = document.querySelector('.filter-btn');
+        const filters = document.querySelector('.filters');
+        const confirmBtn = document.querySelector('.filters .confirm-btn');
+        const backBtn = document.querySelector('.filters .back-btn');
+
+        if (filterToggle) {
+            filterToggle.addEventListener('click', () => filters.classList.toggle('active'));
+        }
+        if (filterBtn) {
+            filterBtn.addEventListener('click', () => filters.classList.toggle('active'));
+        }
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => filters.classList.remove('active'));
+        }
+        if (backBtn) {
+            backBtn.addEventListener('click', () => filters.classList.remove('active'));
+        }
+
+        // Ініціалізація даних, якщо їх немає
+        if (!localStorage.getItem('products')) {
+            const initialProducts = [
+                { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
+                // Додайте інші товари за потребою
+            ];
+            saveToStorage('products', initialProducts); // Використовуємо saveToStorage
         }
 
         console.log('Програма ініціалізована успішно');
