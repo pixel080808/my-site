@@ -389,14 +389,12 @@
         </div>
 <div class="section" id="catalog">
     <div class="container">
-        <button class="filter-toggle">Фільтр</button>
         <div class="filters">
             <div id="filter-list"></div>
             <button class="back-btn">Назад</button>
         </div>
         <div class="products" id="products">
             <div class="filter-sort-container">
-                <button class="filter-btn">Фільтри</button>
                 <div class="sort-menu">
                     <button class="sort-btn">Сортування</button>
                     <div class="sort-dropdown">
@@ -406,17 +404,20 @@
                         <button onclick="sortProducts('name-desc')">За назвою (Я-А)</button>
                     </div>
                 </div>
-                <div class="per-page-menu">
-                    <button class="per-page-btn">Кількість: 20</button>
-                    <div class="per-page-dropdown">
-                        <button onclick="setPerPage(10)">10</button>
-                        <button onclick="setPerPage(20)">20</button>
-                        <button onclick="setPerPage(50)">50</button>
-                    </div>
-                </div>
             </div>
             <div class="product-grid" id="product-grid"></div>
-            <button class="show-more-btn" onclick="loadMoreProducts()">Показати ще</button>
+            <div class="pagination-container">
+                <button class="show-more-btn" onclick="loadMoreProducts()">Показати ще</button>
+                <div class="pagination">
+                    <button class="page-btn active" onclick="changePage(1)">1</button>
+                    <button class="page-btn" onclick="changePage(2)">2</button>
+                    <button class="page-btn" onclick="changePage(3)">3</button>
+                    <button class="page-btn" onclick="changePage(4)">4</button>
+                    <button class="page-btn" onclick="changePage(5)">5</button>
+                    <button class="pagination-arrow" onclick="nextPage()">></button>
+                    <button class="pagination-arrow" onclick="prevPage()"><</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

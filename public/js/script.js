@@ -10,8 +10,8 @@ let currentProduct = null;
 let currentCategory = null;
 let currentSubcategory = null;
 let currentSort = '';
-let perPage = 20;
 let currentPage = 1;
+const perPage = 20;
 let selectedMattressSizes = {};
 let currentSlideIndex = 0;
 let slideInterval;
@@ -25,8 +25,6 @@ let isSearchPending = false;
 let filteredProducts = [];
 let selectedColors = {};
 let ws;
-let displayedProducts = 20; // Початкова кількість товарів
-const productsPerLoad = 20; // Кількість товарів для завантаження
 const activeTimers = new Map();
 let parentGroupProduct = null;
 const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
@@ -813,30 +811,34 @@ async function updateProducts() {
 }
 
 function loadMoreProducts() {
+    let allProducts = isSearchActive ? searchResults : filteredProducts;
     const productGrid = document.querySelector('.product-grid');
     if (!productGrid) {
         console.warn('Елемент .product-grid не знайдено');
         return;
     }
-    let allProducts = loadFromStorage('products', []); // Використовуємо loadFromStorage
-    const nextProducts = allProducts.slice(displayedProducts, displayedProducts + productsPerLoad);
+    let displayedProducts = productGrid.children.length; // Поточна кількість відображених товарів
+    const nextProducts = allProducts.slice(displayedProducts, displayedProducts + perPage);
 
     nextProducts.forEach(product => {
         const productElement = document.createElement('div');
-        productElement.classList.add('product');
+        productElement.className = 'product';
         productElement.innerHTML = `
-            <img src="${product.image || NO_IMAGE_URL}" alt="${product.name}">
-            <h3>${product.name}</h3>
-            <div class="price">${product.price || 'N/A'} грн</div>
-            <button class="buy-btn" onclick="addToCart(${product.id || 0})">Купити</button>
-            <button class="details-btn" onclick="showProductDetails(${product.id || 0})">Деталі</button>
+            <a href="/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}" onclick="event.preventDefault(); openProduct('${product.slug}');">
+                <img src="${product.photos?.[0] || NO_IMAGE_URL}" alt="${product.name}" loading="lazy">
+            </a>
+            <a href="/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}" onclick="event.preventDefault(); openProduct('${product.slug}');">
+                <h3>${product.name}</h3>
+            </a>
+            <div class="price">${(product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price) || 'N/A'} грн</div>
+            <button class="buy-btn" onclick="${product.type === 'mattresses' || product.type === 'group' ? `openProduct('${product.slug}')` : `addToCartWithColor(${product._id})`}">
+                ${product.type === 'mattresses' || product.type === 'group' ? 'Детальніше' : 'Додати в кошик'}
+            </button>
         `;
         productGrid.appendChild(productElement);
     });
 
-    displayedProducts += productsPerLoad;
-
-    if (displayedProducts >= allProducts.length) {
+    if (displayedProducts + nextProducts.length >= allProducts.length) {
         const showMoreBtn = document.querySelector('.show-more-btn');
         if (showMoreBtn) {
             showMoreBtn.disabled = true;
@@ -1350,7 +1352,6 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     renderBreadcrumbs();
 }
 
-// Допоміжна функція для створення контейнера з елементами сортування та кількості
 function createControlsContainer() {
     const filterSortContainer = document.createElement('div');
     filterSortContainer.className = 'filter-sort-container';
@@ -1361,35 +1362,50 @@ function createControlsContainer() {
     filterSortContainer.style.maxWidth = '100%';
     filterSortContainer.style.padding = '10px 0';
     filterSortContainer.style.boxSizing = 'border-box';
-    filterSortContainer.style.gap = '10px'; // Додаємо відступ між елементами
+    filterSortContainer.style.gap = '10px';
+
+    // Додаємо кнопку "Фільтр" перед сортуванням
+    const filterBtn = document.createElement('button');
+    filterBtn.className = 'filter-btn';
+    filterBtn.textContent = 'Фільтр';
+    filterBtn.style.padding = '8px 12px';
+    filterBtn.style.fontSize = '14px';
+    filterBtn.style.whiteSpace = 'nowrap';
+    filterBtn.style.border = '1px solid #ccc';
+    filterBtn.style.borderRadius = '4px';
+    filterBtn.style.backgroundColor = '#f5f5f5';
+    filterBtn.style.cursor = 'pointer';
+    filterBtn.onclick = () => {
+        const filters = document.querySelector('.filters');
+        if (filters) filters.classList.toggle('active');
+    };
+    filterSortContainer.appendChild(filterBtn);
+
+    // Додаємо меню сортування
     filterSortContainer.appendChild(createSortMenu());
-    filterSortContainer.appendChild(createPerPageMenu());
-    const perPageHidden = document.createElement('input');
-    perPageHidden.type = 'hidden';
-    perPageHidden.id = 'per-page-hidden';
-    perPageHidden.value = '20';
-    filterSortContainer.appendChild(perPageHidden);
+
     return filterSortContainer;
 }
 
 function createSortMenu() {
     const sortMenu = document.createElement('div');
     sortMenu.className = 'sort-menu';
-    sortMenu.style.display = 'inline-flex'; // Забезпечуємо горизонтальне розміщення
+    sortMenu.style.display = 'inline-flex';
     sortMenu.style.alignItems = 'center';
-    sortMenu.style.marginRight = '10px'; // Відступ між "Сортування" і "Кількість"
+    sortMenu.style.marginRight = '10px';
 
     const sortBtn = document.createElement('button');
     sortBtn.className = 'sort-btn';
     sortBtn.textContent = 'Сортування ▼';
     sortBtn.style.padding = '8px 12px';
     sortBtn.style.fontSize = '14px';
-    sortBtn.style.whiteSpace = 'nowrap'; // Запобігаємо перенесенню тексту
+    sortBtn.style.whiteSpace = 'nowrap';
     sortBtn.style.border = '1px solid #ccc';
     sortBtn.style.borderRadius = '4px';
     sortBtn.style.backgroundColor = '#f5f5f5';
     sortBtn.style.cursor = 'pointer';
-    sortBtn.onclick = () => {
+    sortBtn.onclick = (e) => {
+        e.stopPropagation();
         sortDropdown.style.display = sortDropdown.style.display === 'block' ? 'none' : 'block';
     };
     sortMenu.appendChild(sortBtn);
@@ -1425,7 +1441,8 @@ function createSortMenu() {
         btn.style.cursor = 'pointer';
         btn.onmouseover = () => { btn.style.backgroundColor = '#f0f0f0'; };
         btn.onmouseout = () => { btn.style.backgroundColor = currentSort === opt.value ? '#e0e0e0' : 'transparent'; };
-        btn.onclick = () => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
             sortProducts(opt.value);
             sortDropdown.style.display = 'none';
             sortDropdown.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
@@ -1435,64 +1452,14 @@ function createSortMenu() {
     });
     sortMenu.appendChild(sortDropdown);
 
-    return sortMenu;
-}
-
-function createPerPageMenu() {
-    const perPageMenu = document.createElement('div');
-    perPageMenu.className = 'per-page-menu';
-    perPageMenu.style.display = 'inline-flex'; // Забезпечуємо горизонтальне розміщення
-    perPageMenu.style.alignItems = 'center';
-
-    const perPageBtn = document.createElement('button');
-    perPageBtn.className = 'per-page-btn';
-    perPageBtn.textContent = 'Кількість ▼';
-    perPageBtn.style.padding = '8px 12px';
-    perPageBtn.style.fontSize = '14px';
-    perPageBtn.style.whiteSpace = 'nowrap'; // Запобігаємо перенесенню тексту
-    perPageBtn.style.border = '1px solid #ccc';
-    perPageBtn.style.borderRadius = '4px';
-    perPageBtn.style.backgroundColor = '#f5f5f5';
-    perPageBtn.style.cursor = 'pointer';
-    perPageBtn.onclick = () => {
-        perPageDropdown.style.display = perPageDropdown.style.display === 'block' ? 'none' : 'block';
-    };
-    perPageMenu.appendChild(perPageBtn);
-
-    const perPageDropdown = document.createElement('div');
-    perPageDropdown.className = 'per-page-dropdown';
-    perPageDropdown.style.display = 'none';
-    perPageDropdown.style.position = 'absolute';
-    perPageDropdown.style.backgroundColor = '#fff';
-    perPageDropdown.style.border = '1px solid #ccc';
-    perPageDropdown.style.borderRadius = '4px';
-    perPageDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-    perPageDropdown.style.zIndex = '1000';
-    perPageDropdown.style.marginTop = '5px';
-
-    [10, 20, 50].forEach(num => {
-        const btn = document.createElement('button');
-        btn.textContent = num;
-        btn.style.display = 'block';
-        btn.style.padding = '8px 12px';
-        btn.style.width = '100%';
-        btn.style.textAlign = 'left';
-        btn.style.border = 'none';
-        btn.style.backgroundColor = 'transparent';
-        btn.style.cursor = 'pointer';
-        btn.onmouseover = () => { btn.style.backgroundColor = '#f0f0f0'; };
-        btn.onmouseout = () => { btn.style.backgroundColor = 'transparent'; };
-        btn.onclick = () => {
-            document.getElementById('per-page-hidden').value = num;
-            renderProducts(isSearchActive ? searchResults : filteredProducts);
-            perPageDropdown.style.display = 'none';
-            perPageBtn.textContent = `Кількість: ${num} ▼`; // Оновлюємо текст кнопки
-        };
-        perPageDropdown.appendChild(btn);
+    // Додаємо обробник для закриття меню при кліку поза ним
+    document.addEventListener('click', (e) => {
+        if (!sortMenu.contains(e.target) && sortDropdown.style.display === 'block') {
+            sortDropdown.style.display = 'none';
+        }
     });
-    perPageMenu.appendChild(perPageDropdown);
 
-    return perPageMenu;
+    return sortMenu;
 }
 
 function renderFilters() {
@@ -1670,18 +1637,20 @@ function renderProducts(filtered) {
         }
     }
 
-    const perPage = parseInt(document.getElementById('per-page-hidden')?.value) || 20;
-    activeProducts = activeProducts.slice(0, perPage);
-    const isHomePage = !currentCategory && !isSearchActive;
+    // Пагінація
+    const totalPages = Math.ceil(activeProducts.length / perPage);
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const paginatedProducts = activeProducts.slice(startIndex, endIndex);
 
-    if (activeProducts.length === 0) {
+    if (paginatedProducts.length === 0) {
         const p = document.createElement('p');
         p.textContent = 'Нічого не знайдено';
         productList.appendChild(p);
         return;
     }
 
-    activeProducts.forEach(product => {
+    paginatedProducts.forEach(product => {
         const productDiv = document.createElement('div');
         productDiv.className = 'product';
 
@@ -1701,8 +1670,6 @@ function renderProducts(filtered) {
         const h3Link = document.createElement('a');
         h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
         h3Link.onclick = (e) => {
-
-
             e.preventDefault();
             openProduct(product.slug);
         };
@@ -1716,42 +1683,20 @@ function renderProducts(filtered) {
         const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
         if (product.type === 'mattresses' && product.sizes?.length > 0) {
             const minPrice = Math.min(...product.sizes.map(s => s.price));
-            if (isHomePage || currentCategory) {
-                const startSpan = document.createElement('span');
-                startSpan.className = 'price-start';
-                startSpan.textContent = 'Починаючи з ';
-                priceDiv.appendChild(startSpan);
-                const valueSpan = document.createElement('span');
-                valueSpan.className = 'price-value';
-                valueSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(valueSpan);
-            } else {
-                const regularSpan = document.createElement('span');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(regularSpan);
-            }
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
             const groupPrices = product.groupProducts.map(id => {
                 const p = products.find(p => p._id === id);
                 return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
             });
             const minPrice = Math.min(...groupPrices);
-            if (isHomePage || currentCategory) {
-                const startSpan = document.createElement('span');
-                startSpan.className = 'price-start';
-                startSpan.textContent = 'Починаючи з ';
-                priceDiv.appendChild(startSpan);
-                const valueSpan = document.createElement('span');
-                valueSpan.className = 'price-value';
-                valueSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(valueSpan);
-            } else {
-                const regularSpan = document.createElement('span');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(regularSpan);
-            }
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
         } else {
             if (isOnSale) {
                 const saleSpan = document.createElement('span');
@@ -1792,6 +1737,79 @@ function renderProducts(filtered) {
 
         productList.appendChild(productDiv);
     });
+
+    // Додаємо пагінацію
+    renderPagination(totalPages, activeProducts.length);
+}
+
+function renderPagination(totalPages, totalItems) {
+    const paginationDiv = document.getElementById('pagination') || createPaginationDiv();
+    while (paginationDiv.firstChild) paginationDiv.removeChild(paginationDiv.firstChild);
+
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'pagination-container';
+
+    const showMoreBtn = document.createElement('button');
+    showMoreBtn.textContent = 'Показати ще';
+    showMoreBtn.className = 'show-more-btn';
+    showMoreBtn.onclick = loadMoreProducts;
+    if (currentPage * perPage >= totalItems) {
+        showMoreBtn.disabled = true;
+        showMoreBtn.textContent = 'Більше немає товарів';
+    }
+    paginationContainer.appendChild(showMoreBtn);
+
+    const paginationInnerDiv = document.createElement('div');
+    paginationInnerDiv.className = 'pagination';
+
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '←'; // Лише стрілка
+    prevButton.className = 'pagination-btn pagination-arrow'; // Додаємо клас для стрілок
+    prevButton.disabled = currentPage === 1;
+    prevButton.onclick = () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderProducts(isSearchActive ? searchResults : filteredProducts);
+        }
+    };
+    paginationInnerDiv.appendChild(prevButton);
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = 'pagination-btn' + (currentPage === i ? ' active' : '');
+        pageButton.onclick = () => {
+            currentPage = i;
+            renderProducts(isSearchActive ? searchResults : filteredProducts);
+        };
+        paginationInnerDiv.appendChild(pageButton);
+    }
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '→'; // Лише стрілка
+    nextButton.className = 'pagination-btn pagination-arrow'; // Додаємо клас для стрілок
+    nextButton.disabled = currentPage === totalPages || totalItems <= perPage;
+    nextButton.onclick = () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderProducts(isSearchActive ? searchResults : filteredProducts);
+        }
+    };
+    paginationInnerDiv.appendChild(nextButton);
+
+    paginationContainer.appendChild(paginationInnerDiv);
+    paginationDiv.appendChild(paginationContainer);
+}
+
+function createPaginationDiv() {
+    const paginationDiv = document.createElement('div');
+    paginationDiv.id = 'pagination';
+    paginationDiv.className = 'pagination';
+    const productsDiv = document.getElementById('products');
+    if (productsDiv) {
+        productsDiv.appendChild(paginationDiv);
+    }
+    return paginationDiv;
 }
 
 async function renderProductDetails() {
@@ -3579,19 +3597,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Логіка фільтрів
-        const filterToggle = document.querySelector('.filter-toggle');
-        const filterBtn = document.querySelector('.filter-btn');
         const filters = document.querySelector('.filters');
         const backBtn = document.querySelector('.filters .back-btn');
 
-        if (filterToggle) {
-            filterToggle.addEventListener('click', () => filters.classList.toggle('active'));
-        }
-        if (filterBtn) {
-            filterBtn.addEventListener('click', () => filters.classList.toggle('active'));
-        }
         if (backBtn) {
-            backBtn.addEventListener('click', () => filters.classList.remove('active'));
+            backBtn.addEventListener('click', () => {
+                if (filters) filters.classList.remove('active');
+            });
         }
 
         // Ініціалізація даних, якщо їх немає
@@ -3632,3 +3644,13 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+const responsiveStyle = document.createElement('style');
+responsiveStyle.textContent = `
+    @media (min-width: 992px) {
+        .filter-btn {
+            display: none !important;
+        }
+    }
+`;
+document.head.appendChild(responsiveStyle);
