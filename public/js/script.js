@@ -1208,17 +1208,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
         h2.textContent = `Результати пошуку ${query ? `за "${query}"` : ''}`;
         productsDiv.appendChild(h2);
 
-        const controlsDiv = document.createElement('div');
-        controlsDiv.className = 'catalog-controls';
-        controlsDiv.appendChild(createSortMenu());
-        controlsDiv.appendChild(createPerPageMenu());
-        const perPageHidden = document.createElement('input');
-        perPageHidden.type = 'hidden';
-        perPageHidden.id = 'per-page-hidden';
-        perPageHidden.value = '20';
-        controlsDiv.appendChild(perPageHidden);
-        productsDiv.appendChild(controlsDiv);
-
+        productsDiv.appendChild(createControlsContainer());
         const productList = document.createElement('div');
         productList.id = 'product-list';
         productList.className = 'product-grid';
@@ -1324,16 +1314,7 @@ function renderCatalog(category = null, subcategory = null, product = null) {
             subFilterDiv.appendChild(subButtonsDiv);
             productsDiv.appendChild(subFilterDiv);
 
-            const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'catalog-controls';
-            controlsDiv.appendChild(createSortMenu());
-            controlsDiv.appendChild(createPerPageMenu());
-            const perPageHidden = document.createElement('input');
-            perPageHidden.type = 'hidden';
-            perPageHidden.id = 'per-page-hidden';
-            perPageHidden.value = '20';
-            controlsDiv.appendChild(perPageHidden);
-            productsDiv.appendChild(controlsDiv);
+            productsDiv.appendChild(createControlsContainer());
         }
 
         const productList = document.createElement('div');
@@ -1369,13 +1350,45 @@ function renderCatalog(category = null, subcategory = null, product = null) {
     renderBreadcrumbs();
 }
 
+// Допоміжна функція для створення контейнера з елементами сортування та кількості
+function createControlsContainer() {
+    const filterSortContainer = document.createElement('div');
+    filterSortContainer.className = 'filter-sort-container';
+    filterSortContainer.style.display = 'flex';
+    filterSortContainer.style.justifyContent = 'space-between';
+    filterSortContainer.style.alignItems = 'center';
+    filterSortContainer.style.width = '100%';
+    filterSortContainer.style.maxWidth = '100%';
+    filterSortContainer.style.padding = '10px 0';
+    filterSortContainer.style.boxSizing = 'border-box';
+    filterSortContainer.style.gap = '10px'; // Додаємо відступ між елементами
+    filterSortContainer.appendChild(createSortMenu());
+    filterSortContainer.appendChild(createPerPageMenu());
+    const perPageHidden = document.createElement('input');
+    perPageHidden.type = 'hidden';
+    perPageHidden.id = 'per-page-hidden';
+    perPageHidden.value = '20';
+    filterSortContainer.appendChild(perPageHidden);
+    return filterSortContainer;
+}
+
 function createSortMenu() {
     const sortMenu = document.createElement('div');
     sortMenu.className = 'sort-menu';
+    sortMenu.style.display = 'inline-flex'; // Забезпечуємо горизонтальне розміщення
+    sortMenu.style.alignItems = 'center';
+    sortMenu.style.marginRight = '10px'; // Відступ між "Сортування" і "Кількість"
 
     const sortBtn = document.createElement('button');
     sortBtn.className = 'sort-btn';
     sortBtn.textContent = 'Сортування ▼';
+    sortBtn.style.padding = '8px 12px';
+    sortBtn.style.fontSize = '14px';
+    sortBtn.style.whiteSpace = 'nowrap'; // Запобігаємо перенесенню тексту
+    sortBtn.style.border = '1px solid #ccc';
+    sortBtn.style.borderRadius = '4px';
+    sortBtn.style.backgroundColor = '#f5f5f5';
+    sortBtn.style.cursor = 'pointer';
     sortBtn.onclick = () => {
         sortDropdown.style.display = sortDropdown.style.display === 'block' ? 'none' : 'block';
     };
@@ -1384,6 +1397,13 @@ function createSortMenu() {
     const sortDropdown = document.createElement('div');
     sortDropdown.className = 'sort-dropdown';
     sortDropdown.style.display = 'none';
+    sortDropdown.style.position = 'absolute';
+    sortDropdown.style.backgroundColor = '#fff';
+    sortDropdown.style.border = '1px solid #ccc';
+    sortDropdown.style.borderRadius = '4px';
+    sortDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+    sortDropdown.style.zIndex = '1000';
+    sortDropdown.style.marginTop = '5px';
 
     const sortOptions = [
         { text: 'Назва (А-Я)', value: 'name-asc' },
@@ -1396,10 +1416,18 @@ function createSortMenu() {
         const btn = document.createElement('button');
         btn.textContent = opt.text;
         btn.className = currentSort === opt.value ? 'selected' : '';
+        btn.style.display = 'block';
+        btn.style.padding = '8px 12px';
+        btn.style.width = '100%';
+        btn.style.textAlign = 'left';
+        btn.style.border = 'none';
+        btn.style.backgroundColor = currentSort === opt.value ? '#e0e0e0' : 'transparent';
+        btn.style.cursor = 'pointer';
+        btn.onmouseover = () => { btn.style.backgroundColor = '#f0f0f0'; };
+        btn.onmouseout = () => { btn.style.backgroundColor = currentSort === opt.value ? '#e0e0e0' : 'transparent'; };
         btn.onclick = () => {
             sortProducts(opt.value);
             sortDropdown.style.display = 'none';
-            // Оновлюємо стиль вибраного пункту
             sortDropdown.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
         };
@@ -1413,10 +1441,19 @@ function createSortMenu() {
 function createPerPageMenu() {
     const perPageMenu = document.createElement('div');
     perPageMenu.className = 'per-page-menu';
+    perPageMenu.style.display = 'inline-flex'; // Забезпечуємо горизонтальне розміщення
+    perPageMenu.style.alignItems = 'center';
 
     const perPageBtn = document.createElement('button');
     perPageBtn.className = 'per-page-btn';
     perPageBtn.textContent = 'Кількість ▼';
+    perPageBtn.style.padding = '8px 12px';
+    perPageBtn.style.fontSize = '14px';
+    perPageBtn.style.whiteSpace = 'nowrap'; // Запобігаємо перенесенню тексту
+    perPageBtn.style.border = '1px solid #ccc';
+    perPageBtn.style.borderRadius = '4px';
+    perPageBtn.style.backgroundColor = '#f5f5f5';
+    perPageBtn.style.cursor = 'pointer';
     perPageBtn.onclick = () => {
         perPageDropdown.style.display = perPageDropdown.style.display === 'block' ? 'none' : 'block';
     };
@@ -1425,14 +1462,31 @@ function createPerPageMenu() {
     const perPageDropdown = document.createElement('div');
     perPageDropdown.className = 'per-page-dropdown';
     perPageDropdown.style.display = 'none';
+    perPageDropdown.style.position = 'absolute';
+    perPageDropdown.style.backgroundColor = '#fff';
+    perPageDropdown.style.border = '1px solid #ccc';
+    perPageDropdown.style.borderRadius = '4px';
+    perPageDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+    perPageDropdown.style.zIndex = '1000';
+    perPageDropdown.style.marginTop = '5px';
 
     [10, 20, 50].forEach(num => {
         const btn = document.createElement('button');
         btn.textContent = num;
+        btn.style.display = 'block';
+        btn.style.padding = '8px 12px';
+        btn.style.width = '100%';
+        btn.style.textAlign = 'left';
+        btn.style.border = 'none';
+        btn.style.backgroundColor = 'transparent';
+        btn.style.cursor = 'pointer';
+        btn.onmouseover = () => { btn.style.backgroundColor = '#f0f0f0'; };
+        btn.onmouseout = () => { btn.style.backgroundColor = 'transparent'; };
         btn.onclick = () => {
             document.getElementById('per-page-hidden').value = num;
             renderProducts(isSearchActive ? searchResults : filteredProducts);
             perPageDropdown.style.display = 'none';
+            perPageBtn.textContent = `Кількість: ${num} ▼`; // Оновлюємо текст кнопки
         };
         perPageDropdown.appendChild(btn);
     });
@@ -3528,7 +3582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const filterToggle = document.querySelector('.filter-toggle');
         const filterBtn = document.querySelector('.filter-btn');
         const filters = document.querySelector('.filters');
-        const confirmBtn = document.querySelector('.filters .confirm-btn');
         const backBtn = document.querySelector('.filters .back-btn');
 
         if (filterToggle) {
@@ -3536,9 +3589,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (filterBtn) {
             filterBtn.addEventListener('click', () => filters.classList.toggle('active'));
-        }
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => filters.classList.remove('active'));
         }
         if (backBtn) {
             backBtn.addEventListener('click', () => filters.classList.remove('active'));

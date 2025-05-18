@@ -2301,7 +2301,6 @@ h3:hover {
         padding: 4px 8px;
     }
 
-@media (max-width: 479px) {
     #catalog-dropdown,
     .dropdown {
         min-width: 200px;
@@ -2311,7 +2310,6 @@ h3:hover {
         right: auto;
         margin: 0;
     }
-}
 
     .sub-dropdown {
         position: absolute;
@@ -2321,7 +2319,7 @@ h3:hover {
         border-top: 1px solid var(--border-color);
     }
 
-.breadcrumbs {
+    .breadcrumbs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
@@ -2393,37 +2391,75 @@ h3:hover {
     }
 
     .categories {
-        gap: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px; /* Зменшено відступ для більшого розміру фото */
+        padding-left: 0;
+        margin: 0;
+        justify-content: flex-start;
     }
 
     .category {
-        width: calc(50% - 2px);
-        max-width: 280px;
-        margin: 0 auto 10px;
-    }
-
-    .subcategory-filter {
-        justify-content: center;
-    }
-
-    .subcategory-buttons button {
-        font-size: 11px;
-        padding: 6px 12px;
-    }
-
-    .catalog-controls {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .sort-btn,
-    .per-page-btn,
-    #per-page {
-        width: 100%;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px; /* Зменшено внутрішній відступ */
         text-align: center;
-        font-size: 11px;
-        padding: 6px 12px;
+        transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        width: calc(50% - 2.5px); /* Зменшено відступ між елементами */
+        height: auto;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .category:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+
+    .category img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-bottom: 8px; /* Зменшено відступ */
+        transition: transform var(--transition-speed) ease;
+    }
+
+    .category img:hover {
+        transform: scale(1.05);
+    }
+
+    .category p {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 16px; /* Зменшено шрифт для компактності */
+        margin-bottom: 8px;
+    }
+
+    .category .subcategories {
+        background: transparent;
+        padding: 0;
+        margin-top: 0;
+        position: static;
+        width: 100%;
+    }
+
+    .category .subcategories p {
+        font-size: 13px; /* Зменшено шрифт */
+        font-weight: 400;
+        color: var(--light-text);
+        cursor: pointer;
+        transition: color var(--transition-speed) ease;
+        padding: 4px 0;
+    }
+
+    .category .subcategories p:hover {
+        color: var(--primary-color);
     }
 
     #catalog .container {
@@ -2436,21 +2472,13 @@ h3:hover {
         justify-content: space-between;
     }
 
-.product {
-    width: calc(50% - 6px);
-    padding: 8px;
-    margin: 0;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.product img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    margin: 0 0 10px 0;
-}
+    .product {
+        width: calc(50% - 6px);
+        padding: 8px;
+        margin: 0;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
 
     .product img {
         margin: 0 auto 10px auto;
@@ -2611,6 +2639,66 @@ h3:hover {
         font-size: 13px;
         padding: 8px 18px;
     }
+
+    .filter-sort-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 5px 5px;
+        margin-bottom: 10px;
+        width: 100%;
+        box-sizing: border-box;
+        background: #f9f9f9;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .sort-menu,
+    .per-page-menu {
+        flex-shrink: 1;
+    }
+
+    .sort-btn,
+    .per-page-btn {
+        width: auto;
+        margin: 0 2px;
+        padding: 5px 8px;
+        font-size: 11px;
+        line-height: 1.2;
+        border-radius: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100px;
+    }
+
+    .sort-dropdown,
+    .per-page-dropdown {
+        right: 0;
+        min-width: 100px;
+        padding: 3px 0;
+    }
+
+    .sort-dropdown button,
+    .per-page-dropdown button {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .subcategory-filter {
+        justify-content: center;
+    }
+
+    .subcategory-buttons button {
+        font-size: 11px;
+        padding: 6px 12px;
+    }
+
+    .catalog-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -2703,7 +2791,7 @@ h3:hover {
         border-top: 1px solid var(--border-color);
     }
 
-.breadcrumbs {
+    .breadcrumbs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
@@ -2775,43 +2863,107 @@ h3:hover {
     }
 
     .categories {
-        gap: 5px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px; /* Зменшено відступ для більшого розміру фото */
+        padding-left: 0;
+        margin: 0;
+        justify-content: flex-start;
     }
 
     .category {
-        width: calc(50% - 2px);
-        max-width: 280px;
-        margin: 0 auto 10px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px; /* Зменшено внутрішній відступ */
+        text-align: center;
+        transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        width: calc(50% - 2.5px); /* Зменшено відступ між елементами */
+        height: auto;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
-#catalog .container {
-    flex-direction: column;
-    padding: 0;
-    width: 100%;
-    box-sizing: border-box;
-    position: relative;
-}
-#catalog .container .filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-}
-#catalog .container .filter-toggle:hover {
-    background: var(--secondary-color);
-}
+    .category:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
 
-.filters {
+    .category img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-bottom: 8px; /* Зменшено відступ */
+        transition: transform var(--transition-speed) ease;
+    }
+
+    .category img:hover {
+        transform: scale(1.05);
+    }
+
+    .category p {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .category .subcategories {
+        background: transparent;
+        padding: 0;
+        margin-top: 0;
+        position: static;
+        width: 100%;
+    }
+
+    .category .subcategories p {
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--light-text);
+        cursor: pointer;
+        transition: color var(--transition-speed) ease;
+        padding: 4px 0;
+    }
+
+    .category .subcategories p:hover {
+        color: var(--primary-color);
+    }
+
+    #catalog .container {
+        flex-direction: column;
+        padding: 0;
+        width: 100%;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    #catalog .container .filter-toggle {
+        display: block;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background var(--transition-speed) ease;
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    #catalog .container .filter-toggle:hover {
+        background: var(--secondary-color);
+    }
+
+    .filters {
         width: 100vw;
         padding: 10px 15px;
         display: none;
@@ -2834,89 +2986,57 @@ h3:hover {
         padding-top: 60px;
     }
 
-
     .breadcrumbs {
         z-index: 98;
     }
 
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
+    .filters .confirm-btn,
+    .filters .back-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0 0;
+        border: none;
+        border-radius: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background var(--transition-speed) ease;
+    }
 
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
+    .filters .confirm-btn {
+        background: var(--primary-color);
+        color: white;
+    }
 
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
+    .filters .confirm-btn:hover {
+        background: var(--secondary-color);
+    }
 
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
+    .filters .back-btn {
+        background: #E53E3E;
+        color: white;
+    }
 
-.filters .back-btn:hover {
-    background: #C53030;
-}
+    .filters .back-btn:hover {
+        background: #C53030;
+    }
 
-.filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-}
+    .filter-toggle {
+        display: block;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background var(--transition-speed) ease;
+    }
 
-.filter-toggle:hover {
-    background: var(--secondary-color);
-}
-
-.filters .confirm-btn,
-.filters .back-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0 0;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-}
-
-.filters .confirm-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.filters .confirm-btn:hover {
-    background: var(--secondary-color);
-}
-
-.filters .back-btn {
-    background: #E53E3E;
-    color: white;
-}
-
-.filters .back-btn:hover {
-    background: #C53030;
-}
+    .filter-toggle:hover {
+        background: var(--secondary-color);
+    }
 
     .products {
         width: 100%;
@@ -2937,27 +3057,63 @@ h3:hover {
         gap: 10px;
     }
 
-    .sort-btn,
-    .per-page-btn,
-    #per-page {
+    .filter-sort-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 5px 5px;
+        margin-bottom: 10px;
         width: 100%;
-        text-align: center;
+        box-sizing: border-box;
+        background: #f9f9f9;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .sort-menu,
+    .per-page-menu {
+        flex-shrink: 1;
+    }
+
+    .sort-btn,
+    .per-page-btn {
+        width: auto;
+        margin: 0 2px;
+        padding: 5px 8px;
+        font-size: 11px;
+        line-height: 1.2;
+        border-radius: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100px;
+    }
+
+    .sort-dropdown,
+    .per-page-dropdown {
+        right: 0;
+        min-width: 100px;
+        padding: 3px 0;
+    }
+
+    .sort-dropdown button,
+    .per-page-dropdown button {
+        padding: 8px 10px;
         font-size: 12px;
-        padding: 8px 15px;
     }
 
     .product-grid {
-    gap: 6px;
+        gap: 6px;
         justify-content: space-between;
     }
 
-.product {
-    width: calc(50% - 6px);
-    padding: 8px;
-    margin: 0;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
+    .product {
+        width: calc(50% - 6px);
+        padding: 8px;
+        margin: 0;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
 
     .product img {
         margin: 0 auto 10px auto;
