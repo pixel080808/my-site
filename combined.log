@@ -9120,3 +9120,115 @@
 {"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T15:24:17.611Z"}
 {"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json - IP: ::1 - Query: {} - Body: {} - 2025-05-18T15:24:20.445Z","timestamp":"2025-05-18T15:24:20.445Z"}
 {"level":"info","message":"Отримано запит на /.well-known/appspecific/com.chrome.devtools.json, відправляємо index.html","timestamp":"2025-05-18T15:24:20.446Z"}
+{"level":"info","message":"Сервер запущено на порту 3000","timestamp":"2025-05-18T18:46:13.609Z"}
+{"level":"info","message":"MongoDB підключено","timestamp":"2025-05-18T18:46:14.223Z"}
+{"level":"info","message":"GET / - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:46:31.798Z","timestamp":"2025-05-18T18:46:31.798Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:46:31.888Z","timestamp":"2025-05-18T18:46:31.888Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-18T18:46:31.892Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:46:31.894Z","timestamp":"2025-05-18T18:46:31.894Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-18T18:46:31.898Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-u0gh9qmlx\"} - Body: {} - 2025-05-18T18:46:32.017Z","timestamp":"2025-05-18T18:46:32.017Z"}
+{"cartId":"cart-u0gh9qmlx","level":"info","message":"GET /api/cart:","timestamp":"2025-05-18T18:46:32.019Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-18T18:46:32.072Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-18T18:46:32.084Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:46:32.087Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-18T18:46:32.088Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:46:32.089Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-18T18:46:32.089Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:46:32.090Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-18T18:46:32.090Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:46:32.091Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T18:46:32.091Z"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:51:40.600Z","timestamp":"2025-05-18T18:51:40.600Z"}
+{"level":"info","message":"Отримано запит на /.well-known/appspecific/com.chrome.devtools.json, відправляємо index.html","timestamp":"2025-05-18T18:51:40.602Z"}
+{"level":"info","message":"GET /mebli-v-vitalnyu - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:55:58.751Z","timestamp":"2025-05-18T18:55:58.751Z"}
+{"level":"info","message":"Отримано запит на /mebli-v-vitalnyu, відправляємо index.html","timestamp":"2025-05-18T18:55:58.752Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-18T18:55:58.776Z"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:55:58.800Z","timestamp":"2025-05-18T18:55:58.800Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:55:58.803Z","timestamp":"2025-05-18T18:55:58.803Z"}
+{"level":"info","message":"Отримано запит на /.well-known/appspecific/com.chrome.devtools.json, відправляємо index.html","timestamp":"2025-05-18T18:55:58.804Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.7\"} - Body: {} - 2025-05-18T18:55:58.807Z","timestamp":"2025-05-18T18:55:58.807Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:55:58.942Z","timestamp":"2025-05-18T18:55:58.942Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-18T18:55:58.943Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:55:58.946Z","timestamp":"2025-05-18T18:55:58.946Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-18T18:55:58.947Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-u0gh9qmlx\"} - Body: {} - 2025-05-18T18:55:58.958Z","timestamp":"2025-05-18T18:55:58.958Z"}
+{"cartId":"cart-u0gh9qmlx","level":"info","message":"GET /api/cart:","timestamp":"2025-05-18T18:55:58.958Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-18T18:55:58.997Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-18T18:55:59.007Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:55:59.009Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-18T18:55:59.009Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:55:59.011Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-18T18:55:59.011Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:55:59.011Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-18T18:55:59.012Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:55:59.012Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T18:55:59.012Z"}
+{"level":"info","message":"GET /mebli-v-vitalnyu - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:28.409Z","timestamp":"2025-05-18T18:57:28.409Z"}
+{"level":"info","message":"Отримано запит на /mebli-v-vitalnyu, відправляємо index.html","timestamp":"2025-05-18T18:57:28.410Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-18T18:57:28.430Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:28.441Z","timestamp":"2025-05-18T18:57:28.441Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.7\"} - Body: {} - 2025-05-18T18:57:28.443Z","timestamp":"2025-05-18T18:57:28.443Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:28.590Z","timestamp":"2025-05-18T18:57:28.590Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-18T18:57:28.592Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:28.594Z","timestamp":"2025-05-18T18:57:28.594Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-18T18:57:28.595Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-u0gh9qmlx\"} - Body: {} - 2025-05-18T18:57:28.601Z","timestamp":"2025-05-18T18:57:28.601Z"}
+{"cartId":"cart-u0gh9qmlx","level":"info","message":"GET /api/cart:","timestamp":"2025-05-18T18:57:28.602Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-18T18:57:28.638Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-18T18:57:28.750Z"}
+{"level":"info","message":"GET /favicon.ico - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:28.752Z","timestamp":"2025-05-18T18:57:28.752Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:57:28.753Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-18T18:57:28.754Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:57:28.754Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-18T18:57:28.754Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:57:28.755Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-18T18:57:28.755Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:57:28.755Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T18:57:28.755Z"}
+{"level":"info","message":"Отримано запит на /favicon.ico, відправляємо index.html","timestamp":"2025-05-18T18:57:28.759Z"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:57:53.223Z","timestamp":"2025-05-18T18:57:53.223Z"}
+{"level":"info","message":"Отримано запит на /.well-known/appspecific/com.chrome.devtools.json, відправляємо index.html","timestamp":"2025-05-18T18:57:53.224Z"}
+{"level":"info","message":"GET /mebli-v-vitalnyu - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:58:58.543Z","timestamp":"2025-05-18T18:58:58.543Z"}
+{"level":"info","message":"Отримано запит на /mebli-v-vitalnyu, відправляємо index.html","timestamp":"2025-05-18T18:58:58.544Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-18T18:58:58.567Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:58:58.580Z","timestamp":"2025-05-18T18:58:58.580Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.7\"} - Body: {} - 2025-05-18T18:58:58.581Z","timestamp":"2025-05-18T18:58:58.581Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:58:58.659Z","timestamp":"2025-05-18T18:58:58.659Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-18T18:58:58.660Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:58:58.661Z","timestamp":"2025-05-18T18:58:58.661Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-18T18:58:58.662Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-u0gh9qmlx\"} - Body: {} - 2025-05-18T18:58:58.669Z","timestamp":"2025-05-18T18:58:58.669Z"}
+{"cartId":"cart-u0gh9qmlx","level":"info","message":"GET /api/cart:","timestamp":"2025-05-18T18:58:58.670Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-18T18:58:58.724Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-18T18:58:58.732Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:58:58.734Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-18T18:58:58.735Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:58:58.736Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-18T18:58:58.737Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:58:58.737Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-18T18:58:58.737Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:58:58.738Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T18:58:58.738Z"}
+{"level":"info","message":"GET /mebli-v-vitalnyu - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:59:28.302Z","timestamp":"2025-05-18T18:59:28.302Z"}
+{"level":"info","message":"Отримано запит на /mebli-v-vitalnyu, відправляємо index.html","timestamp":"2025-05-18T18:59:28.302Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-18T18:59:28.316Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:59:28.337Z","timestamp":"2025-05-18T18:59:28.337Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.7\"} - Body: {} - 2025-05-18T18:59:28.342Z","timestamp":"2025-05-18T18:59:28.342Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:59:28.408Z","timestamp":"2025-05-18T18:59:28.408Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-18T18:59:28.410Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-18T18:59:28.411Z","timestamp":"2025-05-18T18:59:28.411Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-18T18:59:28.412Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-u0gh9qmlx\"} - Body: {} - 2025-05-18T18:59:28.418Z","timestamp":"2025-05-18T18:59:28.418Z"}
+{"cartId":"cart-u0gh9qmlx","level":"info","message":"GET /api/cart:","timestamp":"2025-05-18T18:59:28.419Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-18T18:59:28.456Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-18T18:59:28.463Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:59:28.464Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-18T18:59:28.465Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:59:28.466Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-18T18:59:28.466Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:59:28.466Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-18T18:59:28.467Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-18T18:59:28.467Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-18T18:59:28.467Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-18T19:01:01.855Z"}
