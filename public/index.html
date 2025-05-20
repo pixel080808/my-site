@@ -15,7 +15,7 @@
     <link href="/css/styles.css" rel="stylesheet"/>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <!-- Основний скрипт із defer -->
-    <script type="text/javascript" src="/js/script.js?v=1.0.7" defer></script>
+    <script type="text/javascript" src="/js/script.js?v=1.0.8" defer></script>
     <!-- Google Analytics асинхронно -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
@@ -26,6 +26,7 @@
     </script>
     <!-- LZ-String із defer -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
 .logo {
     background-size: contain;
@@ -348,12 +349,10 @@
         </div>
         <div class="phones" id="phones">
         </div>
-        <div class="search-bar">
-            <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
-            <button aria-label="Шукати" class="search-btn" onclick="searchProducts()">
-                🔍
-            </button>
-        </div>
+<div class="search-bar">
+    <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
+    <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
+</div>
         <div class="cart" onclick="showSection('cart')">
             Кошик
             <span class="cart-count">

@@ -2,17 +2,18 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Roboto', Arial, sans-serif;
+    font-family: 'Inter', 'Roboto', Arial, sans-serif; /* Додаємо Inter як основний шрифт */
 }
 
 :root {
-    --primary-color: #3182CE;
-    --secondary-color: #2B6CB0;
-    --text-color: #2D3748;
-    --light-text: #718096;
-    --background: #ffffff;
-    --card-bg: #FFFFFF;
-    --border-color: #E2E8F0;
+    --primary-color: #1E3A8A; /* Темно-синій для акцентів */
+    --secondary-color: #3B82F6; /* М'який синій для ховер-ефектів */
+    --accent-color: #10B981; /* Зелений для кнопок дій */
+    --text-color: #2D3748; /* Основний текст */
+    --muted-text: #6B7280; /* Другорядний текст (замість --light-text) */
+    --background: #F9FAFB; /* Світло-сірий фон */
+    --card-bg: #FFFFFF; /* Білий для карток */
+    --border-color: #E5E7EB; /* М'який сірий для меж */
     --base-font-size: 16px;
     --base-padding: 10px;
     --transition-speed: 0.3s;
@@ -88,7 +89,7 @@ header.scrolled {
 
 .phones {
     font-size: 18px;
-    color: var(--primary-color);
+    color: var(--text-color);
     padding-right: var(--base-padding);
     cursor: default;
     margin-left: 15px;
@@ -132,54 +133,92 @@ header.scrolled {
     right: 0;
     background: transparent;
     border: none;
-    color: var(--primary-color);
-    font-size: 18px;
-    cursor: pointer;
     width: 30px;
     height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color var(--transition-speed) ease;
+    cursor: pointer;
+    transition: transform 0.3s ease;
 }
 
-.search-btn:hover {
-    color: var(--secondary-color);
+.search-btn::before {
+    content: "";
+    display: block;
+    width: 16px;
+    height: 16px;
+    /* SVG із файлу 1.jpg у форматі base64 або як окремий файл */
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
+    background-size: contain;
+}
+
+.search-btn:hover::before {
+    /* Більш помітна зміна кольору на синій */
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%231E40AF" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
+    background-size: contain;
+    transition: background 0.3s ease;
 }
 
 .cart {
     font-size: 18px;
-    color: var(--primary-color);
+    color: var(--text-color);
     font-weight: 500;
     cursor: pointer;
     padding: 8px 15px;
     border-radius: 18px;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
     margin-right: var(--base-padding);
+    display: inline-flex;
+    align-items: center;
 }
 
-.cart:hover {
-    background: #EBF8FF;
-    color: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-.cart span {
-    background: var(--primary-color);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 10px;
-    margin-left: 5px;
-    font-size: 14px;
+/* Icon for the Cart link (same cart SVG as buy-btn) */
+.cart::before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
+    margin-right: 8px;
     transition: background var(--transition-speed) ease;
 }
 
-.cart span:empty {
-    display: none;
+/* Hover effect for Cart link */
+.cart:hover {
+    background: var(--border-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
 }
 
+/* Update Cart icon color on hover */
+.cart:hover::before {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%231E3A8A" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
+}
+
+/* Cart counter styling */
+.cart span {
+    background: var(--accent-color);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    margin-left: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Hover effect for Cart counter */
 .cart span:hover {
-    background: var(--secondary-color);
+    background: #059669;
+    transform: scale(1.1);
+}
+
+/* Hide empty Cart counter */
+.cart span:empty {
+    display: none;
 }
 
 .nav {
@@ -197,7 +236,7 @@ header.scrolled {
 }
 
 .nav a {
-    color: var(--primary-color);
+    color: var(--text-color);
     text-decoration: none;
     margin: 0 15px;
     font-weight: 500;
@@ -210,8 +249,8 @@ header.scrolled {
 
 .nav a:hover,
 .nav a:focus {
-    background: #EBF8FF;
-    color: var(--secondary-color);
+    background: var(--border-color);
+    color: var(--primary-color);
     transform: translateY(-2px);
     outline: none;
 }
@@ -262,13 +301,13 @@ header.scrolled {
 
 .dropdown-item span {
     cursor: pointer;
-    color: var(--primary-color);
+    color: var(--text-color);
     font-weight: 500;
     transition: color var(--transition-speed) ease;
 }
 
 .dropdown-item:hover span {
-    color: var(--secondary-color);
+    color: var(--primary-color);
 }
 
 .sub-dropdown {
@@ -289,7 +328,7 @@ header.scrolled {
 
 .sub-dropdown p {
     padding: 7px 20px;
-    color: var(--light-text);
+    color: var(--muted-text);
     font-size: 15px;
     transition: color var(--transition-speed) ease;
     cursor: pointer;
@@ -297,7 +336,7 @@ header.scrolled {
 
 .sub-dropdown p:hover {
     color: var(--primary-color);
-    background: #F7FAFC;
+    background: var(--border-color);
 }
 
 .breadcrumbs {
@@ -325,7 +364,7 @@ header.scrolled {
 
 .breadcrumbs a,
 .breadcrumbs .breadcrumb-btn {
-    color: var(--primary-color);
+    color: var(--text-color);
     text-decoration: none;
     font-weight: 500;
     cursor: pointer;
@@ -340,7 +379,7 @@ header.scrolled {
 
 .breadcrumbs a:hover,
 .breadcrumbs .breadcrumb-btn:hover {
-    color: var(--secondary-color);
+    color: var(--primary-color);
     text-decoration: none;
 }
 
@@ -388,23 +427,23 @@ header.scrolled {
 
 h2 {
     font-size: 32px;
-    color: var(--primary-color);
+    color: var(--text-color);
     margin: 15px 0;
     font-weight: 600;
     text-align: left;
     transition: color var(--transition-speed) ease;
-    border-bottom: 2px solid rgba(49, 130, 206, 0.2);
+    border-bottom: 2px solid var(--border-color);
     padding-bottom: 5px;
 }
 
 h2:hover {
-    color: var(--secondary-color);
-    border-bottom-color: var(--secondary-color);
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
 }
 
 h3 {
     font-size: 23px;
-    color: var(--primary-color);
+    color: var(--text-color);
     margin: 15px 0;
     font-weight: 600;
     text-align: center;
@@ -415,7 +454,7 @@ h3 {
 }
 
 h3:hover {
-    color: var(--secondary-color);
+    color: var(--primary-color);
 }
 
 #catalog .container {
@@ -635,14 +674,13 @@ h3:hover {
 .category .subcategories p {
     font-size: 15px;
     font-weight: 400;
-    color: var(--light-text);
+    color: #6B7280;
     cursor: pointer;
     transition: color var(--transition-speed) ease;
     padding: 5px 0;
 }
-
 .category .subcategories p:hover {
-    color: var(--primary-color);
+    color: #4A5568;
 }
 
 #catalog .container {
@@ -849,25 +887,30 @@ h3:hover {
     width: 100%;
 }
 
-.filter-btn {
-    background: #fff;
-    border: 1px solid #ddd;
+.filter-btn, .sort-btn, .per-page-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
-    color: #007bff;
+    color: var(--text-color);
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Додано легку тінь */
 }
-.filter-btn:hover {
-    background: #e9ecef;
+
+.filter-btn:hover, .sort-btn:hover, .per-page-btn:hover {
+    background: var(--border-color);
+    color: var(--primary-color);
     transform: translateY(-2px);
-    border-color: #007bff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Посилено тінь при ховері */
 }
-.filter-btn:focus {
+
+.filter-btn:focus, .sort-btn:focus, .per-page-btn:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px rgba(30, 58, 138, 0.3);
 }
 
 .fixed-controls .sort-menu {
@@ -880,20 +923,20 @@ h3:hover {
 
 .sort-btn {
     background: #fff;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
-    color: #007bff;
+    color: var(--text-color);
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
 }
 
 .sort-btn:hover {
-    background: #e9ecef;
+    background: var(--border-color);
     transform: translateY(-2px);
-    border-color: #007bff;
+    border-color: var(--primary-color);
 }
 
 .sort-btn:focus {
@@ -924,20 +967,20 @@ h3:hover {
     padding: 10px 20px;
     background: none;
     border: none;
-    color: #007bff;
+    color: var(--text-color); /* Змінено на основний текстовий колір */
     font-size: 14px;
     cursor: pointer;
-    transition: background 0.3s ease, color 0.3s ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 .sort-dropdown button:hover {
-    background: #e9ecef;
-    color: #0056b3;
+    background: var(--border-color); /* М'який сірий при ховері */
+    color: var(--primary-color); /* Легкий акцент */
 }
 
 .sort-dropdown button:focus {
     outline: none;
-    background: #dee2e6;
+    background: var(--border-color);
 }
 
 .per-page-menu {
@@ -947,20 +990,20 @@ h3:hover {
 
 .per-page-btn {
     background: #fff;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
-    color: #007bff;
+    color: var(--text-color);
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
 }
 
 .per-page-btn:hover {
-    background: #e9ecef;
+    background: var(--border-color);
     transform: translateY(-2px);
-    border-color: #007bff;
+    border-color: var(--primary-color);
 }
 
 .per-page-dropdown {
@@ -1134,27 +1177,45 @@ h3:hover {
 
 .show-more-btn {
     padding: 12px 30px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
+    background: var(--card-bg); /* Білий фон для гармонії з сайтом */
+    color: var(--text-color);
+    border: 1px solid var(--border-color); /* Додано рамку для визначеності */
     border-radius: 25px;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500; /* Зменшено вагу шрифту для легкості */
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .show-more-btn:hover {
-    background: var(--secondary-color);
+    background: var(--border-color); /* Легкий сірий при ховері */
+    color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .show-more-btn:disabled {
-    background: #ccc;
+    background: #F7FAFC;
+    color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 1.1em;
+    transition: color var(--transition-speed) ease;
+}
+
+.social-link:hover {
+    color: var(--primary-color);
+    text-decoration: none;
 }
 
 .pagination {
@@ -1170,12 +1231,12 @@ h3:hover {
 .pagination-btn {
     width: 40px;
     height: 40px;
-    background: #EDF2F7;
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 50%;
-    color: var(--primary-color);
-    font-size: 16px;
-    font-weight: 600;
+    color: var(--muted-text); /* Змінено на менш контрастний колір */
+    font-size: 15px; /* Зменшено розмір шрифту */
+    font-weight: 500; /* Зменшено вагу шрифту */
     cursor: pointer;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -1185,22 +1246,22 @@ h3:hover {
 }
 
 .pagination-btn.active {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 8px rgba(49, 130, 206, 0.3);
+    background: #E2E8F0;
+    color: var(--text-color);
+    border-color: #E2E8F0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-btn:hover {
-    background: #EBF8FF;
-    color: var(--secondary-color);
+    background: var(--border-color);
+    color: var(--text-color); /* Менш яскравий колір при ховері */
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-btn:disabled {
     background: #F7FAFC;
-    color: var(--light-text);
+    color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
 }
@@ -1208,27 +1269,27 @@ h3:hover {
 .pagination-arrow {
     width: 40px;
     height: 40px;
-    background: #EDF2F7;
+    background: var(--card-bg); /* Змінено на білий для гармонії */
     border: 1px solid var(--border-color);
     border-radius: 50%;
-    color: var(--primary-color);
-    font-size: 18px;
-    font-weight: 600;
+    color: var(--muted-text); /* Змінено на менш яскравий колір */
+    font-size: 16px; /* Зменшено розмір шрифту */
+    font-weight: 500;
     cursor: pointer;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .pagination-arrow:hover {
-    background: #EBF8FF;
-    color: var(--secondary-color);
+    background: var(--border-color);
+    color: var(--text-color); /* Менш яскравий колір при ховері */
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-arrow:disabled {
     background: #F7FAFC;
-    color: var(--light-text);
+    color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
 }
@@ -1381,15 +1442,15 @@ h3:hover {
     cursor: pointer;
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
     border: none;
-    background: var(--primary-color);
+    background: var(--accent-color);
     color: white;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .product .buy-btn:hover {
-    background: var(--secondary-color);
+    background: #059669; /* Темніший зелений */
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .product .buy-btn:focus {
@@ -1600,29 +1661,30 @@ h3:hover {
 }
 
 .quantity-btn {
-    background: var(--primary-color);
-    color: white;
+    background: var(--border-color); /* Змінено на менш яскравий колір */
+    color: var(--text-color);
     border: none;
     padding: 0;
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 16px; /* Зменшено розмір шрифту */
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
 .quantity-btn:hover {
-    background: var(--secondary-color);
+    background: var(--primary-color); /* Легкий акцент при ховері */
+    color: white;
     transform: scale(1.1);
 }
 
 .quantity-btn:focus {
     outline: none;
-    box-shadow: 0 0 8px rgba(49, 130, 206, 0.5);
+    box-shadow: 0 0 8px rgba(30, 58, 138, 0.3); /* Зменшено яскравість тіні */
 }
 
 .quantity-selector input[type="number"] {
@@ -1699,79 +1761,80 @@ h3:hover {
     border-radius: 5px;
 }
 
+/* Styling for the Add to Cart button in product grid and product details */
+.product .buy-btn,
+#product-details .product-detail-right .buy-btn,
 .group-products .buy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    max-width: 255px;
-    padding: 12px 45px;
-    background: var(--primary-color);
+    max-width: 220px; /* Slightly reduced max-width for compactness */
+    padding: 10px 20px; /* Reduced padding for a more compact look */
+    background: linear-gradient(135deg, var(--accent-color), #34D399); /* Subtle gradient for modern look */
     color: white;
     border: none;
-    border-radius: 25px;
-    font-size: 16px;
+    border-radius: 20px; /* Slightly smaller radius for compactness */
+    font-size: 14px; /* Smaller font size for better fit */
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     cursor: pointer;
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    margin: 15px auto 0;
-    display: block;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-align: center;
-    height: 48px;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2); /* Enhanced shadow for depth */
+    position: relative;
+    overflow: hidden;
+    margin: 8px auto; /* Reduced margin for tighter spacing */
+    height: 40px; /* Fixed height for consistency */
 }
 
+/* Icon for the button (cart SVG) */
+.product .buy-btn::before,
+#product-details .product-detail-right .buy-btn::before,
+.group-products .buy-btn::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
+    margin-right: 8px; /* Space between icon and text */
+}
+
+/* Hover effect */
+.product .buy-btn:hover,
+#product-details .product-detail-right .buy-btn:hover,
 .group-products .buy-btn:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+    background: linear-gradient(135deg, #059669, #22D3EE); /* Dynamic gradient on hover */
+    transform: translateY(-2px) scale(1.02); /* Subtle lift and scale */
+    box-shadow: 0 5px 12px rgba(16, 185, 129, 0.3); /* Stronger shadow on hover */
 }
 
+/* Focus effect */
+.product .buy-btn:focus,
+#product-details .product-detail-right .buy-btn:focus,
 .group-products .buy-btn:focus {
     outline: none;
-    box-shadow: 0 0 8px rgba(49, 130, 206, 0.5);
+    box-shadow: 0 0 10px rgba(49, 130, 206, 0.5); /* Blue focus ring */
 }
 
+/* Active state */
+.product .buy-btn:active,
+#product-details .product-detail-right .buy-btn:active,
 .group-products .buy-btn:active {
-    background: #2563EB;
-    transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(49, 130, 206, 0.2);
+    background: linear-gradient(135deg, #047857, #0EA5E9); /* Darker gradient on click */
+    transform: translateY(0); /* Reset lift */
+    box-shadow: 0 2px 6px rgba(49, 130, 206, 0.2); /* Reduced shadow */
 }
 
-#product-details .product-detail-right .buy-btn {
-    width: 100%;
-    max-width: 255px;
-    padding: 12px 45px;
-    background: var(--primary-color) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 25px !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    margin: 0 0 15px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-align: center;
-    height: 48px;
-}
-
-#product-details .product-detail-right .buy-btn:hover {
-    background: var(--secondary-color) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3) !important;
-}
-
-#product-details .product-detail-right .buy-btn:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(49, 130, 206, 0.5);
-}
-
-#product-details .product-detail-right .buy-btn:active {
-    background: #2563EB !important;
-    transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(49, 130, 206, 0.2) !important;
+/* Disabled state */
+.product .buy-btn:disabled,
+#product-details .product-detail-right .buy-btn:disabled,
+.group-products .buy-btn:disabled {
+    background: #E2E8F0;
+    color: var(--muted-text);
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .color-options {
@@ -2025,7 +2088,8 @@ h3:hover {
     align-items: center;
     justify-content: center;
     padding: 15px;
-    background: #F9F9F9;
+    background: var(--card-bg); /* Змінено на білий для консистентності */
+    border: 1px solid var(--border-color); /* Додано рамку */
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 10px;
@@ -2034,6 +2098,7 @@ h3:hover {
     margin-left: auto;
     margin-right: auto;
     cursor: pointer;
+    transition: box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
 }
 
 .cart-item:hover {
@@ -2075,23 +2140,32 @@ h3:hover {
 }
 
 .cart-item .quantity-btn {
-    background: #3182CE;
-    color: white;
+    background: var(--border-color);
+    color: var(--text-color);
     border: none;
     padding: 0;
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
-    font-size: 14px;
+    font-size: 18px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.3s ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .cart-item .quantity-btn:hover {
-    background: #2B6CB0;
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 4px 8px rgba(30, 58, 138, 0.2);
+}
+
+.cart-item .quantity-btn:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(30, 58, 138, 0.3);
 }
 
 .cart-item .quantity-selector input[type="number"] {
@@ -2226,16 +2300,16 @@ h3:hover {
     border-radius: 30px;
     font-weight: 700;
     font-size: 16px;
-    background: #3182CE;
+    background: var(--accent-color);
     color: white;
     border: none;
     cursor: pointer;
     margin: 20px auto 0;
-    transition: background 0.3s ease;
+    transition: background var(--transition-speed) ease;
 }
 
 .submit-order:hover {
-    background: #2B6CB0;
+    background: #059669; /* Темніший зелений */
 }
 
 .notification {
@@ -2372,22 +2446,30 @@ h3:hover {
     .search-btn {
         width: 35px;
         height: 35px;
-        right: 0;
-        background: var(--primary-color);
-        color: white;
+        background: transparent; 
         border-radius: 50%;
     }
 
-    .search-btn:hover {
-        background: var(--secondary-color);
-        color: white;
+    .search-btn::before {
+        width: 18px;
+        height: 18px;
     }
 
-    .cart {
-        margin: 5px 0;
-        padding: 5px 8px;
-        text-align: center;
+.cart {
         font-size: 16px;
+        padding: 5px 8px;
+    }
+
+    .cart::before {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+    }
+
+    .cart span {
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-left: 6px;
     }
 
     .nav {
@@ -2549,9 +2631,9 @@ h3:hover {
     }
 
     .category .subcategories p {
-        font-size: 13px; /* Зменшено шрифт */
+        font-size: 13px;
         font-weight: 400;
-        color: var(--light-text);
+        color: #6B7280;
         cursor: pointer;
         transition: color var(--transition-speed) ease;
         padding: 4px 0;
@@ -2593,9 +2675,21 @@ h3:hover {
         margin: 8px 0;
     }
 
-    .product .buy-btn {
-        padding: 10px 20px;
-        font-size: 14px;
+    .product .buy-btn,
+    #product-details .product-detail-right .buy-btn,
+    .group-products .buy-btn {
+        max-width: 100%; /* Full width on small screens */
+        padding: 8px 16px; /* Further reduced padding */
+        font-size: 12px; /* Smaller font for mobile */
+        height: 36px; /* Slightly shorter height */
+    }
+
+    .product .buy-btn::before,
+    #product-details .product-detail-right .buy-btn::before,
+    .group-products .buy-btn::before {
+        width: 14px;
+        height: 14px;
+        margin-right: 6px; /* Reduced spacing */
     }
 
     .product .details-btn {
@@ -2845,18 +2939,32 @@ h3:hover {
     }
 
     .search-btn {
-        width: 40px;
-        height: 40px;
-        right: 0;
-        background: var(--primary-color);
-        color: white;
+        width: 35px;
+        height: 35px;
+        background: transparent; 
         border-radius: 50%;
     }
 
-    .cart {
-        margin: 5px 0;
-        padding: 5px 10px;
-        text-align: center;
+    .search-btn::before {
+        width: 18px;
+        height: 18px;
+    }
+
+.cart {
+        font-size: 16px;
+        padding: 6px 10px;
+    }
+
+    .cart::before {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+    }
+
+    .cart span {
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-left: 6px;
     }
 
     .nav {
@@ -3020,7 +3128,7 @@ h3:hover {
     .category .subcategories p {
         font-size: 13px;
         font-weight: 400;
-        color: var(--light-text);
+        color: #6B7280;
         cursor: pointer;
         transition: color var(--transition-speed) ease;
         padding: 4px 0;
@@ -3222,9 +3330,21 @@ h3:hover {
         margin: 8px 0;
     }
 
-    .product .buy-btn {
-        padding: 10px 20px;
-        font-size: 14px;
+    .product .buy-btn,
+    #product-details .product-detail-right .buy-btn,
+    .group-products .buy-btn {
+        max-width: 180px; /* Slightly smaller max-width */
+        padding: 9px 18px;
+        font-size: 13px;
+        height: 38px;
+    }
+
+    .product .buy-btn::before,
+    #product-details .product-detail-right .buy-btn::before,
+    .group-products .buy-btn::before {
+        width: 15px;
+        height: 15px;
+        margin-right: 7px;
     }
 
     .product .details-btn {
@@ -3409,17 +3529,32 @@ h3:hover {
     }
 
     .search-btn {
-        width: 40px;
-        height: 40px;
-        right: 0;
-        background: var(--primary-color);
-        color: white;
+        width: 35px;
+        height: 35px;
+        background: transparent; 
         border-radius: 50%;
     }
 
-    .cart {
-        margin: 5px 15px;
-        padding: 5px 10px;
+    .search-btn::before {
+        width: 18px;
+        height: 18px;
+    }
+
+.cart {
+        font-size: 17px;
+        padding: 7px 12px;
+    }
+
+    .cart::before {
+        width: 17px;
+        height: 17px;
+        margin-right: 7px;
+    }
+
+    .cart span {
+        font-size: 15px;
+        padding: 5px 9px;
+        margin-left: 7px;
     }
 
     .nav {
@@ -3842,16 +3977,32 @@ h3:hover {
     }
 
     .search-btn {
-        width: 40px;
-        height: 40px;
-        right: 0;
-        background: var(--primary-color);
-        color: white;
+        width: 35px;
+        height: 35px;
+        background: transparent; 
         border-radius: 50%;
     }
 
+    .search-btn::before {
+        width: 18px;
+        height: 18px;
+    }
+
     .cart {
-        margin-right: 15px;
+        font-size: 18px;
+        padding: 8px 15px;
+    }
+
+    .cart::before {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+    }
+
+    .cart span {
+        font-size: 16px;
+        padding: 5px 10px;
+        margin-left: 8px;
     }
 
     .nav a {
@@ -4044,16 +4195,17 @@ h3:hover {
         padding: 8px 15px;
     }
 
-    .product-grid {
-        gap: 15px;
+.product-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px 0;
     }
-
-.product {
-    width: calc(33.33% - 4px);
-    padding: 8px;
-    margin: 0;
-    border-radius: 8px;
-}
+    .product {
+        width: 100%;
+        padding: 8px;
+        margin: 0;
+    }
 
     .product-detail-top {
         flex-direction: row;
@@ -4072,6 +4224,15 @@ h3:hover {
     .thumbnail {
         width: 80px;
         height: 80px;
+    }
+
+    .product .buy-btn,
+    #product-details .product-detail-right .buy-btn,
+    .group-products .buy-btn {
+        max-width: 200px;
+        padding: 10px 20px;
+        font-size: 14px;
+        height: 40px;
     }
 
     .product-detail-right {
@@ -4185,11 +4346,15 @@ h3:hover {
     }
 
     .search-btn {
-        width: 30px;
-        height: 30px;
-        right: 10px;
-        background: transparent;
-        color: var(--primary-color);
+        width: 35px;
+        height: 35px;
+        background: transparent; 
+        border-radius: 50%;
+    }
+
+    .search-btn::before {
+        width: 18px;
+        height: 18px;
     }
 
     .cart {
@@ -4318,6 +4483,15 @@ h3:hover {
     #per-page {
         font-size: 14px;
         padding: 10px 20px;
+    }
+
+    .product .buy-btn,
+    #product-details .product-detail-right .buy-btn,
+    .group-products .buy-btn {
+        max-width: 220px;
+        padding: 10px 20px;
+        font-size: 14px;
+        height: 40px;
     }
 
     .product-grid {
