@@ -3414,14 +3414,16 @@ function nextGalleryImage() {
     if (img) img.src = currentGalleryImages[currentGalleryIndex];
 }
 
-function showNotification(message, type = 'info') {
+function showNotification(message, type = 'success') {
     const notification = document.getElementById('notification');
     if (!notification) return;
     notification.textContent = message;
-    notification.className = `notification ${type}`;
-    notification.style.display = 'block';
+    notification.classList.remove('success', 'error');
+    notification.classList.add(type, 'show');
+    
+    // Автоматичне зникнення через 3 секунди
     setTimeout(() => {
-        notification.style.display = 'none';
+        notification.classList.remove('show');
     }, 3000);
 }
 
@@ -3604,6 +3606,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
             });
+        }
+
+        // Логіка вибору кольору
+        const colorOptions = document.querySelectorAll('.color-option');
+        if (colorOptions.length > 0) {
+            colorOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    // Знімаємо клас selected з усіх опцій
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    // Додаємо клас selected до клікнутої опції
+                    option.classList.add('selected');
+                    console.log('Обрано колір:', option.querySelector('.color-label')?.textContent);
+                });
+            });
+        } else {
+            console.warn('Елементи .color-option не знайдено');
         }
 
         // Ініціалізація даних, якщо їх немає
