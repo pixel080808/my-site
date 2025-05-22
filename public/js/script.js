@@ -3608,22 +3608,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Логіка вибору кольору
-        const colorOptions = document.querySelectorAll('.color-option');
-        if (colorOptions.length > 0) {
-            colorOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    // Знімаємо клас selected з усіх опцій
-                    colorOptions.forEach(opt => opt.classList.remove('selected'));
-                    // Додаємо клас selected до клікнутої опції
-                    option.classList.add('selected');
-                    console.log('Обрано колір:', option.querySelector('.color-label')?.textContent);
-                });
-            });
-        } else {
-            console.warn('Елементи .color-option не знайдено');
-        }
-
         // Ініціалізація даних, якщо їх немає
         if (!localStorage.getItem('products')) {
             const initialProducts = [
