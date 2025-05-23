@@ -848,10 +848,19 @@ function loadMoreProducts() {
 }
 
 function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    // Знімаємо клас active і приховуємо всі секції
+    document.querySelectorAll('.section').forEach(el => {
+        el.classList.remove('active');
+        el.style.display = 'none';
+    });
+
+    // Знаходимо потрібну секцію
     const section = document.getElementById(sectionId);
     if (section) {
+        // Додаємо клас active і показуємо секцію
         section.classList.add('active');
+        section.style.display = 'block';
+
         let newPath = '/';
         const searchInput = document.getElementById('search');
         if (searchInput) {
@@ -931,6 +940,10 @@ function showSection(sectionId) {
                 searchProducts();
             };
         }
+    } else {
+        console.warn(`Секція з ID ${sectionId} не знайдена`);
+        showNotification('Сторінку не знайдено!', 'error');
+        showSection('home');
     }
 }
 
@@ -3520,6 +3533,13 @@ async function handleNavigation(path, isPopstate = false) {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('Ініціалізація програми...');
+
+        // Негайно приховати всі секції
+        document.querySelectorAll('.section').forEach(el => {
+            el.style.display = 'none';
+        });
+
+        // Ініціалізація даних
         await initializeData();
         updateHeader();
         updateCartCount();
@@ -3579,10 +3599,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Обробка початкового шляху
+        // Обробка початкового шляху після ініціалізації
         const path = window.location.pathname.slice(1) || '';
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path);
+
+        // Показати активну секцію після завершення навігації
+        const activeSection = document.querySelector('.section.active');
+        if (activeSection) {
+            activeSection.style.display = 'block';
+        } else {
+            console.warn('Активна секція не знайдена, показуємо головну');
+            showSection('home');
+        }
+
+        // Приховати прелоадер
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            preloader.style.display = 'none';
+        }
 
         // Обробка кліків у кошику
         const cartItems = document.getElementById('cart-items');
@@ -3614,13 +3649,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
                 // Додайте інші товари за потребою
             ];
-            saveToStorage('products', initialProducts); // Використовуємо saveToStorage
+            saveToStorage('products', initialProducts);
         }
 
         console.log('Програма ініціалізована успішно');
     } catch (error) {
         console.error('Помилка в DOMContentLoaded:', error);
         showNotification('Помилка ініціалізації сторінки!', 'error');
+        // Показати головну сторінку у разі помилки
+        document.querySelectorAll('.section').forEach(el => {
+            el.style.display = 'none';
+        });
+        showSection('home');
+        // Приховати прелоадер у разі помилки
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            preloader.style.display = 'none';
+        }
     }
 });
 
