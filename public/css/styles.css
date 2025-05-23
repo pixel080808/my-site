@@ -36,16 +36,17 @@ body {
 
 header {
     background: var(--card-bg);
-    padding: var(--base-padding) 0;
+    padding: 5px 0; /* Зменшуємо відступи, щоб позбутися пустого простору */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 80px;
+    min-height: 60px; /* Замінюємо height на min-height для адаптивності */
     z-index: 101;
     transition: background var(--transition-speed) ease;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Дозволяємо перенесення елементів */
+    gap: 5px; /* Додаємо невеликий зазор між елементами */
 }
 
 header.scrolled {
@@ -169,6 +170,7 @@ header.scrolled {
     margin-right: var(--base-padding);
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0; /* Запобігаємо стисненню кошика */
 }
 
 .cart::before {
@@ -2446,16 +2448,17 @@ h3:hover {
 @media (max-width: 480px) {
     header {
         flex-direction: column;
-        height: auto;
-        padding: 10px 20px;
+        min-height: auto; /* Дозволяємо шапці адаптуватися до вмісту */
+        padding: 5px 10px; /* Зменшуємо відступи */
         justify-content: center;
         align-items: center;
+        gap: 5px; /* Зазор між елементами */
     }
 
     .logo {
-        margin: 5px 0;
+        margin: 0; /* Видаляємо зайві відступи */
         text-align: center;
-        margin-left: 15px;
+        width: auto;
     }
 
     .logo img {
@@ -2470,16 +2473,15 @@ h3:hover {
     .phones {
         font-size: 16px;
         padding: 0;
-        margin: 5px 0;
+        margin: 0; /* Видаляємо зайві відступи */
         text-align: center;
         max-width: calc(100% - 30px);
-        margin-right: 15px;
     }
 
     .search-bar {
         width: 100%;
         max-width: calc(100% - 40px);
-        margin: 10px 0;
+        margin: 0;
         padding: 0;
         justify-content: center;
     }
@@ -2493,7 +2495,7 @@ h3:hover {
     .search-btn {
         width: 35px;
         height: 35px;
-        background: transparent; 
+        background: transparent;
         border-radius: 50%;
     }
 
@@ -2502,9 +2504,11 @@ h3:hover {
         height: 18px;
     }
 
-.cart {
+    .cart {
         font-size: 16px;
         padding: 6px 10px;
+        margin: 0; /* Видаляємо зайві відступи */
+        width: auto; /* Дозволяємо кошику займати лише потрібний простір */
     }
 
     .cart::before {
@@ -3041,44 +3045,32 @@ h3:hover {
 
 @media (min-width: 481px) and (max-width: 767px) {
     header {
-        flex-direction: row;
-        height: auto;
-        padding: 10px 20px;
-        flex-wrap: wrap;
-        justify-content: space-between;
+        padding: var(--base-padding) 0;
+        height: 80px;
+        flex-wrap: nowrap;
     }
 
     .logo {
-        margin: 5px 0;
         margin-left: 15px;
     }
 
     .logo img {
-        max-width: 160px;
+        max-width: 200px;
     }
 
     .logo-text {
-        font-size: 14px;
-        margin-left: 10px;
+        font-size: 16px;
+        margin-left: 15px;
     }
 
     .phones {
-        font-size: 16px;
-        padding: 0;
-        margin: 5px 15px;
-        text-align: center;
+        font-size: 18px;
+        margin-right: 15px;
     }
 
     .search-bar {
-        flex-grow: 1;
-        max-width: 300px;
-        margin: 5px 0;
-        padding: 0;
-    }
-
-    .search-bar input {
-        width: 100%;
-        padding: 10px 40px 10px 15px;
+        max-width: 400px;
+        margin: 0;
     }
 
     .search-btn {
@@ -3093,21 +3085,20 @@ h3:hover {
         height: 18px;
     }
 
-.cart {
-        font-size: 17px;
-        padding: 7px 12px;
+    .cart {
+        margin-right: 15px;
     }
 
     .cart::before {
-        width: 17px;
-        height: 17px;
-        margin-right: 7px;
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 
     .cart span {
-        font-size: 15px;
-        padding: 5px 9px;
-        margin-left: 7px;
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-left: 6px;
     }
 
     .nav {
@@ -3502,9 +3493,9 @@ h3:hover {
 
 @media (min-width: 768px) and (max-width: 991px) {
     header {
-        padding: 10px 20px;
-        height: auto;
-        flex-wrap: wrap;
+        padding: var(--base-padding) 0;
+        height: 80px;
+        flex-wrap: nowrap;
     }
 
     .logo {
@@ -3512,22 +3503,22 @@ h3:hover {
     }
 
     .logo img {
-        max-width: 170px;
+        max-width: 200px;
     }
 
     .logo-text {
-        font-size: 15px;
-        margin-left: 10px;
+        font-size: 16px;
+        margin-left: 15px;
     }
 
     .phones {
-        font-size: 17px;
+        font-size: 18px;
         margin-right: 15px;
     }
 
     .search-bar {
-        max-width: 350px;
-        margin: 5px 0;
+        max-width: 400px;
+        margin: 0;
     }
 
     .search-btn {
@@ -3543,20 +3534,19 @@ h3:hover {
     }
 
     .cart {
-        font-size: 18px;
-        padding: 8px 15px;
+        margin-right: 15px;
     }
 
     .cart::before {
-        width: 18px;
-        height: 18px;
-        margin-right: 8px;
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 
     .cart span {
-        font-size: 16px;
-        padding: 5px 10px;
-        margin-left: 8px;
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-left: 6px;
     }
 
     .nav a {
