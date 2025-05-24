@@ -726,12 +726,13 @@ async function initializeData() {
     ]);
     if (!localStorage.getItem('orderFields')) saveToStorage('orderFields', orderFields);
 
-    filters = loadFromStorage('filters', [
-        { name: 'brand', label: 'Виробник', type: 'checkbox', options: ['Дубок', 'Matroluxe', 'Сокме', 'Еверест'] },
-        { name: 'price', label: 'Ціна', type: 'checkbox', options: ['0-2000', '2000-5000', '5000-10000', '10000+'] },
-        { name: 'material', label: 'Матеріал', type: 'checkbox', options: ['Дерево', 'Пружинний блок', 'Метал', 'Тканина'] }
-    ]);
-    if (!localStorage.getItem('filters')) saveToStorage('filters', filters);
+filters = loadFromStorage('filters', [
+    { name: 'promo', label: 'Товари з акціями', type: 'checkbox', options: ['Акція'] },
+    { name: 'brand', label: 'Виробник', type: 'checkbox', options: ['Дубок', 'Matroluxe', 'Сокме', 'Еверест'] },
+    { name: 'price', label: 'Ціна', type: 'checkbox', options: ['0-2000', '2000-5000', '5000-10000', '10000+'] },
+    { name: 'material', label: 'Матеріал', type: 'checkbox', options: ['Дерево', 'Пружинний блок', 'Метал', 'Тканина'] }
+]);
+if (!localStorage.getItem('filters')) saveToStorage('filters', filters);
 
     orders = loadFromStorage('orders', []);
     if (orders.length > 5) orders = orders.slice(-5);
@@ -1481,18 +1482,40 @@ function renderFilters() {
     while (filterList.firstChild) filterList.removeChild(filterList.firstChild);
 
     const relevantProducts = filteredProducts;
-    const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
-    const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
-    
-    const priceRanges = ['0-3000', '3000-5000', '5000-7000', '7000-10000', '10000+'];
 
+    // Фільтр для акційних товарів
+    const promoProducts = relevantProducts.filter(p => p.salePrice && new Date(p.saleEnd) > new Date());
+    if (promoProducts.length > 0) {
+        filterList.appendChild(createFilterBlock('Товари з акціями', 'promo', ['Акція']));
+    }
+
+    // Фільтр для брендів
+    const brands = [...new Set(relevantProducts.map(p => p.brand).filter(Boolean))];
     if (brands.length > 0) {
         filterList.appendChild(createFilterBlock('Виробник', 'brand', brands));
     }
+
+    // Фільтр для матеріалів
+    const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
     if (materials.length > 0) {
         filterList.appendChild(createFilterBlock('Матеріал', 'material', materials));
     }
-    filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges));
+
+    // Фільтр для цін
+    const priceRanges = ['0-2000', '2000-5000', '5000-10000', '10000+'];
+    const priceFiltered = relevantProducts.filter(p => {
+        const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+        return priceRanges.some(range => {
+            if (range.endsWith('+')) {
+                return price >= parseInt(range.replace('+', ''));
+            }
+            const [min, max] = range.split('-').map(Number);
+            return price >= min && price <= max;
+        });
+    });
+    if (priceFiltered.length > 0) {
+        filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges));
+    }
 }
 
 function createFilterBlock(title, name, options) {
@@ -1506,20 +1529,46 @@ function createFilterBlock(title, name, options) {
     const optionsDiv = document.createElement('div');
     optionsDiv.className = 'filter-options';
 
+    const relevantProducts = filteredProducts;
+
     options.forEach(opt => {
-        const label = document.createElement('label');
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.name = name;
-        input.value = opt;
-        input.onchange = () => filterProducts();
-        label.appendChild(input);
-        label.appendChild(document.createTextNode(` ${opt}`));
-        optionsDiv.appendChild(label);
+        // Підраховуємо кількість товарів для даної опції
+        let count = 0;
+        if (name === 'promo') {
+            count = relevantProducts.filter(p => p.salePrice && new Date(p.saleEnd) > new Date()).length;
+        } else if (name === 'price') {
+            count = relevantProducts.filter(p => {
+                const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+                if (opt.endsWith('+')) {
+                    return price >= parseInt(opt.replace('+', ''));
+                }
+                const [min, max] = opt.split('-').map(Number);
+                return price >= min && price <= max;
+            }).length;
+        } else {
+            count = relevantProducts.filter(p => p[name] === opt).length;
+        }
+
+        // Відображаємо опцію лише якщо є товари
+        if (count > 0) {
+            const label = document.createElement('label');
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = name;
+            input.value = opt;
+            input.onchange = () => filterProducts();
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(` ${opt} (${count})`));
+            optionsDiv.appendChild(label);
+        }
     });
 
-    block.appendChild(optionsDiv);
-    return block;
+    // Додаємо блок лише якщо є хоча б одна опція
+    if (optionsDiv.children.length > 0) {
+        block.appendChild(optionsDiv);
+        return block;
+    }
+    return null; // Не додаємо блок, якщо немає опцій
 }
 
 function filterProducts() {
@@ -1538,11 +1587,13 @@ function filterProducts() {
     let filtered = [...base];
     let hasActiveFilters = false;
 
-    ['brand', 'material', 'price'].forEach(name => {
+    ['promo', 'brand', 'material', 'price'].forEach(name => {
         const checked = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
         if (checked.length > 0) {
             hasActiveFilters = true;
-            if (name === 'price') {
+            if (name === 'promo') {
+                filtered = filtered.filter(p => p.salePrice && new Date(p.saleEnd) > new Date());
+            } else if (name === 'price') {
                 filtered = filtered.filter(p => {
                     const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
                     return checked.some(range => {
@@ -1566,6 +1617,7 @@ function filterProducts() {
 
     filteredProducts = filtered;
     if (isSearchActive) searchResults = filtered;
+    currentPage = 1; // Скидаємо на першу сторінку при фільтрації
     renderProducts(filtered);
 }
 
@@ -3701,3 +3753,24 @@ responsiveStyle.textContent = `
     }
 `;
 document.head.appendChild(responsiveStyle);
+
+const filterStyle = document.createElement('style');
+filterStyle.textContent = `
+    .filter-block {
+        margin-bottom: 15px;
+    }
+    .filter-block h4 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        font-weight: bold;
+    }
+    .filter-options label {
+        display: block;
+        margin: 5px 0;
+        font-size: 14px;
+    }
+    .filter-options input[type="checkbox"] {
+        margin-right: 5px;
+    }
+`;
+document.head.appendChild(filterStyle);
