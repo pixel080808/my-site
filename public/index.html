@@ -317,24 +317,25 @@
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo" id="logo" onclick="showSection('home')">
+<header>
+    <div class="logo" id="logo" onclick="showSection('home')">
+    </div>
+    <div class="logo-text" id="logo-text">
+    </div>
+    <div class="phones" id="phones">
+    </div>
+    <div class="search-cart-container">
+        <div class="search-bar">
+            <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
+            <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
         </div>
-        <div class="logo-text" id="logo-text">
-        </div>
-        <div class="phones" id="phones">
-        </div>
-<div class="search-bar">
-    <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
-    <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
-</div>
         <div class="cart" onclick="showSection('cart')">
-            Кошик
             <span class="cart-count">
                 0
             </span>
         </div>
-    </header>
+    </div>
+</header>
 <nav class="nav">
     <a href="#" id="nav-home" onclick="showSection('home'); return false;">
         Головна
@@ -443,6 +444,33 @@
             </button>
         </div>
     </div>
+<!-- Бургер-меню -->
+    <div class="burger-menu" id="burger-menu">
+        <div class="burger-icon" id="burger-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="burger-content" id="burger-content">
+            <div class="burger-search">
+                <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
+                <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
+            </div>
+            <a href="#" onclick="showSection('home'); return false;">Головна</a>
+            <div class="burger-catalog">
+                <a href="#" id="burger-catalog-toggle">Каталог</a>
+                <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
+            </div>
+            <a href="#" onclick="showSection('contacts'); return false;">Контакти</a>
+            <a href="#" onclick="showSection('about'); return false;">Про нас</a>
+            <a href="#" class="cart" onclick="showSection('cart'); return false;"><span></span></a>
+        </div>
+    </div>
+<!-- Плаваючий кошик -->
+<div class="floating-cart" id="floating-cart">
+    <span class="cart-count"></span>
+</div>
     <!-- Підключаємо script.js -->
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
 </html>

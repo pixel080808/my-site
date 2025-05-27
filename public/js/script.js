@@ -849,7 +849,7 @@ function loadMoreProducts() {
 }
 
 function showSection(sectionId) {
-    // Знімаємо клас active і приховуємо всі секції
+    // Знітаємо клас active і приховуємо всі секції
     document.querySelectorAll('.section').forEach(el => {
         el.classList.remove('active');
         el.style.display = 'none';
@@ -857,10 +857,29 @@ function showSection(sectionId) {
 
     // Знаходимо потрібну секцію
     const section = document.getElementById(sectionId);
+    const burgerMenu = document.getElementById('burger-menu');
+    const burgerContent = document.getElementById('burger-content');
+    const filters = document.querySelector('.filters'); // Додаємо посилання на фільтр
+
+    // Закриваємо фільтр на екранах до 991px при переході на будь-яку секцію
+    if (filters && window.innerWidth < 992) {
+        filters.classList.remove('active');
+    }
+
     if (section) {
         // Додаємо клас active і показуємо секцію
         section.classList.add('active');
         section.style.display = 'block';
+
+        // Контролюємо видимість бургер-меню
+        if (sectionId === 'catalog') {
+            burgerMenu.style.display = 'block'; // Показуємо для catalog
+        } else {
+            burgerMenu.style.display = 'none'; // Приховуємо для інших секцій
+            burgerMenu.classList.remove('visible');
+            burgerMenu.classList.remove('active');
+            if (burgerContent) burgerContent.classList.remove('active');
+        }
 
         let newPath = '/';
         const searchInput = document.getElementById('search');
@@ -1370,7 +1389,7 @@ function createControlsContainer() {
     const filterSortContainer = document.createElement('div');
     filterSortContainer.className = 'filter-sort-container';
     filterSortContainer.style.display = 'flex';
-    filterSortContainer.style.justifyContent = 'space-between';
+    filterSortContainer.style.justifyContent = 'revert-layer';
     filterSortContainer.style.alignItems = 'center';
     filterSortContainer.style.width = '100%';
     filterSortContainer.style.maxWidth = '100%';
@@ -1382,7 +1401,7 @@ function createControlsContainer() {
     const filterBtn = document.createElement('button');
     filterBtn.className = 'filter-btn';
     filterBtn.textContent = 'Фільтр';
-    filterBtn.style.padding = '8px 12px';
+    filterBtn.style.padding = '8px 42px';
     filterBtn.style.fontSize = '14px';
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
@@ -1451,16 +1470,19 @@ function createSortMenu() {
         btn.style.width = '100%';
         btn.style.textAlign = 'left';
         btn.style.border = 'none';
-        btn.style.backgroundColor = currentSort === opt.value ? '#e0e0e0' : 'transparent';
+        btn.style.backgroundColor = 'transparent';
         btn.style.cursor = 'pointer';
-        btn.onmouseover = () => { btn.style.backgroundColor = '#f0f0f0'; };
-        btn.onmouseout = () => { btn.style.backgroundColor = currentSort === opt.value ? '#e0e0e0' : 'transparent'; };
+        btn.onmouseover = () => { if (!btn.classList.contains('selected')) btn.style.backgroundColor = '#f0f0f0'; };
+        btn.onmouseout = () => { if (!btn.classList.contains('selected')) btn.style.backgroundColor = 'transparent'; };
         btn.onclick = (e) => {
             e.stopPropagation();
+            sortDropdown.querySelectorAll('button').forEach(b => {
+                b.classList.remove('selected');
+                b.style.backgroundColor = 'transparent';
+            });
+            btn.classList.add('selected');
             sortProducts(opt.value);
             sortDropdown.style.display = 'none';
-            sortDropdown.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
         };
         sortDropdown.appendChild(btn);
     });
@@ -2722,23 +2744,22 @@ function normalizeString(str) {
     return str ? str.normalize('NFC').toLowerCase() : '';
 }
 
-function searchProducts() {
+function searchProducts(query = '') {
     const searchInput = document.getElementById('search');
-    if (!searchInput) {
-        console.error('Поле пошуку не знайдено');
-        showNotification('Помилка пошуку!', 'error');
-        return;
-    }
-    const query = normalizeString(searchInput.value.trim());
-    console.log('Пошук за запитом:', query);
-    console.log('Доступні продукти:', products);
+    const burgerSearchInput = document.getElementById('burger-search');
+    // Використовуємо переданий query, або з burger-search, або з основного поля пошуку
+    const searchQuery = normalizeString(query || burgerSearchInput?.value.trim() || searchInput?.value.trim() || '');
 
-    if (!query) {
+    if (!searchQuery) {
         console.log('Порожній запит пошуку, дія не виконується');
+        showNotification('Введіть пошуковий запит!', 'warning');
         return;
     }
     if (isSearchPending) return;
     isSearchPending = true;
+
+    console.log('Пошук за запитом:', searchQuery);
+    console.log('Доступні продукти:', products);
 
     searchResults = products.filter(p => {
         if (!p.visible) {
@@ -2748,7 +2769,7 @@ function searchProducts() {
         const name = normalizeString(p.name);
         const brand = normalizeString(p.brand || '');
         const description = normalizeString(p.description || '');
-        const matches = name.includes(query) || brand.includes(query) || description.includes(query);
+        const matches = name.includes(searchQuery) || brand.includes(searchQuery) || description.includes(searchQuery);
         console.log(`Продукт ${p.name}, збіги: ${matches}`, { name, brand, description });
         return matches;
     });
@@ -2767,8 +2788,12 @@ function searchProducts() {
 
     renderCatalog();
     isSearchPending = false;
-    const searchSlug = transliterate(query.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'));
+    const searchSlug = transliterate(searchQuery.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'));
     history.replaceState({ sectionId: 'catalog', path: `/catalog/search/${searchSlug}` }, '', `/catalog/search/${searchSlug}`);
+
+    // Очищення полів пошуку
+    if (searchInput) searchInput.value = '';
+    if (burgerSearchInput) burgerSearchInput.value = '';
 }
 
 async function updateCartPrices() {
@@ -3088,14 +3113,28 @@ async function updateCartQuantity(index, change) {
     }
 }
 
-        function updateCartCount() {
-            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const cartCount = document.querySelector('.cart-count');
-            if (cartCount) {
-                cartCount.textContent = count > 0 ? count : '0';
-                cartCount.style.display = 'inline';
-            }
-        }
+function updateCartCount() {
+    const cart = loadFromStorage('cart') || [];
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+    // Оновлення лічильника в шапке (.cart-count)
+    const headerCartCount = document.querySelector('.cart .cart-count');
+    if (headerCartCount) {
+        headerCartCount.textContent = totalItems > 0 ? totalItems : '';
+    }
+
+    // Оновлення лічильника в бургер-меню (.burger-content .cart span)
+    const burgerCartCount = document.querySelector('.burger-content .cart span');
+    if (burgerCartCount) {
+        burgerCartCount.textContent = totalItems > 0 ? totalItems : '';
+    }
+
+    // Оновлення лічильника в плаваючому кошику (.floating-cart .cart-count)
+    const floatingCartCount = document.querySelector('.floating-cart .cart-count');
+    if (floatingCartCount) {
+        floatingCartCount.textContent = totalItems > 0 ? totalItems : '';
+    }
+}
 
 async function submitOrder() {
     const customer = orderFields.reduce((acc, field) => {
@@ -3651,6 +3690,129 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        // Налаштування бургер-меню та плаваючого кошика
+        const burgerIcon = document.getElementById('burger-icon');
+        const burgerMenu = document.getElementById('burger-menu');
+        const burgerContent = document.getElementById('burger-content');
+        const burgerSearch = document.getElementById('burger-search');
+        const burgerSearchBtn = document.querySelector('.burger-search-btn');
+        const burgerCatalogToggle = document.getElementById('burger-catalog-toggle');
+        const burgerCatalogDropdown = document.getElementById('burger-catalog-dropdown');
+        const header = document.querySelector('header');
+        const floatingCart = document.getElementById('floating-cart');
+
+        if (burgerIcon && burgerMenu && burgerContent) {
+            // Показ/приховання бургер-меню при кліку
+            burgerIcon.addEventListener('click', () => {
+                burgerMenu.classList.toggle('active');
+                burgerContent.classList.toggle('active');
+                // Скидаємо каталог при закритті бургер-меню
+                if (!burgerContent.classList.contains('active')) {
+                    burgerCatalogDropdown.classList.remove('active');
+                }
+            });
+
+            // Приховування бургер-меню при кліку на пункт
+            burgerContent.querySelectorAll('a:not(#burger-catalog-toggle)').forEach(link => {
+                link.addEventListener('click', () => {
+                    burgerMenu.classList.remove('active');
+                    burgerContent.classList.remove('active');
+                    burgerCatalogDropdown.classList.remove('active');
+                });
+            });
+
+            // Показ бургер-меню та плаваючого кошика тільки для секції catalog після прокрутки
+            window.addEventListener('scroll', () => {
+                const headerHeight = header.offsetHeight;
+                const activeSection = document.querySelector('.section.active')?.id;
+                if (activeSection === 'catalog' && window.scrollY > headerHeight) {
+                    burgerMenu.classList.add('visible');
+                    floatingCart.classList.add('visible');
+                } else {
+                    burgerMenu.classList.remove('visible');
+                    burgerMenu.classList.remove('active');
+                    burgerContent.classList.remove('active');
+                    burgerCatalogDropdown.classList.remove('active');
+                    floatingCart.classList.remove('visible');
+                }
+            });
+
+            // Обробка кліку на плаваючий кошик
+            if (floatingCart) {
+                floatingCart.addEventListener('click', () => {
+                    showSection('cart');
+                    burgerMenu.classList.remove('active');
+                    burgerContent.classList.remove('active');
+                    burgerCatalogDropdown.classList.remove('active');
+                });
+            }
+
+            // Пошук у бургер-меню
+            if (burgerSearch && burgerSearchBtn) {
+                burgerSearch.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = burgerSearch.value.trim();
+                        if (query) {
+                            searchProducts(query);
+                            burgerMenu.classList.remove('active');
+                            burgerContent.classList.remove('active');
+                            burgerCatalogDropdown.classList.remove('active');
+                        } else {
+                            showNotification('Введіть пошуковий запит!', 'warning');
+                        }
+                    }
+                });
+                burgerSearchBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const query = burgerSearch.value.trim();
+                    if (query) {
+                        searchProducts(query);
+                        burgerMenu.classList.remove('active');
+                        burgerContent.classList.remove('active');
+                        burgerCatalogDropdown.classList.remove('active');
+                    } else {
+                        showNotification('Введіть пошуковий запит!', 'warning');
+                    }
+                });
+            } else {
+                console.warn('Елементи пошуку в бургер-меню не знайдено');
+            }
+
+            // Налаштування каталогу в бургер-меню
+            if (burgerCatalogToggle && burgerCatalogDropdown) {
+                // Очищення попереднього вмісту
+                while (burgerCatalogDropdown.firstChild) {
+                    burgerCatalogDropdown.removeChild(burgerCatalogDropdown.firstChild);
+                }
+
+                // Генерація категорій і підкатегорій
+                categories.forEach(category => {
+                    const categoryItem = document.createElement('div');
+                    categoryItem.classList.add('burger-category-item');
+                    categoryItem.innerHTML = `
+                        <a href="#" onclick="currentCategory='${category.name}'; currentSubcategory=null; showSection('catalog'); return false;">${category.name}</a>
+                        <div class="burger-subcategory">
+                            ${(category.subcategories || []).map(sub => `
+                                <a href="#" onclick="currentCategory='${category.name}'; currentSubcategory='${sub.name}'; showSection('catalog'); return false;">${sub.name}</a>
+                            `).join('')}
+                        </div>
+                    `;
+                    burgerCatalogDropdown.appendChild(categoryItem);
+                });
+
+                // Перемикання каталогу
+                burgerCatalogToggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    burgerCatalogDropdown.classList.toggle('active');
+                });
+            } else {
+                console.warn('Елементи каталогу в бургер-меню не знайдено');
+            }
+        } else {
+            console.warn('Елементи бургер-меню не знайдено');
+        }
+
         // Обробка початкового шляху після ініціалізації
         const path = window.location.pathname.slice(1) || '';
         console.log('Обробка початкового шляху:', path);
@@ -3692,6 +3854,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
+                // Показуємо бургер-меню та плаваючий кошик після закриття фільтрів, якщо ми в секції catalog
+                const activeSection = document.querySelector('.section.active')?.id;
+                const headerHeight = document.querySelector('header').offsetHeight;
+                if (activeSection === 'catalog' && window.scrollY > headerHeight) {
+                    burgerMenu.classList.add('visible');
+                    floatingCart.classList.add('visible');
+                }
+            });
+        }
+
+        // Відкриття фільтрів при кліку на filter-toggle
+        const filterToggle = document.querySelector('#catalog .container .filter-toggle');
+        if (filterToggle) {
+            filterToggle.addEventListener('click', () => {
+                filters.classList.add('active');
+                // Приховуємо бургер-меню та плаваючий кошик при відкритті фільтрів
+                burgerMenu.classList.remove('active');
+                burgerMenu.classList.remove('visible');
+                burgerContent.classList.remove('active');
+                burgerCatalogDropdown.classList.remove('active');
+                floatingCart.classList.remove('visible');
             });
         }
 
@@ -3699,7 +3882,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!localStorage.getItem('products')) {
             const initialProducts = [
                 { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
-                // Додайте інші товари за потребою
             ];
             saveToStorage('products', initialProducts);
         }
