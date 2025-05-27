@@ -832,7 +832,7 @@ function loadMoreProducts() {
                 <h3>${product.name}</h3>
             </a>
             <div class="price">${(product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price) || 'N/A'} грн</div>
-            <button class="buy-btn" onclick="${product.type === 'mattresses' || product.type === 'group' ? `openProduct('${product.slug}')` : `addToCartWithColor(${product._id})`}">
+            <button class="buy-btn" data-product-id="${product._id}" data-product-type="${product.type}">
                 ${product.type === 'mattresses' || product.type === 'group' ? 'Детальніше' : 'Додати в кошик'}
             </button>
         `;
@@ -1737,93 +1737,89 @@ function renderProducts(filtered) {
         return;
     }
 
-    paginatedProducts.forEach(product => {
-        const productDiv = document.createElement('div');
-        productDiv.className = 'product';
+paginatedProducts.forEach(product => {
+    const productDiv = document.createElement('div');
+    productDiv.className = 'product';
 
-        const imgLink = document.createElement('a');
-        imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
-        imgLink.onclick = (e) => {
-            e.preventDefault();
-            openProduct(product.slug);
-        };
-        const img = document.createElement('img');
-        img.src = product.photos?.[0] || NO_IMAGE_URL;
-        img.alt = product.name;
-        img.loading = 'lazy';
-        imgLink.appendChild(img);
-        productDiv.appendChild(imgLink);
+    const imgLink = document.createElement('a');
+    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    imgLink.onclick = (e) => {
+        e.preventDefault();
+        openProduct(product.slug);
+    };
+    const img = document.createElement('img');
+    img.src = product.photos?.[0] || NO_IMAGE_URL;
+    img.alt = product.name;
+    img.loading = 'lazy';
+    imgLink.appendChild(img);
+    productDiv.appendChild(imgLink);
 
-        const h3Link = document.createElement('a');
-        h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
-        h3Link.onclick = (e) => {
-            e.preventDefault();
-            openProduct(product.slug);
-        };
-        const h3 = document.createElement('h3');
-        h3.textContent = product.name;
-        h3Link.appendChild(h3);
-        productDiv.appendChild(h3Link);
+    const h3Link = document.createElement('a');
+    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    h3Link.onclick = (e) => {
+        e.preventDefault();
+        openProduct(product.slug);
+    };
+    const h3 = document.createElement('h3');
+    h3.textContent = product.name;
+    h3Link.appendChild(h3);
+    productDiv.appendChild(h3Link);
 
-        const priceDiv = document.createElement('div');
-        priceDiv.className = 'price';
-        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
-        if (product.type === 'mattresses' && product.sizes?.length > 0) {
-            const minPrice = Math.min(...product.sizes.map(s => s.price));
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-        } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            const groupPrices = product.groupProducts.map(id => {
-                const p = products.find(p => p._id === id);
-                return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
-            });
-            const minPrice = Math.min(...groupPrices);
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-        } else {
-            if (isOnSale) {
-                const saleSpan = document.createElement('span');
-                saleSpan.className = 'sale-price';
-                saleSpan.textContent = `${product.salePrice} грн`;
-                priceDiv.appendChild(saleSpan);
-                const regularSpan = document.createElement('s');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${product.price} грн`;
-                priceDiv.appendChild(regularSpan);
-            } else {
-                const regularSpan = document.createElement('span');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${product.price} грн`;
-                priceDiv.appendChild(regularSpan);
-            }
-        }
-        productDiv.appendChild(priceDiv);
-
+    const priceDiv = document.createElement('div');
+    priceDiv.className = 'price';
+    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+    if (product.type === 'mattresses' && product.sizes?.length > 0) {
+        const minPrice = Math.min(...product.sizes.map(s => s.price));
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.textContent = `${minPrice} грн`;
+        priceDiv.appendChild(regularSpan);
+    } else if (product.type === 'group' && product.groupProducts?.length > 0) {
+        const groupPrices = product.groupProducts.map(id => {
+            const p = products.find(p => p._id === id);
+            return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
+        });
+        const minPrice = Math.min(...groupPrices);
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.textContent = `${minPrice} грн`;
+        priceDiv.appendChild(regularSpan);
+    } else {
         if (isOnSale) {
-            const timerDiv = document.createElement('div');
-            timerDiv.className = 'sale-timer';
-            timerDiv.id = `timer-${product._id}`;
-            productDiv.appendChild(timerDiv);
-            updateSaleTimer(product._id, product.saleEnd);
-        }
-
-        const btn = document.createElement('button');
-        btn.className = 'buy-btn';
-        if (product.type === 'mattresses' || product.type === 'group') {
-            btn.textContent = 'Детальніше';
-            btn.onclick = () => openProduct(product.slug);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.textContent = `${product.salePrice} грн`;
+            priceDiv.appendChild(saleSpan);
+            const regularSpan = document.createElement('s');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${product.price} грн`;
+            priceDiv.appendChild(regularSpan);
         } else {
-            btn.textContent = 'Додати в кошик';
-            btn.onclick = () => product.colors?.length > 1 ? (openProduct(product.slug), showNotification('Виберіть потрібний колір', 'error')) : addToCartWithColor(product._id);
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${product.price} грн`;
+            priceDiv.appendChild(regularSpan);
         }
-        productDiv.appendChild(btn);
+    }
+    productDiv.appendChild(priceDiv);
 
-        productList.appendChild(productDiv);
-    });
+    if (isOnSale) {
+        const timerDiv = document.createElement('div');
+        timerDiv.className = 'sale-timer';
+        timerDiv.id = `timer-${product._id}`;
+        productDiv.appendChild(timerDiv);
+        updateSaleTimer(product._id, product.saleEnd);
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    btn.setAttribute('data-product-id', product._id);
+    btn.setAttribute('data-product-type', product.type);
+    btn.textContent = product.type === 'mattresses' || product.type === 'group' ? 'Детальніше' : 'Додати в кошик';
+    productDiv.appendChild(btn);
+
+    productList.appendChild(productDiv);
+});
 
     // Додаємо пагінацію
     renderPagination(totalPages, activeProducts.length);
@@ -2483,11 +2479,13 @@ async function addToCartWithColor(productId) {
             name: size,
             value: size,
             priceChange: 0,
-            photo: product.photos?.[0] || NO_IMAGE_URL
+            photo: product.photos?.[0] || NO_IMAGE_URL,
+            size: size
         };
     }
 
-    const quantity = parseInt(document.getElementById(`quantity-${productId}`)?.value) || 1;
+    const quantityElement = document.getElementById(`quantity-${productId}`);
+    const quantity = quantityElement ? parseInt(quantityElement.value) : 1;
     if (quantity < 1) {
         showNotification('Кількість має бути більше 0!', 'error');
         return;
@@ -3854,7 +3852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
-                // Показуємо бургер-меню та плаваючий кошик після закриття фільтрів, якщо ми в секції catalog
+                // Показуємо бургер-меню і плаваючого кошика після закриття фільтрів, якщо ми в секції catalog
                 const activeSection = document.querySelector('.section.active')?.id;
                 const headerHeight = document.querySelector('header').offsetHeight;
                 if (activeSection === 'catalog' && window.scrollY > headerHeight) {
@@ -3864,12 +3862,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Відкриття фільтрів при кліку на filter-toggle
         const filterToggle = document.querySelector('#catalog .container .filter-toggle');
         if (filterToggle) {
             filterToggle.addEventListener('click', () => {
                 filters.classList.add('active');
-                // Приховуємо бургер-меню та плаваючий кошик при відкритті фільтрів
                 burgerMenu.classList.remove('active');
                 burgerMenu.classList.remove('visible');
                 burgerContent.classList.remove('active');
@@ -3878,7 +3874,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Ініціалізація даних, якщо їх немає
+document.addEventListener('click', (e) => {
+    const buyBtn = e.target.closest('.buy-btn');
+    if (buyBtn) {
+        e.preventDefault();
+        const productId = buyBtn.getAttribute('data-product-id');
+        const productType = buyBtn.getAttribute('data-product-type');
+
+        if (productType === 'mattresses' || productType === 'group') {
+            const product = products.find(p => p._id === productId);
+            if (product) {
+                console.log('Відкриття продукту:', product.slug);
+                openProduct(product.slug);
+            } else {
+                console.warn('Продукт не знайдено за ID:', productId);
+                showNotification('Товар не знайдено!', 'error');
+            }
+        } else {
+            console.log('Додавання до кошика:', productId);
+            addToCartWithColor(productId);
+        }
+    }
+});
+
         if (!localStorage.getItem('products')) {
             const initialProducts = [
                 { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
@@ -3956,3 +3974,12 @@ filterStyle.textContent = `
     }
 `;
 document.head.appendChild(filterStyle);
+
+// Додавання CSS для .product-container
+const containerStyle = document.createElement('style');
+containerStyle.textContent = `
+    .product-container {
+        width: 100%;
+    }
+`;
+document.head.appendChild(containerStyle);
