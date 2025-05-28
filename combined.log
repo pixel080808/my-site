@@ -25141,3 +25141,121 @@
 {"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-27T19:02:28.996Z"}
 {"cartId":"cart-ubbym2qwh","itemCount":0,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-27T19:02:29.093Z"}
 {"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-27T19:02:29.561Z"}
+{"level":"info","message":"Сервер запущено на порту 3000","timestamp":"2025-05-28T07:25:50.931Z"}
+{"level":"info","message":"MongoDB підключено","timestamp":"2025-05-28T07:25:51.705Z"}
+{"level":"info","message":"GET / - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:25:59.460Z","timestamp":"2025-05-28T07:25:59.460Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:25:59.521Z","timestamp":"2025-05-28T07:25:59.521Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.11\"} - Body: {} - 2025-05-28T07:25:59.525Z","timestamp":"2025-05-28T07:25:59.525Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:25:59.609Z","timestamp":"2025-05-28T07:25:59.609Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-28T07:25:59.613Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:25:59.615Z","timestamp":"2025-05-28T07:25:59.616Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-28T07:25:59.619Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: {} - 2025-05-28T07:25:59.633Z","timestamp":"2025-05-28T07:25:59.633Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"GET /api/cart:","timestamp":"2025-05-28T07:25:59.636Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-28T07:25:59.698Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-28T07:25:59.710Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:25:59.713Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-28T07:25:59.714Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:25:59.714Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-28T07:25:59.715Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:25:59.715Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-28T07:25:59.715Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:25:59.715Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-28T07:25:59.716Z"}
+{"level":"info","message":"GET / - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:02.694Z","timestamp":"2025-05-28T07:27:02.694Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-28T07:27:02.714Z"}
+{"level":"info","message":"GET /css/styles.css - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:02.733Z","timestamp":"2025-05-28T07:27:02.733Z"}
+{"level":"info","message":"GET /js/script.js - IP: ::1 - Query: {\"v\":\"1.0.11\"} - Body: {} - 2025-05-28T07:27:02.735Z","timestamp":"2025-05-28T07:27:02.735Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:02.817Z","timestamp":"2025-05-28T07:27:02.817Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:02.818Z","timestamp":"2025-05-28T07:27:02.818Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-28T07:27:02.819Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-28T07:27:02.820Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: {} - 2025-05-28T07:27:02.829Z","timestamp":"2025-05-28T07:27:02.829Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"GET /api/cart:","timestamp":"2025-05-28T07:27:02.830Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-28T07:27:02.878Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-28T07:27:02.886Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:02.891Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-28T07:27:02.892Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:02.894Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-28T07:27:02.894Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:02.895Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-28T07:27:02.895Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:02.895Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-28T07:27:02.896Z"}
+{"level":"info","message":"GET /mebli-v-vitalnyu - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:22.403Z","timestamp":"2025-05-28T07:27:22.403Z"}
+{"level":"info","message":"Отримано запит на /mebli-v-vitalnyu, відправляємо index.html","timestamp":"2025-05-28T07:27:22.403Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-28T07:27:22.417Z"}
+{"level":"info","message":"GET /cdn-cgi/challenge-platform/scripts/jsd/main.js - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:22.442Z","timestamp":"2025-05-28T07:27:22.442Z"}
+{"level":"info","message":"GET /api/csrf-token - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:22.443Z","timestamp":"2025-05-28T07:27:22.443Z"}
+{"level":"info","message":"Отримано запит на /cdn-cgi/challenge-platform/scripts/jsd/main.js, відправляємо index.html","timestamp":"2025-05-28T07:27:22.444Z"}
+{"level":"info","message":"Згенеровано CSRF-токен:","timestamp":"2025-05-28T07:27:22.445Z"}
+{"level":"info","message":"GET /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: {} - 2025-05-28T07:27:22.503Z","timestamp":"2025-05-28T07:27:22.503Z"}
+{"level":"info","message":"GET /favicon.ico - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:27:22.504Z","timestamp":"2025-05-28T07:27:22.504Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"GET /api/cart:","timestamp":"2025-05-28T07:27:22.505Z"}
+{"level":"info","message":"Отримано запит на /favicon.ico, відправляємо index.html","timestamp":"2025-05-28T07:27:22.507Z"}
+{"level":"info","message":"Повертаємо кошик:","timestamp":"2025-05-28T07:27:22.548Z"}
+{"level":"info","message":"WebSocket: Підключення без токена (публічний клієнт), IP: ::1","timestamp":"2025-05-28T07:27:22.555Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=products, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:22.556Z"}
+{"level":"info","message":"Клієнт підписався на products, IP: ::1","timestamp":"2025-05-28T07:27:22.556Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=categories, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:22.558Z"}
+{"level":"info","message":"Клієнт підписався на categories, IP: ::1","timestamp":"2025-05-28T07:27:22.558Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=settings, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:22.558Z"}
+{"level":"info","message":"Клієнт підписався на settings, IP: ::1","timestamp":"2025-05-28T07:27:22.558Z"}
+{"level":"info","message":"Отримано WebSocket-повідомлення: type=slides, action=subscribe, IP: ::1","timestamp":"2025-05-28T07:27:22.559Z"}
+{"level":"info","message":"Клієнт підписався на slides, IP: ::1","timestamp":"2025-05-28T07:27:22.559Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":49,\"name\":\"ewqe1\",\"quantity\":1,\"price\":12312,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp\",\"color\":null}] - 2025-05-28T07:28:31.356Z","timestamp":"2025-05-28T07:28:31.356Z"}
+{"body":[{"color":null,"id":49,"name":"ewqe1","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp","price":12312,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:28:31.359Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:28:31.470Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":1,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:28:31.594Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":49,\"name\":\"ewqe1\",\"quantity\":1,\"price\":12312,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp\",\"color\":null},{\"id\":62,\"name\":\"Вітальня \\\"Марк\\\"\",\"quantity\":1,\"price\":14000,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg\",\"color\":{\"name\":\"Венге\",\"value\":\"#000000\",\"priceChange\":0,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg\"}}] - 2025-05-28T07:31:04.856Z","timestamp":"2025-05-28T07:31:04.856Z"}
+{"body":[{"color":null,"id":49,"name":"ewqe1","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp","price":12312,"quantity":1},{"color":{"name":"Венге","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg","priceChange":0,"value":"#000000"},"id":62,"name":"Вітальня \"Марк\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg","price":14000,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:04.857Z"}
+{"level":"info","message":"Використано фото кольору для продукту 62: https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg","timestamp":"2025-05-28T07:31:04.950Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:04.995Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":2,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:05.099Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":49,\"name\":\"ewqe1\",\"quantity\":1,\"price\":12312,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp\",\"color\":null},{\"id\":62,\"name\":\"Вітальня \\\"Марк\\\"\",\"quantity\":1,\"price\":14000,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg\",\"color\":{\"name\":\"Венге\",\"value\":\"#000000\",\"priceChange\":0,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg\"}},{\"id\":62,\"name\":\"Вітальня \\\"Марк\\\"\",\"quantity\":1,\"price\":14100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg\",\"color\":{\"name\":\"Дуб артізан\",\"value\":\"#000000\",\"priceChange\":100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg\"}}] - 2025-05-28T07:31:06.878Z","timestamp":"2025-05-28T07:31:06.878Z"}
+{"body":[{"color":null,"id":49,"name":"ewqe1","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp","price":12312,"quantity":1},{"color":{"name":"Венге","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg","priceChange":0,"value":"#000000"},"id":62,"name":"Вітальня \"Марк\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg","price":14000,"quantity":1},{"color":{"name":"Дуб артізан","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","priceChange":100,"value":"#000000"},"id":62,"name":"Вітальня \"Марк\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg","price":14100,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:06.879Z"}
+{"level":"info","message":"Використано фото кольору для продукту 62: https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/gbpm1j4jeidj83hi1qjn.jpg","timestamp":"2025-05-28T07:31:06.972Z"}
+{"level":"info","message":"Використано фото кольору для продукту 62: https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","timestamp":"2025-05-28T07:31:07.016Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:07.060Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":3,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:07.156Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":49,\"name\":\"ewqe1\",\"quantity\":1,\"price\":12312,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp\",\"color\":null},{\"id\":62,\"name\":\"Вітальня \\\"Марк\\\"\",\"quantity\":1,\"price\":14100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg\",\"color\":{\"name\":\"Дуб артізан\",\"value\":\"#000000\",\"priceChange\":100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg\"}}] - 2025-05-28T07:31:11.054Z","timestamp":"2025-05-28T07:31:11.054Z"}
+{"body":[{"color":null,"id":49,"name":"ewqe1","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp","price":12312,"quantity":1},{"color":{"name":"Дуб артізан","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","priceChange":100,"value":"#000000"},"id":62,"name":"Вітальня \"Марк\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg","price":14100,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:11.055Z"}
+{"level":"info","message":"Використано фото кольору для продукту 62: https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","timestamp":"2025-05-28T07:31:11.142Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:11.186Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":2,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:11.283Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":49,\"name\":\"ewqe1\",\"quantity\":1,\"price\":12312,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp\",\"color\":null}] - 2025-05-28T07:31:12.845Z","timestamp":"2025-05-28T07:31:12.845Z"}
+{"body":[{"color":null,"id":49,"name":"ewqe1","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747564446/products/fxudsnhrxk5w7w3qi2an.webp","price":12312,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:12.846Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:12.935Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":1,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:13.026Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [] - 2025-05-28T07:31:14.205Z","timestamp":"2025-05-28T07:31:14.205Z"}
+{"body":[],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:14.206Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:14.249Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":0,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:14.344Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":52,\"name\":\"Вітальня \\\"Марк211\\\"\",\"quantity\":1,\"price\":15665,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg\",\"color\":null}] - 2025-05-28T07:31:17.782Z","timestamp":"2025-05-28T07:31:17.782Z"}
+{"body":[{"color":null,"id":52,"name":"Вітальня \"Марк211\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg","price":15665,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:17.782Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:17.882Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":1,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:17.984Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":52,\"name\":\"Вітальня \\\"Марк211\\\"\",\"quantity\":1,\"price\":15665,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg\",\"color\":null},{\"id\":52,\"name\":\"Вітальня \\\"Марк211\\\"\",\"quantity\":1,\"price\":15665,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg\",\"color\":null}] - 2025-05-28T07:31:18.983Z","timestamp":"2025-05-28T07:31:18.983Z"}
+{"body":[{"color":null,"id":52,"name":"Вітальня \"Марк211\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg","price":15665,"quantity":1},{"color":null,"id":52,"name":"Вітальня \"Марк211\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg","price":15665,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:18.983Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:19.114Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":2,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:19.211Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":52,\"name\":\"Вітальня \\\"Марк211\\\"\",\"quantity\":1,\"price\":15665,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg\",\"color\":null}] - 2025-05-28T07:31:23.494Z","timestamp":"2025-05-28T07:31:23.494Z"}
+{"body":[{"color":null,"id":52,"name":"Вітальня \"Марк211\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565103/products/qkrlcxifyhdvw9cpjcln.jpg","price":15665,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:23.494Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:23.598Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":1,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:23.698Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [] - 2025-05-28T07:31:25.221Z","timestamp":"2025-05-28T07:31:25.221Z"}
+{"body":[],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:25.222Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:25.265Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":0,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:25.355Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":51,\"name\":\"sdgdw\",\"quantity\":1,\"price\":213213,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565020/products/kpbgajyzzpivybwxvwup.jpg\",\"color\":null}] - 2025-05-28T07:31:28.421Z","timestamp":"2025-05-28T07:31:28.421Z"}
+{"body":[{"color":null,"id":51,"name":"sdgdw","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565020/products/kpbgajyzzpivybwxvwup.jpg","price":213213,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:28.422Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:28.510Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":1,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:28.612Z"}
+{"level":"info","message":"POST /api/cart - IP: ::1 - Query: {\"cartId\":\"cart-ubbym2qwh\"} - Body: [{\"id\":51,\"name\":\"sdgdw\",\"quantity\":1,\"price\":213213,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565020/products/kpbgajyzzpivybwxvwup.jpg\",\"color\":null},{\"id\":62,\"name\":\"Вітальня \\\"Марк\\\"\",\"quantity\":1,\"price\":14100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg\",\"color\":{\"name\":\"Дуб артізан\",\"value\":\"#000000\",\"priceChange\":100,\"photo\":\"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg\"}}] - 2025-05-28T07:31:36.574Z","timestamp":"2025-05-28T07:31:36.574Z"}
+{"body":[{"color":null,"id":51,"name":"sdgdw","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747565020/products/kpbgajyzzpivybwxvwup.jpg","price":213213,"quantity":1},{"color":{"name":"Дуб артізан","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","priceChange":100,"value":"#000000"},"id":62,"name":"Вітальня \"Марк\"","photo":"https://res.cloudinary.com/dephpsfyv/image/upload/v1747913786/products/sfpn9ajfyrkxtyjncjx4.jpg","price":14100,"quantity":1}],"cartId":"cart-ubbym2qwh","level":"info","message":"POST /api/cart:","timestamp":"2025-05-28T07:31:36.575Z"}
+{"level":"info","message":"Використано фото кольору для продукту 62: https://res.cloudinary.com/dephpsfyv/image/upload/v1747913792/products/g1dhekweh0kp2bwat7mt.jpg","timestamp":"2025-05-28T07:31:36.663Z"}
+{"cartId":"cart-ubbym2qwh","level":"info","message":"Оновлюємо існуючий кошик:","timestamp":"2025-05-28T07:31:36.708Z"}
+{"cartId":"cart-ubbym2qwh","itemCount":2,"level":"info","message":"Кошик успішно збережено:","timestamp":"2025-05-28T07:31:36.810Z"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json - IP: ::1 - Query: {} - Body: {} - 2025-05-28T07:31:41.580Z","timestamp":"2025-05-28T07:31:41.580Z"}
+{"level":"info","message":"Отримано запит на /.well-known/appspecific/com.chrome.devtools.json, відправляємо index.html","timestamp":"2025-05-28T07:31:41.581Z"}
+{"level":"info","message":"Клієнт від’єднався від WebSocket, IP: ::1, Код: 1001, Причина: ","timestamp":"2025-05-28T07:32:17.514Z"}

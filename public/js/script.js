@@ -818,9 +818,16 @@ function loadMoreProducts() {
         console.warn('Елемент .product-grid не знайдено');
         return;
     }
-    let displayedProducts = productGrid.children.length; // Поточна кількість відображених товарів
-    const nextProducts = allProducts.slice(displayedProducts, displayedProducts + perPage);
 
+    // Збільшуємо поточну сторінку
+    currentPage++;
+
+    // Обчислюємо діапазон товарів для нової сторінки
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const nextProducts = allProducts.slice(startIndex, endIndex);
+
+    // Додаємо нові товари до сітки
     nextProducts.forEach(product => {
         const productElement = document.createElement('div');
         productElement.className = 'product';
@@ -839,12 +846,16 @@ function loadMoreProducts() {
         productGrid.appendChild(productElement);
     });
 
-    if (displayedProducts + nextProducts.length >= allProducts.length) {
-        const showMoreBtn = document.querySelector('.show-more-btn');
-        if (showMoreBtn) {
-            showMoreBtn.disabled = true;
-            showMoreBtn.textContent = 'Більше немає товарів';
-        }
+    // Оновлюємо пагінацію та стан кнопки
+    const totalPages = Math.ceil(allProducts.length / perPage);
+    const totalItems = allProducts.length;
+    renderPagination(totalPages, totalItems);
+
+    // Оновлюємо стан кнопки "Показати ще"
+    const showMoreBtn = document.querySelector('.show-more-btn');
+    if (showMoreBtn && endIndex >= totalItems) {
+        showMoreBtn.disabled = true;
+        showMoreBtn.textContent = 'Більше немає товарів';
     }
 }
 
