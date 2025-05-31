@@ -221,10 +221,12 @@ async function saveCartToServer() {
                     };
                 }
                 let price = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : parseFloat(product.price || 0);
+                let sizeData = null;
                 if (product.type === 'mattresses' && item.size) {
                     const sizeInfo = product.sizes?.find(s => s.name === item.size);
                     if (sizeInfo) {
                         price = parseFloat(sizeInfo.price || price);
+                        sizeData = item.size;
                     } else {
                         console.warn(`Розмір ${item.size} не знайдено для товару ${item.name}, використовуємо базову ціну`);
                     }
@@ -237,7 +239,8 @@ async function saveCartToServer() {
                     quantity: Number(item.quantity) || 1,
                     price: parseFloat(price) || 0,
                     photo: product.photos?.[0] || NO_IMAGE_URL,
-                    color: colorData
+                    color: colorData,
+                    size: sizeData
                 };
                 return cartItem;
             })
@@ -307,7 +310,9 @@ async function saveCartToServer() {
                         continue;
                     } else if (response.status === 400) {
                         console.error('Некоректні дані кошика:', errorText);
-                        showNotification(`Помилка: ${JSON.parse(errorText).error || 'Некоректні дані кошика.'}`, 'error');
+                        showNotification(`Помилка: ${JSON.parse(errorText).error || 'Некоректні дані кошика.'}`, 'warning');
+                        saveToStorage('cart', cartItems); // Зберігаємо оригінальний кошик
+                        debouncedRenderCart();
                         return;
                     }
                     throw new Error(`Помилка сервера: ${response.status} - ${errorText}`);
@@ -344,6 +349,7 @@ async function saveCartToServer() {
     } catch (error) {
         console.error('Критична помилка в saveCartToServer:', error);
         showNotification('Помилка збереження кошика!', 'error');
+        saveToStorage('cart', cartItems); // Зберігаємо кошик у разі критичної помилки
     }
 }
 
@@ -3192,21 +3198,18 @@ function updateCartCount() {
 }
 
 async function submitOrder() {
-    // Collect customer data from form fields
     const customer = orderFields.reduce((acc, field) => {
         const input = document.getElementById(`order-${field.name}`);
         acc[field.name] = input ? input.value.trim() : '';
         return acc;
     }, {});
 
-    // Validate required fields
     const missingFields = orderFields.filter(f => f.required && !customer[f.name]);
     if (missingFields.length > 0) {
         showNotification(`Будь ласка, заповніть обов'язкові поля: ${missingFields.map(f => f.label).join(', ')}!`, 'error');
         return;
     }
 
-    // Validate name (minimum 2 Ukrainian letters)
     const nameRegex = /^[А-ЯҐЄІЇа-яґєії]{2,}$/;
     if (!nameRegex.test(customer.name)) {
         showNotification('Ім\'я має містити щонайменше 2 українські літери!', 'error');
@@ -3217,33 +3220,28 @@ async function submitOrder() {
         return;
     }
 
-    // Validate email if provided
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (customer.email && !emailRegex.test(customer.email)) {
         showNotification('Введіть коректну email-адресу!', 'error');
         return;
     }
 
-    // Validate address (minimum 6 characters)
     if (customer.address.length < 6) {
         showNotification('Адреса доставки має містити щонайменше 6 символів!', 'error');
         return;
     }
 
-    // Validate phone number
     const phoneRegex = /^(0\d{9})$|^(\+?\d{10,15})$/;
     if (!phoneRegex.test(customer.phone)) {
         showNotification('Номер телефону має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX (10-15 цифр)!', 'error');
         return;
     }
 
-    // Check if cart is empty
     if (!cart || cart.length === 0) {
         showNotification('Кошик порожній! Додайте товари перед оформленням замовлення.', 'error');
         return;
     }
 
-    // Validate cart items and check for unavailable products or missing sizes for mattresses
     const unavailableItems = [];
     cart.forEach(item => {
         if (!item.id || typeof item.id !== 'number' || !item.name || typeof item.quantity !== 'number' || typeof item.price !== 'number' || isNaN(item.price)) {
@@ -3263,7 +3261,6 @@ async function submitOrder() {
         }
     });
 
-    // Remove unavailable items from cart
     if (unavailableItems.length > 0) {
         cart = cart.filter(item => !unavailableItems.includes(item));
         saveToStorage('cart', cart);
@@ -3285,7 +3282,6 @@ async function submitOrder() {
         return;
     }
 
-    // Prepare order data
     const orderData = {
         cartId: localStorage.getItem('cartId') || '',
         date: new Date().toISOString(),
@@ -3303,7 +3299,6 @@ async function submitOrder() {
                     photo: item.color.photo || ''
                 };
             }
-            // Include size in name for mattresses to avoid server validation error
             const itemName = product?.type === 'mattresses' && item.size ? `${item.name} (${item.size})` : item.name;
             const orderItem = {
                 id: Number(item.id),
@@ -3311,13 +3306,13 @@ async function submitOrder() {
                 quantity: Number(item.quantity),
                 price: Number(item.price),
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
-                color: colorData
+                color: colorData,
+                size: product?.type === 'mattresses' ? item.size || null : null
             };
             return orderItem;
         })
     };
 
-    // Filter out invalid order items
     orderData.items = orderData.items.filter(item => {
         const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number' && !isNaN(item.price);
         if (!isValid) {
@@ -3331,7 +3326,6 @@ async function submitOrder() {
         return;
     }
 
-    // Confirm order submission
     if (!confirm('Підтвердити оформлення замовлення?')) return;
 
     console.log('Дані замовлення перед відправкою:', JSON.stringify(orderData, null, 2));
@@ -3398,7 +3392,6 @@ async function submitOrder() {
 
             console.log('Замовлення успішно оформлено:', responseData);
 
-            // Clear cart and reset related data
             cart = [];
             saveToStorage('cart', cart);
             const newCartId = 'cart-' + Math.random().toString(36).substr(2, 9);
@@ -3418,7 +3411,7 @@ async function submitOrder() {
             console.error(`Помилка при оформленні замовлення (спроба ${attempt + 1}):`, error);
             attempt++;
             if (attempt >= maxRetries) {
-                console.error('Усі спроби оформлення замовлення провалилися');
+                console.error('Усі спроби оформлення замовлення провалились');
                 orders.push(orderData);
                 if (orders.length > 5) orders = orders.slice(-5);
                 saveToStorage('orders', orders);
