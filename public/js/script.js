@@ -236,7 +236,7 @@ async function saveCartToServer() {
                     name: item.name || '',
                     quantity: Number(item.quantity) || 1,
                     price: parseFloat(price) || 0,
-                    photo: item.photo || '',
+                    photo: product.photos?.[0] || NO_IMAGE_URL,
                     color: colorData
                 };
                 return cartItem;
@@ -2844,7 +2844,6 @@ async function renderCart() {
         return;
     }
 
-    // Не викликаємо fetchPublicData тут, використовуємо поточні products
     if (!products || products.length === 0) {
         console.warn('Масив products порожній, перевірте WebSocket або локальні дані');
         showNotification('Список товарів порожній!', 'warning');
@@ -2854,7 +2853,6 @@ async function renderCart() {
     console.log('Поточний масив products:', products);
     console.log('Поточний масив cart перед фільтрацією:', JSON.parse(JSON.stringify(cart)));
 
-    // Видаляємо товари, яких немає в products
     const initialCartLength = cart.length;
     cart = cart.filter(item => {
         const product = products.find(p => p.id === item.id);
@@ -2925,7 +2923,7 @@ async function renderCart() {
         }
 
         const img = document.createElement('img');
-        img.src = item.photo || NO_IMAGE_URL;
+        img.src = product ? (product.photos?.[0] || NO_IMAGE_URL) : NO_IMAGE_URL;
         img.className = 'cart-item-image';
         img.alt = item.name;
         img.loading = 'lazy';
