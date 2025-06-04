@@ -18,12 +18,13 @@ const csurf = require('csurf');
 const winston = require('winston');
 
 const { Product } = require('./models/Product');
-const Order = require('./models/Order');
+const { Order, orderSchemaValidation } = require('./models/Order');
 const Category = require('./models/Category');
 const Slide = require('./models/Slide');
 const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
+const Counter = require('./models/Counter');
 const { Cart } = require('./models/Cart');
 const OrderField = require('./models/OrderField');
 
@@ -329,44 +330,6 @@ const productSchemaValidation = Joi.object({
     lengthCm: Joi.number().min(0).allow(null),
     popularity: Joi.number().min(0).default(0)
 }).unknown(false);
-
-const orderSchemaValidation = Joi.object({
-    id: Joi.number().optional(),
-    cartId: Joi.string().default(''),
-    date: Joi.date().default(Date.now),
-    customer: Joi.object({
-        name: Joi.string().min(1).max(255).required(),
-        surname: Joi.string().min(1).max(255).optional(),
-        email: Joi.string().email().allow('').optional(),
-        phone: Joi.string()
-            .pattern(/^(0\d{9})$|^(\+?\d{10,15})$/)
-            .allow('')
-            .optional(),
-        address: Joi.string().allow('').optional(),
-        payment: Joi.string().allow('').optional()
-    }).required(),
-    items: Joi.array().items(
-        Joi.object({
-            id: Joi.number().required(),
-            name: Joi.string().required(),
-            quantity: Joi.number().min(1).required(),
-            price: Joi.number().min(0).required(),
-            photo: Joi.string().uri().allow('').optional(),
-            color: Joi.object({
-                name: Joi.string().allow('').optional(),
-                value: Joi.string().allow('').optional(),
-                priceChange: Joi.number().default(0),
-                photo: Joi.string().uri().allow('', null).optional(),
-                size: Joi.string().allow('', null).optional()
-            }).allow(null).optional().unknown(false),
-            _id: Joi.any().optional()
-        }).unknown(false)
-    ).required(),
-    total: Joi.number().min(0).required(),
-    status: Joi.string()
-        .valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано')
-        .default('Нове замовлення')
-});
 
 const settingsSchemaValidation = Joi.object({
     name: Joi.string().allow(''),
@@ -2365,72 +2328,142 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/orders', csrfProtection, async (req, res) => {
+async function getNextOrderId(name) {
     try {
-        logger.info('Отримано запит на створення замовлення:', req.body);
-        let orderData = req.body;
-        const cartId = req.query.cartId;
+        let counter;
+        let newOrderId;
+        let isUnique = false;
+        const maxAttempts = 5; // Обмежуємо кількість спроб
+        let attempts = 0;
 
-        if (orderData.items) {
-            orderData.items = orderData.items.map(item => {
-                if (item.img && !item.photo) {
-                    item.photo = item.img;
-                    delete item.img;
-                }
-                return item;
-            });
+        while (!isUnique && attempts < maxAttempts) {
+            counter = await Counter.findOneAndUpdate(
+                { _id: name },
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true }
+            );
+
+            if (!counter || !Number.isInteger(counter.seq) || counter.seq < 1) {
+                throw new Error(`Некоректне значення seq: ${counter ? counter.seq : 'null'}`);
+            }
+
+            newOrderId = counter.seq;
+            // Перевіряємо, чи id уже існує
+            const existingOrder = await Order.findOne({ id: newOrderId });
+            if (!existingOrder) {
+                isUnique = true;
+            } else {
+                logger.warn(`orderId ${newOrderId} уже існує, пробуємо отримати новий`);
+                attempts++;
+            }
         }
 
+        if (!isUnique) {
+            throw new Error(`Не вдалося згенерувати унікальний orderId після ${maxAttempts} спроб`);
+        }
+
+        logger.info('Згенеровано orderId:', { seq: newOrderId });
+        return newOrderId;
+    } catch (err) {
+        logger.error('Помилка при генерації orderId:', err);
+        throw err;
+    }
+}
+
+app.post('/api/orders', csrfProtection, async (req, res) => {
+    try {
+        logger.info('Отримано запит на створення замовлення:', JSON.stringify(req.body, null, 2));
+        let orderData = { ...req.body };
+        const cartId = req.query.id;
+
+        // Перевірка вхідних даних
+        if (!orderData.items || !Array.isArray(orderData.items)) {
+            logger.error('Помилка: orderData.items не є масивом або відсутній');
+            return res.status(400).json({ error: 'Невірні дані', details: 'items має бути масивом' });
+        }
+
+        // Видалення id із orderData, якщо воно присутнє
+        if ('id' in orderData) {
+            logger.warn('id знайдено у вхідних даних, видаляємо:', { id: orderData.id });
+            delete orderData.id;
+        }
+
+        // Очищення та підготовка елементів замовлення
+        orderData.items = await Promise.all(orderData.items.map(async (item) => {
+            if (item.img && !item.photo) {
+                item.photo = item.img;
+                delete item.img;
+            }
+            const product = await Product.findOne({ id: item.id });
+            if (product && product.type === 'mattresses' && item.size) {
+                item.color = null;
+            }
+            return item;
+        }));
+
+        // Валідація cartId
         if (cartId) {
-            const { error } = cartIdSchema.validate(cartId);
+            const { error } = cartIdSchema.validate({ id: cartId });
             if (error) {
                 logger.error('Помилка валідації cartId:', error.details);
                 return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
             }
         }
 
-        const { error } = orderSchemaValidation.validate(orderData);
+        // Валідація даних замовлення
+        const { error } = orderSchemaValidation.validate(orderData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації замовлення:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        if (orderData.id) {
-            const existingOrder = await Order.findOne({ id: orderData.id });
-            if (existingOrder) {
-                logger.error('Замовлення з таким id уже існує:', orderData.id);
-                return res.status(400).json({ error: 'Замовлення з таким id уже існує' });
-            }
-        }
-
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            const maxIdOrder = await Order.findOne().sort({ id: -1 }).session(session);
-            orderData.id = maxIdOrder ? maxIdOrder.id + 1 : 1;
+            // Генерація унікального id
+            const newOrderId = await getNextOrderId('order_id');
+            logger.info('Згенеровано newOrderId:', { newOrderId });
 
+            // Встановлення id
+            orderData.id = newOrderId;
+            logger.info('orderData після встановлення id:', JSON.stringify(orderData, null, 2));
+
+            // Створення документа Order
             const order = new Order(orderData);
-            await order.save({ session });
+            logger.info('Order перед збереженням:', JSON.stringify(order.toObject(), null, 2));
 
+            // Перевірка id у документі
+            if (order.id === null || order.id === undefined) {
+                logger.error('Помилка: order.id є null або undefined перед збереженням');
+                throw new Error('id не встановлено в документі Order');
+            }
+
+            // Збереження замовлення
+            await order.save({ session });
+            logger.info('Замовлення збережено:', { orderId: order.id, dbId: order._id });
+
+            // Очищення кошика
             if (cartId) {
                 const cart = await Cart.findOne({ cartId }).session(session);
                 if (cart) {
                     cart.items = [];
-                    cart.updatedAt = Date.now();
+                    cart.updatedAt = new Date();
                     await cart.save({ session });
                 } else {
-                    logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
+                    logger.warn(`Кошик із id ${cartId} не знайдено`);
                 }
             }
 
+            // Оновлення даних і трансляція через WebSocket
             const orders = await Order.find().session(session);
             broadcast('orders', orders);
 
             await session.commitTransaction();
-            logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
+            logger.info('Замовлення успішно створено:', { orderId: order.id, customer: orderData.customer.name });
             res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
+            logger.error('Помилка в транзакції створення замовлення:', err);
             throw err;
         } finally {
             session.endSession();
@@ -2474,12 +2507,13 @@ const cartSchemaValidation = Joi.array().items(
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
         color: Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required(),
+            name: Joi.string().allow('').optional(),
+            value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional()
-        }).allow(null).optional()
-    })
+        }).allow(null).optional(),
+        size: Joi.string().allow('', null).optional()
+    }).unknown(false)
 );
 
 app.post('/api/cart', csrfProtection, async (req, res) => {
@@ -2521,38 +2555,36 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
                 session.endSession();
                 return res.status(400).json({ error: `Продукт з id ${item.id} не знайдено` });
             }
-            if (item.color) {
-                if (product.type === 'mattresses') {
-                    const size = product.sizes.find(s => s.name === item.color.name);
-                    if (!size) {
-                        await session.abortTransaction();
-                        session.endSession();
-                        return res.status(400).json({ error: `Розмір ${item.color.name} не доступний для продукту ${item.name}` });
-                    }
-                    const expectedPrice = size.price;
-                    if (item.price !== expectedPrice) {
-                        logger.warn(`Невідповідність ціни для продукту ${item.id}, розмір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
-                        item.price = expectedPrice;
-                    }
-                    item.color.priceChange = 0;
-                    item.photo = item.color.photo || product.photos[0] || '';
-                } else {
-                    const color = product.colors.find(c => c.name === item.color.name && c.value === item.color.value);
-                    if (!color) {
-                        await session.abortTransaction();
-                        session.endSession();
-                        return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` });
-                    }
-                    const expectedPrice = product.price + (color.priceChange || 0);
-                    if (item.price !== expectedPrice) {
-                        logger.warn(`Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
-                        item.price = expectedPrice;
-                    }
-                    item.color.priceChange = color.priceChange || 0;
-                    item.photo = color.photo || item.photo || product.photos[0] || '';
-                    if (color.photo) {
-                        logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`);
-                    }
+            if (product.type === 'mattresses' && item.size) {
+                const size = product.sizes.find(s => s.name === item.size);
+                if (!size) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ error: `Розмір ${item.size} не доступний для продукту ${item.name}` });
+                }
+                const expectedPrice = size.price;
+                if (item.price !== expectedPrice) {
+                    logger.warn(`Невідповідність ціни для продукту ${item.id}, розмір ${item.size}: отримано ${item.price}, очікувалося ${expectedPrice}`);
+                    item.price = expectedPrice;
+                }
+                item.photo = item.photo || product.photos[0] || '';
+                // Не вимагаємо color для матраців, розмір передається в size
+            } else if (item.color && item.color.name) {
+                const color = product.colors.find(c => c.name === item.color.name && c.value === item.color.value);
+                if (!color) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` });
+                }
+                const expectedPrice = product.price + (color.priceChange || 0);
+                if (item.price !== expectedPrice) {
+                    logger.warn(`Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`);
+                    item.price = expectedPrice;
+                }
+                item.color.priceChange = color.priceChange || 0;
+                item.photo = color.photo || item.photo || product.photos[0] || '';
+                if (color.photo) {
+                    logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`);
                 }
             } else {
                 if (item.price !== product.price) {

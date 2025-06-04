@@ -2,13 +2,18 @@ const mongoose = require('mongoose');
 const Joi = require('joi');
 
 const orderSchema = new mongoose.Schema({
-    id: { type: Number, required: true, unique: true },
+    id: {
+        type: Number,
+        required: true,
+        unique: true,
+        min: 1
+    },
     cartId: {
         type: String,
         default: '',
         validate: {
             validator: function(v) {
-                return v === '' || /^cart-[a-zA-Z0-9]{9}$/.test(v);
+                return v === '' || /^cart-[a-z0-9]{9}$/.test(v);
             },
             message: 'cartId must be in format cart-xxxxxxxxx (9 alphanumeric characters) or empty string'
         }
@@ -65,18 +70,18 @@ const orderSchema = new mongoose.Schema({
                 priceChange: { type: Number, default: 0 },
                 photo: {
                     type: String,
-                    default: null, // Змінено default на null
+                    default: null,
                     validate: {
                         validator: function(v) {
                             return v === null || v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
                         },
                         message: 'Color photo must be a valid URL, empty string, or null'
                     }
-                },
-                size: { type: String, default: null }
+                }
             },
             default: null
-        }
+        },
+        size: { type: String, default: null }
     }],
     total: { 
         type: Number, 
@@ -90,12 +95,12 @@ const orderSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-orderSchema.index({ date: -1 });
+orderSchema.index({ date: -1 }); // Залишаємо тільки індекс для date
 
 const orderSchemaValidation = Joi.object({
-    id: Joi.number().optional(),
+    id: Joi.number().min(1), // Видаляємо .required(), щоб id не було обов'язковим у вхідних даних
     cartId: Joi.string()
-        .pattern(/^cart-[a-zA-Z0-9]{9}$/)
+        .pattern(/^cart-[a-z0-9]{9}$/)
         .allow('')
         .optional()
         .messages({
@@ -124,9 +129,9 @@ const orderSchemaValidation = Joi.object({
                 name: Joi.string().allow('').optional(),
                 value: Joi.string().allow('').optional(),
                 priceChange: Joi.number().default(0),
-                photo: Joi.string().uri().allow('', null).optional(),
-                size: Joi.string().allow('', null).optional()
+                photo: Joi.string().uri().allow('', null).optional()
             }).allow(null).optional(),
+            size: Joi.string().allow('', null).optional(),
             _id: Joi.any().optional()
         }).unknown(false)
     ).required(),
@@ -136,4 +141,4 @@ const orderSchemaValidation = Joi.object({
         .default('Нове замовлення')
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = { Order: mongoose.model('Order', orderSchema), orderSchemaValidation };

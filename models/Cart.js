@@ -2,7 +2,18 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 
 const cartSchema = new mongoose.Schema({
-    cartId: { type: String, required: true, unique: true },
+    cartId: {
+        type: String,
+        required: true,
+        unique: true,
+        match: /^cart-[a-z0-9]{9}$/,
+        validate: {
+            validator: function(v) {
+                return /^cart-[a-z0-9]{9}$/.test(v);
+            },
+            message: 'cartId must be in format cart-xxxxxxxxx (9 alphanumeric characters)'
+        }
+    },
     items: [
         {
             id: { type: Number, required: true },
@@ -26,18 +37,18 @@ const cartSchema = new mongoose.Schema({
                     priceChange: { type: Number, default: 0 },
                     photo: {
                         type: String,
-                        default: '',
+                        default: null,
                         validate: {
                             validator: function(v) {
-                                return v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                                return v === null || v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
                             },
-                            message: 'Color photo must be a valid URL or empty string'
+                            message: 'Color photo must be a valid URL, empty string, or null'
                         }
-                    },
-                    size: { type: String, default: null }
+                    }
                 },
                 default: null
-            }
+            },
+            size: { type: String, default: null } // Переміщено size на рівень items
         }
     ],
     updatedAt: { type: Date, default: Date.now }
@@ -63,9 +74,9 @@ const cartSchemaValidation = Joi.array().items(
             name: Joi.string().allow('').optional(),
             value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null).optional(),
-            size: Joi.string().allow('', null).optional()
-        }).allow(null).optional()
+            photo: Joi.string().uri().allow('', null).optional()
+        }).allow(null).optional(),
+        size: Joi.string().allow('', null).optional() // Додано size на рівень items
     }).unknown(false)
 );
 
