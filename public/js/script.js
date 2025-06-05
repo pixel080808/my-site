@@ -2518,6 +2518,7 @@ async function addToCartWithColor(productId) {
             return;
         }
         sizeData = size;
+        // Не встановлюємо color для матраців, розмір передаємо в size
     }
 
     const qtyInput = document.getElementById(`quantity-${productId}`);
@@ -2535,8 +2536,8 @@ async function addToCartWithColor(productId) {
         quantity: quantity,
         price: price,
         photo: product.photos?.[0] || NO_IMAGE_URL,
-        color: product.type === 'mattresses' ? null : colorData, // Для матраців color завжди null
-        size: sizeData,
+        color: colorData,
+        size: sizeData, // Зберігаємо розмір окремо
         brand: product.brand || 'Не вказано'
     };
 
@@ -3332,7 +3333,7 @@ async function submitOrder() {
         items: cart.map(item => {
             const product = products.find(p => p.id === item.id);
             let colorData = null;
-            if (item.color && item.color.name && product?.type !== 'mattresses') {
+            if (item.color && item.color.name) {
                 colorData = {
                     name: item.color.name || 'Не вказано',
                     value: item.color.value || item.color.name || '',
@@ -3340,7 +3341,15 @@ async function submitOrder() {
                     photo: item.color.photo || ''
                 };
             }
-            // Для матраців розмір передаємо лише в size, color залишаємо null
+            // Для матраців додаємо розмір до color для сумісності з серверною валідацією
+            if (product?.type === 'mattresses' && item.size) {
+                colorData = {
+                    name: item.size,
+                    value: item.size,
+                    priceChange: 0,
+                    photo: null
+                };
+            }
             const itemName = product?.type === 'mattresses' && item.size ? `${item.name} (${item.size})` : item.name;
             const orderItem = {
                 id: Number(item.id),
@@ -3348,7 +3357,7 @@ async function submitOrder() {
                 quantity: Number(item.quantity),
                 price: Number(item.price),
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
-                color: product?.type === 'mattresses' ? null : colorData, // Для матраців color завжди null
+                color: colorData,
                 size: item.size || null
             };
             return orderItem;
@@ -3388,6 +3397,9 @@ async function submitOrder() {
                 }
             }
 
+            // Видаляємо поле id, якщо воно є, щоб сервер сам його призначив
+            delete orderData.id;
+
             const response = await fetch(`${BASE_URL}/api/orders`, {
                 method: 'POST',
                 headers: {
@@ -3417,7 +3429,7 @@ async function submitOrder() {
                 } else if (response.status === 400) {
                     try {
                         const errorData = JSON.parse(errorText);
-                        showNotification(`Помилка: ${errorData.error || 'Некоректні дані замовлення'}`, 'error');
+                        showNotification(`Помилка: ${errorData.message || 'Некоректні дані замовлення'}`, 'error');
                     } catch (e) {
                         showNotification(`Помилка: ${errorText}`, 'error');
                     }
@@ -3430,11 +3442,11 @@ async function submitOrder() {
             }
 
             const responseData = await response.json();
-            if (!responseData || !responseData.id) {
+            if (!responseData || !responseData._id) {
                 throw new Error('Некоректна відповідь сервера: orderId відсутній');
             }
 
-            console.log('Замовлення успішно оформлено:', responseData);
+            console.log('Замовлення успішно оформ16:54:29 оформлено:', responseData);
 
             // Clear cart and reset related data
             cart = [];

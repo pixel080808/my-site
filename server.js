@@ -24,8 +24,8 @@ const Slide = require('./models/Slide');
 const Settings = require('./models/Settings');
 const Material = require('./models/Material');
 const Brand = require('./models/Brand');
-const Counter = require('./models/Counter');
 const { Cart } = require('./models/Cart');
+const Counter = require('./models/Counter');
 const OrderField = require('./models/OrderField');
 
 const logger = winston.createLogger({
@@ -2328,142 +2328,85 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 });
 
-async function getNextOrderId(name) {
-    try {
-        let counter;
-        let newOrderId;
-        let isUnique = false;
-        const maxAttempts = 5; // Обмежуємо кількість спроб
-        let attempts = 0;
-
-        while (!isUnique && attempts < maxAttempts) {
-            counter = await Counter.findOneAndUpdate(
-                { _id: name },
-                { $inc: { seq: 1 } },
-                { new: true, upsert: true }
-            );
-
-            if (!counter || !Number.isInteger(counter.seq) || counter.seq < 1) {
-                throw new Error(`Некоректне значення seq: ${counter ? counter.seq : 'null'}`);
-            }
-
-            newOrderId = counter.seq;
-            // Перевіряємо, чи id уже існує
-            const existingOrder = await Order.findOne({ id: newOrderId });
-            if (!existingOrder) {
-                isUnique = true;
-            } else {
-                logger.warn(`orderId ${newOrderId} уже існує, пробуємо отримати новий`);
-                attempts++;
-            }
-        }
-
-        if (!isUnique) {
-            throw new Error(`Не вдалося згенерувати унікальний orderId після ${maxAttempts} спроб`);
-        }
-
-        logger.info('Згенеровано orderId:', { seq: newOrderId });
-        return newOrderId;
-    } catch (err) {
-        logger.error('Помилка при генерації orderId:', err);
-        throw err;
-    }
-}
-
 app.post('/api/orders', csrfProtection, async (req, res) => {
     try {
-        logger.info('Отримано запит на створення замовлення:', JSON.stringify(req.body, null, 2));
-        let orderData = { ...req.body };
-        const cartId = req.query.id;
+        logger.info('Отримано запит на створення замовлення:', req.body);
+        let orderData = req.body;
+        const cartId = req.query.cartId;
 
-        // Перевірка вхідних даних
-        if (!orderData.items || !Array.isArray(orderData.items)) {
-            logger.error('Помилка: orderData.items не є масивом або відсутній');
-            return res.status(400).json({ error: 'Невірні дані', details: 'items має бути масивом' });
+        if (orderData.items) {
+            orderData.items = orderData.items.map(item => {
+                if (item.img && !item.photo) {
+                    item.photo = item.img;
+                    delete item.img;
+                }
+                return item;
+            });
         }
 
-        // Видалення id із orderData, якщо воно присутнє
-        if ('id' in orderData) {
-            logger.warn('id знайдено у вхідних даних, видаляємо:', { id: orderData.id });
-            delete orderData.id;
-        }
-
-        // Очищення та підготовка елементів замовлення
-        orderData.items = await Promise.all(orderData.items.map(async (item) => {
-            if (item.img && !item.photo) {
-                item.photo = item.img;
-                delete item.img;
-            }
-            const product = await Product.findOne({ id: item.id });
-            if (product && product.type === 'mattresses' && item.size) {
-                item.color = null;
-            }
-            return item;
-        }));
-
-        // Валідація cartId
         if (cartId) {
-            const { error } = cartIdSchema.validate({ id: cartId });
+            const { error } = cartIdSchema.validate(cartId);
             if (error) {
                 logger.error('Помилка валідації cartId:', error.details);
                 return res.status(400).json({ error: 'Невірний формат cartId', details: error.details });
             }
         }
 
-        // Валідація даних замовлення
-        const { error } = orderSchemaValidation.validate(orderData, { abortEarly: false });
+        const { error } = orderSchemaValidation.validate(orderData);
         if (error) {
             logger.error('Помилка валідації замовлення:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
+        // Видаляємо id з orderData, якщо воно присутнє
+        delete orderData.id;
+
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            // Генерація унікального id
-            const newOrderId = await getNextOrderId('order_id');
-            logger.info('Згенеровано newOrderId:', { newOrderId });
+            // Генерація нового id через Counter
+            let counter = await Counter.findOneAndUpdate(
+                { _id: 'orderId' },
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true, session }
+            );
 
-            // Встановлення id
-            orderData.id = newOrderId;
-            logger.info('orderData після встановлення id:', JSON.stringify(orderData, null, 2));
-
-            // Створення документа Order
-            const order = new Order(orderData);
-            logger.info('Order перед збереженням:', JSON.stringify(order.toObject(), null, 2));
-
-            // Перевірка id у документі
-            if (order.id === null || order.id === undefined) {
-                logger.error('Помилка: order.id є null або undefined перед збереженням');
-                throw new Error('id не встановлено в документі Order');
+            // Перевірка, чи id уже існує
+            let idExists = await Order.findOne({ id: counter.seq }).session(session);
+            while (idExists) {
+                logger.warn(`id ${counter.seq} уже існує, генеруємо новий`);
+                counter = await Counter.findOneAndUpdate(
+                    { _id: 'orderId' },
+                    { $inc: { seq: 1 } },
+                    { new: true, session }
+                );
+                idExists = await Order.findOne({ id: counter.seq }).session(session);
             }
 
-            // Збереження замовлення
-            await order.save({ session });
-            logger.info('Замовлення збережено:', { orderId: order.id, dbId: order._id });
+            orderData.id = counter.seq;
 
-            // Очищення кошика
+            const order = new Order(orderData);
+            await order.save({ session });
+
             if (cartId) {
                 const cart = await Cart.findOne({ cartId }).session(session);
                 if (cart) {
                     cart.items = [];
-                    cart.updatedAt = new Date();
+                    cart.updatedAt = Date.now();
                     await cart.save({ session });
                 } else {
-                    logger.warn(`Кошик із id ${cartId} не знайдено`);
+                    logger.warn(`Кошик з cartId ${cartId} не знайдено під час створення замовлення`);
                 }
             }
 
-            // Оновлення даних і трансляція через WebSocket
             const orders = await Order.find().session(session);
             broadcast('orders', orders);
 
             await session.commitTransaction();
-            logger.info('Замовлення успішно створено:', { orderId: order.id, customer: orderData.customer.name });
+            logger.info('Замовлення успішно створено:', { orderId: orderData.id, customer: orderData.customer.name });
             res.status(201).json(order);
         } catch (err) {
             await session.abortTransaction();
-            logger.error('Помилка в транзакції створення замовлення:', err);
             throw err;
         } finally {
             session.endSession();
