@@ -3,7 +3,7 @@ const Joi = require('joi');
 const Counter = require('./Counter');
 
 const orderSchema = new mongoose.Schema({
-    id: { type: Number, required: true, unique: true }, // Додаємо поле id
+    id: { type: Number, required: true, unique: true },
     cartId: {
         type: String,
         default: '',
@@ -91,7 +91,6 @@ const orderSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Додаємо хук для генерації id
 orderSchema.pre('save', async function(next) {
     try {
         if (!this.id) {
@@ -109,10 +108,9 @@ orderSchema.pre('save', async function(next) {
 });
 
 orderSchema.index({ date: -1 });
-orderSchema.index({ id: 1 }, { unique: true });
 
 const orderSchemaValidation = Joi.object({
-    id: Joi.number().optional(), // id не потрібне у вхідних даних, генерується сервером
+    id: Joi.number().optional(),
     cartId: Joi.string()
         .pattern(/^cart-[a-z0-9]{9}$/)
         .allow('')
