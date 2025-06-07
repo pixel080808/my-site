@@ -2874,7 +2874,7 @@ h3:hover {
     position: absolute;
     left: 0;
     top: 100%;
-    transform: translateX(-60px); /* Змінено з -10px на -20px для більшого зсуву лівіше */
+    transform: translateX(-80px); /* Змінено з -10px на -20px для більшого зсуву лівіше */
     min-width: 160px;
     max-width: 200px;
     width: calc(100% - 20px);
