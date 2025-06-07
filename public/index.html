@@ -15,7 +15,7 @@
     <link href="/css/styles.css" rel="stylesheet"/>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <!-- Основний скрипт із defer -->
-    <script type="text/javascript" src="/js/script.js?v=1.0.11" defer></script>
+    <script type="text/javascript" src="/js/script.js?v=1.0.12" defer></script>
     <!-- Google Analytics асинхронно -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
@@ -451,20 +451,19 @@
             <span></span>
             <span></span>
         </div>
-        <div class="burger-content" id="burger-content">
-            <div class="burger-search">
-                <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
-                <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
-            </div>
-            <a href="#" onclick="showSection('home'); return false;">Головна</a>
-            <div class="burger-catalog">
-                <a href="#" id="burger-catalog-toggle">Каталог</a>
-                <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
-            </div>
-            <a href="#" onclick="showSection('contacts'); return false;">Контакти</a>
-            <a href="#" onclick="showSection('about'); return false;">Про нас</a>
-            <a href="#" class="cart" onclick="showSection('cart'); return false;"><span></span></a>
-        </div>
+<div class="burger-content" id="burger-content">
+    <div class="burger-search">
+        <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
+        <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
+    </div>
+    <a href="#" onclick="showSection('home'); return false;">Головна</a>
+    <div class="burger-catalog">
+        <a href="#" id="burger-catalog-toggle">Каталог</a>
+        <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
+    </div>
+    <a href="#" onclick="showSection('contacts'); return false;">Контакти</a>
+    <a href="#" onclick="showSection('about'); return false;">Про нас</a>
+</div>
     </div>
 <!-- Плаваючий кошик -->
 <div class="floating-cart" id="floating-cart">
