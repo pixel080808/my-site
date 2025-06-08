@@ -1674,12 +1674,12 @@ h3:hover {
 .burger-menu {
     display: none;
     position: fixed;
-    top: 60px; /* Positioned below floating cart (40px height + 10px gap) */
-    right: 10px; /* Align with floating cart on the right */
-    z-index: 1001; /* Below floating cart (z-index: 1002) */
+    top: 60px;
+    right: 10px;
+    z-index: 1001;
     transition: opacity 0.5s ease, transform 0.3s ease;
     opacity: 0;
-    transform: translateY(10px); /* Subtle entrance animation */
+    transform: translateY(10px);
 }
 
 #catalog.active ~ .burger-menu {
@@ -1742,42 +1742,45 @@ h3:hover {
     display: none;
     position: fixed;
     top: 60px;
-    right: 10px; /* Open from the right */
+    right: 10px;
     background: var(--card-bg);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    padding: 20px;
-    min-width: 220px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 280px; /* Increased width */
     max-width: 90vw;
+    height: 70vh;
+    max-height: 400px;
+    overflow-y: auto;
     z-index: 1002;
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.4s ease;
-    transform: translateX(100%); /* Start off-screen to the right */
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    transform: translateX(100%);
     opacity: 0;
     border: 1px solid var(--border-color);
 }
 
 .burger-content.active {
     display: block;
-    transform: translateX(0); /* Slide in from the right */
+    transform: translateX(0);
     opacity: 1;
 }
 
 .burger-content a {
     display: block;
-    padding: 12px 15px;
+    padding: 10px 15px;
     color: var(--text-color);
     text-decoration: none;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
     transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
-    border-radius: 8px;
-    margin: 5px 0;
+    border-radius: 6px;
+    margin: 4px 0;
 }
 
 .burger-content a:hover {
     background: var(--border-color);
-    color: var(--accent-color);
-    transform: translateX(-5px); /* Move left on hover for consistency */
+    color: var(--primary-color); /* Changed to primary color to match site hover style */
+    transform: translateX(-3px);
 }
 
 .burger-content .cart {
@@ -1929,52 +1932,59 @@ h3:hover {
 
 .burger-catalog-dropdown {
     display: none;
-    padding: 15px;
+    padding: 10px;
     background: var(--card-bg);
-    border-radius: 10px;
-    margin-top: 8px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    margin-top: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
     transition: opacity 0.3s ease, transform 0.3s ease;
+    background-color: #f9f9f9;
 }
 
 .burger-catalog-dropdown.active {
     display: block;
     opacity: 1;
     transform: translateY(0);
+    background-color: #ffffff;
 }
 
 .burger-category-item {
-    margin: 8px 0;
+    margin: 6px 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 6px;
 }
 
 .burger-category-item a {
-    font-size: 15px;
-    font-weight: 500;
-    padding: 10px 15px;
-    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: block;
+    background-color: #ffffff;
 }
 
 .burger-subcategory {
-    padding-left: 25px;
-    margin-top: 5px;
+    padding-left: 20px;
+    margin-top: 4px;
     display: block;
 }
 
 .burger-subcategory a {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: var(--muted-text);
-    padding: 8px 15px;
-    border-radius: 6px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: block;
 }
 
 .burger-subcategory a:hover {
     background: var(--border-color);
-    color: var(--accent-color);
-    transform: translateX(-3px);
+    color: var(--primary-color);
+    transform: translateX(-2px);
 }
 
 .quantity-selector {
@@ -2854,18 +2864,26 @@ h3:hover {
         font-size: 12px;
     }
 
-    .nav {
-        padding: 5px 0;
-        position: relative; /* Додано для позиціонування dropdown відносно nav */
-    }
+.nav {
+    padding: 5px 2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
 
-    .nav a {
-        font-size: 14px;
-        margin: 0 5px;
-        padding: 5px 10px;
-    }
+.nav a {
+    font-size: 15px;
+    margin: 0 3px;
+    padding: 5px 6px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
 
-    .burger-menu {
+.burger-menu {
         top: 60px;
         right: 10px;
     }
@@ -2873,11 +2891,33 @@ h3:hover {
     .burger-content {
         top: 60px;
         right: 10px;
-        transform: translateX(100%);
+        min-width: 200px;
+        max-width: 80vw;
+        height: 60vh;
+        max-height: 350px;
     }
 
-    .burger-content.active {
-        transform: translateX(0);
+    .burger-catalog-dropdown {
+        padding: 8px;
+        margin-top: 4px;
+    }
+
+    .burger-category-item {
+        margin: 4px 0;
+    }
+
+    .burger-category-item a {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .burger-subcategory {
+        padding-left: 15px;
+    }
+
+    .burger-subcategory a {
+        padding: 5px 8px;
+        font-size: 12px;
     }
 
     .breadcrumbs {
@@ -3523,21 +3563,6 @@ h3:hover {
         padding: 8px 15px;
     }
 
-.burger-menu {
-        top: 60px;
-        right: 10px;
-    }
-
-    .burger-content {
-        top: 60px;
-        right: 10px;
-        transform: translateX(100%);
-    }
-
-    .burger-content.active {
-        transform: translateX(0);
-    }
-
 .floating-cart {
     position: fixed;
     top: 10px;
@@ -3604,146 +3629,6 @@ h3:hover {
 
     #catalog.active ~ .floating-cart {
         display: flex;
-    }
-
-    .burger-search {
-        position: relative;
-        margin: 15px 0;
-        display: flex;
-        align-items: center;
-    }
-
-    .burger-search input {
-        width: 100%;
-        padding: 8px 40px 8px 15px;
-        border: none;
-        border-bottom: 2px solid var(--border-color);
-        background: transparent;
-        font-size: 15px;
-        color: var(--text-color);
-        outline: none;
-        transition: border-color var(--transition-speed) ease;
-    }
-
-    .burger-search input:focus {
-        border-color: var(--accent-color);
-    }
-
-    .burger-search input::placeholder {
-        color: var(--muted-text);
-        opacity: 0.7;
-    }
-
-    .burger-search-btn {
-        position: absolute;
-        right: 0;
-        background: transparent;
-        border: none;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.3s ease;
-    }
-
-    .burger-search-btn::before {
-        content: "";
-        display: block;
-        width: 18px;
-        height: 18px;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
-        background-size: contain;
-    }
-
-    .burger-search-btn:hover::before {
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2310B981" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
-        background-size: contain;
-    }
-
-    .burger-catalog {
-        position: relative;
-        margin: 10px 0;
-    }
-
-    .burger-catalog-toggle {
-        display: flex;
-        align-items: center;
-        padding: 12px 15px;
-        color: var(--text-color);
-        text-decoration: none;
-        font-size: 16px;
-        font-weight: 600;
-        transition: background 0.3s ease, color 0.3s ease;
-        border-radius: 8px;
-        margin: 5px 0;
-    }
-
-    .burger-catalog-toggle::after {
-        content: "▾";
-        margin-left: auto;
-        font-size: 14px;
-        transition: transform 0.3s ease;
-    }
-
-    .burger-catalog-dropdown.active .burger-catalog-toggle::after {
-        transform: rotate(180deg);
-    }
-
-    .burger-catalog-toggle:hover {
-        background: var(--border-color);
-        color: var(--accent-color);
-    }
-
-    .burger-catalog-dropdown {
-        display: none;
-        padding: 15px;
-        background: var(--card-bg);
-        border-radius: 10px;
-        margin-top: 8px;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        border: 1px solid var(--border-color);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    .burger-catalog-dropdown.active {
-        display: block;
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .burger-category-item {
-        margin: 8px 0;
-    }
-
-    .burger-category-item a {
-        font-size: 15px;
-        font-weight: 500;
-        padding: 10px 15px;
-        border-radius: 6px;
-    }
-
-    .burger-subcategory {
-        padding-left: 25px;
-        margin-top: 5px;
-        display: block;
-    }
-
-    .burger-subcategory a {
-        font-size: 14px;
-        font-weight: 400;
-        color: var(--muted-text);
-        padding: 8px 15px;
-        border-radius: 6px;
-    }
-
-    .burger-subcategory a:hover {
-        background: var(--border-color);
-        color: var(--accent-color);
-        transform: translateX(3px);
     }
 
     .breadcrumbs {
@@ -4364,21 +4249,6 @@ h3:hover {
 
     .catalog-controls {
         display: none;
-    }
-
-.burger-menu {
-        top: 60px;
-        right: 10px;
-    }
-
-    .burger-content {
-        top: 60px;
-        right: 10px;
-        transform: translateX(100%);
-    }
-
-    .burger-content.active {
-        transform: translateX(0);
     }
 
     .floating-cart {
@@ -5052,6 +4922,45 @@ h3:hover {
 
     .filter-options .range-values {
         color: var(--muted-text);
+    }
+
+.floating-cart {
+        background: var(--card-bg);
+        box-shadow: 0 4px 12px var(--shadow-color);
+    }
+
+    .floating-cart:hover {
+        background: var(--button-background);
+    }
+
+    .floating-cart::before {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    }
+
+    .floating-cart:hover::before {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2360A5FA" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    }
+
+    .floating-cart span {
+        background: var(--accent-color);
+        color: #1A202C;
+    }
+
+    .burger-icon {
+        background: var(--card-bg);
+        box-shadow: 0 4px 12px var(--shadow-color);
+    }
+
+    .burger-icon:hover {
+        background: var(--button-background);
+    }
+
+    .burger-icon span {
+        background: #E2E8F0;
+    }
+
+    .burger-icon:hover span {
+        background: #60A5FA;
     }
 
     .group-total-price {

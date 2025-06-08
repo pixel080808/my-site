@@ -878,33 +878,28 @@ function loadMoreProducts() {
 }
 
 function showSection(sectionId) {
-    // Знітаємо клас active і приховуємо всі секції
     document.querySelectorAll('.section').forEach(el => {
         el.classList.remove('active');
         el.style.display = 'none';
     });
 
-    // Знаходимо потрібну секцію
     const section = document.getElementById(sectionId);
     const burgerMenu = document.getElementById('burger-menu');
     const burgerContent = document.getElementById('burger-content');
-    const filters = document.querySelector('.filters'); // Додаємо посилання на фільтр
+    const filters = document.querySelector('.filters');
 
-    // Закриваємо фільтр на екранах до 991px при переході на будь-яку секцію
     if (filters && window.innerWidth < 992) {
         filters.classList.remove('active');
     }
 
     if (section) {
-        // Додаємо клас active і показуємо секцію
         section.classList.add('active');
         section.style.display = 'block';
 
-        // Контролюємо видимість бургер-меню
         if (sectionId === 'catalog') {
-            burgerMenu.style.display = 'block'; // Показуємо для catalog
+            burgerMenu.style.display = 'block';
         } else {
-            burgerMenu.style.display = 'none'; // Приховуємо для інших секцій
+            burgerMenu.style.display = 'none';
             burgerMenu.classList.remove('visible');
             burgerMenu.classList.remove('active');
             if (burgerContent) burgerContent.classList.remove('active');
@@ -1261,19 +1256,6 @@ function renderCatalogDropdown() {
 
         dropdown.appendChild(itemDiv);
     });
-
-    // Закриття всіх підкатегорій при закритті меню
-    const catalogToggle = document.getElementById('catalog-toggle');
-    if (catalogToggle) {
-        catalogToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            const isActive = dropdown.classList.toggle('active');
-            if (!isActive) {
-                const allSubDropdowns = document.querySelectorAll('.sub-dropdown');
-                allSubDropdowns.forEach(sd => sd.classList.remove('active'));
-            }
-        });
-    }
 }
 
 function renderCatalog(category = null, subcategory = null, product = null) {
@@ -1453,7 +1435,7 @@ function createControlsContainer() {
     filterBtn.className = 'filter-btn';
     filterBtn.textContent = 'Фільтр';
     filterBtn.style.padding = '8px 42px';
-    filterBtn.style.fontSize = '14px';
+    filterBtn.style.fontSize = '13px';
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
     filterBtn.style.borderRadius = '4px';
@@ -1482,7 +1464,7 @@ function createSortMenu() {
     sortBtn.className = 'sort-btn';
     sortBtn.textContent = 'Сортування ▼';
     sortBtn.style.padding = '8px 12px';
-    sortBtn.style.fontSize = '14px';
+    sortBtn.style.fontSize = '13px';
     sortBtn.style.whiteSpace = 'nowrap';
     sortBtn.style.border = '1px solid #ccc';
     sortBtn.style.borderRadius = '4px';
@@ -1941,28 +1923,36 @@ async function renderProductDetails() {
         const priceDiv = document.createElement('div');
         priceDiv.className = 'price product-detail-price';
         priceDiv.id = `price-${product._id}`;
-        if (product.type === 'mattresses' && product.sizes?.length > 0) {
-            const minPrice = Math.min(...product.sizes.map(s => s.price));
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-            const sizeP = document.createElement('p');
-            sizeP.innerHTML = '<strong>Розміри:</strong> ';
-            const sizeSelect = document.createElement('select');
-            sizeSelect.id = `mattress-size-${product._id}`;
-            sizeSelect.className = 'custom-select';
-            sizeSelect.onchange = () => updateMattressPrice(product._id);
-            product.sizes.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s.name;
-                option.setAttribute('data-price', s.price);
-                option.textContent = `${s.name} - ${s.price} грн`;
-                sizeSelect.appendChild(option);
-            });
-            sizeP.appendChild(sizeSelect);
-            rightDiv.appendChild(priceDiv);
-            rightDiv.appendChild(sizeP);
+if (product.type === 'mattresses' && product.sizes?.length > 0) {
+    const minPrice = Math.min(...product.sizes.map(s => s.price));
+    const regularSpan = document.createElement('span');
+    regularSpan.className = 'regular-price';
+    regularSpan.textContent = `${minPrice} грн`;
+    priceDiv.appendChild(regularSpan);
+    const sizeP = document.createElement('p');
+    sizeP.innerHTML = '<strong>Розміри:</strong> ';
+    const sizeSelect = document.createElement('select');
+    sizeSelect.id = `mattress-size-${product._id}`;
+    sizeSelect.className = 'custom-select';
+    sizeSelect.onchange = () => updateMattressPrice(product._id);
+    product.sizes.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.name;
+        option.setAttribute('data-price', s.price);
+        option.textContent = `${s.name} - ${s.price} грн`;
+        sizeSelect.appendChild(option);
+    });
+    sizeP.appendChild(sizeSelect);
+    rightDiv.appendChild(priceDiv);
+    rightDiv.appendChild(sizeP);
+
+    // Ініціалізація першого розміру за замовчуванням, якщо не вибрано
+    if (!selectedMattressSizes[product._id] && product.sizes.length > 0) {
+        selectedMattressSizes[product._id] = product.sizes[0].name;
+        sizeSelect.value = product.sizes[0].name;
+        saveToStorage('selectedMattressSizes', selectedMattressSizes);
+        updateMattressPrice(product._id); // Викликаємо оновлення ціни
+    }
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
             const groupPriceDiv = document.createElement('div');
             groupPriceDiv.className = 'group-total-price';
@@ -3803,6 +3793,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateHeader();
         updateCartCount();
 
+        // Рендеринг каталогу після ініціалізації даних
+        renderCatalogDropdown();
+
         // Налаштування каталогу
         const catalogToggle = document.getElementById('catalog-toggle');
         const catalogDropdown = document.getElementById('catalog-dropdown');
@@ -4055,15 +4048,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         console.log('Програма ініціалізована успішно');
-    } catch (error) {
+} catch (error) {
         console.error('Помилка в DOMContentLoaded:', error);
         showNotification('Помилка ініціалізації сторінки!', 'error');
-        // Показати головну сторінку у разі помилки
-        document.querySelectorAll('.section').forEach(el => {
-            el.style.display = 'none';
-        });
         showSection('home');
-        // Приховати прелоадер у разі помилки
         const preloader = document.getElementById('preloader');
         if (preloader) {
             preloader.style.display = 'none';
