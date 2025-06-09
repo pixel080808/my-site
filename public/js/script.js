@@ -1443,7 +1443,7 @@ function createControlsContainer() {
     const filterBtn = document.createElement('button');
     filterBtn.className = 'filter-btn';
     filterBtn.textContent = 'Фільтр';
-    filterBtn.style.padding = '8px 42px';
+    filterBtn.style.padding = '8px 35px';
     filterBtn.style.fontSize = '13px';
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
