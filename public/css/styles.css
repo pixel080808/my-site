@@ -1358,7 +1358,7 @@ h3:hover {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 10px;
-    margin: 0 auto 20px auto;
+    margin: 0 auto 5px auto;
     transition: transform var(--transition-speed) ease;
     cursor: pointer;
 }
@@ -2276,21 +2276,6 @@ h3:hover {
     color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
-}
-
-@keyframes checkmark {
-    0% {
-        opacity: 0;
-        transform: scale(0) rotate(-45deg);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.2) rotate(0deg);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-    }
 }
 
 .color-options {
@@ -3428,7 +3413,7 @@ h3:hover {
     }
 
     .product img {
-        margin: 0 auto 10px auto;
+        margin: 0 auto 3px auto;
     }
 
     .product h3 {
@@ -4006,7 +3991,7 @@ h3:hover {
     }
 
     .product img {
-        margin: 0 auto 10px auto;
+        margin: 0 auto 3px auto;
     }
 
     .product h3 {
