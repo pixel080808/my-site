@@ -1400,31 +1400,93 @@ h3:hover {
 }
 
 .product .price {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     font-size: 22px;
     color: #000000;
     font-weight: 700;
     margin: 10px 0;
     text-align: center;
-    line-height: 1.2;
+}
+
+.product .price span {
+    margin-right: 15px; /* Пропуск між ціною та кошиком */
+}
+
+.product .cart-icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
+    position: relative;
+}
+
+.product .cart-icon.added {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>') no-repeat center;
+    background-size: contain;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    animation: pulse 0.3s ease-in-out;
+    transform: scale(1.1) rotate(360deg);
+}
+
+.product .cart-icon:hover:not(.added) {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%231E3A8A" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
+    transform: translateY(-2px) scale(1.05);
+}
+
+.product .cart-icon.added:hover {
+    background-color: #059669;
+    transform: scale(1.15) rotate(360deg);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
 }
 
 .product .price.on-sale {
     display: flex;
-    flex-direction: column;
+    flex-direction: row; /* Змінюємо на горизонтальне розташування */
     align-items: center;
+    justify-content: center;
+    gap: 10px; /* Додаємо відстань між цінами */
 }
 
 .product .price.on-sale s {
+    order: 1; /* Перекреслена ціна перша */
     color: #A0AEC0;
     font-size: 16px;
-    margin-bottom: 5px;
-    transition: color var(--transition-speed) ease;
+    margin-bottom: 0; /* Прибираємо margin-bottom, бо тепер горизонтально */
 }
 
 .product .price.on-sale span {
+    order: 2; /* Акційна ціна друга */
     color: #E53E3E;
     font-size: 22px;
     font-weight: 700;
+    margin-right: 15px; /* Зберігаємо відступ до іконки кошика */
+}
+
+.price {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px; /* Додано пропуск між цінами */
 }
 
 .price .regular-price {
@@ -2116,7 +2178,7 @@ h3:hover {
     width: 100%;
     max-width: 220px;
     padding: 10px 20px;
-    background: linear-gradient(135deg, var(--accent-color), #34D399);
+    background: var(--accent-color);
     color: white;
     border: none;
     border-radius: 20px;
@@ -2125,7 +2187,7 @@ h3:hover {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease, color var(--transition-speed) ease;
     box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2);
     position: relative;
     overflow: hidden;
@@ -2152,12 +2214,42 @@ h3:hover {
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
     margin-right: 8px;
+    transition: opacity var(--transition-speed) ease;
 }
 
-.product .buy-btn:hover,
-#product-details .product-detail-right .buy-btn:hover,
-.group-products .buy-btn:hover {
-    background: linear-gradient(135deg, #059669, #22D3EE);
+.product .buy-btn.added::before,
+#product-details .product-detail-right .buy-btn.added::before,
+.group-products .buy-btn.added::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>') no-repeat center;
+    background-size: contain;
+    margin-right: 0;
+    animation: checkmark 0.5s ease forwards;
+}
+
+.product .buy-btn.added,
+#product-details .product-detail-right .buy-btn.added,
+.group-products .buy-btn.added {
+    background: #10B981;
+    color: transparent;
+    pointer-events: none;
+}
+
+.product .buy-btn:hover:not(.added),
+#product-details .product-detail-right .buy-btn:hover:not(.added),
+.group-products .buy-btn:hover:not(.added) {
+    background: #059669;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 5px 12px rgba(5, 150, 105, 0.3);
+}
+
+.product .buy-btn.added:hover,
+#product-details .product-detail-right .buy-btn.added:hover,
+.group-products .buy-btn.added:hover {
+    background: #10B981;
     transform: translateY(-2px) scale(1.02);
     box-shadow: 0 5px 12px rgba(16, 185, 129, 0.3);
 }
@@ -2166,15 +2258,15 @@ h3:hover {
 #product-details .product-detail-right .buy-btn:focus,
 .group-products .buy-btn:focus {
     outline: none;
-    box-shadow: 0 0 10px rgba(49, 130, 206, 0.5);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
 .product .buy-btn:active,
 #product-details .product-detail-right .buy-btn:active,
 .group-products .buy-btn:active {
-    background: linear-gradient(135deg, #047857, #0EA5E9);
+    background: #047857;
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(49, 130, 206, 0.2);
+    box-shadow: 0 2px 6px rgba(4, 120, 87, 0.2);
 }
 
 .product .buy-btn:disabled,
@@ -2184,6 +2276,21 @@ h3:hover {
     color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
+}
+
+@keyframes checkmark {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-45deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(0deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
 }
 
 .color-options {
@@ -5149,6 +5256,16 @@ h3:hover {
 
     #product-details .product-detail-right p {
         color: var(--text-color);
+    }
+
+.product .cart-icon {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+        background-size: contain;
+    }
+
+    .product .cart-icon:hover:not(.added) {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2360A5FA" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+        background-size: contain;
     }
 
     .quantity-selector input[type="number"] {
