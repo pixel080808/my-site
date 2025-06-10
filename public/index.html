@@ -237,24 +237,23 @@
 
 .product-detail-price {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
 }
 
 .product-detail-price s {
     font-size: 20px;
     color: #999;
     text-decoration: line-through;
-    order: 1; /* Перекреслена звичайна ціна завжди перша */
+    order: 1; /* Перекреслена звичайна ціна зверху */
 }
 
 .product-detail-price .sale-price {
     font-size: 28px;
     color: #EF4444;
     font-weight: bold;
-    margin-right: 10px;
-    order: 2; /* Акційна ціна завжди друга */
+    order: 2; /* Акційна ціна знизу */
 }
 
 .product-detail-price .regular-price {
