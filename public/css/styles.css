@@ -1401,17 +1401,30 @@ h3:hover {
 
 .product .price {
     display: flex;
-    justify-content: center;
+    flex-direction: column; /* Stack prices vertically */
     align-items: center;
-    font-size: 22px;
-    color: #000000;
-    font-weight: 700;
+    justify-content: center;
     margin: 10px 0;
     text-align: center;
+    gap: 5px; /* Space between regular and sale price */
 }
 
-.product .price span {
-    margin-right: 15px; /* Пропуск між ціною та кошиком */
+.product .price.on-sale .regular-price {
+    color: #A0AEC0;
+    font-size: 16px;
+    text-decoration: line-through;
+}
+
+.product .price .regular-price {
+    color: #000000;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.product .price .sale-price {
+    color: #EF4444;
+    font-size: 22px;
+    font-weight: 700;
 }
 
 .product .cart-icon {
@@ -1422,6 +1435,11 @@ h3:hover {
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
     position: relative;
+    align-self: flex-end; /* Align cart icon with the sale price */
+}
+
+.product .price.on-sale .cart-icon {
+    align-self: flex-end; /* Ensure cart icon aligns with sale price */
 }
 
 .product .cart-icon.added {
@@ -3421,9 +3439,21 @@ h3:hover {
         margin: 8px 0;
     }
 
-    .product .price {
+.product .price {
+        font-size: 18px;
+    }
+.product .price .regular-price {
+        font-size: 20px; /* Match sale price size */
+    }
+    .product .price.on-sale .regular-price {
+        font-size: 14px; /* Smaller when on sale */
+    }
+    .product .price .sale-price {
         font-size: 20px;
-        margin: 8px 0;
+    }
+    .product .cart-icon {
+        width: 20px;
+        height: 20px;
     }
 
     .product .buy-btn,
@@ -3999,9 +4029,21 @@ h3:hover {
         margin: 8px 0;
     }
 
-    .product .price {
+.product .price {
+        font-size: 18px;
+    }
+.product .price .regular-price {
+        font-size: 20px; /* Match sale price size */
+    }
+    .product .price.on-sale .regular-price {
+        font-size: 14px; /* Smaller when on sale */
+    }
+    .product .price .sale-price {
         font-size: 20px;
-        margin: 8px 0;
+    }
+    .product .cart-icon {
+        width: 22px;
+        height: 22px;
     }
 
     .product .buy-btn {

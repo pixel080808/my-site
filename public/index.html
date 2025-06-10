@@ -101,7 +101,7 @@
 }
 
 .group-product-item .group-product-info .price .sale-price {
-    color: #ff4500;
+    color: #EF4444;
     font-size: 20px;
     font-weight: bold;
     margin-right: 10px;
@@ -145,7 +145,7 @@
 
 .sale-timer {
     font-size: 14px;
-    color: #ff4500;
+    color: #EF4444;
     margin-top: 5px;
 }
 .custom-select {
@@ -171,7 +171,7 @@
     font-size: 18px;
 }
 .price .sale-price {
-    color: #ff4500;
+    color: #EF4444;
     font-size: 22px;
     font-weight: bold;
     margin-right: 10px;
@@ -235,18 +235,31 @@
     margin-top: 60px;
 }
 
-.product-detail-price .regular-price {
-    font-size: 24px; 
+.product-detail-price {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
 }
+
+.product-detail-price s {
+    font-size: 20px;
+    color: #999;
+    text-decoration: line-through;
+    order: 1; /* Перекреслена звичайна ціна завжди перша */
+}
+
 .product-detail-price .sale-price {
-    font-size: 28px; 
-    color: #ff4500;
+    font-size: 28px;
+    color: #EF4444;
     font-weight: bold;
     margin-right: 10px;
+    order: 2; /* Акційна ціна завжди друга */
 }
-.product-detail-price s {
-    font-size: 20px; 
-    color: #999;
+
+.product-detail-price .regular-price {
+    font-size: 24px;
+    color: #000; /* Для неакційних товарів */
 }
 
 .back-to-group-btn {
