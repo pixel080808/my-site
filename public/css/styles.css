@@ -1337,13 +1337,14 @@ h3:hover {
     margin: 10px;
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
+    justify-content: flex-start;
     width: var(--product-width);
     height: auto;
     text-align: center;
     transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
     cursor: pointer;
     overflow: hidden;
+    min-height: 320px; /* Зменшено, щоб прибрати зайвий простір */
 }
 
 .product:hover {
@@ -1358,7 +1359,7 @@ h3:hover {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 10px;
-    margin: 0 auto 5px auto;
+    margin: 0 auto 10px auto;
     transition: transform var(--transition-speed) ease;
     cursor: pointer;
 }
@@ -1372,9 +1373,17 @@ h3:hover {
     color: inherit;
 }
 
+.product .product-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 114px; /* Фіксована висота для назви (54px) + ціни (60px) */
+}
+
 .product h3 {
     font-size: 18px;
-    margin: 10px 0;
+    margin: 0 0 5px 0;
     color: var(--text-color);
     font-weight: 500;
     line-height: 1.4;
@@ -1383,6 +1392,13 @@ h3:hover {
     text-transform: none;
     letter-spacing: normal;
     text-decoration: none !important;
+    flex-grow: 0;
+    height: 54px; /* Фіксована висота для назви */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .product h3 a {
@@ -1399,14 +1415,25 @@ h3:hover {
     color: var(--text-color);
 }
 
+.product .price-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    gap: 5px;
+    flex-grow: 0;
+    height: 60px; /* Фіксована висота для блоку ціни */
+}
+
 .product .price {
     display: flex;
-    flex-direction: column; /* Stack prices vertically */
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    margin: 10px 0;
+    justify-content: flex-start;
+    margin: 0;
     text-align: center;
-    gap: 5px; /* Space between regular and sale price */
+    gap: 5px;
 }
 
 .product .price.on-sale .regular-price {
@@ -1427,19 +1454,30 @@ h3:hover {
     font-weight: 700;
 }
 
+.product {
+    position: relative;
+}
+
 .product .cart-icon {
     width: 24px;
     height: 24px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
-    position: relative;
-    align-self: flex-end; /* Align cart icon with the sale price */
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    opacity: 1;
+    display: block;
 }
 
 .product .price.on-sale .cart-icon {
-    align-self: flex-end; /* Ensure cart icon aligns with sale price */
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    opacity: 1;
+    display: block;
 }
 
 .product .cart-icon.added {
@@ -1463,41 +1501,29 @@ h3:hover {
 }
 
 @keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2);
-        opacity: 0.8;
-    }
-    100% {
-        transform: scale(1.1);
-        opacity: 1;
-    }
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1.1); opacity: 1; }
 }
 
 .product .price.on-sale {
     display: flex;
-    flex-direction: row; /* Змінюємо на горизонтальне розташування */
+    flex-direction: column; /* Вертикальне розташування для консистентності */
     align-items: center;
-    justify-content: center;
-    gap: 10px; /* Додаємо відстань між цінами */
+    justify-content: flex-start;
+    gap: 5px; /* Відстань між цінами */
 }
 
 .product .price.on-sale s {
-    order: 1; /* Перекреслена ціна перша */
     color: #A0AEC0;
     font-size: 16px;
-    margin-bottom: 0; /* Прибираємо margin-bottom, бо тепер горизонтально */
+    text-decoration: line-through;
 }
 
 .product .price.on-sale span {
-    order: 2; /* Акційна ціна друга */
     color: #E53E3E;
     font-size: 22px;
     font-weight: 700;
-    margin-right: 15px; /* Зберігаємо відступ до іконки кошика */
 }
 
 .price {
@@ -1935,7 +1961,7 @@ h3:hover {
 }
 
 .burger-search input:focus {
-    border-color: var(--accent-color);
+    border-color: #2d3748;
 }
 
 .burger-search input::placeholder {
@@ -3417,38 +3443,44 @@ h3:hover {
         justify-content: center;
     }
 
-    .product {
+.product {
         width: calc(50% - 6px);
         padding: 8px;
         margin: 0;
-        border-radius: 8px;
-        box-sizing: border-box;
+        min-height: 280px; /* Зменшено для малих екранів */
     }
+    .product .product-content {
+        height: 100px; /* Зменшено для малих екранів */
+    }
+    .product h3 {
+        font-size: 15px;
+        margin: 0 0 3px 0;
+        height: 40px; /* Зменшено висоту назви */
+    }
+    .product .price-container {
+        height: 60px;
+    }
+    .product .price {
+        font-size: 16px;
+    }
+    .product .price .regular-price {
+        font-size: 18px;
+    }
+    .product .price.on-sale .regular-price {
+        font-size: 12px;
+    }
+    .product .price .sale-price {
+        font-size: 18px;
+    }
+.product .cart-icon {
+    width: 20px;
+    height: 20px;
+    bottom: 13px; /* Вирівнюємо з рядком ціни */
+    right: 8px;
+}
 
     .product img {
         margin: 0 auto 3px auto;
-    }
-
-    .product h3 {
-        font-size: 16px;
-        margin: 8px 0;
-    }
-
-.product .price {
-        font-size: 18px;
-    }
-.product .price .regular-price {
-        font-size: 20px; /* Match sale price size */
-    }
-    .product .price.on-sale .regular-price {
-        font-size: 14px; /* Smaller when on sale */
-    }
-    .product .price .sale-price {
-        font-size: 20px;
-    }
-    .product .cart-icon {
-        width: 20px;
-        height: 20px;
     }
 
     .product .buy-btn,
@@ -4008,30 +4040,30 @@ h3:hover {
         justify-content: space-between;
     }
 
-    .product {
+.product {
         width: calc(33.33% - 4px);
         padding: 8px;
         margin: 0;
-        border-radius: 8px;
     }
-
-    .product img {
-        margin: 0 auto 3px auto;
+    .product .product-content {
+        height: 114px;
     }
-
     .product h3 {
         font-size: 16px;
-        margin: 8px 0;
+        margin: 0 0 5px 0;
+        height: 54px;
     }
-
-.product .price {
+    .product .price-container {
+        height: 60px;
+    }
+    .product .price {
         font-size: 18px;
     }
-.product .price .regular-price {
-        font-size: 20px; /* Match sale price size */
+    .product .price .regular-price {
+        font-size: 20px;
     }
     .product .price.on-sale .regular-price {
-        font-size: 14px; /* Smaller when on sale */
+        font-size: 14px;
     }
     .product .price .sale-price {
         font-size: 20px;
@@ -4039,6 +4071,8 @@ h3:hover {
     .product .cart-icon {
         width: 22px;
         height: 22px;
+        bottom: 14px;
+        right: 8px;
     }
 
     .product .buy-btn {
@@ -4472,11 +4506,39 @@ h3:hover {
         gap: 15px;
     }
 
-    .product {
+.product {
         width: calc(31.80% - 4px);
         padding: 8px;
         margin: 0;
-        border-radius: 8px;
+    }
+    .product .product-content {
+        height: 114px;
+    }
+    .product h3 {
+        font-size: 18px;
+        margin: 0 0 5px 0;
+        height: 54px;
+    }
+    .product .price-container {
+        height: 60px;
+    }
+    .product .price {
+        font-size: 22px;
+    }
+    .product .price .regular-price {
+        font-size: 22px;
+    }
+    .product .price.on-sale .regular-price {
+        font-size: 16px;
+    }
+    .product .price .sale-price {
+        font-size: 22px;
+    }
+    .product .cart-icon {
+        width: 24px;
+        height: 24px;
+        bottom: 15px;
+        right: 15px;
     }
 
     .product-detail-top {
@@ -4697,11 +4759,40 @@ h3:hover {
     }
 
 .product {
-    width: calc(25% - 15px);
-    max-width: 300px;
-    padding: 8px;
-    margin: 0;
-}
+        width: calc(25% - 15px);
+        max-width: 300px;
+        padding: 8px;
+        margin: 0;
+    }
+    .product .product-content {
+        height: 114px;
+    }
+    .product h3 {
+        font-size: 18px;
+        margin: 0 0 5px 0;
+        height: 54px;
+    }
+    .product .price-container {
+        height: 60px;
+    }
+    .product .price {
+        font-size: 22px;
+    }
+    .product .price .regular-price {
+        font-size: 22px;
+    }
+    .product .price.on-sale .regular-price {
+        font-size: 16px;
+    }
+    .product .price .sale-price {
+        font-size: 22px;
+    }
+    .product .cart-icon {
+        width: 24px;
+        height: 24px;
+        bottom: 15px;
+        right: 15px;
+    }
 
     .product-detail-left {
         max-width: 600px;
@@ -5075,22 +5166,85 @@ h3:hover {
         color: #1A202C;
     }
 
-    .burger-icon {
-        background: var(--card-bg);
-        box-shadow: 0 4px 12px var(--shadow-color);
-    }
+.burger-icon {
+    background: var(--card-bg);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
 
-    .burger-icon:hover {
-        background: var(--button-background);
-    }
+.burger-icon:hover {
+    background: var(--button-hover-background);
+    box-shadow: 0 6px 15px var(--shadow-color);
+}
 
-    .burger-icon span {
-        background: #E2E8F0;
-    }
+.burger-icon span {
+    background: var(--text-color);
+}
 
-    .burger-icon:hover span {
-        background: #60A5FA;
-    }
+.burger-icon:hover span {
+    background: var(--primary-color);
+}
+
+.burger-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 6px 15px var(--shadow-color);
+}
+
+.burger-content a {
+    color: var(--text-color);
+}
+
+.burger-content a:hover {
+    background: var(--button-background);
+    color: var(--primary-color);
+}
+
+.burger-catalog-toggle {
+    color: var(--text-color);
+}
+
+.burger-catalog-toggle:hover {
+    background: var(--button-background);
+    color: var(--primary-color);
+}
+
+.burger-catalog-dropdown {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 10px var(--shadow-color);
+}
+
+.burger-catalog-dropdown.active {
+    background: var(--card-bg);
+}
+
+.burger-category-item {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.burger-category-item a {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+.burger-category-item a:hover {
+    background: var(--button-background);
+    color: var(--primary-color);
+}
+
+.burger-subcategory a {
+    color: var(--muted-text);
+    background: var(--card-bg);
+}
+
+.burger-subcategory a:hover {
+    background: var(--button-background);
+    color: var(--primary-color);
+}
+
+.burger-search input:focus {
+    border-color: #60A5FA;
+}
 
     .group-total-price {
         color: var(--text-color);
