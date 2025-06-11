@@ -3445,7 +3445,7 @@ h3:hover {
 
 .product {
         width: calc(50% - 6px);
-        padding: 3px;
+        padding: 1px;
         margin: 0;
         min-height: 280px; /* Зменшено для малих екранів */
     }
@@ -4042,7 +4042,7 @@ h3:hover {
 
 .product {
         width: calc(33.33% - 4px);
-        padding: 8px;
+        padding: 1px;
         margin: 0;
     }
     .product .product-content {
@@ -4508,7 +4508,7 @@ h3:hover {
 
 .product {
         width: calc(31.80% - 4px);
-        padding: 8px;
+        padding: 1px;
         margin: 0;
     }
     .product .product-content {
@@ -4761,7 +4761,7 @@ h3:hover {
 .product {
         width: calc(25% - 15px);
         max-width: 300px;
-        padding: 8px;
+        padding: 1px;
         margin: 0;
     }
     .product .product-content {
