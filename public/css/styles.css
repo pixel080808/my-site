@@ -5172,12 +5172,13 @@ h3:hover {
 }
 
 .burger-icon:hover {
-    background: var(--button-hover-background);
+    background: var(--button-background);
     box-shadow: 0 6px 15px var(--shadow-color);
 }
 
 .burger-icon span {
     background: var(--text-color);
+    transition: background 0.3s ease;
 }
 
 .burger-icon:hover span {
@@ -5272,32 +5273,30 @@ h3:hover {
     }
 
 .filter-btn,
-    .sort-btn,
-    .per-page-btn {
-        background: var(--button-background) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 6px !important;
-        color: var(--button-text-color) !important;
-        padding: 8px 16px !important;
-        box-shadow: 0 2px 4px var(--shadow-color) !important;
-        transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease !important;
-    }
+.sort-btn,
+.per-page-btn {
+    background: var(--button-background) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--button-text-color) !important;
+    box-shadow: 0 2px 4px var(--shadow-color) !important;
+    transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease !important;
+}
 
-    .filter-btn:hover,
-    .sort-btn:hover,
-    .per-page-btn:hover {
-        background: var(--button-hover-background) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 4px 8px var(--shadow-color) !important;
-        transform: translateY(-2px) !important;
-    }
+.filter-btn:hover,
+.sort-btn:hover,
+.per-page-btn:hover {
+    background: var(--button-hover-background) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 8px var(--shadow-color) !important;
+    transform: translateY(-2px) !important;
+}
 
-    .filter-btn:focus,
-    .sort-btn:focus,
-    .per-page-btn:focus {
-        border-color: var(--primary-color) !important;
-        box-shadow: 0 0 8px rgba(96, 165, 250, 0.3) !important;
-    }
+.filter-btn:focus,
+.sort-btn:focus,
+.per-page-btn:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.3) !important;
+}
 
     .sort-menu .sort-dropdown,
     .sort-menu .per-page-dropdown {
