@@ -1564,7 +1564,7 @@ function createControlsContainer() {
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
     filterBtn.style.borderRadius = '4px';
-    filterBtn.style.backgroundColor = '#f5f5f5';
+    filterBtn.style.backgroundColor = '#ffffff';
     filterBtn.style.cursor = 'pointer';
     filterBtn.onclick = () => {
         const filters = document.querySelector('.filters');
@@ -1592,7 +1592,7 @@ function createSortMenu() {
     sortBtn.style.whiteSpace = 'nowrap';
     sortBtn.style.border = '1px solid #ccc';
     sortBtn.style.borderRadius = '4px';
-    sortBtn.style.backgroundColor = '#f5f5f5';
+    sortBtn.style.backgroundColor = '#ffffff';
     sortBtn.style.cursor = 'pointer';
     sortBtn.onclick = (e) => {
         e.stopPropagation();

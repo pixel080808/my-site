@@ -11,7 +11,7 @@
     --accent-color: #10B981;
     --text-color: #2D3748;
     --muted-text: #6B7280;
-    --background: #F9FAFB;
+    --background: #ffffff;
     --card-bg: #FFFFFF;
     --sale-color: #EF4444;
     --border-color: #E5E7EB;
@@ -28,7 +28,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0 0 20px 0;
-    background: linear-gradient(135deg, var(--background), #F9FAFB);
+    background: linear-gradient(135deg, #ffffff00, #ffffff);
     font-size: var(--base-font-size);
     line-height: 1.6;
     color: var(--text-color);
@@ -343,9 +343,9 @@ header.scrolled {
     padding: 10px 0;
     width: 100%;
     z-index: 99;
-    background: #F7F8FA;
+    background: #ffffff00;
     text-align: left;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 6px rgb(255 255 255 / 5%);
     transition: background var(--transition-speed) ease;
     overflow-x: auto;
 }
@@ -676,7 +676,7 @@ h3:hover {
     padding: 5px 0;
 }
 .category .subcategories p:hover {
-    color: #4A5568;
+    color: var(--primary-color);
 }
 
 #catalog .container {
@@ -726,10 +726,6 @@ h3:hover {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 8px;
     transition: color var(--transition-speed) ease;
-}
-
-.filter-block h4:hover {
-    color: var(--primary-color);
 }
 
 .filter-options {
@@ -843,18 +839,18 @@ h3:hover {
     border: none;
     padding: 10px 20px;
     border-radius: 20px;
-    color: var(--primary-color);
+    color: #2d3748;
     cursor: pointer;
     font-weight: 500;
     font-size: 15px;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
-.subcategory-buttons button:hover {
-    background: #EBF8FF;
-    color: var(--secondary-color);
-    transform: translateY(-2px);
-}
+    .subcategory-buttons button:hover {
+        background: var(--border-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+    }
 
 .subcategory-buttons button:focus {
     outline: 2px solid var(--primary-color);
@@ -1048,8 +1044,8 @@ h3:hover {
     width: 100%;
     padding: 10px 50px;
     margin-bottom: 15px;
-    background: #f9f9f9;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    background: #f9f9f900;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0%);
     box-sizing: border-box;
 }
 
@@ -1364,7 +1360,7 @@ h3:hover {
 }
 
 .product img:hover {
-    transform: scale(1.05);
+    transform: scale(1.00);
 }
 
 .product a {
@@ -1377,7 +1373,7 @@ h3:hover {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: 114px; /* Фіксована висота для назви (54px) + ціни (60px) */
+    height: 114px;
 }
 
 .product h3 {
@@ -3394,7 +3390,7 @@ h3:hover {
         justify-content: center;
         align-items: center;
         gap: 8px;
-        background: #f9f9f9;
+        background: #fffffff7;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         flex-wrap: wrap;
     }
@@ -3898,7 +3894,7 @@ h3:hover {
         justify-content: center;
         align-items: center;
         gap: 8px;
-        background: #f9f9f9;
+        background: #fffffff7;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         flex-wrap: wrap;
     }
@@ -4391,7 +4387,7 @@ h3:hover {
         border: none;
         padding: 10px 20px;
         border-radius: 20px;
-        color: var(--primary-color);
+        color: #2d3748;
         cursor: pointer;
         font-weight: 500;
         font-size: 15px;
@@ -4399,8 +4395,8 @@ h3:hover {
     }
 
     .subcategory-buttons button:hover {
-        background: #EBF8FF;
-        color: var(--secondary-color);
+        background: var(--border-color);
+        color: var(--primary-color);
         transform: translateY(-2px);
     }
 
@@ -5258,8 +5254,8 @@ h3:hover {
     }
 
     .subcategory-buttons button:hover {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
+        background: var(--border-color);
+        color: var(--primary-color);
     }
 
     .fixed-controls {
