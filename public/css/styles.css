@@ -619,19 +619,18 @@ h3:hover {
 }
 
 .category {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: #ffffff00;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 15px;
+    padding: 2px;
     text-align: center;
     transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
     width: var(--category-width);
     height: auto;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
 }
 
 .category:hover {
@@ -650,7 +649,7 @@ h3:hover {
 }
 
 .category img:hover {
-    transform: scale(1.05);
+    transform: none;
 }
 
 .category p {
@@ -1329,10 +1328,10 @@ h3:hover {
 }
 
 .product {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: #ffffff00;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0%);
     padding: 15px;
     margin: 10px;
     display: flex;
@@ -1344,7 +1343,7 @@ h3:hover {
     transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
     cursor: pointer;
     overflow: hidden;
-    min-height: 320px; /* Зменшено, щоб прибрати зайвий простір */
+    min-height: 320px;
 }
 
 .product:hover {
@@ -3132,13 +3131,13 @@ h3:hover {
     }
 
     .category {
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
+        background: #ffffff00;
+        border: 1px solid #e5e7eb;
         border-radius: 12px;
-        padding: 10px;
+        padding: 2px;
         text-align: center;
         transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px rgb(0 0 0 / 3%);
         width: calc(50% - 2.5px);
         height: auto;
         cursor: pointer;
