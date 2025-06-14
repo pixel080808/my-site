@@ -6,7 +6,7 @@
 }
 
 :root {
-    --primary-color: #1E3A8A;
+    --primary-color: #000000;
     --secondary-color: #3B82F6;
     --accent-color: #10B981;
     --text-color: #2D3748;
@@ -14,7 +14,7 @@
     --background: #ffffff;
     --card-bg: #FFFFFF;
     --sale-color: #EF4444;
-    --border-color: #E5E7EB;
+    --border-color: #d8d8d8;
     --base-font-size: 16px;
     --base-padding: 10px;
     --transition-speed: 0.3s;
@@ -171,7 +171,7 @@ header.scrolled {
     display: inline-flex;
     align-items: center;
     background: var(--card-bg);
-    border-radius: 18px;
+    border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
@@ -181,7 +181,7 @@ header.scrolled {
 
 .cart:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
@@ -252,7 +252,7 @@ header.scrolled {
 .nav a:focus {
     background: var(--border-color);
     color: var(--primary-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     outline: none;
 }
 
@@ -433,18 +433,13 @@ h2 {
     padding-bottom: 5px;
 }
 
-h2:hover {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
-
 h3 {
     font-size: 23px;
     color: var(--text-color);
     margin: 15px 0;
     font-weight: 600;
     text-align: center;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 1.5px;
     padding-bottom: 10px;
     transition: color var(--transition-speed) ease;
@@ -620,7 +615,7 @@ h3:hover {
 
 .category {
     background: #ffffff00;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #d8d8d8;
     border-radius: 12px;
     padding: 2px;
     text-align: center;
@@ -635,7 +630,7 @@ h3:hover {
 
 .category:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    transform: translateY(-5px);
+    transform: translateY(0px);
 }
 
 .category img {
@@ -750,7 +745,7 @@ h3:hover {
 
 .filter-options input[type="checkbox"] {
     margin-right: 10px;
-    accent-color: var(--primary-color);
+    accent-color: var(--text-color);
     width: 16px;
     height: 16px;
     transition: accent-color var(--transition-speed) ease;
@@ -835,21 +830,21 @@ h3:hover {
 }
 
 .subcategory-buttons button {
-    background: #EDF2F7;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    color: #2d3748;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 15px;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
-}
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        padding: 10px 20px;
+        border-radius: 20px;
+        color: var(--text-color);
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 15px;
+        transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    }
 
     .subcategory-buttons button:hover {
         background: var(--border-color);
-        color: var(--primary-color);
-        transform: translateY(-2px);
+        color: var(--text-color);
+       /* transform: translateY(-2px); */
     }
 
 .subcategory-buttons button:focus {
@@ -895,7 +890,7 @@ h3:hover {
 .filter-btn:hover, .sort-btn:hover, .per-page-btn:hover {
     background: var(--border-color);
     color: var(--primary-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -927,7 +922,7 @@ h3:hover {
 
 .sort-btn:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     border-color: var(--primary-color);
 }
 
@@ -994,7 +989,7 @@ h3:hover {
 
 .per-page-btn:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     border-color: var(--primary-color);
 }
 
@@ -1097,7 +1092,7 @@ h3:hover {
     padding: 10px;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 750px) {
     .fixed-controls {
         display: flex;
         justify-content: flex-end;
@@ -1199,14 +1194,14 @@ h3:hover {
     font-weight: 500;
     cursor: pointer;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .show-more-btn:hover {
     background: var(--border-color);
-    color: var(--primary-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: var(--text-color);
+    /* transform: translateY(-2px); */
+     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .show-more-btn:disabled {
@@ -1263,14 +1258,14 @@ h3:hover {
     background: #E2E8F0;
     color: var(--text-color);
     border-color: #E2E8F0;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .pagination-btn:hover {
     background: var(--border-color);
     color: var(--text-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+       /* transform: translateY(-2px); */
+        box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .pagination-btn:disabled {
@@ -1297,8 +1292,8 @@ h3:hover {
 .pagination-arrow:hover {
     background: var(--border-color);
     color: var(--text-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* transform: translateY(-2px); */
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .pagination-arrow:disabled {
@@ -1325,10 +1320,10 @@ h3:hover {
 
 .product {
     background: #ffffff00;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #d8d8d8;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0%);
-    padding: 15px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+    padding: 12px;
     margin: 10px;
     display: flex;
     flex-direction: column;
@@ -1343,8 +1338,8 @@ h3:hover {
 }
 
 .product:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    transform: translateY(-0px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .product img {
@@ -1569,7 +1564,7 @@ h3:hover {
 
 .product .buy-btn:hover {
     background: #059669;
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
@@ -1594,7 +1589,7 @@ h3:hover {
 
 .product .details-btn:hover {
     background: #E2E8F0;
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -1662,7 +1657,7 @@ h3:hover {
 }
 
 .main-product-image:hover {
-    transform: scale(1.03);
+    transform: scale(1.0);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
@@ -1804,7 +1799,7 @@ h3:hover {
 
 .burger-icon:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
@@ -1812,14 +1807,14 @@ h3:hover {
     display: block;
     width: 24px;
     height: 3px;
-    background: #2D3748;
+    background: #000000;
     border-radius: 2px;
     margin: 3px 0;
     transition: all 0.3s ease;
 }
 
 .burger-icon:hover span {
-    background: #1E3A8A;
+    background: #000000;
 }
 
 .burger-menu.active .burger-icon span:nth-child(1) {
@@ -1895,7 +1890,7 @@ h3:hover {
 
 .burger-content .cart:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
@@ -2092,30 +2087,27 @@ h3:hover {
 }
 
 .quantity-btn {
-    background: var(--border-color);
-    color: var(--text-color);
-    border: none;
+    background: var(--card-bg);
+    color: var(--muted-text);
+    border: 1px solid var(--border-color);
     padding: 0;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .quantity-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: scale(1.1);
-}
-
-.quantity-btn:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(30, 58, 138, 0.3);
+    background: #E2E8F0;
+    color: var(--text-color);
+    transform: scale(1);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .quantity-selector input[type="number"] {
@@ -2123,10 +2115,10 @@ h3:hover {
     text-align: center;
     padding: 10px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    margin: 0 15px;
-    background: #F7FAFC;
-    font-size: 16px;
+    border-radius: 12px;
+    margin: 0 11px;
+    background: #f7fafc00;
+    font-size: 15px;
     transition: border-color var(--transition-speed) ease;
     height: 40px;
 }
@@ -2276,7 +2268,7 @@ h3:hover {
 #product-details .product-detail-right .buy-btn:hover:not(.added),
 .group-products .buy-btn:hover:not(.added) {
     background: #059669;
-    transform: translateY(-2px) scale(1.02);
+    /* transform: translateY(-2px); */
     box-shadow: 0 5px 12px rgba(5, 150, 105, 0.3);
 }
 
@@ -2284,7 +2276,7 @@ h3:hover {
 #product-details .product-detail-right .buy-btn.added:hover,
 .group-products .buy-btn.added:hover {
     background: #10B981;
-    transform: translateY(-2px) scale(1.02);
+    /* transform: translateY(-2px); */
     box-shadow: 0 5px 12px rgba(16, 185, 129, 0.3);
 }
 
@@ -2471,7 +2463,6 @@ h3:hover {
 
 .gallery-close:hover {
     background: #C53030;
-    transform: rotate(90deg);
 }
 
 .gallery-prev,
@@ -2503,7 +2494,7 @@ h3:hover {
 .gallery-prev:hover,
 .gallery-next:hover {
     background: rgba(49, 130, 206, 0.7);
-    transform: scale(1.1);
+    transform: scale(1.0);
 }
 
 .gallery-prev:disabled,
@@ -2634,9 +2625,9 @@ h3:hover {
 }
 
 .cart-item .quantity-btn {
-    background: var(--border-color);
-    color: var(--text-color);
-    border: none;
+    background: var(--card-bg);
+    color: var(--muted-text);
+    border: 1px solid #c6c6c6;
     padding: 0;
     width: 35px;
     height: 35px;
@@ -2647,14 +2638,15 @@ h3:hover {
     align-items: center;
     justify-content: center;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .cart-item .quantity-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: scale(1.15);
-    box-shadow: 0 4px 8px rgba(30, 58, 138, 0.2);
+    background: #E2E8F0;
+    color: var(--text-color);
+    border: 1px solid #c6c6c6;
+    transform: scale(1);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .cart-item .quantity-btn:focus {
@@ -2667,9 +2659,9 @@ h3:hover {
     text-align: center;
     padding: 6px;
     border: 1px solid #E2E8F0;
-    border-radius: 6px;
+    border-radius: 12px;
     margin: 0 5px;
-    background: #F7FAFC;
+    background: #ffffff00;
     font-size: 14px;
 }
 
@@ -2678,19 +2670,20 @@ h3:hover {
 }
 
 .cart-item .remove-btn {
-    background: var(--border-color);
+    background: var(--card-bg);
     color: var(--text-color);
-    border: none;
+    border: 1px solid #d8d8d8;
     padding: 6px 12px;
     border-radius: 15px;
     font-size: 14px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .cart-item .remove-btn:hover {
-    background: var(--sale-color);
-    color: white;
+    background: var(--border-color);
+    color: var(--text-color);
 }
 
 .cart-content {
@@ -2773,7 +2766,7 @@ h3:hover {
 .form-group .order-input {
     width: 100%;
     padding: 11px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid #d8d8d8;
     border-radius: 10px;
     font-size: 15px;
     text-align: center;
@@ -2890,22 +2883,27 @@ h3:hover {
 }
 
 .confirm-btn {
-    background: var(--primary-color);
-    color: white;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid #c6c6c6;
 }
 
 .confirm-btn:hover {
-    background: var(--secondary-color);
+    background: var(--border-color);
+    color: var(--text-color);
+    border: 1px solid #c6c6c6;
 }
 
 .cancel-btn {
-    background: var(--border-color);
+    background: var(--card-bg);
     color: var(--text-color);
+    border: 1px solid #c6c6c6;
 }
 
 .cancel-btn:hover {
-    background: var(--sale-color);
-    color: white;
+    background: var(--border-color);
+    color: var(--text-color);
+    border: 1px solid #c6c6c6;
 }
 
 @media (max-width: 600px) {
@@ -3144,7 +3142,7 @@ h3:hover {
 
     .category:hover {
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        transform: translateY(-5px);
+        transform: translateY(0px);
     }
 
     .category img {
@@ -3158,7 +3156,7 @@ h3:hover {
     }
 
     .category img:hover {
-        transform: scale(1.05);
+        transform: scale(1.00);
     }
 
     .category p {
@@ -3265,9 +3263,9 @@ h3:hover {
     }
 
     .filters .back-btn:hover {
-        background: var(--button-hover-background);
-        color: var(--button-text-color);
-        transform: translateY(-2px);
+     background: var(--border-color);
+     color: var(--text-color);
+       /* transform: translateY(-2px); */
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
@@ -3303,7 +3301,7 @@ h3:hover {
         display: inline-flex;
         align-items: center;
         background: var(--card-bg);
-        border-radius: 18px;
+        border-radius: 50px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         cursor: pointer;
         transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
@@ -3317,8 +3315,8 @@ h3:hover {
 
     .floating-cart:hover {
         background: var(--border-color);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+       /* transform: translateY(-2px); */
+       box-shadow: 0 4px 12px var(--shadow-color);
     }
 
     .floating-cart::before {
@@ -3371,7 +3369,7 @@ h3:hover {
     }
 
     .subcategory-buttons button {
-        font-size: 12px;
+        font-size: 13px;
         padding: 8px 15px;
     }
 
@@ -3561,7 +3559,7 @@ h3:hover {
     }
 
     #product-details .product-detail-right .buy-btn {
-        max-width: 100%;
+        max-width: 230px;
         font-size: 16px !important;
         padding: 12px 20px;
     }
@@ -3597,15 +3595,15 @@ h3:hover {
     }
 
     .cart-item .quantity-selector input[type="number"] {
-        width: 30px;
+        width: 40px;
         padding: 5px;
         font-size: 12px;
     }
 
     .cart-item .quantity-btn {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
+        width: 28px;
+        height: 28px;
+        font-size: 15px;
     }
 
     .cart-item .remove-btn {
@@ -3634,7 +3632,7 @@ h3:hover {
     }
 }
 
-@media (min-width: 600px) and (max-width: 992px) {
+@media (min-width: 600px) and (max-width: 769px) {
     header {
         padding: var(--base-padding) 15px;
         height: 80px;
@@ -3730,7 +3728,7 @@ h3:hover {
 
 .floating-cart:hover {
     background: var(--border-color);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
@@ -3984,9 +3982,9 @@ h3:hover {
     }
 
     .filters .back-btn:hover {
-        background: var(--button-hover-background);
-        color: var(--button-text-color);
-        transform: translateY(-2px);
+     background: var(--border-color);
+     color: var(--text-color);
+       /* transform: translateY(-2px); */
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
@@ -4022,7 +4020,7 @@ h3:hover {
     }
 
     .subcategory-buttons button {
-        font-size: 13px;
+        font-size: 14px;
         padding: 8px 15px;
     }
 
@@ -4091,7 +4089,7 @@ h3:hover {
     }
 
     .main-product-image {
-        max-width: 100%;
+        max-width: 500px;
         height: auto;
     }
 
@@ -4140,7 +4138,7 @@ h3:hover {
     }
 
     #product-details .product-detail-right .buy-btn {
-        max-width: 100%;
+        max-width: 230px;
         font-size: 16px !important;
         padding: 12px 20px;
     }
@@ -4176,7 +4174,7 @@ h3:hover {
     }
 
     .cart-item .quantity-selector input[type="number"] {
-        width: 35px;
+        width: 45px;
         padding: 5px;
         font-size: 13px;
     }
@@ -4184,7 +4182,7 @@ h3:hover {
     .cart-item .quantity-btn {
         width: 25px;
         height: 25px;
-        font-size: 12px;
+        font-size: 16px;
     }
 
     .cart-item .remove-btn {
@@ -4213,7 +4211,7 @@ h3:hover {
     }
 }
 
-@media (min-width: 992px) {
+@media (min-width: 769px) {
     header {
         padding: var(--base-padding) 0;
         height: 80px;
@@ -4382,12 +4380,12 @@ h3:hover {
         padding-left: 0;
     }
 
-    .subcategory-buttons button {
-        background: #EDF2F7;
-        border: none;
+        .subcategory-buttons button {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
         padding: 10px 20px;
         border-radius: 20px;
-        color: #2d3748;
+        color: var(--text-color);
         cursor: pointer;
         font-weight: 500;
         font-size: 15px;
@@ -4396,8 +4394,8 @@ h3:hover {
 
     .subcategory-buttons button:hover {
         background: var(--border-color);
-        color: var(--primary-color);
-        transform: translateY(-2px);
+        color: var(--text-color);
+       /* transform: translateY(-2px); */
     }
 
     .subcategory-buttons button:focus {
@@ -4432,8 +4430,8 @@ h3:hover {
 
     .floating-cart:hover {
         background: var(--border-color);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+       /* transform: translateY(-2px); */
+       box-shadow: 0 4px 12px var(--shadow-color);
     }
 
     .floating-cart::before {
@@ -4599,14 +4597,14 @@ h3:hover {
     }
 
     .cart-item .quantity-selector input[type="number"] {
-        width: 40px;
+        width: 50px;
         font-size: 14px;
     }
 
     .cart-item .quantity-btn {
         width: 30px;
         height: 30px;
-        font-size: 14px;
+        font-size: 18px;
     }
 
     .cart-item .remove-btn {
@@ -4824,7 +4822,7 @@ h3:hover {
     }
 
     header {
-        background: var(--card-bg);
+        background: var(--background);
         box-shadow: 0 2px 6px var(--shadow-color);
     }
 
@@ -4957,8 +4955,8 @@ h3:hover {
     }
 
     .breadcrumbs {
-        background: var(--card-bg);
-        box-shadow: 0 2px 6px var(--shadow-color);
+        background: #2d374800;
+        box-shadow: 0 2px 6px rgb(255 255 255 / 0%);
     }
 
     .breadcrumbs a,
@@ -4978,11 +4976,6 @@ h3:hover {
     h2 {
         color: var(--text-color);
         border-bottom-color: var(--border-color);
-    }
-
-    h2:hover {
-        color: var(--primary-color);
-        border-bottom-color: var(--primary-color);
     }
 
     h3 {
@@ -5069,7 +5062,7 @@ h3:hover {
     }
 
     .filters {
-        background: var(--card-bg) !important;
+        background: #1a202c !important;
         border-color: var(--border-color);
         box-shadow: 0 4px 15px var(--shadow-color);
     }
@@ -5113,10 +5106,6 @@ h3:hover {
     .filter-block h4 {
         color: var(--text-color);
         border-bottom-color: var(--border-color);
-    }
-
-    .filter-block h4:hover {
-        color: var(--primary-color);
     }
 
     .filter-options label {
@@ -5283,7 +5272,7 @@ h3:hover {
     background: var(--button-hover-background) !important;
     color: #FFFFFF !important;
     box-shadow: 0 4px 8px var(--shadow-color) !important;
-    transform: translateY(-2px) !important;
+    /* transform: translateY(-2px); */
 }
 
 .filter-btn:focus,
@@ -5292,6 +5281,13 @@ h3:hover {
     border-color: var(--primary-color) !important;
     box-shadow: 0 0 8px rgba(96, 165, 250, 0.3) !important;
 }
+
+    .filters .back-btn:hover {
+        background: var(--button-hover-background);
+        color: #FFFFFF;
+       /* transform: translateY(-2px); */
+        box-shadow: 0 4px 12px var(--shadow-color);
+    }
 
     .sort-menu .sort-dropdown,
     .sort-menu .per-page-dropdown {
@@ -5580,7 +5576,7 @@ h3:hover {
     }
 
     .cart-item .remove-btn:hover {
-        background: var(--sale-color);
+        background: var(--button-hover-background);
         color: #FFFFFF;
     }
 
@@ -5822,7 +5818,7 @@ h3:hover {
 
     .back-to-group-btn:hover {
         background-color: #5A6A82;
-        transform: translateY(-2px);
+       /* transform: translateY(-2px); */
         box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
     }
 
@@ -5856,5 +5852,16 @@ h3:hover {
         background: var(--input-bg);
         border-color: var(--input-border);
         color: var(--text-color);
+    }
+
+@media (max-width: 600px) {
+    .filter-sort-container {
+        background: #1a202cfa;
+    }
+}
+
+@media (min-width: 600px) and (max-width: 750px) {
+    .filter-sort-container {
+        background: #1a202cfa;
     }
 }

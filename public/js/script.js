@@ -1563,7 +1563,7 @@ function createControlsContainer() {
     filterBtn.style.fontSize = '13px';
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
-    filterBtn.style.borderRadius = '4px';
+    filterBtn.style.borderRadius = '20px';
     filterBtn.style.backgroundColor = '#ffffff';
     filterBtn.style.cursor = 'pointer';
     filterBtn.onclick = () => {
@@ -1591,7 +1591,7 @@ function createSortMenu() {
     sortBtn.style.fontSize = '13px';
     sortBtn.style.whiteSpace = 'nowrap';
     sortBtn.style.border = '1px solid #ccc';
-    sortBtn.style.borderRadius = '4px';
+    sortBtn.style.borderRadius = '20px';
     sortBtn.style.backgroundColor = '#ffffff';
     sortBtn.style.cursor = 'pointer';
     sortBtn.onclick = (e) => {
@@ -1606,7 +1606,7 @@ function createSortMenu() {
     sortDropdown.style.position = 'absolute';
     sortDropdown.style.backgroundColor = '#fff';
     sortDropdown.style.border = '1px solid #ccc';
-    sortDropdown.style.borderRadius = '4px';
+    sortDropdown.style.borderRadius = '7px';
     sortDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
     sortDropdown.style.zIndex = '1000';
     sortDropdown.style.marginTop = '5px';
@@ -3311,25 +3311,25 @@ async function renderCart() {
         groupDiv.appendChild(label);
 
         const savedValue = localStorage.getItem(`order-${f.name}`) || '';
-        if (f.type === 'select') {
-            const select = document.createElement('select');
-            select.id = `order-${f.name}`;
-            select.className = 'order-input custom-select';
-            select.onchange = (e) => {
-                localStorage.setItem(`order-${f.name}`, e.target.value);
-            };
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = `Оберіть ${f.label.toLowerCase()}`;
-            select.appendChild(defaultOption);
-            f.options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                if (savedValue === opt) option.selected = true;
-                select.appendChild(option);
-            });
-            groupDiv.appendChild(select);
+if (f.type === 'select') {
+    const select = document.createElement('select');
+    select.id = `order-${f.name}`;
+    select.className = 'order-input custom-select';
+    select.onchange = (e) => {
+        localStorage.setItem(`order-${f.name}`, e.target.value);
+    };
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = f.name === 'payment' ? 'Спосіб оплати' : `Оберіть ${f.label.toLowerCase()}`; // Зміна тут
+    select.appendChild(defaultOption);
+    f.options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        if (savedValue === opt) option.selected = true;
+        select.appendChild(option);
+    });
+    groupDiv.appendChild(select);
         } else {
             const input = document.createElement('input');
             input.type = f.type;
@@ -4532,7 +4532,7 @@ document.head.appendChild(style);
 
 const responsiveStyle = document.createElement('style');
 responsiveStyle.textContent = `
-    @media (min-width: 992px) {
+    @media (min-width: 769px) {
         .filter-btn {
             display: none !important;
         }
