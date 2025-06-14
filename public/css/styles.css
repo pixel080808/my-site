@@ -1335,6 +1335,7 @@ h3:hover {
     cursor: pointer;
     overflow: hidden;
     min-height: 320px;
+    position: relative;
 }
 
 .product:hover {
@@ -1419,11 +1420,12 @@ h3:hover {
 .product .price {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
     margin: 0;
-    text-align: center;
+    text-align: left;
     gap: 5px;
+    padding: 10px 20px 10px 10px; /* Додано відступ 20px справа */
 }
 
 .product .price.on-sale .regular-price {
@@ -1438,8 +1440,13 @@ h3:hover {
     font-weight: 600;
 }
 
+.product .price s {
+    color: #999;
+    font-size: 16px;
+}
+
 .product .price .sale-price {
-    color: #EF4444;
+    color: var(--sale-color);
     font-size: 22px;
     font-weight: 700;
 }
@@ -1449,16 +1456,30 @@ h3:hover {
 }
 
 .product .cart-icon {
-    width: 24px;
-    height: 24px;
+    width: 48px;
+    height: 48px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
-    background-size: contain;
+    transition: all var(--transition-speed) ease;
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%); /* Чистий зелений градієнт */
     position: absolute;
     bottom: 15px;
     right: 15px;
     opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-sizing: content-box;
+}
+
+.product .cart-icon::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
     display: block;
 }
 
@@ -1467,33 +1488,59 @@ h3:hover {
     bottom: 15px;
     right: 15px;
     opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-sizing: content-box;
+}
+
+.product .price.on-sale .cart-icon::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    background-size: contain;
     display: block;
 }
 
+.product .cart-icon:hover {
+    transform: translateY(-2px) scale(1.1);
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    box-shadow: 0 8px 20px rgba(4, 120, 87, 0.4);
+}
+
+.product .price.on-sale .cart-icon:hover {
+    transform: translateY(-2px) scale(1.1);
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    box-shadow: 0 8px 20px rgba(4, 120, 87, 0.4);
+}
+
 .product .cart-icon.added {
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>') no-repeat center;
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    animation: fadeInBounce 0.4s ease-out;
+}
+
+.product .cart-icon.added::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>') no-repeat center;
     background-size: contain;
-    background-color: var(--accent-color);
-    border-radius: 50%;
-    animation: pulse 0.3s ease-in-out;
-    transform: scale(1.1) rotate(360deg);
+    display: block;
 }
 
-.product .cart-icon:hover:not(.added) {
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%231E3A8A" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
-    background-size: contain;
-    transform: translateY(-2px) scale(1.05);
+@keyframes fadeInBounce {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
-.product .cart-icon.added:hover {
-    background-color: #059669;
-    transform: scale(1.15) rotate(360deg);
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.2); opacity: 0.8; }
-    100% { transform: scale(1.1); opacity: 1; }
+s {
+    text-decoration: line-through;
 }
 
 .product .price.on-sale {
@@ -1760,6 +1807,29 @@ h3:hover {
     text-align: left;
     display: flex;
     align-items: center;
+}
+
+.rm-btn-del {
+    background: transparent;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+}
+
+.rm-btn-del .rm-btn-icon {
+    display: block;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6' stroke='%23EF4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6' stroke='%23EF4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    background: #f43535;
+    width: 24px;
+    height: 24px;
+    transition: opacity 0.3s ease;
+}
+
+.rm-btn-del:hover .rm-btn-icon {
+    opacity: 0.8;
 }
 
 .burger-menu {
@@ -2669,20 +2739,18 @@ h3:hover {
 }
 
 .cart-item .remove-btn {
-    background: var(--card-bg);
+    background: transparent;
     color: var(--text-color);
-    border: 1px solid #d8d8d8;
-    padding: 6px 12px;
+    border: none;
+    padding: 6px;
     border-radius: 15px;
     font-size: 14px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
 
 .cart-item .remove-btn:hover {
-    background: var(--border-color);
-    color: var(--text-color);
+    transform: scale(1.1);
 }
 
 .cart-content {
@@ -2855,6 +2923,7 @@ h3:hover {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    backdrop-filter: blur(3px); /* Легкий ефект розмиття фону */
 }
 
 .confirm-modal.active {
@@ -2864,45 +2933,50 @@ h3:hover {
 .confirm-modal-content {
     background: var(--card-bg);
     padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     text-align: center;
     width: 90%;
-    max-width: 400px;
+    max-width: 450px;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Легкий контур для елегантності */
+    background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%); /* Градієнтний фон */
 }
 
 .confirm-btn,
 .cancel-btn {
-    padding: 10px 20px;
+    padding: 12px 25px;
     margin: 10px;
     border: none;
-    border-radius: 20px;
+    border-radius: 25px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all var(--transition-speed) ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .confirm-btn {
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid #c6c6c6;
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .confirm-btn:hover {
-    background: var(--border-color);
-    color: var(--text-color);
-    border: 1px solid #c6c6c6;
+    background: linear-gradient(90deg, #f87171 0%, #ef4444 100%);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3);
 }
 
 .cancel-btn {
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid #c6c6c6;
+    background: linear-gradient(90deg, #6b7280 0%, #4b5563 100%);
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .cancel-btn:hover {
-    background: var(--border-color);
-    color: var(--text-color);
-    border: 1px solid #c6c6c6;
+    background: linear-gradient(90deg, #9ca3af 0%, #6b7280 100%);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(107, 114, 128, 0.3);
 }
 
 @media (max-width: 600px) {
@@ -3606,8 +3680,7 @@ h3:hover {
     }
 
     .cart-item .remove-btn {
-        font-size: 12px;
-        padding: 5px 10px;
+        padding: 4px;
     }
 
     .cart-total {
@@ -4184,9 +4257,8 @@ h3:hover {
         font-size: 16px;
     }
 
-    .cart-item .remove-btn {
-        font-size: 13px;
-        padding: 5px 10px;
+.cart-item .remove-btn {
+        padding: 5px;
     }
 
     .cart-total {
@@ -4514,14 +4586,11 @@ h3:hover {
     .product .price-container {
         height: 60px;
     }
-    .product .price {
+.product .price {
         font-size: 22px;
     }
     .product .price .regular-price {
         font-size: 22px;
-    }
-    .product .price.on-sale .regular-price {
-        font-size: 16px;
     }
     .product .price .sale-price {
         font-size: 22px;
@@ -4606,10 +4675,10 @@ h3:hover {
         font-size: 18px;
     }
 
-    .cart-item .remove-btn {
-        font-size: 14px;
-        padding: 6px 12px;
+.cart-item .remove-btn {
+        padding: 6px;
     }
+}
 
     .cart-total {
         font-size: 20px;
@@ -4767,14 +4836,11 @@ h3:hover {
     .product .price-container {
         height: 60px;
     }
-    .product .price {
+.product .price {
         font-size: 22px;
     }
     .product .price .regular-price {
         font-size: 22px;
-    }
-    .product .price.on-sale .regular-price {
-        font-size: 16px;
     }
     .product .price .sale-price {
         font-size: 22px;

@@ -3266,12 +3266,14 @@ async function renderCart() {
         qtyDiv.appendChild(plusBtn);
         itemDiv.appendChild(qtyDiv);
 
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-btn';
-        removeBtn.setAttribute('aria-label', 'Видалити товар');
-        removeBtn.textContent = 'Видалити';
-        removeBtn.onclick = () => promptRemoveFromCart(index);
-        itemDiv.appendChild(removeBtn);
+	const removeBtn = document.createElement('button');
+	removeBtn.className = 'remove-btn rm-btn-del';
+	removeBtn.setAttribute('aria-label', 'Видалити товар');
+	const iconSpan = document.createElement('span');
+	iconSpan.className = 'rm-btn-icon';
+	removeBtn.appendChild(iconSpan);
+	removeBtn.onclick = () => promptRemoveFromCart(index);
+	itemDiv.appendChild(removeBtn);
 
         if (product?.salePrice && new Date(product.saleEnd) > new Date()) {
             const timerDiv = document.createElement('div');
