@@ -3286,7 +3286,7 @@ async function renderCart() {
 
     const totalP = document.createElement('p');
     totalP.className = 'cart-total';
-    totalP.textContent = `Загалом: ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)} грн`;
+    totalP.textContent = `Разом: ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)} грн`;
     cartContent.appendChild(totalP);
 
     const h3 = document.createElement('h3');

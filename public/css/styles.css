@@ -182,7 +182,7 @@ header.scrolled {
 .cart:hover {
     background: var(--border-color);
     /* transform: translateY(-2px); */
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .cart::before {
@@ -1682,8 +1682,8 @@ h3:hover {
 }
 
 .thumbnail:hover {
-    border: 2px solid var(--primary-color);
-    transform: scale(1.1);
+    border: 1px solid var(--primary-color);
+    transform: scale(1.0);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1800,7 +1800,7 @@ h3:hover {
 .burger-icon:hover {
     background: var(--border-color);
     /* transform: translateY(-2px); */
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .burger-icon span {
@@ -1891,7 +1891,7 @@ h3:hover {
 .burger-content .cart:hover {
     background: var(--border-color);
     /* transform: translateY(-2px); */
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .burger-content .cart::before {
@@ -2333,7 +2333,6 @@ h3:hover {
     margin: 10px;
     position: relative;
     cursor: pointer;
-    border: 2px solid transparent;
     background-size: cover;
     background-position: center;
     transition: border var(--transition-speed) ease, transform var(--transition-speed) ease;
@@ -2421,7 +2420,7 @@ h3:hover {
     position: relative;
     width: 85%;
     max-width: 800px;
-    max-height: 80vh;
+    max-height: 85vh;
     background: var(--card-bg);
     padding: 20px;
     border-radius: 12px;
@@ -2431,12 +2430,12 @@ h3:hover {
 }
 
 .gallery-modal-content:hover {
-    transform: scale(1.01);
+    transform: scale(1.00);
 }
 
 .gallery-image {
     width: 100%;
-    max-height: 60vh;
+    max-height: 70vh;
     height: auto;
     aspect-ratio: 4 / 3 !important;
     object-fit: cover !important;
@@ -2484,11 +2483,11 @@ h3:hover {
 }
 
 .gallery-prev {
-    left: 15px;
+    left: 20px;
 }
 
 .gallery-next {
-    right: 15px;
+    right: 20px;
 }
 
 .gallery-prev:hover,
