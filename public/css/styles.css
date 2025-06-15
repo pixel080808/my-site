@@ -1460,7 +1460,7 @@ h3:hover {
     height: 48px;
     cursor: pointer;
     transition: all var(--transition-speed) ease;
-    background: linear-gradient(135deg, #10b981 0%, #34d399 100%); /* Чистий зелений градієнт */
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
     position: absolute;
     bottom: 15px;
     right: 15px;
@@ -4678,7 +4678,6 @@ s {
 .cart-item .remove-btn {
         padding: 6px;
     }
-}
 
     .cart-total {
         font-size: 20px;
@@ -5484,14 +5483,27 @@ s {
         color: var(--text-color);
     }
 
-.product .cart-icon {
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
-        background-size: contain;
+    .product .cart-icon,
+    .product .price.on-sale .cart-icon {
+        background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     }
-
-    .product .cart-icon:hover:not(.added) {
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2360A5FA" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
-        background-size: contain;
+    .product .cart-icon::before,
+    .product .price.on-sale .cart-icon::before {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
+    }
+    .product .cart-icon:hover,
+    .product .price.on-sale .cart-icon:hover {
+        background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+        box-shadow: 0 8px 20px rgba(4, 120, 87, 0.4);
+    }
+    .product .cart-icon.added,
+    .product .price.on-sale .cart-icon.added {
+        background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    }
+    .product .cart-icon.added::before,
+    .product .price.on-sale .cart-icon.added::before {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>') no-repeat center;
     }
 
     .quantity-selector input[type="number"] {
