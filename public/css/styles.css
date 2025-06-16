@@ -1665,7 +1665,7 @@ s {
 .product-detail-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 0px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -3599,7 +3599,7 @@ s {
     }
 
     .product-detail-right {
-        padding: 15px;
+        padding: 1px;
         width: 100%;
     }
 
@@ -4178,7 +4178,7 @@ s {
     }
 
     .product-detail-right {
-        padding: 15px;
+        padding: 1px;
         width: 100%;
     }
 
@@ -4615,7 +4615,7 @@ s {
     }
 
     .product-detail-right {
-        padding: 20px;
+        padding: 1px;
     }
 
     #product-details .product-detail-right h2 {
