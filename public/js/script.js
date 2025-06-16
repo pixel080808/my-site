@@ -937,6 +937,7 @@ function showSection(sectionId) {
     const burgerMenu = document.getElementById('burger-menu');
     const burgerContent = document.getElementById('burger-content');
     const filters = document.querySelector('.filters');
+    const floatingCart = document.getElementById('floating-cart');
 
     if (filters && window.innerWidth < 992) {
         filters.classList.remove('active');
@@ -946,18 +947,44 @@ function showSection(sectionId) {
         section.classList.add('active');
         section.style.display = 'block';
 
-        if (sectionId === 'catalog') {
-            burgerMenu.style.display = 'block';
-        } else {
-            burgerMenu.style.display = 'none';
-            burgerMenu.classList.remove('visible');
+        // Керуємо видимістю плаваючих елементів
+        if (burgerMenu && floatingCart) {
+            const header = document.querySelector('header');
+            const headerHeight = header ? header.offsetHeight : 0;
+            // Оновлюємо видимість одразу
+            if (window.scrollY > headerHeight) {
+                burgerMenu.classList.add('visible');
+                floatingCart.classList.add('visible');
+            } else {
+                burgerMenu.classList.remove('visible');
+                floatingCart.classList.remove('visible');
+            }
+            // Додаємо обробник прокрутки для синхронізації
+            const handleScroll = () => {
+                if (window.scrollY > headerHeight) {
+                    burgerMenu.classList.add('visible');
+                    floatingCart.classList.add('visible');
+                } else {
+                    burgerMenu.classList.remove('visible');
+                    floatingCart.classList.remove('visible');
+                    burgerMenu.classList.remove('active');
+                    burgerContent.classList.remove('active');
+                }
+            };
+            // Видаляємо попередні обробники, щоб уникнути дублювання
+            window.removeEventListener('scroll', window.scrollHandler);
+            window.scrollHandler = handleScroll;
+            window.addEventListener('scroll', handleScroll);
+        }
+
+        // Скидаємо активність бургер-меню при переході між секціями
+        if (burgerMenu && burgerContent) {
             burgerMenu.classList.remove('active');
-            if (burgerContent) burgerContent.classList.remove('active');
+            burgerContent.classList.remove('active');
         }
 
         let newPath = '/';
         const searchInput = document.getElementById('search');
-        // Не очищаємо поле пошуку
         if (searchInput && sectionId !== 'catalog') {
             searchInput.value = '';
         }
@@ -988,7 +1015,6 @@ function showSection(sectionId) {
                 newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}`;
                 renderCatalog(currentCategory, currentSubcategory, null);
             } else {
-                // Якщо немає категорії чи пошуку, перенаправляємо на home
                 showSection('home');
                 return;
             }
@@ -2088,7 +2114,7 @@ function createPaginationDiv() {
     return paginationDiv;
 }
 
-async function renderProductDetails() {
+function renderProductDetails() {
     const productDetails = document.getElementById('product-details');
     if (!productDetails || !currentProduct) {
         console.error('Product details element or currentProduct missing:', { productDetails, currentProduct });
@@ -2162,56 +2188,56 @@ async function renderProductDetails() {
         const priceDiv = document.createElement('div');
         priceDiv.className = 'price product-detail-price';
         priceDiv.id = `price-${product._id}`;
-if (product.type === 'mattresses' && product.sizes?.length > 0) {
-    const minPrice = Math.min(...product.sizes.map(s => s.price));
-    const regularSpan = document.createElement('span');
-    regularSpan.className = 'regular-price';
-    regularSpan.textContent = `${minPrice} грн`;
-    priceDiv.appendChild(regularSpan);
-    const sizeP = document.createElement('p');
-    sizeP.innerHTML = '<strong>Розміри:</strong> ';
-    const sizeSelect = document.createElement('select');
-    sizeSelect.id = `mattress-size-${product._id}`;
-    sizeSelect.className = 'custom-select';
-    sizeSelect.onchange = () => updateMattressPrice(product._id);
-    product.sizes.forEach(s => {
-        const option = document.createElement('option');
-        option.value = s.name;
-        option.setAttribute('data-price', s.price);
-        option.textContent = `${s.name} - ${s.price} грн`;
-        sizeSelect.appendChild(option);
-    });
-    sizeP.appendChild(sizeSelect);
-    rightDiv.appendChild(priceDiv);
-    rightDiv.appendChild(sizeP);
+        if (product.type === 'mattresses' && product.sizes?.length > 0) {
+            const minPrice = Math.min(...product.sizes.map(s => s.price));
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
+            const sizeP = document.createElement('p');
+            sizeP.innerHTML = '<strong>Розміри:</strong> ';
+            const sizeSelect = document.createElement('select');
+            sizeSelect.id = `mattress-size-${product._id}`;
+            sizeSelect.className = 'custom-select';
+            sizeSelect.onchange = () => updateMattressPrice(product._id);
+            product.sizes.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.name;
+                option.setAttribute('data-price', s.price);
+                option.textContent = `${s.name} - ${s.price} грн`;
+                sizeSelect.appendChild(option);
+            });
+            sizeP.appendChild(sizeSelect);
+            rightDiv.appendChild(priceDiv);
+            rightDiv.appendChild(sizeP);
 
-    if (!selectedMattressSizes[product._id] && product.sizes.length > 0) {
-        selectedMattressSizes[product._id] = product.sizes[0].name;
-        sizeSelect.value = product.sizes[0].name;
-        saveToStorage('selectedMattressSizes', selectedMattressSizes);
-        updateMattressPrice(product._id);
-    }
+            if (!selectedMattressSizes[product._id] && product.sizes.length > 0) {
+                selectedMattressSizes[product._id] = product.sizes[0].name;
+                sizeSelect.value = product.sizes[0].name;
+                saveToStorage('selectedMattressSizes', selectedMattressSizes);
+                updateMattressPrice(product._id);
+            }
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
             const groupPriceDiv = document.createElement('div');
             groupPriceDiv.className = 'group-total-price';
             groupPriceDiv.textContent = `Загальна ціна: 0 грн`;
             rightDiv.appendChild(groupPriceDiv);
         } else {
-if (isOnSale) {
-    const regularSpan = document.createElement('s');
-    regularSpan.className = 'regular-price';
-    regularSpan.textContent = `${product.price} грн`;
-    priceDiv.appendChild(regularSpan);
-    const saleSpan = document.createElement('span');
-    saleSpan.className = 'sale-price';
-    saleSpan.textContent = `${initialPrice} грн`;
-    priceDiv.appendChild(saleSpan);
-} else {
-    const regularSpan = document.createElement('span');
-    regularSpan.className = 'regular-price';
-    regularSpan.textContent = `${initialPrice} грн`;
-    priceDiv.appendChild(regularSpan);
-}
+            if (isOnSale) {
+                const regularSpan = document.createElement('s');
+                regularSpan.className = 'regular-price';
+                regularSpan.textContent = `${product.price} грн`;
+                priceDiv.appendChild(regularSpan);
+                const saleSpan = document.createElement('span');
+                saleSpan.className = 'sale-price';
+                saleSpan.textContent = `${initialPrice} грн`;
+                priceDiv.appendChild(saleSpan);
+            } else {
+                const regularSpan = document.createElement('span');
+                regularSpan.className = 'regular-price';
+                regularSpan.textContent = `${initialPrice} грн`;
+                priceDiv.appendChild(regularSpan);
+            }
             rightDiv.appendChild(priceDiv);
             if (isOnSale) {
                 const timerDiv = document.createElement('div');
@@ -2314,7 +2340,7 @@ if (isOnSale) {
             h3.textContent = 'Складові товари';
             groupDiv.appendChild(h3);
 
-            const savedSelection = loadFromStorage(`groupSelection_${product._id}`, []);
+            const savedSelection = loadFromStorage(`groupSelection_${product._id}`, {});
             product.groupProducts.forEach(id => {
                 const p = products.find(p => p._id === id);
                 if (!p) {
@@ -2322,101 +2348,105 @@ if (isOnSale) {
                     return;
                 }
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'group-product-item';
+                itemDiv.className = 'group-product-item product'; // Додаємо клас product для стилів каталогу
 
-                const label = document.createElement('label');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = p._id;
-                checkbox.checked = savedSelection.includes(p._id);
-                checkbox.onchange = () => updateGroupSelection(product._id);
-                label.appendChild(checkbox);
-
+                const imgLink = document.createElement('a');
+                imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
+                imgLink.onclick = (e) => {
+                    e.preventDefault();
+                    parentGroupProduct = product;
+                    saveToStorage('parentGroupProduct', parentGroupProduct);
+                    currentProduct = p;
+                    showSection('product-details');
+                };
                 const img = document.createElement('img');
                 img.src = p.photos?.[0] || NO_IMAGE_URL;
                 img.alt = p.name;
-                img.onclick = () => {
+                img.loading = 'lazy';
+                imgLink.appendChild(img);
+                itemDiv.appendChild(imgLink);
+
+                const h3Link = document.createElement('a');
+                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
+                h3Link.onclick = (e) => {
+                    e.preventDefault();
                     parentGroupProduct = product;
                     saveToStorage('parentGroupProduct', parentGroupProduct);
                     currentProduct = p;
                     showSection('product-details');
                 };
-                label.appendChild(img);
-
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'group-product-info';
-
-                const h4 = document.createElement('h4');
-                h4.textContent = p.name;
-                h4.onclick = () => {
-                    parentGroupProduct = product;
-                    saveToStorage('parentGroupProduct', parentGroupProduct);
-                    currentProduct = p;
-                    showSection('product-details');
-                };
-                infoDiv.appendChild(h4);
+                const h3 = document.createElement('h3');
+                h3.textContent = p.name;
+                h3Link.appendChild(h3);
+                itemDiv.appendChild(h3Link);
 
                 const priceDiv = document.createElement('div');
                 priceDiv.className = 'price';
                 const isOnSaleP = p.salePrice && new Date(p.saleEnd) > new Date();
-if (isOnSaleP) {
-    const regularSpan = document.createElement('s');
-    regularSpan.className = 'regular-price';
-    regularSpan.textContent = `${p.price} грн`;
-    priceDiv.appendChild(regularSpan);
-    const saleSpan = document.createElement('span');
-    saleSpan.className = 'sale-price';
-    saleSpan.textContent = `${p.salePrice} грн`;
-    priceDiv.appendChild(saleSpan);
-} else {
-    const regularSpan = document.createElement('span');
-    regularSpan.className = 'regular-price';
-    regularSpan.textContent = `${p.price} грн`;
-    priceDiv.appendChild(regularSpan);
-}
-                infoDiv.appendChild(priceDiv);
-
-                const dimensions = [];
-                if (p.widthCm) dimensions.push({ label: 'шир.', value: `${p.widthCm} см` });
-                if (p.depthCm) dimensions.push({ label: 'гл.', value: `${p.depthCm} см` });
-                if (p.heightCm) dimensions.push({ label: 'вис.', value: `${p.heightCm} см` });
-                if (p.lengthCm) dimensions.push({ label: 'дов.', value: `${p.lengthCm} см` });
-                if (dimensions.length > 0) {
-                    const dimensionsDiv = document.createElement('div');
-                    dimensionsDiv.className = 'dimensions';
-                    dimensionsDiv.textContent = 'Розміри: ';
-                    dimensions.forEach((dim, index) => {
-                        const dimensionItem = document.createElement('span');
-                        dimensionItem.className = 'dimension-item';
-                        const labelSpan = document.createElement('span');
-                        labelSpan.className = 'label';
-                        labelSpan.textContent = dim.label;
-                        const valueSpan = document.createElement('span');
-                        valueSpan.className = 'value';
-                        valueSpan.textContent = dim.value;
-                        dimensionItem.appendChild(labelSpan);
-                        dimensionItem.appendChild(valueSpan);
-                        dimensionsDiv.appendChild(dimensionItem);
-                        if (index < dimensions.length - 1) {
-                            dimensionsDiv.appendChild(document.createTextNode(', '));
-                        }
-                    });
-                    infoDiv.appendChild(dimensionsDiv);
+                if (isOnSaleP) {
+                    const regularSpan = document.createElement('s');
+                    regularSpan.className = 'regular-price';
+                    regularSpan.textContent = `${p.price} грн`;
+                    priceDiv.appendChild(regularSpan);
+                    const saleSpan = document.createElement('span');
+                    saleSpan.className = 'sale-price';
+                    saleSpan.textContent = `${p.salePrice} грн`;
+                    priceDiv.appendChild(saleSpan);
+                } else {
+                    const regularSpan = document.createElement('span');
+                    regularSpan.className = 'regular-price';
+                    regularSpan.textContent = `${p.price} грн`;
+                    priceDiv.appendChild(regularSpan);
                 }
+                itemDiv.appendChild(priceDiv);
 
-                label.appendChild(infoDiv);
-                itemDiv.appendChild(label);
+                // Додаємо селектор кількості
+                const qtyDiv = document.createElement('div');
+                qtyDiv.className = 'quantity-selector';
+                const minusBtn = document.createElement('button');
+                minusBtn.className = 'quantity-btn';
+                minusBtn.setAttribute('aria-label', 'Зменшити кількість');
+                minusBtn.textContent = '-';
+                minusBtn.onclick = () => changeGroupQuantity(product._id, p._id, -1);
+                qtyDiv.appendChild(minusBtn);
+
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'number';
+                qtyInput.id = `group-quantity-${product._id}-${p._id}`;
+                qtyInput.min = '0';
+                qtyInput.value = savedSelection[p._id] || '0';
+                qtyInput.readOnly = true;
+                qtyDiv.appendChild(qtyInput);
+
+                const plusBtn = document.createElement('button');
+                plusBtn.className = 'quantity-btn';
+                plusBtn.setAttribute('aria-label', 'Збільшити кількість');
+                plusBtn.textContent = '+';
+                plusBtn.onclick = () => changeGroupQuantity(product._id, p._id, 1);
+                qtyDiv.appendChild(plusBtn);
+                itemDiv.appendChild(qtyDiv);
+
                 groupDiv.appendChild(itemDiv);
             });
 
-            const groupBtn = document.createElement('button');
-            groupBtn.className = 'buy-btn';
-            groupBtn.textContent = 'Додати в кошик';
-            groupBtn.onclick = () => addGroupToCart(product._id);
-            groupDiv.appendChild(groupBtn);
             container.appendChild(groupDiv);
 
-            updateGroupSelection(product._id);
+            // Додаємо плаваючу кнопку і ціну
+            const floatingContainer = document.createElement('div');
+            floatingContainer.className = 'floating-group-cart';
+            const floatingPrice = document.createElement('span');
+            floatingPrice.className = 'floating-group-price';
+            floatingPrice.textContent = 'Загальна ціна: 0 грн';
+            floatingContainer.appendChild(floatingPrice);
+
+            const floatingBtn = document.createElement('button');
+            floatingBtn.className = 'floating-group-buy-btn';
+            floatingBtn.textContent = 'Додати в кошик';
+            floatingBtn.onclick = () => addGroupToCart(product._id);
+            floatingContainer.appendChild(floatingBtn);
+            container.appendChild(floatingContainer);
+
+            updateGroupSelectionWithQuantity(product._id);
         }
 
         if (product.description && product.description.trim() !== '') {
@@ -2446,6 +2476,51 @@ if (isOnSaleP) {
         showNotification('Помилка при відображенні товару!', 'error');
         showSection('home');
     }
+}
+
+function changeGroupQuantity(groupProductId, productId, change) {
+    const qtyInput = document.getElementById(`group-quantity-${groupProductId}-${productId}`);
+    if (qtyInput) {
+        let qty = parseInt(qtyInput.value) + change;
+        if (qty < 0) qty = 0;
+        qtyInput.value = qty;
+        updateGroupSelectionWithQuantity(groupProductId);
+    }
+}
+
+function updateGroupSelectionWithQuantity(productId) {
+    const product = products.find(p => p._id === productId);
+    if (!product || product.type !== 'group') return;
+
+    let totalPrice = 0;
+    const selectedItems = {};
+
+    product.groupProducts.forEach(id => {
+        const qtyInput = document.getElementById(`group-quantity-${productId}-${id}`);
+        if (qtyInput) {
+            const quantity = parseInt(qtyInput.value) || 0;
+            if (quantity > 0) {
+                const p = products.find(p => p._id === id);
+                if (p) {
+                    const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
+                    totalPrice += price * quantity;
+                    selectedItems[id] = quantity;
+                }
+            }
+        }
+    });
+
+    const priceDiv = document.querySelector('.group-total-price');
+    if (priceDiv) {
+        priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
+    }
+
+    const floatingPrice = document.querySelector('.floating-group-price');
+    if (floatingPrice) {
+        floatingPrice.textContent = `Загальна ціна: ${totalPrice} грн`;
+    }
+
+    saveToStorage(`groupSelection_${productId}`, selectedItems);
 }
 
 function createCharP(label, value) {
@@ -2823,28 +2898,32 @@ async function addToCartWithColor(productId) {
 async function addGroupToCart(productId) {
     const product = products.find(p => p._id === productId);
     if (!product || product.type !== 'group') return;
-    const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]:checked`);
-    if (checkboxes.length === 0) {
+    
+    const selectedItems = loadFromStorage(`groupSelection_${productId}`, {});
+    const selectedCount = Object.values(selectedItems).reduce((sum, qty) => sum + qty, 0);
+    
+    if (selectedCount === 0) {
         showNotification('Будь ласка, виберіть хоча б один товар!', 'error');
         return;
     }
-    checkboxes.forEach(cb => {
-        const id = cb.value;
+
+    Object.entries(selectedItems).forEach(([id, quantity]) => {
         const p = products.find(p => p._id === id);
-        if (p) {
+        if (p && quantity > 0) {
             const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
             const cartItem = {
                 id: p.id,
                 name: p.name,
                 price,
-                quantity: 1,
+                quantity,
                 photo: p.photos?.[0] || NO_IMAGE_URL
             };
             const existingItemIndex = cart.findIndex(item => item.id === cartItem.id && item.name === cartItem.name);
-            if (existingItemIndex > -1) cart[existingItemIndex].quantity += 1;
+            if (existingItemIndex > -1) cart[existingItemIndex].quantity += quantity;
             else cart.push(cartItem);
         }
     });
+
     saveToStorage('cart', cart);
     await saveCartToServer();
     updateCartCount();
@@ -4257,8 +4336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             window.addEventListener('scroll', () => {
                 const headerHeight = header.offsetHeight;
-                const activeSection = document.querySelector('.section.active')?.id;
-                if (activeSection === 'catalog' && window.scrollY > headerHeight) {
+                if (window.scrollY > headerHeight) {
                     burgerMenu.classList.add('visible');
                     floatingCart.classList.add('visible');
                 } else {
@@ -4340,62 +4418,62 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Елементи бургер-меню не знайдено');
         }
 
-window.addEventListener('popstate', (event) => {
-        console.log('Подія popstate:', location.pathname, 'state:', event.state);
-        if (event.state) {
-            const {
-                sectionId,
-                path,
-                currentPage: statePage,
-                currentCategory: stateCategory,
-                currentSubcategory: stateSubcategory,
-                isSearchActive: stateIsSearchActive,
-                searchQuery: stateSearchQuery
-            } = event.state;
+        window.addEventListener('popstate', (event) => {
+            console.log('Подія popstate:', location.pathname, 'state:', event.state);
+            if (event.state) {
+                const {
+                    sectionId,
+                    path,
+                    currentPage: statePage,
+                    currentCategory: stateCategory,
+                    currentSubcategory: stateSubcategory,
+                    isSearchActive: stateIsSearchActive,
+                    searchQuery: stateSearchQuery
+                } = event.state;
 
-            currentPage = statePage || 1;
-            currentCategory = stateCategory || null;
-            currentSubcategory = stateSubcategory || null;
-            isSearchActive = stateIsSearchActive || false;
-            searchQuery = stateSearchQuery || '';
+                currentPage = statePage || 1;
+                currentCategory = stateCategory || null;
+                currentSubcategory = stateSubcategory || null;
+                isSearchActive = stateIsSearchActive || false;
+                searchQuery = stateSearchQuery || '';
 
-            const productGrid = document.querySelector('.product-grid');
-            if (productGrid) {
-                while (productGrid.firstChild) productGrid.removeChild(productGrid.firstChild);
-            }
-
-            if (sectionId === 'catalog' && isSearchActive && searchQuery) {
-                currentProduct = null;
-                searchProducts(searchQuery); // Відновлюємо пошук
-                showSection('catalog');
-            } else if (sectionId === 'catalog' && !isSearchActive) {
-                currentProduct = null;
-                renderCatalog(currentCategory, currentSubcategory, null, null);
-                showSection('catalog');
-            } else if (sectionId === 'product-details') {
-                const productSlug = location.pathname.split('/').pop();
-                const product = products.find(p => p.slug === productSlug);
-                if (product) {
-                    currentProduct = product;
-                    currentCategory = product.category;
-                    currentSubcategory = product.subcategory || null;
-                    showSection('product-details');
-                } else {
-                    showSection('home');
+                const productGrid = document.querySelector('.product-grid');
+                if (productGrid) {
+                    while (productGrid.firstChild) productGrid.removeChild(productGrid.firstChild);
                 }
-            } else {
-                currentProduct = null;
-                showSection(sectionId);
-            }
 
-            saveToStorage('currentCategory', currentCategory);
-            saveToStorage('currentSubcategory', currentSubcategory);
-            saveToStorage('lastCatalogState', event.state);
-        } else {
-            const path = location.pathname.slice(1) || '';
-            handleNavigation(path, true);
-        }
-    });
+                if (sectionId === 'catalog' && isSearchActive && searchQuery) {
+                    currentProduct = null;
+                    searchProducts(searchQuery); // Відновлюємо пошук
+                    showSection('catalog');
+                } else if (sectionId === 'catalog' && !isSearchActive) {
+                    currentProduct = null;
+                    renderCatalog(currentCategory, currentSubcategory, null, null);
+                    showSection('catalog');
+                } else if (sectionId === 'product-details') {
+                    const productSlug = location.pathname.split('/').pop();
+                    const product = products.find(p => p.slug === productSlug);
+                    if (product) {
+                        currentProduct = product;
+                        currentCategory = product.category;
+                        currentSubcategory = product.subcategory || null;
+                        showSection('product-details');
+                    } else {
+                        showSection('home');
+                    }
+                } else {
+                    currentProduct = null;
+                    showSection(sectionId);
+                }
+
+                saveToStorage('currentCategory', currentCategory);
+                saveToStorage('currentSubcategory', currentSubcategory);
+                saveToStorage('lastCatalogState', event.state);
+            } else {
+                const path = location.pathname.slice(1) || '';
+                handleNavigation(path, true);
+            }
+        });
         const path = window.location.pathname.slice(1) || '';
         console.log('Обробка початкового шляху:', path);
         await handleNavigation(path, false);
@@ -4432,9 +4510,8 @@ window.addEventListener('popstate', (event) => {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
-                const activeSection = document.querySelector('.section.active')?.id;
                 const headerHeight = document.querySelector('header').offsetHeight;
-                if (activeSection === 'catalog' && window.scrollY > headerHeight) {
+                if (window.scrollY > headerHeight) {
                     burgerMenu.classList.add('visible');
                     floatingCart.classList.add('visible');
                 }
