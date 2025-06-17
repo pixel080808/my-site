@@ -835,7 +835,7 @@ h3:hover {
     color: var(--text-color);
     font-weight: 500;
     line-height: 1.4;
-    height: 54px;
+    height: 34px;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -948,6 +948,48 @@ h3:hover {
 .floating-group-buy-btn:hover {
     background: #059669;
     box-shadow: 0 5px 12px rgba(5,150,105,0.3);
+}
+
+.dimensions {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dimension-values {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    align-items: baseline;
+}
+
+.dimension-values .value {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.dimension-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2px;
+}
+
+.dimension-label {
+    font-size: 12px;
+    color: #444;
+    flex: 1;
+    text-align: center;
+}
+
+.dimension-item,
+.dimension-cross,
+.dimension-labels .label,
+.dimension-values .value + .value::before {
+    display: none;
 }
 
 .products {
@@ -1837,7 +1879,7 @@ s {
     padding: 0px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 0px;
     background: transparent;
     align-items: flex-start;
     margin-left: 10;
@@ -1845,7 +1887,7 @@ s {
 
 .product-detail-top {
     display: flex;
-    gap: 30px;
+    gap: 20px;
     width: 100%;
     align-items: flex-start;
     justify-content: flex-start;
@@ -1976,8 +2018,30 @@ s {
     margin: 0 0 5px 0;
     line-height: 1.6;
     text-align: left;
+    display: block;
+}
+
+.product-characteristics,
+.dimensions {
+    font-size: 15px;
+    color: var(--text-color);
+    margin: 10px 0;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 0px;
+}
+
+.product-characteristics p,
+.dimensions p {
+    margin: 0 0 5px 0;
+    line-height: 1.6;
+}
+
+.product-characteristics p strong,
+.dimensions p strong {
+    display: inline-block;
+    min-width: 100px;
+    color: #333;
 }
 
 .rm-btn-del {
@@ -2600,32 +2664,27 @@ s {
 }
 
 .product-characteristics {
-    margin: 0;
-    padding: 15px 0;
-    border-radius: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+    margin: 0 0 15px 0;
+    margin-top: 15px;
+    line-height: 1.6;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .product-characteristics p {
     margin: 0;
-    padding: 5px 0;
-    line-height: 1.6;
-    color: var(--text-color);
-    border-bottom: 1px dashed rgba(226, 232, 240, 0.5);
     display: flex;
     align-items: center;
-    padding-left: 10px;
 }
 
-.product-characteristics p:last-child {
-    border-bottom: none;
-}
-
-.product-characteristics p:hover {
-    color: var(--secondary-color);
-}
-
-.product-characteristics p span::after {
-    content: " ";
+.product-characteristics p strong {
+    min-width: 80px;
+    display: inline-block;
+    font-weight: 700;
 }
 
 .gallery-modal {
@@ -2649,11 +2708,11 @@ s {
 
 .gallery-modal-content {
     position: relative;
-    width: 85%;
+    width: 100%;
     max-width: 800px;
     max-height: 85vh;
     background: var(--card-bg);
-    padding: 20px;
+    padding: 4px;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
@@ -2714,11 +2773,11 @@ s {
 }
 
 .gallery-prev {
-    left: 20px;
+    left: 5px;
 }
 
 .gallery-next {
-    right: 20px;
+    right: 5px;
 }
 
 .gallery-prev:hover,
@@ -3751,6 +3810,16 @@ s {
         max-width: 100%;
     }
 
+.product-characteristics,
+.dimensions {
+    font-size: 14px;
+    color: var(--text-color);
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
     .main-product-image {
         max-width: 100%;
         height: auto;
@@ -4337,6 +4406,16 @@ s {
         min-width: 100%;
         max-width: 100%;
     }
+
+.product-characteristics,
+.dimensions {
+    font-size: 14px;
+    color: var(--text-color);
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
 
     .main-product-image {
         max-width: 500px;
@@ -5687,6 +5766,20 @@ s {
     .product .price.on-sale .cart-icon.added::before {
         background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23E2E8F0" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>') no-repeat center;
     }
+
+.product-characteristics p strong,
+.dimensions p strong {
+    display: inline-block;
+    min-width: 100px;
+    color: #f9f9f9;
+}
+
+.dimension-label {
+    font-size: 12px;
+    color: #e2e8f0;
+    flex: 1;
+    text-align: center;
+}
 
     .quantity-selector input[type="number"] {
         background: var(--input-bg);

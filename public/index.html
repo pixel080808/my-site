@@ -120,27 +120,38 @@
 .group-product-item .group-product-info .dimensions {
     font-size: 14px;
     margin-top: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 15px;
 }
 
-.group-product-item .group-product-info .dimensions span {
-    margin: 0 5px;
+.group-product-item .group-product-info .dimensions .dimension-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
-.group-product-item .group-product-info .dimensions .dimension-item,
-.product-characteristics .dimension-item {
-    display: inline-block;
-    margin-right: 5px; 
-}
-
-.group-product-item .group-product-info .dimensions .dimension-item .label,
-.product-characteristics .dimension-item .label {
+.group-product-item .group-product-info .dimensions .dimension-item .label {
     font-weight: bold;
-    margin-right: 2px; 
+    min-width: 60px;
+    margin-bottom: 2px;
 }
 
-.group-product-item .group-product-info .dimensions .dimension-item .value,
-.product-characteristics .dimension-item .value {
-    margin-right: 2px; 
+.group-product-item .group-product-info .dimensions .dimension-item .value {
+    margin-right: 0;
+}
+
+.group-product-item .group-product-info .dimensions .values {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.group-product-item .group-product-info .dimensions .values .value + .value::before {
+    content: "×";
+    margin: 0 5px;
 }
 
 .sale-timer {
@@ -268,7 +279,7 @@
     border-radius: 25px;
     padding: 12px 20px; 
     font-weight: 500;
-    font-size: 16px; 
+    font-size: 14px; 
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
