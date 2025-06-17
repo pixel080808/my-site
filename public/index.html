@@ -476,24 +476,23 @@
         </div>
     </div>
 <!-- Бургер-меню -->
-    <div class="burger-menu" id="burger-menu">
-        <div class="burger-icon" id="burger-icon">
-            <span></span>
-            <span></span>
-            <span></span>
+<div class="burger-menu" id="burger-menu">
+    <div class="burger-icon" id="burger-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <div class="burger-content" id="burger-content">
+        <div class="burger-search">
+            <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
+            <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
         </div>
-<div class="burger-content" id="burger-content">
-    <div class="burger-search">
-        <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
-        <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
+        <a href="#" onclick="showSection('home'); return false;">Головна</a>
+        <div class="burger-catalog">
+            <a href="#" id="burger-catalog-toggle">Каталог</a>
+            <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
+        </div>
     </div>
-    <a href="#" onclick="showSection('home'); return false;">Головна</a>
-    <div class="burger-catalog">
-        <a href="#" id="burger-catalog-toggle">Каталог</a>
-        <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
-    </div>
-    <a href="#" onclick="showSection('contacts'); return false;">Контакти</a>
-    <a href="#" onclick="showSection('about'); return false;">Про нас</a>
 </div>
     </div>
 <!-- Плаваючий кошик -->

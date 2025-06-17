@@ -783,7 +783,7 @@ h3:hover {
 
 .group-products {
     width: 100%;
-    margin-top: 40px;
+    margin-top: 0px;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
@@ -797,7 +797,7 @@ h3:hover {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 15px;
+    padding: 1px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -809,7 +809,7 @@ h3:hover {
 }
 
 .group-products .group-product-item:hover {
-    transform: translateY(-5px);
+    transform: translateY(0px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
@@ -822,10 +822,6 @@ h3:hover {
     border-radius: 10px;
     margin-bottom: 10px;
     transition: transform var(--transition-speed) ease;
-}
-
-.group-products .group-product-item img:hover {
-    transform: scale(1.02);
 }
 
 .group-products .group-product-item h3 {
@@ -867,8 +863,8 @@ h3:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 10px;
-    gap: 10px;
+    margin-top: 0px;
+    gap: 0px;
 }
 
 .group-products .group-product-item .quantity-btn {
@@ -924,6 +920,15 @@ h3:hover {
     transition: transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
     max-width: calc(100% - 40px); /* Обмежуємо ширину, щоб уникнути горизонтальної прокрутки */
     box-sizing: border-box;
+    opacity: 0; /* Приховуємо за замовчуванням */
+    transform: translateY(20px); /* Зміщення вниз для анімації */
+    pointer-events: none; /* Уникаємо взаємодії, коли кнопка прихована */
+}
+
+.floating-group-cart.visible {
+    opacity: 1; /* Показуємо при додаванні класу visible */
+    transform: translateY(0); /* Повертаємо на місце */
+    pointer-events: auto; /* Дозволяємо взаємодію */
 }
 
 .floating-group-price {
@@ -2144,7 +2149,7 @@ s {
     min-width: 280px;
     max-width: 90vw;
     height: 70vh;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     z-index: 1002;
     transition: transform 0.4s ease, opacity 0.4s ease;
@@ -2161,7 +2166,7 @@ s {
 
 .burger-content a {
     display: block;
-    padding: 10px 15px;
+    padding: 10px 1px;
     color: var(--text-color);
     text-decoration: none;
     font-size: 15px;
@@ -2373,6 +2378,57 @@ s {
     background: var(--border-color);
     color: var(--primary-color);
     transform: translateX(-2px);
+}
+
+.burger-contact-info {
+    margin: 1px 0;
+    padding: 15px 1px;
+    border-top: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.burger-contact-info p {
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.burger-contact-info strong {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.burger-socials {
+    margin: 1px 0;
+    padding: 1px 1px;
+}
+
+.burger-socials h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.burger-social-link {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+    border-radius: 6px;
+    margin: 4px 0;
+}
+
+.burger-social-link:hover {
+    background: var(--border-color);
+    color: var(--primary-color);
+    transform: translateX(-3px);
 }
 
 .quantity-selector {
@@ -3286,7 +3342,7 @@ s {
 
 .group-products {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 5px;
     }
     .group-products .group-product-item {
         width: calc(100% - 5px);
@@ -3320,10 +3376,10 @@ s {
     .burger-content {
         top: 60px;
         right: 10px;
-        min-width: 200px;
+        min-width: 250px;
         max-width: 80vw;
         height: 60vh;
-        max-height: 350px;
+        max-height: 450px;
     }
 
     .burger-catalog-dropdown {
@@ -4015,7 +4071,7 @@ s {
 
 .group-products {
         grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
+        gap: 10px;
     }
     .group-products .group-product-item {
         width: calc(100% - 4px);
@@ -4581,7 +4637,7 @@ s {
 
 .group-products {
         grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
+        gap: 10px;
     }
     .group-products .group-product-item {
         width: calc(100% - 4px);
@@ -5075,7 +5131,7 @@ s {
 
 .group-products {
         grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
+        gap: 10px;
     }
     .group-products .group-product-item {
         width: calc(100% - 8px);
@@ -5561,6 +5617,29 @@ s {
 
     .burger-search input:focus {
         border-color: #60A5FA;
+    }
+
+    .burger-contact-info {
+        border-top: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+
+    .burger-contact-info strong {
+        color: var(--primary-color);
+    }
+
+    .burger-socials h3 {
+        color: var(--text-color);
+    }
+
+    .burger-social-link {
+        color: var(--text-color);
+        background: var(--card-bg);
+    }
+
+    .burger-social-link:hover {
+        background: var(--button-background);
+        color: var(--primary-color);
     }
 
     .group-total-price {
