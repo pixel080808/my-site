@@ -2666,12 +2666,12 @@ function updateGroupSelectionWithQuantity(productId) {
 
     const priceDiv = document.querySelector('.group-total-price');
     if (priceDiv) {
-        priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
+        priceDiv.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">${totalPrice} грн</span>`;
     }
 
     const floatingPrice = document.querySelector('.floating-group-price');
     if (floatingPrice) {
-        floatingPrice.textContent = `Загальна ціна: ${totalPrice} грн`;
+        floatingPrice.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">${totalPrice} грн</span>`;
     }
 
     saveToStorage(`groupSelection_${productId}`, selectedItems);

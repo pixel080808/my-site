@@ -783,11 +783,11 @@ h3:hover {
 
 .group-products {
     width: 100%;
-    margin-top: 40px; /* Збільшено для відступу від тексту */
+    margin-top: 40px;
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* За замовчуванням 2 товари для малих екранів */
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-    padding: 0;
+    padding: 0 0 80px 0;
     box-sizing: border-box;
 }
 
@@ -830,12 +830,12 @@ h3:hover {
 
 .group-products .group-product-item h3 {
     font-size: 18px;
-    margin: 10px 0;
+    margin: 0px 0;
     text-align: center;
     color: var(--text-color);
     font-weight: 500;
     line-height: 1.4;
-    height: 34px;
+    height: 54px;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -845,7 +845,7 @@ h3:hover {
 
 .group-products .group-product-item .price {
     font-size: 18px;
-    margin-bottom: 10px;
+    margin-bottom: 0px;
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
@@ -922,6 +922,8 @@ h3:hover {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transition: transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
+    max-width: calc(100% - 40px); /* Обмежуємо ширину, щоб уникнути горизонтальної прокрутки */
+    box-sizing: border-box;
 }
 
 .floating-group-price {
@@ -2639,7 +2641,7 @@ s {
 
 .color-circle.selected {
     border-color: var(--secondary-color);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 8px rgb(59 130 246);
 }
 
 .color-circle span {
@@ -2711,8 +2713,8 @@ s {
     width: 100%;
     max-width: 800px;
     max-height: 85vh;
-    background: var(--card-bg);
-    padding: 4px;
+    /* background: var(--card-bg); */
+    padding: 1px;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
@@ -2762,7 +2764,7 @@ s {
     height: 50px;
     background: rgba(0, 0, 0, 0.5);
     color: white;
-    font-size: 24px;
+    font-size: 23px;
     line-height: 50px;
     text-align: center;
     cursor: pointer;
@@ -2770,14 +2772,15 @@ s {
     margin-top: -25px;
     border: none;
     box-shadow: none;
+    border-radius: 50%;
 }
 
 .gallery-prev {
-    left: 5px;
+    left: 2px;
 }
 
 .gallery-next {
-    right: 5px;
+    right: 2px;
 }
 
 .gallery-prev:hover,
