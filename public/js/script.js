@@ -4705,31 +4705,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        const filters = document.querySelector('.filters');
-        const backBtn = document.querySelector('.filters .back-btn');
+const filters = document.querySelector('.filters');
+const backBtn = document.querySelector('.filters .back-btn');
 
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                if (filters) filters.classList.remove('active');
-                const headerHeight = document.querySelector('header').offsetHeight;
-                if (window.scrollY > headerHeight) {
-                    burgerMenu.classList.add('visible');
-                    floatingCart.classList.add('visible');
-                }
-            });
+if (backBtn) {
+    backBtn.addEventListener('click', () => {
+        if (filters) filters.classList.remove('active');
+        toggleBodyScroll(false); // Розблоковуємо прокрутку body
+        const headerHeight = document.querySelector('header').offsetHeight;
+        if (window.scrollY > headerHeight) {
+            burgerMenu.classList.add('visible');
+            floatingCart.classList.add('visible');
         }
+    });
+}
 
-        const filterToggle = document.querySelector('#catalog .container .filter-toggle');
-        if (filterToggle) {
-            filterToggle.addEventListener('click', () => {
-                filters.classList.add('active');
-                burgerMenu.classList.remove('active');
-                burgerMenu.classList.remove('visible');
-                burgerContent.classList.remove('active');
-                burgerCatalogDropdown.classList.remove('active');
-                floatingCart.classList.remove('visible');
-            });
+// Функція для блокування/розблокування прокрутки body
+const toggleBodyScroll = (lock) => {
+    document.body.classList.toggle('no-scroll', lock);
+};
+
+const filterToggle = document.querySelector('#catalog .container .filter-toggle');
+if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+        filters.classList.add('active');
+        toggleBodyScroll(true); // Блокуємо прокрутку body
+        burgerMenu.classList.remove('active');
+        burgerMenu.classList.remove('visible');
+        burgerContent.classList.remove('active');
+        burgerCatalogDropdown.classList.remove('active');
+        floatingCart.classList.remove('visible');
+    });
+}
+const filterScroll = document.querySelector('.filter-scroll');
+if (filterScroll) {
+    filterScroll.addEventListener('wheel', (e) => {
+        const scrollHeight = filterScroll.scrollHeight;
+        const clientHeight = filterScroll.clientHeight;
+        const scrollTop = filterScroll.scrollTop;
+
+        // Якщо є вміст для прокрутки
+        if (scrollHeight > clientHeight) {
+            // Запобігаємо прокрутці вгору, якщо вже на початку
+            if (e.deltaY < 0 && scrollTop === 0) {
+                e.preventDefault();
+            }
+            // Запобігаємо прокрутці вниз, якщо вже в кінці
+            else if (e.deltaY > 0 && scrollTop >= scrollHeight - clientHeight - 1) {
+                e.preventDefault();
+            }
         }
+    }, { passive: false }); // Вимикаємо пасивну обробку для preventDefault
+}
+
 
         if (!localStorage.getItem('products')) {
             const initialProducts = [
