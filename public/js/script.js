@@ -4756,15 +4756,27 @@ if (filterScroll) {
             }
         }
     }, { passive: false }); // Вимикаємо пасивну обробку для preventDefault
+
+    filterScroll.addEventListener('touchmove', (e) => {
+        const scrollHeight = filterScroll.scrollHeight;
+        const clientHeight = filterScroll.clientHeight;
+        const scrollTop = filterScroll.scrollTop;
+
+        if (scrollHeight > clientHeight) {
+            if ((e.touches[0].clientY > e.targetTouches[0].clientY && scrollTop === 0) ||
+                (e.touches[0].clientY < e.targetTouches[0].clientY && scrollTop >= scrollHeight - clientHeight - 1)) {
+                e.preventDefault();
+            }
+        }
+    }, { passive: false });
 }
 
-
-        if (!localStorage.getItem('products')) {
-            const initialProducts = [
-                { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
-            ];
-            saveToStorage('products', initialProducts);
-        }
+if (!localStorage.getItem('products')) {
+    const initialProducts = [
+        { id: 1, name: "Стіл дерев'яний", price: "5000", image: "https://picsum.photos/200/200" },
+    ];
+    saveToStorage('products', initialProducts);
+}
 
         console.log('Програма ініціалізована успішно');
     } catch (error) {
