@@ -1396,7 +1396,7 @@ h3:hover {
     }
 
     .filter-scroll {
-        max-height: calc(100vh - 190px); /* Висота мінус кнопка, відступи та padding-top */
+        max-height: calc(100vh - 190px);
         overflow-y: auto;
     }
 }
@@ -3616,7 +3616,7 @@ s {
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: calc(100vh - 55px);
+        height: calc(100vh - 60px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
@@ -3658,7 +3658,7 @@ s {
         width: 100%;
         max-width: 220px;
         padding: 10px 20px;
-        margin: 10px 0;
+        margin: 0px 0;
         border: 1px solid var(--border-color);
         border-radius: 20px;
         font-size: 14px;
@@ -4368,7 +4368,7 @@ s {
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: calc(100vh - 55px);
+        height: calc(100vh - 60px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
@@ -4410,7 +4410,7 @@ s {
         width: 100%;
         max-width: 220px;
         padding: 10px 20px;
-        margin: 10px 0;
+        margin: 0px 0;
         border: 1px solid var(--border-color);
         border-radius: 20px;
         font-size: 14px;
