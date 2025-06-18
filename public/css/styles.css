@@ -1352,7 +1352,7 @@ h3:hover {
 }
 
 @media (max-width: 920px) {
-.fixed-controls {
+    .fixed-controls {
         display: none;
     }
 
@@ -1361,7 +1361,7 @@ h3:hover {
     }
 
     .filter-toggle {
-        display: block; /* Змінено з none на block, щоб кнопка фільтрів відображалася */
+        display: block;
     }
 
     .filters {
@@ -1372,17 +1372,32 @@ h3:hover {
         top: 0;
         left: 0;
         background: #f9f9f9;
-        height: auto;
-        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
+        height: calc(100vh - 60px);
         z-index: 1001;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         box-sizing: border-box;
-        overflow-y: auto;
+        padding-top: 60px;
+        padding-bottom: 70px; /* Місце для .back-btn */
     }
 
     .filters.active {
         transform: translateX(0);
+    }
+
+    .filters .back-btn {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 30px);
+        max-width: 220px;
+        margin: 0;
+    }
+
+    .filter-scroll {
+        max-height: calc(100vh - 190px); /* Висота мінус кнопка, відступи та padding-top */
+        overflow-y: auto;
     }
 }
 
@@ -3594,21 +3609,20 @@ s {
     }
 
 .filters {
-        width: 280px;
+        width: 240px;
         padding: 10px 15px;
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: auto;
-        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
+        height: calc(100vh - 55px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
         box-sizing: border-box;
-        overflow-y: auto;
         padding-top: 60px;
+        padding-bottom: 70px;
     }
 
     .filters.active {
@@ -3616,8 +3630,23 @@ s {
         z-index: 1005;
     }
 
+    .filters .back-btn {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 30px);
+        max-width: 220px;
+        margin: 0;
+    }
+
+    .filter-scroll {
+        max-height: calc(100vh - 129px); /* Висота мінус кнопка, відступи та padding-top */
+        overflow-y: auto;
+    }
+
     .filters {
-        padding-top: 60px;
+        padding-top: 10px;
     }
 
     .breadcrumbs {
@@ -3650,7 +3679,6 @@ s {
     }
 
     .filters .back-btn:active {
-        transform: translateY(0);
         box-shadow: 0 2px 6px var(--shadow-color);
     }
 
@@ -4333,21 +4361,20 @@ s {
     }
 
 .filters {
-        width: 280px;
+        width: 240px;
         padding: 10px 15px;
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: auto;
-        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
+        height: calc(100vh - 55px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
         box-sizing: border-box;
-        overflow-y: auto;
         padding-top: 60px;
+        padding-bottom: 70px;
     }
 
     .filters.active {
@@ -4355,8 +4382,23 @@ s {
         z-index: 1005;
     }
 
+    .filters .back-btn {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 30px);
+        max-width: 220px;
+        margin: 0;
+    }
+
+    .filter-scroll {
+        max-height: calc(100vh - 129px);
+        overflow-y: auto;
+    }
+
     .filters {
-        padding-top: 60px;
+        padding-top: 10px;
     }
 
     .breadcrumbs {
@@ -4384,12 +4426,10 @@ s {
     .filters .back-btn:hover {
      background: var(--border-color);
      color: var(--text-color);
-       /* transform: translateY(-2px); */
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
     .filters .back-btn:active {
-        transform: translateY(0);
         box-shadow: 0 2px 6px var(--shadow-color);
     }
 
