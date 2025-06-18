@@ -3624,9 +3624,10 @@ async function renderCart() {
     totalP.textContent = `Разом: ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)} грн`;
     cartContent.appendChild(totalP);
 
-    const h3 = document.createElement('h3');
-    h3.textContent = 'Оформити замовлення';
-    cartContent.appendChild(h3);
+const h3 = document.createElement('h3');
+h3.textContent = 'Оформити замовлення';
+h3.className = 'cart-heading'; // Додаємо клас
+cartContent.appendChild(h3);
 
     const form = document.createElement('div');
     form.id = 'order-form';
@@ -4059,6 +4060,12 @@ function renderContacts() {
     while (contactInfo.firstChild) contactInfo.removeChild(contactInfo.firstChild);
     while (socials.firstChild) socials.removeChild(socials.firstChild);
 
+    // Додаємо заголовок "Контакти"
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Контакти';
+    h2.className = 'section-heading';
+    contactInfo.appendChild(h2);
+
     contactInfo.appendChild(createCharP('Телефони', settings.contacts?.phones || 'Немає даних'));
     contactInfo.appendChild(createCharP('Адреси', settings.contacts?.addresses || 'Немає даних'));
     contactInfo.appendChild(createCharP('Графік роботи', settings.contacts?.schedule || 'Немає даних'));
@@ -4066,6 +4073,7 @@ function renderContacts() {
     if (settings.showSocials && settings.socials?.length > 0) {
         const h3 = document.createElement('h3');
         h3.textContent = 'Ми в соціальних мережах';
+        h3.className = 'contacts-heading';
         socials.appendChild(h3);
         settings.socials.forEach(s => {
             const a = document.createElement('a');

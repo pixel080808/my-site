@@ -433,16 +433,26 @@ h2 {
     padding-bottom: 5px;
 }
 
+/* Базові стилі для всіх h3 */
 h3 {
     font-size: 23px;
     color: var(--text-color);
     margin: 15px 0;
     font-weight: 600;
-    text-align: center;
     text-transform: none;
     letter-spacing: 1.5px;
     padding-bottom: 10px;
     transition: color var(--transition-speed) ease;
+}
+
+/* Стилі для h3 на сторінці кошика */
+h3.cart-heading {
+    text-align: center;
+}
+
+/* Стилі для h3 на сторінці контактів */
+h3.contacts-heading {
+    text-align: left;
 }
 
 h3:hover {
@@ -688,9 +698,9 @@ h3:hover {
 }
 
 .filters {
-    width: 300px;
-    padding: var(--base-padding) calc(var(--base-padding) + 20px);
-    background: var(--card-bg);
+    width: 250px;
+    padding: 20px;
+    background-color: #ffffff;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     transition: box-shadow var(--transition-speed) ease;
@@ -699,6 +709,8 @@ h3:hover {
     margin-left: 0;
     display: block;
     flex-shrink: 0;
+    min-height: 0;
+    box-sizing: border-box;
 }
 
 .filters:hover {
@@ -1340,7 +1352,7 @@ h3:hover {
 }
 
 @media (max-width: 920px) {
-    .fixed-controls {
+.fixed-controls {
         display: none;
     }
 
@@ -1349,22 +1361,24 @@ h3:hover {
     }
 
     .filter-toggle {
-        display: none;
+        display: block; /* Змінено з none на block, щоб кнопка фільтрів відображалася */
     }
 
     .filters {
-        width: 100vw;
+        width: 280px;
         padding: 10px 15px;
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         background: #f9f9f9;
-        height: 100%;
+        height: auto;
+        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
         z-index: 1001;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         box-sizing: border-box;
+        overflow-y: auto;
     }
 
     .filters.active {
@@ -2393,6 +2407,7 @@ s {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    margin-bottom: 0px;
 }
 
 .burger-contact-info strong {
@@ -2410,6 +2425,7 @@ s {
     font-weight: 600;
     color: var(--text-color);
     margin-bottom: 10px;
+    padding: 0px
 }
 
 .burger-social-link {
@@ -3376,10 +3392,10 @@ s {
     .burger-content {
         top: 60px;
         right: 10px;
-        min-width: 250px;
+        min-width: 230px;
         max-width: 80vw;
         height: 60vh;
-        max-height: 450px;
+        max-height: 500px;
     }
 
     .burger-catalog-dropdown {
@@ -3577,19 +3593,22 @@ s {
         background: var(--secondary-color);
     }
 
-    .filters {
-        width: 100vw;
+.filters {
+        width: 280px;
         padding: 10px 15px;
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: 100%;
+        height: auto;
+        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
         box-sizing: border-box;
+        overflow-y: auto;
+        padding-top: 60px;
     }
 
     .filters.active {
@@ -3782,7 +3801,7 @@ s {
 
     .sort-dropdown button {
         padding: 8px 10px;
-        font-size: 15px;
+        font-size: 14px;
         font-family: 'Inter', 'Roboto', Arial, sans-serif;
         font-weight: 500;
     }
@@ -4314,24 +4333,27 @@ s {
     }
 
 .filters {
-    width: 100vw;
-    padding: 10px 15px;
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: var(--card-bg);
-    height: 100%;
-    z-index: 1005;
-    transform: translateX(-100%);
-    transition: transform var(--transition-speed) ease;
-    box-sizing: border-box;
-}
+        width: 280px;
+        padding: 10px 15px;
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background: var(--card-bg);
+        height: auto;
+        max-height: calc(100vh - 60px); /* Додано для обмеження висоти */
+        z-index: 1005;
+        transform: translateX(-100%);
+        transition: transform var(--transition-speed) ease;
+        box-sizing: border-box;
+        overflow-y: auto;
+        padding-top: 60px;
+    }
 
-.filters.active {
-    transform: translateX(0);
-    z-index: 1005;
-}
+    .filters.active {
+        transform: translateX(0);
+        z-index: 1005;
+    }
 
     .filters {
         padding-top: 60px;
@@ -4733,14 +4755,15 @@ s {
         padding: 0 var(--base-padding);
     }
 
-    .filters {
-        width: 300px;
+.filters {
+        width: 250px;
         padding: var(--base-padding) calc(var(--base-padding) + 20px);
         display: block;
         position: sticky;
         top: 0;
         align-self: flex-start;
-        height: 100vh;
+        height: auto;
+        max-height: 100vh; /* Додано для обмеження висоти */
         overflow-y: auto;
     }
 
@@ -5126,7 +5149,7 @@ s {
     }
 
     .filters {
-        width: 300px;
+        width: 250px;
     }
 
 .group-products {
@@ -5449,7 +5472,7 @@ s {
         background: var(--background);
     }
 
-    .filters {
+.filters {
         background: #1a202c !important;
         border-color: var(--border-color);
         box-shadow: 0 4px 15px var(--shadow-color);
