@@ -2726,17 +2726,32 @@ async function saveEditedCategory(categoryId) {
         }
 
         const updatedCategoryData = await response.json();
-        console.log('Отримано оновлені дані категорії:', updatedCategoryData);
+        console.log('Отримано оновлені дані категорії:', JSON.stringify(updatedCategoryData, null, 2));
+
+        // Перевіряємо, чи містять оновлені дані правильні значення
+        if (updatedCategoryData._id !== categoryId || updatedCategoryData.name !== name || updatedCategoryData.slug !== slug) {
+            console.error('Оновлені дані не відповідають надісланим:', updatedCategoryData);
+            showNotification('Помилка синхронізації даних категорії.');
+            return;
+        }
 
         const index = categories.findIndex(c => c._id === categoryId);
         if (index !== -1) {
-            categories[index] = updatedCategoryData;
+            categories[index] = { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] };
+        } else {
+            console.error('Категорія не знайдена в локальному масиві:', categoryId);
+            showNotification('Помилка оновлення локального стану.');
+            return;
         }
 
-        closeModal();
-        renderCategoriesAdmin();
-        showNotification('Категорію оновлено!');
-        resetInactivityTimer();
+        // Затримка для уникнення конфліктів із WebSocket
+        setTimeout(() => {
+            closeModal();
+            renderCategoriesAdmin();
+            showNotification('Категорію оновлено!');
+            resetInactivityTimer();
+        }, 100);
+
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
         showNotification('Не вдалося оновити категорію: ' + (err.message || 'Невідома помилка'));
@@ -3311,17 +3326,33 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         const updatedCategory = await response.json();
-        console.log('Отримано оновлені дані категорії:', updatedCategory);
+        console.log('Отримано оновлені дані категорії:', JSON.stringify(updatedCategory, null, 2));
+
+        // Перевіряємо, чи оновлена підкатегорія містить правильні дані
+        const updatedSubcat = updatedCategory.subcategories.find(s => s._id === subcategoryId);
+        if (!updatedSubcat || updatedSubcat.name !== name || updatedSubcat.slug !== slug || updatedSubcat.photo !== (photo || subcategory.photo || '')) {
+            console.error('Оновлені дані підкатегорії не відповідають надісланим:', updatedSubcat);
+            showNotification('Помилка синхронізації даних підкатегорії.');
+            return;
+        }
 
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
-            categories[catIndex] = updatedCategory;
+            categories[catIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
+        } else {
+            console.error('Категорія не знайдена в локальному масиві:', categoryId);
+            showNotification('Помилка оновлення локального стану.');
+            return;
         }
 
-        closeModal();
-        renderCategoriesAdmin();
-        showNotification('Підкатегорію оновлено!');
-        resetInactivityTimer();
+        // Затримка для уникнення конфліктів із WebSocket
+        setTimeout(() => {
+            closeModal();
+            renderCategoriesAdmin();
+            showNotification('Підкатегорію оновлено!');
+            resetInactivityTimer();
+        }, 100);
+
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
         showNotification('Не вдалося оновити підкатегорію: ' + (err.message || 'Невідома помилка'));
