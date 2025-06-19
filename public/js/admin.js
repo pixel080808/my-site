@@ -2760,14 +2760,14 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Збільшуємо затримку для уникнення конфліктів із WebSocket
-        setTimeout(() => {
-            closeModal();
-            renderCategoriesAdmin();
-            showNotification('Категорію оновлено!');
-            resetInactivityTimer();
-            isUpdatingCategories = false; // Скидаємо флаг після завершення
-        }, 500);
+setTimeout(() => {
+    closeModal();
+    renderCategoriesAdmin();
+    showNotification('Категорію оновлено!');
+    loadCategories(); // Додаємо виклик для синхронізації з сервером
+    resetInactivityTimer();
+    isUpdatingCategories = false; // Скидаємо флаг після завершення
+}, 500);
 
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
@@ -3357,14 +3357,14 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        // Збільшуємо затримку для уникнення конфліктів із WebSocket
-        setTimeout(() => {
-            closeModal();
-            renderCategoriesAdmin();
-            showNotification('Підкатегорію оновлено!');
-            resetInactivityTimer();
-            isUpdatingCategories = false; // Скидаємо флаг після завершення
-        }, 500);
+setTimeout(() => {
+    closeModal();
+    renderCategoriesAdmin();
+    showNotification('Підкатегорію оновлено!');
+    loadCategories(); // Додаємо виклик для синхронізації з сервером
+    resetInactivityTimer();
+    isUpdatingCategories = false; // Скидаємо флаг після завершення
+}, 500);
 
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
@@ -6493,21 +6493,32 @@ function handleCategoriesUpdate(data) {
     data.forEach(newCat => {
         const existingCat = categories.find(c => c._id === newCat._id);
         if (existingCat && new Date(existingCat.updatedAt) >= new Date(newCat.updatedAt)) {
-            console.log(`Ігноруємо WebSocket-оновлення для категорії ${newCat._id}, локальні дані новіші`);
+            console.log(`Ігноруємо WebSocket-оновлення для категорії ${newCat._id}, локальні дані новіші`, {
+                localUpdatedAt: existingCat.updatedAt,
+                wsUpdatedAt: newCat.updatedAt
+            });
             return;
         }
         const index = categories.findIndex(c => c._id === newCat._id);
+        if (!newCat._id || !isValidId(newCat._id)) {
+            console.error(`Некоректний ID категорії у WebSocket-оновленні: ${newCat._id}`);
+            return;
+        }
+        const validatedSubcategories = (newCat.subcategories || []).filter(sub => 
+            sub._id && isValidId(sub._id) && sub.name && sub.slug
+        );
         if (index !== -1) {
             categories[index] = {
                 ...newCat,
-                subcategories: (newCat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
+                subcategories: validatedSubcategories
             };
         } else {
             categories.push({
                 ...newCat,
-                subcategories: (newCat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
+                subcategories: validatedSubcategories
             });
         }
+        console.log(`Оновлено категорію ${newCat._id}:`, categories[index] || categories[categories.length - 1]);
     });
     console.log('Оновлено categories:', categories);
     localStorage.removeItem('products');
@@ -6593,7 +6604,7 @@ socket.onmessage = (event) => {
             console.log('Оновлено settings:', settings);
             renderSettingsAdmin();
         } else if (type === 'products' && Array.isArray(data)) {
-            if (isLoadingProducts) { // Виправлено: Ladders -> isLoadingProducts
+            if (isLoadingProducts) {
                 console.log('Завантаження товарів через loadProducts ще триває, ігноруємо WebSocket-оновлення для products');
                 return;
             }
