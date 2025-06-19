@@ -1498,18 +1498,16 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                     sub.photo = sub.img;
                     delete sub.img;
                 }
-                return sub;
+                if (sub._id && mongoose.Types.ObjectId.isValid(sub._id)) {
+                    return sub;
+                }
+                const { _id, ...rest } = sub;
+                return rest;
             });
         }
 
         delete categoryData._id;
         delete categoryData.__v;
-        if (categoryData.subcategories) {
-            categoryData.subcategories = categoryData.subcategories.map(sub => {
-                const { _id, ...rest } = sub;
-                return rest;
-            });
-        }
 
         const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
         if (error) {
@@ -1579,6 +1577,10 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        // Зберігаємо старі значення для порівняння
+        const oldSlug = category.slug;
+        const oldSubcategories = category.subcategories.map(sub => ({ _id: sub._id, slug: sub.slug }));
+
         category.name = categoryData.name || category.name;
         category.slug = categoryData.slug || category.slug;
         category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;
@@ -1587,6 +1589,31 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         category.subcategories = subcategories.length > 0 ? subcategories : category.subcategories;
 
         await category.save({ session });
+
+        // Оновлюємо продукти, якщо slug категорії змінився
+        if (categoryData.slug && categoryData.slug !== oldSlug) {
+            await Product.updateMany(
+                { category: oldSlug },
+                { $set: { category: categoryData.slug } },
+                { session }
+            );
+            logger.info(`Оновлено category у продуктах: ${oldSlug} -> ${categoryData.slug}`);
+        }
+
+        // Оновлюємо продукти, якщо slug підкатегорій змінився
+        if (categoryData.subcategories) {
+            for (const sub of categoryData.subcategories) {
+                const existingSub = oldSubcategories.find(s => s._id && s._id.toString() === sub._id);
+                if (existingSub && sub.slug !== existingSub.slug) {
+                    await Product.updateMany(
+                        { subcategory: existingSub.slug },
+                        { $set: { subcategory: sub.slug } },
+                        { session }
+                    );
+                    logger.info(`Оновлено subcategory у продуктах: ${existingSub.slug} -> ${sub.slug}`);
+                }
+            }
+        }
 
         const categories = await Category.find().session(session);
         broadcast('categories', categories);

@@ -4695,8 +4695,9 @@ function updateSubcategories() {
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     
+    // Перевіряємо, чи це модальне вікно для редагування продукту
     if (!categorySelect || !subcategorySelect) {
-        console.warn('Елементи #product-category або #product-subcategory не знайдено в модальному вікні');
+        console.log('Це не модальне вікно для редагування продукту, пропускаємо оновлення підкатегорій');
         return;
     }
 
@@ -4719,7 +4720,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.slug; // Використовуємо slug замість name
+                option.value = sub.slug;
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -6478,16 +6479,36 @@ document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('keypress', resetInactivityTimer);
 
 function handleCategoriesUpdate(data) {
+    if (isUpdatingCategories) {
+        console.log('Ігноруємо WebSocket-оновлення для categories, оскільки триває локальне оновлення');
+        return;
+    }
     const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-    categories = data.filter(cat => isValidId(cat._id)).map(cat => ({
-        ...cat,
-        subcategories: (cat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
-    }));
+    data.forEach(newCat => {
+        const existingCat = categories.find(c => c._id === newCat._id);
+        if (existingCat && new Date(existingCat.updatedAt) >= new Date(newCat.updatedAt)) {
+            console.log(`Ігноруємо WebSocket-оновлення для категорії ${newCat._id}, локальні дані новіші`);
+            return;
+        }
+        const index = categories.findIndex(c => c._id === newCat._id);
+        if (index !== -1) {
+            categories[index] = {
+                ...newCat,
+                subcategories: (newCat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
+            };
+        } else {
+            categories.push({
+                ...newCat,
+                subcategories: (newCat.subcategories || []).filter(sub => isValidId(sub._id) && sub.name && sub.slug)
+            });
+        }
+    });
     console.log('Оновлено categories:', categories);
-    // Очищаємо локальний кеш для продуктів і категорій
     localStorage.removeItem('products');
     localStorage.removeItem('categories');
-    renderCategoriesAdmin();
+    if (document.querySelector('#categories.active')) {
+        renderCategoriesAdmin();
+    }
     const modal = document.getElementById('modal');
     if (modal && modal.classList.contains('active')) {
         updateSubcategories();
