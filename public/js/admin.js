@@ -2688,7 +2688,7 @@ async function saveEditedCategory(categoryId) {
                 }
             });
             if (!response.ok) {
-                const errorData =Ａ待 response.json();
+                const errorData = await response.json();
                 throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
             }
             const data = await response.json();
