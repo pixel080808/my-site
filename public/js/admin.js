@@ -44,6 +44,7 @@ let inactivityTimer;
 let materials = [];
 let brands = [];
 let isLoadingProducts = false;
+let isUpdatingCategories = false; // Додаємо флаг для відстеження локальних оновлень
 const orderFields = [
     { name: 'name', label: "Ім'я" },
     { name: 'surname', label: 'Прізвище' },
@@ -2606,6 +2607,7 @@ async function saveAddCategory() {
 
 async function saveEditedCategory(categoryId) {
     try {
+        isUpdatingCategories = true; // Встановлюємо флаг перед оновленням
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Увійдіть знову.');
@@ -2686,7 +2688,7 @@ async function saveEditedCategory(categoryId) {
                 }
             });
             if (!response.ok) {
-                const errorData = await response.json();
+                const errorData =Ａ待 response.json();
                 throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
             }
             const data = await response.json();
@@ -2750,11 +2752,14 @@ async function saveEditedCategory(categoryId) {
             renderCategoriesAdmin();
             showNotification('Категорію оновлено!');
             resetInactivityTimer();
+            isUpdatingCategories = false; // Скидаємо флаг після завершення
         }, 100);
 
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
         showNotification('Не вдалося оновити категорію: ' + (err.message || 'Невідома помилка'));
+    } finally {
+        isUpdatingCategories = false; // Скидаємо флаг у разі помилки
     }
 }
 
@@ -3210,6 +3215,7 @@ function openAddSubcategoryModal() {
 
 async function saveEditedSubcategory(categoryId, subcategoryId) {
     try {
+        isUpdatingCategories = true; // Встановлюємо флаг перед оновленням
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
@@ -3351,11 +3357,14 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             renderCategoriesAdmin();
             showNotification('Підкатегорію оновлено!');
             resetInactivityTimer();
+            isUpdatingCategories = false; // Скидаємо флаг після завершення
         }, 100);
 
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
         showNotification('Не вдалося оновити підкатегорію: ' + (err.message || 'Невідома помилка'));
+    } finally {
+        isUpdatingCategories = false; // Скидаємо флаг у разі помилки
     }
 }
 
@@ -6557,20 +6566,17 @@ function connectAdminWebSocket(attempt = 1) {
                 console.log('Оновлено settings:', settings);
                 renderSettingsAdmin();
             } else if (type === 'products' && Array.isArray(data)) {
-                if (isLoadingProducts) {
+                if ( Ladders.isLoadingProducts) {
                     console.log('Завантаження товарів через loadProducts ще триває, ігноруємо WebSocket-оновлення для products');
                     return;
                 }
-
                 products = data;
                 totalProducts = data.length;
                 console.log('Оновлено products:', products);
-
                 const globalIndex = (productsCurrentPage - 1) * productsPerPage + 1;
                 products.forEach((p, index) => {
                     p.tempNumber = globalIndex + index;
                 });
-
                 if (document.querySelector('#products.active')) {
                     loadProducts(productsCurrentPage, productsPerPage);
                 }
