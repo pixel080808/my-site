@@ -2442,14 +2442,19 @@ function openEditCategoryModal(categoryId) {
         return;
     }
 
+    // Екрануємо значення для безпечного відображення
+    const safeName = category.name ? category.name.replace(/"/g, '&quot;') : '';
+    const safeSlug = category.slug ? category.slug.replace(/"/g, '&quot;') : '';
+    const safePhoto = category.photo ? category.photo.replace(/"/g, '&quot;') : '';
+
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати категорію</h3>
-            <input type="text" id="category-name" value="${category.name || ''}"><br/>
+            <input type="text" id="category-name" value="${safeName}"><br/>
             <label for="category-name">Назва категорії</label>
-            <input type="text" id="category-slug" value="${category.slug || ''}"><br/>
+            <input type="text" id="category-slug" value="${safeSlug}"><br/>
             <label for="category-slug">Шлях категорії</label>
-            <input type="text" id="category-photo-url" value="${category.photo || ''}"><br/>
+            <input type="text" id="category-photo-url" value="${safePhoto}"><br/>
             <label for="category-photo-url">URL фотографії</label>
             <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
             <label for="category-photo-file">Завантажте фотографію</label>
@@ -2467,7 +2472,7 @@ function openEditCategoryModal(categoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
 
-    // Додаємо перевірку ініціалізації елементів
+    // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2481,6 +2486,10 @@ function openEditCategoryModal(categoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
+        // Примусово встановлюємо значення, якщо вони не відобразилися
+        if (nameInput && !nameInput.value) nameInput.value = category.name || '';
+        if (slugInput && !slugInput.value) slugInput.value = category.slug || '';
+        if (photoUrlInput && !photoUrlInput.value) photoUrlInput.value = category.photo || '';
     }, 0);
 
     resetInactivityTimer();
@@ -2627,18 +2636,24 @@ async function saveEditedCategory(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        if (!name || name === '') {
+        if (!name) {
             showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug === '') {
+        if (!slug) {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+            return;
+        }
+
+        const category = categories.find(c => c._id === categoryId);
+        if (!category) {
+            showNotification('Категорія не знайдена!');
             return;
         }
 
@@ -2676,12 +2691,6 @@ async function saveEditedCategory(categoryId) {
             }
             const data = await response.json();
             photo = data.url;
-        }
-
-        const category = categories.find(c => c._id === categoryId);
-        if (!category) {
-            showNotification('Категорія не знайдена!');
-            return;
         }
 
         const updatedCategory = {
@@ -3216,23 +3225,18 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
-        if (!name || name === '') {
+        if (!name) {
             showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
             return;
         }
 
-        if (!slug || slug === '') {
+        if (!slug) {
             showNotification('Шлях підкатегорії є обов’язковим!');
             return;
         }
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
-            return;
-        }
-
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
-            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
@@ -3250,6 +3254,11 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         if (category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
+            return;
+        }
+
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
@@ -3459,14 +3468,19 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
         return;
     }
 
+    // Екрануємо значення для безпечного відображення
+    const safeName = subcategory.name ? subcategory.name.replace(/"/g, '&quot;') : '';
+    const safeSlug = subcategory.slug ? subcategory.slug.replace(/"/g, '&quot;') : '';
+    const safePhoto = subcategory.photo ? subcategory.photo.replace(/"/g, '&quot;') : '';
+
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати підкатегорію</h3>
-            <input type="text" id="subcategory-name" value="${subcategory.name || ''}"><br/>
+            <input type="text" id="subcategory-name" value="${safeName}"><br/>
             <label for="subcategory-name">Назва підкатегорії</label>
-            <input type="text" id="subcategory-slug" value="${subcategory.slug || ''}"><br/>
+            <input type="text" id="subcategory-slug" value="${safeSlug}"><br/>
             <label for="subcategory-slug">Шлях підкатегорії</label>
-            <input type="text" id="subcategory-photo-url" value="${subcategory.photo || ''}"><br/>
+            <input type="text" id="subcategory-photo-url" value="${safePhoto}"><br/>
             <label for="subcategory-photo-url">URL фотографії</label>
             <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
             <label for="subcategory-photo-file">Завантажте фотографію</label>
@@ -3476,7 +3490,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
             </select><br/>
             <label for="subcategory-visible">Видимість</label>
             <div class="modal-actions">
-                <button onclick="saveEditedSubcategory('${categoryId}', '${subcategory._id}')">Зберегти</button>
+                <button onclick="saveEditedSubcategory('${categoryId}', '${subcategoryId}')">Зберегти</button>
                 <button onclick="closeModal()">Скасувати</button>
             </div>
         </div>
@@ -3484,7 +3498,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування підкатегорії відкрито:', { categoryId, subcategoryId });
 
-    // Додаємо перевірку ініціалізації елементів
+    // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3498,6 +3512,10 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
+        // Примусово встановлюємо значення, якщо вони не відобразилися
+        if (nameInput && !nameInput.value) nameInput.value = subcategory.name || '';
+        if (slugInput && !slugInput.value) slugInput.value = subcategory.slug || '';
+        if (photoUrlInput && !photoUrlInput.value) photoUrlInput.value = subcategory.photo || '';
     }, 0);
 
     resetInactivityTimer();

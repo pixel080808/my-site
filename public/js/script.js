@@ -2695,10 +2695,24 @@ function updateGroupSelectionWithQuantity(productId) {
 
 function createCharP(label, value) {
     const p = document.createElement('p');
-    const span = document.createElement('span');
-    span.style.whiteSpace = 'nowrap';
-    span.innerHTML = `<strong>${label}:</strong> ${value}`;
-    p.appendChild(span);
+    const strong = document.createElement('strong');
+    strong.textContent = `${label}:`;
+    p.appendChild(strong);
+
+    // Якщо це адреса, не розбиваємо на частини
+    const items = label === 'Адреси' 
+        ? [value.trim()] // Залишаємо як один рядок
+        : value.split(/[,;\n]+/).map(item => item.trim()).filter(item => item);
+
+    // Для кожного елемента створюємо окремий span
+    items.forEach(item => {
+        const span = document.createElement('span');
+        span.textContent = item;
+        span.style.display = 'block'; // Кожен елемент на новому рядку
+        span.style.marginLeft = '10px'; // Відступ для вирівнювання
+        p.appendChild(span);
+    });
+
     return p;
 }
 
