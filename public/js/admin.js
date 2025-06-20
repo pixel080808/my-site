@@ -286,7 +286,7 @@ async function fetchWithAuth(url, options = {}) {
                 credentials: 'include'
             });
             if (!csrfResponse.ok) {
-                throw new Error('Не вдалося отримати CSRF-токен');
+                throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
             }
             const csrfData = await csrfResponse.json();
             csrfToken = csrfData.csrfToken;
@@ -303,60 +303,70 @@ async function fetchWithAuth(url, options = {}) {
         ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
     };
 
-    const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-    });
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'include'
+        });
 
-    if (response.status === 401) {
-        const tokenRefreshed = await refreshToken();
-        if (tokenRefreshed) {
-            const newToken = localStorage.getItem('adminToken');
-            const newResponse = await fetch(url, {
-                ...options,
-                headers: {
-                    ...headers,
-                    'Authorization': `Bearer ${newToken}`,
-                    ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
-                },
-                credentials: 'include'
-            });
-            if (!newResponse.ok) {
-                const errorData = await newResponse.json().catch(() => ({}));
-                console.error('Помилка повторного запиту:', { url, status: newResponse.status, errorData });
-                const error = new Error(errorData.error || `HTTP error ${newResponse.status}`);
-                error.errorData = errorData;
-                throw error;
+        if (response.status === 401) {
+            const tokenRefreshed = await refreshToken();
+            if (tokenRefreshed) {
+                const newToken = localStorage.getItem('adminToken');
+                const newResponse = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...headers,
+                        'Authorization': `Bearer ${newToken}`,
+                        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
+                    },
+                    credentials: 'include'
+                });
+                if (!newResponse.ok) {
+                    const errorData = await newResponse.json().catch(() => ({}));
+                    console.error('Помилка повторного запиту:', { url, status: newResponse.status, errorData });
+                    const error = new Error(errorData.error || `HTTP error ${newResponse.status}`);
+                    error.errorData = errorData;
+                    throw error;
+                }
+                return newResponse;
             }
-            return newResponse;
-        }
-    } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` },
-                credentials: 'include'
-            });
-            if (csrfResponse.ok) {
-                const csrfData = await csrfResponse.json();
-                localStorage.setItem('csrfToken', csrfData.csrfToken);
-                return fetchWithAuth(url, options);
+        } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
+            try {
+                const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include'
+                });
+                if (csrfResponse.ok) {
+                    const csrfData = await csrfResponse.json();
+                    localStorage.setItem('csrfToken', csrfData.csrfToken);
+                    return fetchWithAuth(url, options);
+                }
+            } catch (err) {
+                console.error('Помилка повторного отримання CSRF-токена:', err);
             }
-        } catch (err) {
-            console.error('Помилка повторного отримання CSRF-токена:', err);
         }
-    }
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Помилка запиту:', { url, status: response.status, errorData });
-        const error = new Error(errorData.error || `HTTP error ${response.status}`);
-        error.errorData = errorData;
-        throw error;
-    }
+        if (!response.ok) {
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = { error: `HTTP error ${response.status}` };
+            }
+            console.error('Помилка запиту:', { url, status: response.status, errorData });
+            const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
+            error.errorData = errorData;
+            throw error;
+        }
 
-    return response;
+        return response;
+    } catch (err) {
+        console.error('Помилка виконання запиту:', err);
+        throw err;
+    }
 }
 
 async function updateSocials() {
@@ -2661,7 +2671,7 @@ async function saveEditedCategory(categoryId) {
                 photoFileInput: !!photoFileInput,
                 visibleSelect: !!visibleSelect
             });
-            showNotification('Елементи форми для реагування категорії не знайдено.');
+            showNotification('Елементи форми для редагування категорії не знайдено.');
             return;
         }
 
@@ -2671,7 +2681,7 @@ async function saveEditedCategory(categoryId) {
         let photo = photoUrlInput.value.trim();
 
         if (!name) {
-            showNotification('Назва категорії є обов’язковою і не може складатися лише з пробілів!');
+            showNotification('Назва категорії є обов’язковою!');
             return;
         }
 
@@ -2687,14 +2697,14 @@ async function saveEditedCategory(categoryId) {
 
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
-            showNotification('Категію не знайдено!');
+            showNotification('Категорію не знайдено!');
             return;
         }
 
         const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
         const existingCategories = await slugCheck.json();
         if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-            showNotification('Шлях до категорії має бути унікальним!');
+            showNotification('Шлях категорії має бути унікальним!');
             return;
         }
 
@@ -2714,15 +2724,8 @@ async function saveEditedCategory(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
-            }
             const data = await response.json();
             photo = data.url;
         }
@@ -2754,14 +2757,8 @@ async function saveEditedCategory(categoryId) {
             body: JSON.stringify(updatedCategory)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
-        }
-
-        // Перезавантажуємо категорії з сервера
-        const categoriesResponse = await fetchWithAuth('/api/categories');
-        categories = await categoriesResponse.json();
+        const updatedCategoryData = await response.json();
+        categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
@@ -2770,7 +2767,7 @@ async function saveEditedCategory(categoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
-        showNotification('Не вдалося оновити категорію: ' + err.message);
+        showNotification(`Не вдалося оновити категорію: ${err.message}`);
     } finally {
         isUpdatingCategories = false;
     }
@@ -3260,7 +3257,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         let photo = photoUrlInput.value.trim();
 
         if (!name) {
-            showNotification('Назва підкатегорії є обов’язковою і не може складатися лише з пробілів!');
+            showNotification('Назва підкатегорії є обов’язковою!');
             return;
         }
 
@@ -3307,15 +3304,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
-            }
             const data = await response.json();
             photo = data.url;
         }
@@ -3339,14 +3329,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             body: JSON.stringify(updatedSubcategory)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
-        }
-
-        // Перезавантажуємо категорії з сервера
-        const categoriesResponse = await fetchWithAuth('/api/categories');
-        categories = await categoriesResponse.json();
+        const updatedCategoryData = await response.json();
+        categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
@@ -3355,7 +3339,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
-        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
+        showNotification(`Не вдалося оновити підкатегорію: ${err.message}`);
     } finally {
         isUpdatingCategories = false;
     }
@@ -6477,8 +6461,8 @@ function handleCategoriesUpdate(data) {
         return;
     }
 
-    const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id); // Виправлено регулярний вираз і видалено зайву дужку
-    categories = data.map(newCat => ({
+    const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id);
+    categories = data.filter(cat => cat._id && isValidId(cat._id) && cat.name && cat.slug).map(newCat => ({
         ...newCat,
         subcategories: (newCat.subcategories || []).filter(sub => 
             sub._id && 
