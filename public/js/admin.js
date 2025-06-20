@@ -2706,7 +2706,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Формуємо updatedSubcategories перед перевіркою isUnchanged
+        // Формуємо updatedSubcategories
         const updatedSubcategories = (category.subcategories || []).map(sub => ({
             _id: sub._id || undefined,
             name: sub.name || '',
@@ -2726,7 +2726,7 @@ async function saveEditedCategory(categoryId) {
             normalizedNewPhoto === normalizedOldPhoto &&
             visible === category.visible &&
             !hasFile &&
-            JSON.stringify(category.subcategories || []) === JSON.stringify(updatedSubcategories || [])
+            JSON.stringify(updatedSubcategories.map(s => ({ ...s, _id: s._id || null }))) === JSON.stringify((category.subcategories || []).map(s => ({ ...s, _id: s._id || null })))
         );
 
         console.log('Порівняння даних:', {
@@ -2735,10 +2735,11 @@ async function saveEditedCategory(categoryId) {
             photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
             visible: { new: visible, old: category.visible },
             hasFile,
-            subcategories: { new: JSON.stringify(updatedSubcategories || []), old: JSON.stringify(category.subcategories || []) }
+            subcategories: { new: JSON.stringify(updatedSubcategories), old: JSON.stringify(category.subcategories || []) }
         });
 
         if (isUnchanged) {
+            console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, категорію не оновлено.');
             closeModal();
             return;
@@ -3190,7 +3191,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             slug === subcategory.slug &&
             normalizedNewPhoto === normalizedOldPhoto &&
             visible === subcategory.visible &&
-            !hasFile
+            !hasFile &&
+            subcategory.order === subcategory.order
         );
 
         console.log('Порівняння даних:', {
@@ -3198,10 +3200,10 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             slug: { new: slug, old: subcategory.slug },
             photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
             visible: { new: visible, old: subcategory.visible },
+            order: { new: subcategory.order, old: subcategory.order },
             hasFile
         });
 
-        // Додаємо логування для дебагінгу
         if (isUnchanged) {
             console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, підкатегорію не оновлено.');
