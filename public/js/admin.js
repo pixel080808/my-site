@@ -2696,7 +2696,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+            showNotification('Шлях категорії може містити лише малі літери, цифри та деilier);
             return;
         }
 
@@ -2711,10 +2711,18 @@ async function saveEditedCategory(categoryId) {
         const isUnchanged = (
             name === category.name &&
             slug === category.slug &&
-            photo === (category.photo || '') &&
+            (photo || '') === (category.photo || '') &&
             visible === category.visible &&
             !hasFile
         );
+
+        console.log('Порівняння даних:', {
+            name: { new: name, old: category.name },
+            slug: { new: slug, old: category.slug },
+            photo: { new: photo, old: category.photo || '' },
+            visible: { new: visible, old: category.visible },
+            hasFile
+        });
 
         if (isUnchanged) {
             showNotification('Зміни відсутні, категорію не оновлено.');
@@ -2788,7 +2796,7 @@ async function saveEditedCategory(categoryId) {
         const updatedCategory = {
             name,
             slug,
-            photo: photo || category.photo || '',
+            photo: photo || '',
             visible,
             order: category.order !== undefined ? category.order : 0,
             subcategories: updatedSubcategories
@@ -3173,10 +3181,18 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const isUnchanged = (
             name === subcategory.name &&
             slug === subcategory.slug &&
-            photo === (subcategory.photo || '') &&
+            (photo || '') === (subcategory.photo || '') &&
             visible === subcategory.visible &&
             !hasFile
         );
+
+        console.log('Порівняння даних:', {
+            name: { new: name, old: subcategory.name },
+            slug: { new: slug, old: subcategory.slug },
+            photo: { new: photo, old: subcategory.photo || '' },
+            visible: { new: visible, old: subcategory.visible },
+            hasFile
+        });
 
         if (isUnchanged) {
             showNotification('Зміни відсутні, підкатегорію не оновлено.');
@@ -3218,7 +3234,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || subcategory.photo || '',
+            photo: photo || '',
             visible,
             order: subcategory.order !== undefined ? subcategory.order : 0
         };
@@ -6244,7 +6260,6 @@ function handleCategoriesUpdate(data) {
         console.log('Ігноруємо WebSocket-оновлення для категорій, оскільки триває локальне оновлення');
         return;
     }
-
     const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id);
     categories = data.filter(cat => cat._id && isValidId(cat._id) && cat.name && cat.slug).map(newCat => ({
         ...newCat,
@@ -6257,11 +6272,8 @@ function handleCategoriesUpdate(data) {
             typeof sub.slug === 'string'
         )
     }));
-
     localStorage.setItem('categories', JSON.stringify(categories));
     console.log('Оновлено categories:', categories);
-    localStorage.removeItem('products');
-
     if (document.querySelector('#categories.active')) {
         renderCategoriesAdmin();
     }

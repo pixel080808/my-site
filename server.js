@@ -1546,7 +1546,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         const isUnchanged = (
             categoryData.name === category.name &&
             categoryData.slug === category.slug &&
-            (categoryData.photo || '') === (category.photo || '') &&
+            (categoryData.photo ?? '') === (category.photo ?? '') &&
             categoryData.visible === category.visible &&
             categoryData.order === category.order &&
             JSON.stringify(categoryData.subcategories) === JSON.stringify(category.subcategories)
@@ -1558,6 +1558,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(200).json({ message: 'Зміни відсутні', category });
         }
 
+        // Решта коду залишається без змін
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
             if (existingCategoryByName) {
@@ -1591,11 +1592,11 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 
         category.name = categoryData.name || category.name;
         category.slug = categoryData.slug || category.slug;
-        category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;
+        category.photo = categoryData.photo ?? category.photo;
         category.visible = categoryData.visible !== undefined ? categoryData.visible : category.visible;
         category.order = categoryData.order !== undefined ? categoryData.order : category.order;
         category.subcategories = categoryData.subcategories || category.subcategories;
-        category.updatedAt = new Date(); // Примусово оновлюємо updatedAt
+        category.updatedAt = new Date();
 
         await category.save({ session });
 
@@ -1624,13 +1625,13 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 
         const categories = await Category.find().session(session);
         broadcast('categories', categories);
-        logger.info(`Категория оновлена: ${req.params.id}`);
+        logger.info(`Категорія оновлена: ${req.params.id}`);
         await session.commitTransaction();
         res.json(category);
     } catch (err) {
         await session.abortTransaction();
-        logger.error('Помилка при оцінці категорії:', err);
-        res.status(400).json({ error: 'Не вдалось оновити категорію', details: err.message });
+        logger.error('Помилка при оновленні категорії:', err);
+        res.status(400).json({ error: 'Не вдалося оновити категорію', details: err.message });
     } finally {
         session.endSession();
     }
@@ -1904,7 +1905,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         const isUnchanged = (
             subcategoryData.name === subcategory.name &&
             subcategoryData.slug === subcategory.slug &&
-            (subcategoryData.photo || '') === (subcategory.photo || '') &&
+            (subcategoryData.photo ?? '') === (subcategory.photo ?? '') &&
             subcategoryData.visible === subcategory.visible &&
             subcategoryData.order === subcategory.order
         );
@@ -1937,10 +1938,10 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 
         subcategory.name = subcategoryData.name || subcategory.name;
         subcategory.slug = subcategoryData.slug || subcategory.slug;
-        subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
+        subcategory.photo = subcategoryData.photo ?? subcategory.photo;
         subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
         subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order;
-        category.updatedAt = new Date(); // Примусово оновлюємо updatedAt
+        category.updatedAt = new Date();
 
         await category.save({ session });
 
