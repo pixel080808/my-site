@@ -2707,13 +2707,13 @@ async function saveEditedCategory(categoryId) {
         }
 
         // Порівнюємо нові дані зі старими
+        const hasFile = photoFileInput.files.length > 0;
         const isUnchanged = (
             name === category.name &&
             slug === category.slug &&
             photo === (category.photo || '') &&
             visible === category.visible &&
-            !photoFileInput.files[0] &&
-            JSON.stringify(category.subcategories) === JSON.stringify(category.subcategories)
+            !hasFile
         );
 
         if (isUnchanged) {
@@ -2747,7 +2747,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        if (photoFileInput.files[0]) {
+        if (hasFile) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -3169,12 +3169,13 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         // Порівнюємо нові дані зі старими
+        const hasFile = photoFileInput.files.length > 0;
         const isUnchanged = (
             name === subcategory.name &&
             slug === subcategory.slug &&
             photo === (subcategory.photo || '') &&
             visible === subcategory.visible &&
-            !photoFileInput.files[0]
+            !hasFile
         );
 
         if (isUnchanged) {
@@ -3194,7 +3195,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        if (photoFileInput.files[0]) {
+        if (hasFile) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
