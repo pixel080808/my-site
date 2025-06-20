@@ -332,6 +332,7 @@ async function fetchWithAuth(url, options = {}) {
                     }
                     console.error('Помилка повторного запиту:', { url, status: newResponse.status, errorData });
                     const error = new Error(errorData.error || errorData.message || `HTTP error ${newResponse.status}`);
+                    error.status = newResponse.status;
                     error.errorData = errorData;
                     throw error;
                 }
@@ -363,6 +364,7 @@ async function fetchWithAuth(url, options = {}) {
             }
             console.error('Помилка запиту:', { url, status: response.status, errorData });
             const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
+            error.status = response.status;
             error.errorData = errorData;
             throw error;
         }
@@ -2706,6 +2708,14 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
+        // Перевірка унікальності назви
+        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+        const existingCategoriesByName = await nameCheck.json();
+        if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
+            showNotification('Назва категорії має бути унікальною!');
+            return;
+        }
+
         // Перевірка унікальності slug
         if (slug !== category.slug) {
             const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
@@ -2732,10 +2742,33 @@ async function saveEditedCategory(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             const data = await response.json();
             photo = data.url;
+        }
+
+        // Формуємо оновлені підкатегорії
+        const updatedSubcategories = (category.subcategories || []).map(sub => ({
+            _id: sub._id,
+            name: sub.name || '',
+            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+            photo: sub.photo || '',
+            visible: sub.visible !== undefined ? sub.visible : true,
+            order: sub.order !== undefined ? sub.order : 0
+        }));
+
+        // Перевірка унікальності slug у підкатегоріях
+        const subSlugs = new Set();
+        for (const sub of updatedSubcategories) {
+            if (subSlugs.has(sub.slug)) {
+                showNotification(`Підкатегорія з шляхом "${sub.slug}" уже існує в цій категорії!`);
+                return;
+            }
+            subSlugs.add(sub.slug);
         }
 
         const updatedCategory = {
@@ -2743,21 +2776,18 @@ async function saveEditedCategory(categoryId) {
             slug,
             photo: photo || category.photo || '',
             visible,
-            order: category.order || 0,
-            subcategories: (category.subcategories || []).map(sub => ({
-                _id: sub._id,
-                name: sub.name,
-                slug: sub.slug,
-                photo: sub.photo || '',
-                visible: sub.visible !== undefined ? sub.visible : true,
-                order: sub.order || 0
-            }))
+            order: category.order !== undefined ? category.order : 0,
+            subcategories: updatedSubcategories
         };
 
         console.log('Надсилаємо запит на оновлення категорії:', JSON.stringify(updatedCategory, null, 2));
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(updatedCategory)
         });
 
@@ -2771,8 +2801,16 @@ async function saveEditedCategory(categoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
-        const errorMessage = err.errorData?.details ? err.errorData.details.join('; ') : err.message;
-        showNotification(`Не вдалося оновити категорію: ${errorMessage}`);
+        let errorMessage = 'Не вдалося оновити категорію';
+        if (err.status === 400 && err.errorData) {
+            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+            if (err.errorData.details) {
+                errorMessage += `. Деталі: ${err.errorData.details.join('; ')}`;
+            }
+        } else {
+            errorMessage += `: ${err.message}`;
+        }
+        showNotification(errorMessage);
     } finally {
         isUpdatingCategories = false;
     }
@@ -3148,7 +3186,10 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             const data = await response.json();
             photo = data.url;
@@ -3159,13 +3200,17 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             slug,
             photo: photo || subcategory.photo || '',
             visible,
-            order: subcategory.order || 0
+            order: subcategory.order !== undefined ? subcategory.order : 0
         };
 
         console.log('Надсилаємо запит на оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(updatedSubcategory)
         });
 
@@ -3179,8 +3224,16 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
-        const errorMessage = err.errorData?.details ? err.errorData.details.join('; ') : err.message;
-        showNotification(`Не вдалося оновити підкатегорію: ${errorMessage}`);
+        let errorMessage = 'Не вдалося оновити підкатегорію';
+        if (err.status === 400 && err.errorData) {
+            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+            if (err.errorData.details) {
+                errorMessage += `. Деталі: ${err.errorData.details.join('; ')}`;
+            }
+        } else {
+            errorMessage += `: ${err.message}`;
+        }
+        showNotification(errorMessage);
     } finally {
         isUpdatingCategories = false;
     }
