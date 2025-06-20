@@ -2751,15 +2751,15 @@ async function saveEditedCategory(categoryId) {
             photo = data.url;
         }
 
-        // Формуємо оновлені підкатегорії
+        // Формуємо оновлені підкатегорії, виключаючи невалідні
         const updatedSubcategories = (category.subcategories || []).map(sub => ({
-            _id: sub._id,
+            _id: sub._id || undefined, // Виключаємо _id, якщо він невалідний
             name: sub.name || '',
             slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
             photo: sub.photo || '',
             visible: sub.visible !== undefined ? sub.visible : true,
             order: sub.order !== undefined ? sub.order : 0
-        }));
+        })).filter(sub => sub.name && sub.slug); // Фільтруємо невалідні підкатегорії
 
         // Перевірка унікальності slug у підкатегоріях
         const subSlugs = new Set();
@@ -2805,7 +2805,7 @@ async function saveEditedCategory(categoryId) {
         if (err.status === 400 && err.errorData) {
             errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
             if (err.errorData.details) {
-                errorMessage += `. Деталі: ${err.errorData.details.join('; ')}`;
+                errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join('; ') : err.errorData.details}`;
             }
         } else {
             errorMessage += `: ${err.message}`;

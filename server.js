@@ -1498,6 +1498,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                     sub.photo = sub.img;
                     delete sub.img;
                 }
+                // Виключаємо невалідні _id
                 if (sub._id && mongoose.Types.ObjectId.isValid(sub._id)) {
                     return sub;
                 }
@@ -1513,6 +1514,13 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                     return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
                 }
                 subSlugs.add(sub.slug);
+
+                // Валідація кожної підкатегорії
+                const { error } = subcategorySchemaValidation.validate(sub);
+                if (error) {
+                    logger.error('Помилка валідації підкатегорії:', error.details);
+                    return res.status(400).json({ error: 'Помилка валідації підкатегорії', details: error.details.map(d => d.message) });
+                }
             }
         }
 
@@ -1572,7 +1580,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         category.photo = categoryData.photo !== undefined ? categoryData.photo : category.photo;
         category.visible = categoryData.visible !== undefined ? categoryData.visible : category.visible;
         category.order = categoryData.order !== undefined ? categoryData.order : category.order;
-        category.subcategories = subcategories.length > 0 ? subcategories : category.subcategories;
+        category.subcategories = categoryData.subcategories || category.subcategories;
         category.updatedAt = new Date();
 
         await category.save({ session });
