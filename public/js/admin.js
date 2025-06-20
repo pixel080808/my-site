@@ -2696,7 +2696,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії може містити лише малі літери, цифри та деilier);
+            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
@@ -2734,7 +2734,7 @@ async function saveEditedCategory(categoryId) {
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
-            if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
+            if (existingCategoriesByName(c => c.name === name && c._id !== categoryId)) {
                 showNotification('Назва категорії має бути унікальною!');
                 return;
             }
@@ -2750,7 +2750,7 @@ async function saveEditedCategory(categoryId) {
             }
         }
 
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+        if (photo && !/photo && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
