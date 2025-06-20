@@ -1546,10 +1546,10 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         const isUnchanged = (
             categoryData.name === category.name &&
             categoryData.slug === category.slug &&
-            (categoryData.photo ?? '') === (category.photo ?? '') &&
+            (categoryData.photo || '') === (category.photo || '') &&
             categoryData.visible === category.visible &&
             categoryData.order === category.order &&
-            JSON.stringify(categoryData.subcategories) === JSON.stringify(category.subcategories)
+            JSON.stringify(categoryData.subcategories || []) === JSON.stringify(category.subcategories || [])
         );
 
         if (isUnchanged) {
@@ -1558,7 +1558,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(200).json({ message: 'Зміни відсутні', category });
         }
 
-        // Решта коду залишається без змін
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
             if (existingCategoryByName) {
@@ -1905,7 +1904,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         const isUnchanged = (
             subcategoryData.name === subcategory.name &&
             subcategoryData.slug === subcategory.slug &&
-            (subcategoryData.photo ?? '') === (subcategory.photo ?? '') &&
+            (subcategoryData.photo || '') === (subcategory.photo || '') &&
             subcategoryData.visible === subcategory.visible &&
             subcategoryData.order === subcategory.order
         );

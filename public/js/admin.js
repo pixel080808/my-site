@@ -2706,6 +2706,16 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
+        // Формуємо updatedSubcategories перед перевіркою isUnchanged
+        const updatedSubcategories = (category.subcategories || []).map(sub => ({
+            _id: sub._id || undefined,
+            name: sub.name || '',
+            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+            photo: sub.photo || '',
+            visible: sub.visible !== undefined ? sub.visible : true,
+            order: sub.order !== undefined ? sub.order : 0
+        })).filter(sub => sub.name && sub.slug);
+
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
         const normalizedOldPhoto = category.photo || '';
@@ -2778,15 +2788,6 @@ async function saveEditedCategory(categoryId) {
             const data = await response.json();
             photo = data.url;
         }
-
-        const updatedSubcategories = (category.subcategories || []).map(sub => ({
-            _id: sub._id || undefined,
-            name: sub.name || '',
-            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-            photo: sub.photo || '',
-            visible: sub.visible !== undefined ? sub.visible : true,
-            order: sub.order !== undefined ? sub.order : 0
-        })).filter(sub => sub.name && sub.slug);
 
         const subSlugs = new Set();
         for (const sub of updatedSubcategories) {
@@ -3200,7 +3201,9 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             hasFile
         });
 
+        // Додаємо логування для дебагінгу
         if (isUnchanged) {
+            console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, підкатегорію не оновлено.');
             closeModal();
             return;
