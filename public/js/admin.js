@@ -2708,20 +2708,24 @@ async function saveEditedCategory(categoryId) {
 
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
+        const normalizedOldPhoto = category.photo || '';
+        const normalizedNewPhoto = photo || '';
         const isUnchanged = (
             name === category.name &&
             slug === category.slug &&
-            (photo || '') === (category.photo || '') &&
+            normalizedNewPhoto === normalizedOldPhoto &&
             visible === category.visible &&
-            !hasFile
+            !hasFile &&
+            JSON.stringify(category.subcategories || []) === JSON.stringify(updatedSubcategories || [])
         );
 
         console.log('Порівняння даних:', {
             name: { new: name, old: category.name },
             slug: { new: slug, old: category.slug },
-            photo: { new: photo, old: category.photo || '' },
+            photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
             visible: { new: visible, old: category.visible },
-            hasFile
+            hasFile,
+            subcategories: { new: JSON.stringify(updatedSubcategories || []), old: JSON.stringify(category.subcategories || []) }
         });
 
         if (isUnchanged) {
@@ -3178,10 +3182,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
+        const normalizedOldPhoto = subcategory.photo || '';
+        const normalizedNewPhoto = photo || '';
         const isUnchanged = (
             name === subcategory.name &&
             slug === subcategory.slug &&
-            (photo || '') === (subcategory.photo || '') &&
+            normalizedNewPhoto === normalizedOldPhoto &&
             visible === subcategory.visible &&
             !hasFile
         );
@@ -3189,7 +3195,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         console.log('Порівняння даних:', {
             name: { new: name, old: subcategory.name },
             slug: { new: slug, old: subcategory.slug },
-            photo: { new: photo, old: subcategory.photo || '' },
+            photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
             visible: { new: visible, old: subcategory.visible },
             hasFile
         });
