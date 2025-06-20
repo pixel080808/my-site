@@ -1615,6 +1615,9 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
+        await category.save({ session });
+        logger.info('Категорія успішно збережена:', { id: req.params.id, updatedData: category });
+
         const categories = await Category.find().session(session);
         broadcast('categories', categories);
         logger.info(`Категорію оновлено: ${req.params.id}`);
@@ -1859,7 +1862,6 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
     try {
         const { categoryId, subcategoryId } = req.params;
         let subcategoryData = { ...req.body };
-
         logger.info('Отримано дані для оновлення підкатегорії:', JSON.stringify(subcategoryData, null, 2));
 
         if (subcategoryData.img && !subcategoryData.photo) {
@@ -1920,6 +1922,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order;
 
         await category.save({ session });
+        logger.info('Підкатегорія успішно збережена:', { categoryId, subcategoryId, updatedData: subcategory });
 
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
