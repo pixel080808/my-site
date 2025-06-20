@@ -6466,11 +6466,17 @@ function handleCategoriesUpdate(data) {
         return;
     }
 
-    const isValidId = id => /^[0-9]+$/.test(id));
+    const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id); // Виправлено регулярний вираз і видалено зайву дужку
     categories = data.map(newCat => ({
         ...newCat,
-        subcategories: (newCat.subcategories || []).filter(sub => sub._id && sub.name && sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-.replace(/(^-|-$)/g, '') && sub.slug)
+        subcategories: (newCat.subcategories || []).filter(sub => 
+            sub._id && 
+            isValidId(sub._id) && 
+            sub.name && 
+            sub.slug && 
+            typeof sub.name === 'string' && 
+            typeof sub.slug === 'string'
+        )
     }));
 
     localStorage.setItem('categories', JSON.stringify(categories));
