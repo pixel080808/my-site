@@ -2751,29 +2751,27 @@ async function saveEditedCategory(categoryId) {
         const updatedCategoryData = await response.json();
         console.log('Отримано оновлені дані категорії:', JSON.stringify(updatedCategoryData, null, 2));
 
+        // Оновлюємо локальний масив categories
         const index = categories.findIndex(c => c._id === categoryId);
         if (index !== -1) {
             categories[index] = { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] };
+            // Синхронізуємо локальний стан перед рендерингом
+            localStorage.setItem('categories', JSON.stringify(categories));
         } else {
             console.error('Категорія не знайдена в локальному масиві:', categoryId);
             showNotification('Помилка оновлення локального стану.');
             return;
         }
 
-        // Збільшуємо затримку для уникнення конфліктів із WebSocket
-        setTimeout(() => {
-            closeModal();
-            renderCategoriesAdmin();
-            showNotification('Категорію оновлено!');
-            resetInactivityTimer();
-            isUpdatingCategories = false; // Скидаємо флаг після завершення
-        }, 500);
-
+        closeModal();
+        renderCategoriesAdmin();
+        showNotification('Категорію оновлено!');
+        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні категорії:', err);
-        showNotification('Не вдалося оновити категорію: ' + (err.message || 'Невідома помилка'));
+        showNotification('Не вдалося оновити категорію: ' + err.message);
     } finally {
-        isUpdatingCategories = false; // Скидаємо флаг у разі помилки
+        isUpdatingCategories = false; // Скидаємо флаг після завершення
     }
 }
 
@@ -3348,29 +3346,27 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const updatedCategory = await response.json();
         console.log('Отримано оновлені дані категорії:', JSON.stringify(updatedCategory, null, 2));
 
+        // Оновлюємо локальний масив categories
         const catIndex = categories.findIndex(c => c._id === categoryId);
         if (catIndex !== -1) {
             categories[catIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
+            // Синхронізуємо локальний стан перед рендерингом
+            localStorage.setItem('categories', JSON.stringify(categories));
         } else {
             console.error('Категорія не знайдена в локальному масиві:', categoryId);
             showNotification('Помилка оновлення локального стану.');
             return;
         }
 
-        // Збільшуємо затримку для уникнення конфліктів із WebSocket
-        setTimeout(() => {
-            closeModal();
-            renderCategoriesAdmin();
-            showNotification('Підкатегорію оновлено!');
-            resetInactivityTimer();
-            isUpdatingCategories = false; // Скидаємо флаг після завершення
-        }, 500);
-
+        closeModal();
+        renderCategoriesAdmin();
+        showNotification('Підкатегорію оновлено!');
+        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні підкатегорії:', err);
-        showNotification('Не вдалося оновити підкатегорію: ' + (err.message || 'Невідома помилка'));
+        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
     } finally {
-        isUpdatingCategories = false; // Скидаємо флаг у разі помилки
+        isUpdatingCategories = false; // Скидаємо флаг після завершення
     }
 }
 
