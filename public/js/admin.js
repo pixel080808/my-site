@@ -2799,18 +2799,18 @@ async function saveEditedCategory(categoryId) {
         renderCategoriesAdmin();
         showNotification('Категорію оновлено!');
         resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка при оновленні категорії:', err);
-        let errorMessage = 'Не вдалося оновити категорію';
-        if (err.status === 400 && err.errorData) {
-            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
-            if (err.errorData.details) {
-                errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join('; ') : err.errorData.details}`;
-            }
-        } else {
-            errorMessage += `: ${err.message}`;
+    catch (err) {
+    console.error('Помилка при оновленні категорії:', err);
+    let errorMessage = 'Не вдалося оновити категорію';
+    if (err.status === 400 && err.errorData) {
+        errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+        if (err.errorData.details) {
+            errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
         }
-        showNotification(errorMessage);
+    } else {
+        errorMessage += `: ${err.message}`;
+    }
+    showNotification(errorMessage);
     } finally {
         isUpdatingCategories = false;
     }
@@ -3160,7 +3160,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         const subcategory = category.subcategories.find(s => s._id === subcategoryId);
         if (!subcategory) {
-            showNotification('Підкатегория не найдена!');
+            showNotification('Підкатегорія не знайдена!');
             return;
         }
 
@@ -3180,7 +3180,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         // Перевірка унікальності slug
-        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId !== subcategoryId)) {
+        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
@@ -3218,7 +3218,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             order: subcategory.order !== undefined ? subcategory.order : 0
         };
 
-        console.log('Надсилаємо запит на оновлення підкатегориї:', JSON.stringify(updatedSubcategory, null, 2));
+        console.log('Надсилаємо запит на оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3235,18 +3235,18 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Підкатегория оновлена!');
+        showNotification('Підкатегорія оновлена!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оцінці підкатегориї:', err);
-        let errorMessage = 'Не вдалося оновити підкатегорию';
+        console.error('Помилка при оновленні підкатегорії:', err);
+        let errorMessage = 'Не вдалося оновити підкатегорію';
         if (err.status === 400 && err.errorData) {
-            errorMessage += ': ${err.errorData.error || 'Невірні дані'}';
+            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
             if (err.errorData.details) {
-                errorMessage += '. Детали: ${Array.isArray(err.errorData.details)? err.errorData.details.join(', ') : err.errorData.details}';
+                errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
             }
         } else {
-            errorMessage += ': ${err.message}';
+            errorMessage += `: ${err.message}`;
         }
         showNotification(errorMessage);
     } finally {
