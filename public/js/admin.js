@@ -60,6 +60,20 @@ let productEditor;
 let selectedMedia = null;
 let socket;
 
+function handleError(err, defaultMessage) {
+    let errorMessage = defaultMessage;
+    if (err.status === 400 && err.errorData) {
+        errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+        if (err.errorData.details) {
+            errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
+        }
+    } else {
+        errorMessage += `: ${err.message}`;
+    }
+    console.error(`${defaultMessage}:`, err);
+    showNotification(errorMessage);
+}
+
 async function loadProducts(page = 1, limit = productsPerPage) {
     try {
         isLoadingProducts = true;
@@ -2686,7 +2700,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const category = categories.find(c => c._id hierv: categoryId);
+        const category = categories.find(c => c._id === categoryId);
         if (!category) {
             showNotification('Категорію не знайдено!');
             return;
@@ -6254,20 +6268,6 @@ function handleCategoriesUpdate(data) {
     if (modal && modal.classList.contains('active')) {
         updateSubcategories();
     }
-}
-
-function handleError(err, defaultMessage) {
-    let errorMessage = defaultMessage;
-    if (err.status === 400 && err.errorData) {
-        errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
-        if (err.errorData.details) {
-            errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
-        }
-    } else {
-        errorMessage += `: ${err.message}`;
-    }
-    console.error(`${defaultMessage}:`, err);
-    showNotification(errorMessage);
 }
 
 function handleOrdersUpdate(data) {
