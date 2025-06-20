@@ -1504,6 +1504,16 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                 const { _id, ...rest } = sub;
                 return rest;
             });
+
+            // Перевірка унікальності slug підкатегорій
+            const subSlugs = new Set();
+            for (const sub of categoryData.subcategories) {
+                if (sub.slug && subSlugs.has(sub.slug)) {
+                    logger.error(`Дублювання slug у підкатегоріях: ${sub.slug}`);
+                    return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
+                }
+                subSlugs.add(sub.slug);
+            }
         }
 
         delete categoryData._id;
@@ -1554,30 +1564,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        const subcategories = categoryData.subcategories || [];
-        const subSlugs = new Set();
-        for (const sub of subcategories) {
-            if (sub.slug && subSlugs.has(sub.slug)) {
-                logger.error(`Дублювання slug у підкатегоріях: ${sub.slug}`);
-                return res.status(400).json({ error: `Підкатегорія з slug "${sub.slug}" уже існує в цій категорії` });
-            }
-            subSlugs.add(sub.slug);
-
-            const existingSub = category.subcategories.find(s => s.name === sub.name && s.slug !== sub.slug);
-            if (existingSub && existingSub.photo && sub.photo && sub.photo !== existingSub.photo) {
-                const publicId = getPublicIdFromUrl(existingSub.photo);
-                if (publicId) {
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Видалено старе зображення підкатегорії: ${publicId}`);
-                    } catch (err) {
-                        logger.error(`Не вдалося видалити старе зображення підкатегорії: ${publicId}`, err);
-                    }
-                }
-            }
-        }
-
-        // Зберігаємо старі значення для порівняння
         const oldSlug = category.slug;
         const oldSubcategories = category.subcategories.map(sub => ({ _id: sub._id, slug: sub.slug }));
 
@@ -1587,10 +1573,10 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         category.visible = categoryData.visible !== undefined ? categoryData.visible : category.visible;
         category.order = categoryData.order !== undefined ? categoryData.order : category.order;
         category.subcategories = subcategories.length > 0 ? subcategories : category.subcategories;
+        category.updatedAt = new Date();
 
         await category.save({ session });
 
-        // Оновлюємо продукти, якщо slug категорії змінився
         if (categoryData.slug && categoryData.slug !== oldSlug) {
             await Product.updateMany(
                 { category: oldSlug },
@@ -1600,7 +1586,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             logger.info(`Оновлено category у продуктах: ${oldSlug} -> ${categoryData.slug}`);
         }
 
-        // Оновлюємо продукти, якщо slug підкатегорій змінився
         if (categoryData.subcategories) {
             for (const sub of categoryData.subcategories) {
                 const existingSub = oldSubcategories.find(s => s._id && s._id.toString() === sub._id);
@@ -1918,6 +1903,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         subcategory.photo = subcategoryData.photo !== undefined ? subcategoryData.photo : subcategory.photo;
         subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : subcategory.visible;
         subcategory.order = subcategoryData.order !== undefined ? subcategoryData.order : subcategory.order;
+        category.updatedAt = new Date(); // Примусово оновлюємо updatedAt
 
         await category.save({ session });
 
