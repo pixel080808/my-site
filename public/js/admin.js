@@ -2463,16 +2463,9 @@ function validateFile(file) {
 }
 
 function openEditCategoryModal(categoryId) {
-    if (isModalOpen) {
-        console.log('Модальне вікно вже відкрите, ігноруємо повторний виклик');
-        return;
-    }
-    isModalOpen = true;
-
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
         showNotification('Категорія не знайдена!');
-        isModalOpen = false;
         return;
     }
 
@@ -2480,11 +2473,9 @@ function openEditCategoryModal(categoryId) {
     if (!modal) {
         console.error('Модальне вікно не знайдено!');
         showNotification('Модальне вікно не знайдено.');
-        isModalOpen = false;
         return;
     }
 
-    // Екрануємо значення для безпечного відображення
     const safeName = category.name ? category.name.replace(/"/g, '&quot;') : '';
     const safeSlug = category.slug ? category.slug.replace(/"/g, '&quot;') : '';
     const safePhoto = category.photo ? category.photo.replace(/"/g, '&quot;') : '';
@@ -2514,14 +2505,6 @@ function openEditCategoryModal(categoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
 
-    // Додаємо обробник для закриття модального вікна
-    const closeButton = modal.querySelector('#close-modal');
-    if (closeButton) {
-        closeButton.addEventListener('click', () => {
-            closeModal();
-        });
-    }
-
     // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('category-name');
@@ -2536,10 +2519,11 @@ function openEditCategoryModal(categoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
-        // Примусово встановлюємо значення, якщо вони не відобразилися
-        if (nameInput && !nameInput.value) nameInput.value = category.name || '';
-        if (slugInput && !slugInput.value) slugInput.value = category.slug || '';
-        if (photoUrlInput && !photoUrlInput.value) photoUrlInput.value = category.photo || '';
+        // Примусово встановлюємо значення
+        if (nameInput) nameInput.value = category.name || '';
+        if (slugInput) slugInput.value = category.slug || '';
+        if (photoUrlInput) photoUrlInput.value = category.photo || '';
+        if (visibleSelect) visibleSelect.value = category.visible ? 'true' : 'false';
     }, 0);
 
     resetInactivityTimer();
@@ -2708,12 +2692,30 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Перевірка унікальності назви
-        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-        const existingCategoriesByName = await nameCheck.json();
-        if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
-            showNotification('Назва категорії має бути унікальною!');
+        // Порівнюємо нові дані зі старими
+        const isUnchanged = (
+            name === category.name &&
+            slug === category.slug &&
+            photo === (category.photo || '') &&
+            visible === category.visible &&
+            !photoFileInput.files[0] &&
+            JSON.stringify(category.subcategories) === JSON.stringify(category.subcategories)
+        );
+
+        if (isUnchanged) {
+            showNotification('Зміни відсутні, категорію не оновлено.');
+            closeModal();
             return;
+        }
+
+        // Перевірка унікальності назви
+        if (name !== category.name) {
+            const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+            const existingCategoriesByName = await nameCheck.json();
+            if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
+                showNotification('Назва категорії має бути унікальною!');
+                return;
+            }
         }
 
         // Перевірка унікальності slug
@@ -2751,17 +2753,15 @@ async function saveEditedCategory(categoryId) {
             photo = data.url;
         }
 
-        // Формуємо оновлені підкатегорії, виключаючи невалідні
         const updatedSubcategories = (category.subcategories || []).map(sub => ({
-            _id: sub._id || undefined, // Виключаємо _id, якщо він невалідний
+            _id: sub._id || undefined,
             name: sub.name || '',
             slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
             photo: sub.photo || '',
             visible: sub.visible !== undefined ? sub.visible : true,
             order: sub.order !== undefined ? sub.order : 0
-        })).filter(sub => sub.name && sub.slug); // Фільтруємо невалідні підкатегорії
+        })).filter(sub => sub.name && sub.slug);
 
-        // Перевірка унікальності slug у підкатегоріях
         const subSlugs = new Set();
         for (const sub of updatedSubcategories) {
             if (subSlugs.has(sub.slug)) {
@@ -3160,12 +3160,27 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         const subcategory = category.subcategories.find(s => s._id === subcategoryId);
         if (!subcategory) {
-            showNotification('Підкатегорія не знайдена!');
+            showNotification('Підкатегория не найдена!');
+            return;
+        }
+
+        // Порівнюємо нові дані зі старими
+        const isUnchanged = (
+            name === subcategory.name &&
+            slug === subcategory.slug &&
+            photo === (subcategory.photo || '') &&
+            visible === subcategory.visible &&
+            !photoFileInput.files[0]
+        );
+
+        if (isUnchanged) {
+            showNotification('Зміни відсутні, підкатегорію не оновлено.');
+            closeModal();
             return;
         }
 
         // Перевірка унікальності slug
-        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
+        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
@@ -3203,7 +3218,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             order: subcategory.order !== undefined ? subcategory.order : 0
         };
 
-        console.log('Надсилаємо запит на оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
+        console.log('Надсилаємо запит на оновлення підкатегориї:', JSON.stringify(updatedSubcategory, null, 2));
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3220,18 +3235,18 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Підкатегорію оновлено!');
+        showNotification('Підкатегория оновлена!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оновленні підкатегорії:', err);
-        let errorMessage = 'Не вдалося оновити підкатегорію';
+        console.error('Помилка при оцінці підкатегориї:', err);
+        let errorMessage = 'Не вдалося оновити підкатегорию';
         if (err.status === 400 && err.errorData) {
-            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+            errorMessage += ': ${err.errorData.error || 'Невірні дані'}';
             if (err.errorData.details) {
-                errorMessage += `. Деталі: ${err.errorData.details.join('; ')}`;
+                errorMessage += '. Детали: ${Array.isArray(err.errorData.details)? err.errorData.details.join(', ') : err.errorData.details}';
             }
         } else {
-            errorMessage += `: ${err.message}`;
+            errorMessage += ': ${err.message}';
         }
         showNotification(errorMessage);
     } finally {
@@ -3379,7 +3394,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
         return;
     }
 
-    // Екрануємо значення для безпечного відображення
     const safeName = subcategory.name ? subcategory.name.replace(/"/g, '&quot;') : '';
     const safeSlug = subcategory.slug ? subcategory.slug.replace(/"/g, '&quot;') : '';
     const safePhoto = subcategory.photo ? subcategory.photo.replace(/"/g, '&quot;') : '';
@@ -3423,10 +3437,11 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
-        // Примусово встановлюємо значення, якщо вони не відобразилися
-        if (nameInput && !nameInput.value) nameInput.value = subcategory.name || '';
-        if (slugInput && !slugInput.value) slugInput.value = subcategory.slug || '';
-        if (photoUrlInput && !photoUrlInput.value) photoUrlInput.value = subcategory.photo || '';
+        // Примусово встановлюємо значення
+        if (nameInput) nameInput.value = subcategory.name || '';
+        if (slugInput) slugInput.value = subcategory.slug || '';
+        if (photoUrlInput) photoUrlInput.value = subcategory.photo || '';
+        if (visibleSelect) visibleSelect.value = subcategory.visible ? 'true' : 'false';
     }, 0);
 
     resetInactivityTimer();

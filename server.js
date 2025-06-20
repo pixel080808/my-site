@@ -1492,13 +1492,13 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             categoryData.photo = categoryData.img;
             delete categoryData.img;
         }
+
         if (categoryData.subcategories) {
             categoryData.subcategories = categoryData.subcategories.map(sub => {
                 if (sub.img && !sub.photo) {
                     sub.photo = sub.img;
                     delete sub.img;
                 }
-                // Виключаємо невалідні _id
                 if (sub._id && mongoose.Types.ObjectId.isValid(sub._id)) {
                     return sub;
                 }
@@ -1506,7 +1506,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                 return rest;
             });
 
-            // Перевірка унікальності slug підкатегорій
             const subSlugs = new Set();
             for (const sub of categoryData.subcategories) {
                 if (sub.slug && subSlugs.has(sub.slug)) {
@@ -1515,7 +1514,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
                 }
                 subSlugs.add(sub.slug);
 
-                // Валідація кожної підкатегорії
                 const { error } = subcategorySchemaValidation.validate(sub);
                 if (error) {
                     logger.error('Помилка валідації підкатегорії:', error.details);
@@ -1544,6 +1542,22 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
+        // Порівнюємо нові дані зі старими
+        const isUnchanged = (
+            categoryData.name === category.name &&
+            categoryData.slug === category.slug &&
+            (categoryData.photo || '') === (category.photo || '') &&
+            categoryData.visible === category.visible &&
+            categoryData.order === category.order &&
+            JSON.stringify(categoryData.subcategories) === JSON.stringify(category.subcategories)
+        );
+
+        if (isUnchanged) {
+            logger.info(`Зміни відсутні для категорії: ${req.params.id}`);
+            await session.commitTransaction();
+            return res.status(200).json({ message: 'Зміни відсутні', category });
+        }
+
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategoryByName = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
             if (existingCategoryByName) {
@@ -1556,7 +1570,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             const existingCategoryBySlug = await Category.findOne({ slug: categoryData.slug, _id: { $ne: category._id } }).session(session);
             if (existingCategoryBySlug) {
                 logger.error(`Категорія з slug "${categoryData.slug}" уже існує`);
-                return res.status(400).json({ error: `Категорія з slug "${categoryData.slug}" уже існує` });
+                return res.status(400).json({ error: `Категія з slug "${categoryData.slug}" уже існує` });
             }
         }
 
@@ -1581,7 +1595,7 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
         category.visible = categoryData.visible !== undefined ? categoryData.visible : category.visible;
         category.order = categoryData.order !== undefined ? categoryData.order : category.order;
         category.subcategories = categoryData.subcategories || category.subcategories;
-        category.updatedAt = new Date();
+        category.updatedAt = new Date(); // Примусово оновлюємо updatedAt
 
         await category.save({ session });
 
@@ -1610,13 +1624,13 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 
         const categories = await Category.find().session(session);
         broadcast('categories', categories);
-        logger.info(`Категорію оновлено: ${req.params.id}`);
+        logger.info(`Категория оновлена: ${req.params.id}`);
         await session.commitTransaction();
         res.json(category);
     } catch (err) {
         await session.abortTransaction();
-        logger.error('Помилка при оновленні категорії:', err);
-        res.status(400).json({ error: 'Не вдалося оновити категорію', details: err.message });
+        logger.error('Помилка при оцінці категорії:', err);
+        res.status(400).json({ error: 'Не вдалось оновити категорію', details: err.message });
     } finally {
         session.endSession();
     }
@@ -1853,7 +1867,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         const { categoryId, subcategoryId } = req.params;
         let subcategoryData = { ...req.body };
 
-        logger.info('Отримано дані для оновлення підкатегорії:', JSON.stringify(subcategoryData, null, 2));
+        logger.info('Отримано дані для оновлення підкатегориї:', JSON.stringify(subcategoryData, null, 2));
 
         if (subcategoryData.img && !subcategoryData.photo) {
             subcategoryData.photo = subcategoryData.img;
@@ -1865,7 +1879,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 
         const { error } = subcategorySchemaValidation.validate(subcategoryData, { abortEarly: false });
         if (error) {
-            logger.error('Помилка валідації підкатегорії:', error.details);
+            logger.error('Помилка валідації підкатегориї:', error.details);
             return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
         }
 
@@ -1876,32 +1890,48 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 
         const category = await Category.findById(categoryId).session(session);
         if (!category) {
-            logger.error(`Категорію не знайдено: ${categoryId}`);
-            return res.status(404).json({ error: 'Категорію не знайдено' });
+            logger.error(`Категория не найдена: ${categoryId}`);
+            return res.status(404).json({ error: 'Категория не найдена' });
         }
 
         const subcategory = category.subcategories.id(subcategoryId);
         if (!subcategory) {
-            logger.error(`Підкатегорію не знайдено: ${subcategoryId}`);
-            return res.status(404).json({ error: 'Підкатегорію не знайдено' });
+            logger.error(`Підкатегория не найдена: ${subcategoryId}`);
+            return res.status(404).json({ error: 'Підкатегория не найдена' });
+        }
+
+        // Проверяем, есть ли изменения
+        const isUnchanged = (
+            subcategoryData.name === subcategory.name &&
+            subcategoryData.slug === subcategory.slug &&
+            (subcategoryData.photo || '') === (subcategory.photo || '') &&
+            subcategoryData.visible === subcategory.visible &&
+            subcategoryData.order === subcategory.order
+        );
+
+        if (isUnchanged) {
+            logger.info(`Изменения отсутствуют для подкатегории: ${subcategoryId}`);
+            await session.commitTransaction();
+            return res.status(200).json({ message: 'Зміни відсутні', subcategory });
         }
 
         if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
-            const existingSubcategory = category.subcategories.find(sub => sub.slug === subcategoryData.slug && sub._id.toString() !== subcategoryId);
-            if (existingSubcategory) {
-                logger.error(`Підкатегорія з slug "${subcategoryData.slug}" уже існує в цій категорії`);
-                return res.status(400).json({ error: `Підкатегорія з slug "${subcategoryData.slug}" уже існує` });
+            const existingCategorySubcategory = category.subcategories.find(sub => sub.slug === categoryData.subcategoryData.slug && sub._id.toString() !== subcategoryId);
+            if (existingCategorySubcategory) {
+                logger.error(`Підкатегория с slug "${subcategoryData.slug}" уже существует`);
+                return res.status(400).json({ error: `Підкатегория с slug "${subcategoryData.slug}" уже существует` });
             }
         }
 
-        if (subcategory.photo && subcategoryData.photo && subcategoryData.photo !== subcategory.photo) {
+        if (subcategory.photo && subcategory.photo && subcategory.photo !== subcategory.photo) {
+            subcategoryData.photo !== subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
                 try {
                     await cloudinary.uploader.destroy(publicId);
-                    logger.info(`Видалено старе зображення підкатегорії: ${publicId}`);
+                    logger.info(`Видалено старе зображення підкатегориї: ${publicId}`);
                 } catch (err) {
-                    logger.error(`Не вдалося видалити старе зображення підкатегорії: ${publicId}`, err);
+                    logger.error(`Не вдалось видалити старе зображення підкатегориї: ${publicId}`, err);
                 }
             }
         }
@@ -1917,13 +1947,13 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
 
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);
-        logger.info(`Підкатегорію оновлено: ${subcategoryId}`);
+        logger.info(`Підкатегория оновлена: ${subcategoryId}`);
         await session.commitTransaction();
         res.json(category);
     } catch (err) {
         await session.abortTransaction();
-        logger.error('Помилка при оновленні підкатегорії:', err);
-        res.status(400).json({ error: 'Не вдалося оновити підкатегорію', details: err.message });
+        logger.error('Помилка при оцінці підкатегориї:', err);
+        res.status(400).json({ error: 'Не вдалось оновити підкатегорию', details: err.message });
     } finally {
         session.endSession();
     }
