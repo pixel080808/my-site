@@ -2686,7 +2686,7 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const category = categories.find(c => c._id === categoryId);
+        const category = categories.find(c => c._id hierv: categoryId);
         if (!category) {
             showNotification('Категорію не знайдено!');
             return;
@@ -2799,18 +2799,8 @@ async function saveEditedCategory(categoryId) {
         renderCategoriesAdmin();
         showNotification('Категорію оновлено!');
         resetInactivityTimer();
-    catch (err) {
-    console.error('Помилка при оновленні категорії:', err);
-    let errorMessage = 'Не вдалося оновити категорію';
-    if (err.status === 400 && err.errorData) {
-        errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
-        if (err.errorData.details) {
-            errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
-        }
-    } else {
-        errorMessage += `: ${err.message}`;
-    }
-    showNotification(errorMessage);
+    } catch (err) {
+        handleError(err, 'Не вдалося оновити категорію');
     } finally {
         isUpdatingCategories = false;
     }
@@ -3238,17 +3228,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         showNotification('Підкатегорія оновлена!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при оновленні підкатегорії:', err);
-        let errorMessage = 'Не вдалося оновити підкатегорію';
-        if (err.status === 400 && err.errorData) {
-            errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
-            if (err.errorData.details) {
-                errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
-            }
-        } else {
-            errorMessage += `: ${err.message}`;
-        }
-        showNotification(errorMessage);
+        handleError(err, 'Не вдалося оновити підкатегорію');
     } finally {
         isUpdatingCategories = false;
     }
@@ -6274,6 +6254,20 @@ function handleCategoriesUpdate(data) {
     if (modal && modal.classList.contains('active')) {
         updateSubcategories();
     }
+}
+
+function handleError(err, defaultMessage) {
+    let errorMessage = defaultMessage;
+    if (err.status === 400 && err.errorData) {
+        errorMessage += `: ${err.errorData.error || 'Невірні дані'}`;
+        if (err.errorData.details) {
+            errorMessage += `. Деталі: ${Array.isArray(err.errorData.details) ? err.errorData.details.join(', ') : err.errorData.details}`;
+        }
+    } else {
+        errorMessage += `: ${err.message}`;
+    }
+    console.error(`${defaultMessage}:`, err);
+    showNotification(errorMessage);
 }
 
 function handleOrdersUpdate(data) {
