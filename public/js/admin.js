@@ -2061,13 +2061,23 @@ function renderCategoriesAdmin() {
         return;
     }
 
-    // Сортуємо категорії за полем order
-    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+    // Логування для дебагу
+    console.log('Рендеринг категорій:', JSON.stringify(categories, null, 2));
 
+    // Перевірка масиву categories
+    if (!Array.isArray(categories) || categories.length === 0) {
+        categoryList.innerHTML = '<p>Категорії відсутні.</p>';
+        return;
+    }
+
+    // Сортуємо категорії за полем order
+    const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Генеруємо HTML
     categoryList.innerHTML = sortedCategories.map((category, index) => {
         // Сортуємо підкатегорії за полем order
-        const sortedSubcategories = (category.subcategories && Array.isArray(category.subcategories) 
-            ? [...category.subcategories].sort((a, b) => a.order - b.order) 
+        const sortedSubcategories = (category.subcategories && Array.isArray(category.subcategories)
+            ? [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0))
             : []);
 
         return `
@@ -2103,12 +2113,10 @@ function renderCategoriesAdmin() {
                 `).join('') : '<p>Підкатегорії відсутні</p>'}
             </div>
         </div>
-    `}).join('');
+        `;
+    }).join('');
 
-    const newCategoryList = categoryList.cloneNode(true);
-    categoryList.parentNode.replaceChild(newCategoryList, categoryList);
-
-    // Додаємо дебонсинг для обробки кліків
+    // Видаляємо попередні слухачі подій, якщо вони є
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2126,7 +2134,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = sortedCategories.find(c => c._id === catId);
+            const category = categories.find(c => c._id === catId);
             if (category && category.subcategories) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2136,7 +2144,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = sortedCategories.find(c => c._id === catId);
+            const category = categories.find(c => c._id === catId);
             if (category && category.subcategories) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2154,8 +2162,11 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-    newCategoryList.addEventListener('click', handleClick);
+    // Видаляємо попередні слухачі, якщо вони були додані
+    categoryList.removeEventListener('click', handleClick);
+    categoryList.addEventListener('click', handleClick);
 
+    // Оновлюємо селектори
     const subcatSelect = document.getElementById('subcategory-category');
     if (subcatSelect) {
         const currentValue = subcatSelect.value;
