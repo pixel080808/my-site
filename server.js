@@ -1720,12 +1720,12 @@ app.put('/api/categories/order', authenticateToken, csrfProtection, async (req, 
     }
 });
 
-app.delete('/api/categories/:id', authenticateToken, csrfProtection, async (req, res) => {
+app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (req, res) => {
     try {
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            const category = await Category.findByIdAndDelete(req.params.id, { session });
+            const category = await Category.findOneAndDelete({ slug: req.params.slug }, { session });
             if (!category) {
                 await session.abortTransaction();
                 return res.status(404).json({ error: 'Категорію не знайдено' });
@@ -1773,7 +1773,7 @@ app.delete('/api/categories/:id', authenticateToken, csrfProtection, async (req,
             broadcast('categories', categories);
 
             await session.commitTransaction();
-            logger.info(`Категорію видалено: ${req.params.id}, користувач: ${req.user.username}`);
+            logger.info(`Категорію видалено: ${req.params.slug}, користувач: ${req.user.username}`);
             res.json({ message: 'Категорію видалено' });
         } catch (err) {
             await session.abortTransaction();
