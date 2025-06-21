@@ -2213,7 +2213,7 @@ async function deleteCategory(categoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${category.slug}`, {
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
@@ -2773,10 +2773,11 @@ async function saveEditedCategory(categoryId) {
 
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
-        categories = categories.map(c => c._id === categoryId ? { ...c, ...updatedCategoryData } : c);
+        categories = categories.filter(c => c._id !== categoryId);
+        categories.push(updatedCategoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        await loadCategories(); // Оновлюємо список категорій з сервера
+        await loadCategories();
         closeModal();
         renderCategoriesAdmin();
         renderAdmin('products');
@@ -3206,13 +3207,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
-        categories = categories.map(c => c._id === categoryId ? { ...c, ...updatedCategoryData } : c);
+        categories = categories.filter(c => c._id !== categoryId);
+        categories.push(updatedCategoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        await loadCategories(); // Оновлюємо список категорій з сервера
         closeModal();
         renderCategoriesAdmin();
-        renderAdmin('products');
         showNotification(responseData.message || 'Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
