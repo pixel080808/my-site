@@ -2702,6 +2702,29 @@ async function saveEditedCategory(categoryId) {
                                       sub.order !== (oldSub.order || 0);
                            });
 
+        // Додаємо детальне логування перед перевіркою hasChanges
+        console.log('Порівняння змін для категорії:', {
+            name: { new: normalizeValue(name), old: normalizeValue(category.name) },
+            slug: { new: normalizeValue(slug), old: normalizeValue(category.slug) },
+            photo: { new: normalizeValue(photo), old: normalizeValue(category.photo) },
+            visible: { new: visible, old: category.visible ?? true },
+            photoFile: photoFileInput.files.length,
+            subcategories: {
+                newLength: updatedSubcategories.length,
+                oldLength: (category.subcategories || []).length,
+                differences: updatedSubcategories.map((sub, i) => {
+                    const oldSub = category.subcategories[i] || {};
+                    return {
+                        name: normalizeValue(sub.name) !== normalizeValue(oldSub.name),
+                        slug: normalizeValue(sub.slug) !== normalizeValue(oldSub.slug),
+                        photo: normalizeValue(sub.photo) !== normalizeValue(oldSub.photo),
+                        visible: sub.visible !== (oldSub.visible ?? true),
+                        order: sub.order !== (oldSub.order || 0)
+                    };
+                })
+            }
+        });
+
         if (!hasChanges) {
             console.log('Зміни відсутні:', { 
                 original: { name: category.name, slug: category.slug, photo: category.photo, visible: category.visible, subcategories: category.subcategories },
@@ -3155,6 +3178,15 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
                            visible !== (subcategory.visible ?? true) ||
                            normalizeValue(photo) !== normalizeValue(subcategory.photo) ||
                            photoFileInput.files.length > 0;
+
+        // Додаємо детальне логування перед перевіркою hasChanges
+        console.log('Порівняння змін для підкатегорії:', {
+            name: { new: normalizeValue(name), old: normalizeValue(subcategory.name) },
+            slug: { new: normalizeValue(slug), old: normalizeValue(subcategory.slug) },
+            photo: { new: normalizeValue(photo), old: normalizeValue(subcategory.photo) },
+            visible: { new: visible, old: subcategory.visible ?? true },
+            photoFile: photoFileInput.files.length
+        });
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', { 
