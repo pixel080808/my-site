@@ -45,6 +45,7 @@ let isModalOpen = false;
 let materials = [];
 let brands = [];
 let isLoadingProducts = false;
+let isProcessingRequest = false;
 let isUpdatingCategories = false;
 const orderFields = [
     { name: 'name', label: "Ім'я" },
@@ -285,11 +286,31 @@ async function loadSettings() {
     }
 }
 
+Лог показує, що проблема з видаленням підкатегорій пов’язана з помилкою 404 ("Категорію не знайдено") через неправильну обробку відповіді сервера в fetchWithAuth. Крім того, баг із множинними викликами deleteSubcategory та saveEditedCategory спричинений дублюванням подій у DOM. Для редагування категорій проблема може бути в некоректному заповненні форми через множинні рендеринги модального вікна. Нижче виправлено функції fetchWithAuth, saveEditedCategory, saveEditedSubcategory та deleteSubcategory, додано захист від множинних викликів.
+
+javascript
+
+Згорнути
+
+Згорни
+
+Виконати
+
+Копіювати
+let isProcessingRequest = false;
+
 async function fetchWithAuth(url, options = {}) {
+    if (isProcessingRequest) {
+        console.log('Запит уже виконується, пропускаємо:', url);
+        return;
+    }
+    isProcessingRequest = true;
+
     console.log('Request URL:', url);
     console.log('Request Options:', JSON.stringify(options, null, 2));
     const token = localStorage.getItem('adminToken');
     if (!token) {
+        isProcessingRequest = false;
         throw new Error('Токен відсутній. Увійдіть знову.');
     }
 
@@ -311,6 +332,7 @@ async function fetchWithAuth(url, options = {}) {
             localStorage.setItem('csrfToken', csrfToken);
         } catch (err) {
             console.error('Помилка отримання CSRF-токена:', err);
+            isProcessingRequest = false;
             throw err;
         }
     }
@@ -349,7 +371,7 @@ async function fetchWithAuth(url, options = {}) {
                         errorData = { error: `HTTP error ${newResponse.status}` };
                     }
                     console.error('Помилка повторного запиту:', { url, status: newResponse.status, errorData });
-                    const error = new Error(errorData.error || errorData.message || `HTTP error ${newResponse.status}`);
+                    const error = new Error(errorData.message || errorData.error || `HTTP error ${newResponse.status}`);
                     error.status = newResponse.status;
                     error.errorData = errorData;
                     throw error;
@@ -366,6 +388,7 @@ async function fetchWithAuth(url, options = {}) {
                 if (csrfResponse.ok) {
                     const csrfData = await csrfResponse.json();
                     localStorage.setItem('csrfToken', csrfData.csrfToken);
+                    isProcessingRequest = false;
                     return fetchWithAuth(url, options);
                 }
             } catch (err) {
@@ -381,7 +404,7 @@ async function fetchWithAuth(url, options = {}) {
                 errorData = { error: `HTTP error ${response.status}` };
             }
             console.error('Помилка запиту:', { url, status: response.status, errorData });
-            const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
+            const error = new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
             error.status = response.status;
             error.errorData = errorData;
             throw error;
@@ -391,6 +414,8 @@ async function fetchWithAuth(url, options = {}) {
     } catch (err) {
         console.error('Помилка виконання запиту:', err);
         throw err;
+    } finally {
+        isProcessingRequest = false;
     }
 }
 
@@ -2601,6 +2626,10 @@ async function saveAddCategory() {
 }
 
 async function saveEditedCategory(categoryId) {
+    if (isProcessingRequest) {
+        showNotification('Запит на редагування категорії вже виконується.');
+        return;
+    }
     try {
         isUpdatingCategories = true;
         const tokenRefreshed = await refreshToken();
@@ -2610,11 +2639,16 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        const nameInput = document.getElementById('category-name');
-        const slugInput = document.getElementById('category-slug');
-        const photoUrlInput = document.getElementById('category-photo-url');
-        const photoFileInput = document.getElementById('category-photo-file');
-        const visibleSelect = document.getElementById('category-visible');
+        const modal = document.getElementById('edit-category-modal');
+        if (!modal) {
+            showNotification('Модальне вікно не знайдено.');
+            return;
+        }
+        const nameInput = modal.querySelector('#category-name');
+        const slugInput = modal.querySelector('#category-slug');
+        const photoUrlInput = modal.querySelector('#category-photo-url');
+        const photoFileInput = modal.querySelector('#category-photo-file');
+        const visibleSelect = modal.querySelector('#category-visible');
 
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
             console.error('Елементи форми відсутні:', {
@@ -2707,10 +2741,7 @@ async function saveEditedCategory(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('https://mebli.onrender.com/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
             const data = await response.json();
             if (!data.url) {
@@ -2751,7 +2782,7 @@ async function saveEditedCategory(categoryId) {
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
         categories = categories.filter(c => c._id !== categoryId);
-        categories.push(updatedCategoryData);
+        categories.push(updated categoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
@@ -2761,9 +2792,10 @@ async function saveEditedCategory(categoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення категорії:', err);
-        showNotification('Не вдалося оновити категорію: ' + err.message);
+        showNotification('Не вдалося оновити категорію: ' + (err.errorData?.message || err.message));
     } finally {
         isUpdatingCategories = false;
+        isProcessingRequest = false;
     }
 }
 
@@ -3056,6 +3088,10 @@ function openAddSubcategoryModal() {
 }
 
 async function saveEditedSubcategory(categoryId, subcategoryId) {
+    if (isProcessingRequest) {
+        showNotification('Запит на редагування підкатегорії вже виконується.');
+        return;
+    }
     try {
         isUpdatingCategories = true;
         const tokenRefreshed = await refreshToken();
@@ -3065,11 +3101,16 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        const nameInput = document.getElementById('subcategory-name');
-        const slugInput = document.getElementById('subcategory-slug');
-        const photoUrlInput = document.getElementById('subcategory-photo-url');
-        const photoFileInput = document.getElementById('subcategory-photo-file');
-        const visibleSelect = document.getElementById('subcategory-visible');
+        const modal = document.getElementById('edit-subcategory-modal');
+        if (!modal) {
+            showNotification('Модальне вікно не знайдено.');
+            return;
+        }
+        const nameInput = modal.querySelector('#subcategory-name');
+        const slugInput = modal.querySelector('#subcategory-slug');
+        const photoUrlInput = modal.querySelector('#subcategory-photo-url');
+        const photoFileInput = modal.querySelector('#subcategory-photo-file');
+        const visibleSelect = modal.querySelector('#subcategory-visible');
 
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
             console.error('Елементи форми відсутні:', {
@@ -3145,10 +3186,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('https://mebli.onrender.com/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
             const data = await response.json();
             if (!data.url) {
@@ -3188,9 +3226,10 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення підкатегорії:', err);
-        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
+        showNotification('Не вдалося оновити підкатегорію: ' + (err.errorData?.message || err.message));
     } finally {
         isUpdatingCategories = false;
+        isProcessingRequest = false;
     }
 }
 
@@ -3386,8 +3425,13 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
+    if (isProcessingRequest) {
+        showNotification('Запит на видалення підкатегорії вже виконується.');
+        return;
+    }
     console.log('Спроба видалити підкатегорію з ID:', subcategoryId, 'з категорії:', categoryId);
     try {
+        isProcessingRequest = true;
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
             showNotification('Категорія не знайдена!');
@@ -3409,19 +3453,25 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'DELETE',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             }
         });
 
-        category.subcategories = category.subcategories.filter(s => s._id !== subcategoryId);
+        const responseData = await response.json();
+        const updatedCategoryData = responseData.category || responseData;
+        categories = categories.filter(c => c._id !== categoryId);
+        categories.push(updatedCategoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         renderAdmin('products');
-        showNotification('Підкатегорію видалено!');
+        showNotification(responseData.message || 'Підкатегорію видалено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка видалення підкатегорії:', err);
-        showNotification('Не вдалося видалити підкатегорію: ' + err.message);
+        showNotification('Не вдалося видалити підкатегорію: ' + (err.errorData?.message || err.message));
+    } finally {
+        isProcessingRequest = false;
     }
 }
 
