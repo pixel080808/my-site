@@ -1901,10 +1901,12 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         }
 
         // Порівнюємо нові дані зі старими
+        const normalizedNewPhoto = subcategoryData.photo || '';
+        const normalizedOldPhoto = subcategory.photo || '';
         const isUnchanged = (
             subcategoryData.name === subcategory.name &&
             subcategoryData.slug === subcategory.slug &&
-            (subcategoryData.photo || '') === (subcategory.photo || '') &&
+            normalizedNewPhoto === normalizedOldPhoto &&
             subcategoryData.visible === subcategory.visible &&
             subcategoryData.order === subcategory.order
         );
@@ -1912,7 +1914,7 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         if (isUnchanged) {
             logger.info(`Зміни відсутні для підкатегорії: ${subcategoryId}`);
             await session.commitTransaction();
-            return res.status(200).json({ message: 'Зміни відсутні', subcategory });
+            return res.status(200).json({ message: 'Зміни відсутні', category });
         }
 
         if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
@@ -1943,6 +1945,16 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         category.updatedAt = new Date();
 
         await category.save({ session });
+
+        // Оновлення пов’язаних продуктів
+        if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
+            await Product.updateMany(
+                { subcategory: subcategory.slug },
+                { $set: { subcategory: subcategoryData.slug } },
+                { session }
+            );
+            logger.info(`Оновлено subcategory у продуктах: ${subcategory.slug} -> ${subcategoryData.slug}`);
+        }
 
         const updatedCategories = await Category.find().session(session);
         broadcast('categories', updatedCategories);

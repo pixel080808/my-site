@@ -2738,7 +2738,7 @@ async function saveEditedCategory(categoryId) {
             subcategories: { new: JSON.stringify(updatedSubcategories), old: JSON.stringify(category.subcategories || []) }
         });
 
-        if (isUnchanged) {
+        if (isUnchanged && !hasFile) {
             console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, категорію не оновлено.');
             closeModal();
@@ -2802,7 +2802,7 @@ async function saveEditedCategory(categoryId) {
         const updatedCategory = {
             name,
             slug,
-            photo: photo || '',
+            photo: photo || null, // Явно встановлюємо null, якщо photo порожнє
             visible,
             order: category.order !== undefined ? category.order : 0,
             subcategories: updatedSubcategories
@@ -3204,7 +3204,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             hasFile
         });
 
-        if (isUnchanged) {
+        if (isUnchanged && !hasFile) {
             console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, підкатегорію не оновлено.');
             closeModal();
@@ -3245,7 +3245,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || '',
+            photo: photo || null, // Явно встановлюємо null, якщо photo порожнє
             visible,
             order: subcategory.order !== undefined ? subcategory.order : 0
         };
