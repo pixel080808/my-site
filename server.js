@@ -1787,17 +1787,93 @@ app.delete('/api/categories/:slug', authenticateToken, csrfProtection, async (re
     }
 });
 
+app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const categoryId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            logger.error(`Невірний формат ID категорії: ${categoryId}`);
+            await session.abortTransaction();
+            return res.status(400).json({ error: 'Невірний формат ID категорії' });
+        }
+
+        const category = await Category.findByIdAndDelete(categoryId, { session });
+        if (!category) {
+            logger.error(`Категорію не знайдено: ${categoryId}`);
+            await session.abortTransaction();
+            return res.status(404).json({ error: 'Категорію не знайдено' });
+        }
+
+        await Product.updateMany(
+            { category: category.name },
+            { $set: { category: '' } },
+            { session }
+        );
+
+        await Product.updateMany(
+            { subcategory: { $in: category.subcategories.map(sub => sub.name) } },
+            { $set: { subcategory: '' } },
+            { session }
+        );
+
+        if (category.photo) {
+            const publicId = getPublicIdFromUrl(category.photo);
+            if (publicId) {
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    logger.info(`Успішно видалено зображення категорії з Cloudinary: ${publicId}`);
+                } catch (err) {
+                    logger.error(`Не вдалося видалити зображення категорії з Cloudinary: ${publicId}`, err);
+                }
+            }
+        }
+
+        for (const subcategory of category.subcategories) {
+            if (subcategory.photo) {
+                const publicId = getPublicIdFromUrl(subcategory.photo);
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                        logger.info(`Успішно видалено зображення підкатегорії з Cloudinary: ${publicId}`);
+                    } catch (err) {
+                        logger.error(`Не вдалося видалити зображення підкатегорії з Cloudinary: ${publicId}`, err);
+                    }
+                }
+            }
+        }
+
+        const categories = await Category.find().session(session);
+        broadcast('categories', categories);
+        logger.info(`Категорію видалено: ${categoryId}, користувач: ${req.user.username}`);
+        await session.commitTransaction();
+        res.json({ message: 'Категорію видалено' });
+    } catch (err) {
+        await session.abortTransaction();
+        logger.error('Помилка при видаленні категорії:', err);
+        res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } finally {
+        session.endSession();
+    }
+});
+
 app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authenticateToken, csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const { categorySlug, subcategorySlug } = req.params;
 
-        const category = await Category.findOne({ slug: categorySlug });
+        const category = await Category.findOne({ slug: categorySlug }).session(session);
         if (!category) {
+            logger.error(`Категорію не знайдено: ${categorySlug}`);
+            await session.abortTransaction();
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
         const subcategoryIndex = category.subcategories.findIndex(sub => sub.slug === subcategorySlug);
         if (subcategoryIndex === -1) {
+            logger.error(`Підкатегорію не знайдено: ${subcategorySlug} у категорії ${categorySlug}`);
+            await session.abortTransaction();
             return res.status(404).json({ error: 'Підкатегорію не знайдено' });
         }
 
@@ -1816,14 +1892,26 @@ app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authe
         }
 
         category.subcategories.splice(subcategoryIndex, 1);
-        await category.save();
+        category.updatedAt = new Date();
+        await category.save({ session });
 
-        const categories = await Category.find();
+        await Product.updateMany(
+            { subcategory: subcategory.name },
+            { $set: { subcategory: '' } },
+            { session }
+        );
+
+        const categories = await Category.find().session(session);
         broadcast('categories', categories);
-        res.json({ message: 'Підкатегорію видалено' });
+        logger.info(`Підкатегоію видалено: ${subcategorySlug} з категорії ${categorySlug}`);
+        await session.commitTransaction();
+        res.json(category);
     } catch (err) {
+        await session.abortTransaction();
         logger.error('Помилка при видаленні підкатегорії:', err);
         res.status(500).json({ error: 'Помилка сервера', details: err.message });
+    } finally {
+        session.endSession();
     }
 });
 
