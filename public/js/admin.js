@@ -1852,7 +1852,7 @@ function renderAdmin(section = activeTab, data = {}) {
         const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
         const contactPhones = document.getElementById('contact-phones');
         if (contactPhones) contactPhones.value = contacts.phones || '';
-        else console.warn 'Очі 0_0';
+        else console.warn('Елемент #contact-phones не знайдено');
 
         const contactAddresses = document.getElementById('contact-addresses');
         if (contactAddresses) contactAddresses.value = contacts.addresses || '';
