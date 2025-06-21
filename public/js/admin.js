@@ -2702,8 +2702,8 @@ async function saveEditedCategory(categoryId) {
                                       sub.order !== (oldSub.order || 0);
                            });
 
-        // Додаємо детальне логування перед перевіркою hasChanges
-        console.log('Порівняння змін для категорії:', {
+        // Виправлене логування з деталями
+        console.log('Порівняння змін для категорії:', JSON.stringify({
             name: { new: normalizeValue(name), old: normalizeValue(category.name) },
             slug: { new: normalizeValue(slug), old: normalizeValue(category.slug) },
             photo: { new: normalizeValue(photo), old: normalizeValue(category.photo) },
@@ -2723,18 +2723,19 @@ async function saveEditedCategory(categoryId) {
                     };
                 })
             }
-        });
+        }, null, 2));
 
         if (!hasChanges) {
-            console.log('Зміни відсутні:', { 
+            console.log('Зміни відсутні:', JSON.stringify({ 
                 original: { name: category.name, slug: category.slug, photo: category.photo, visible: category.visible, subcategories: category.subcategories },
                 updated: { name, slug, photo, visible, subcategories: updatedSubcategories }
-            });
+            }, null, 2));
             showNotification('Зміни відсутні.');
             closeModal();
             return;
         }
 
+        // Решта коду без змін
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
@@ -3179,25 +3180,26 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
                            normalizeValue(photo) !== normalizeValue(subcategory.photo) ||
                            photoFileInput.files.length > 0;
 
-        // Додаємо детальне логування перед перевіркою hasChanges
-        console.log('Порівняння змін для підкатегорії:', {
+        // Виправлене логування з деталями
+        console.log('Порівняння змін для підкатегорії:', JSON.stringify({
             name: { new: normalizeValue(name), old: normalizeValue(subcategory.name) },
             slug: { new: normalizeValue(slug), old: normalizeValue(subcategory.slug) },
             photo: { new: normalizeValue(photo), old: normalizeValue(subcategory.photo) },
             visible: { new: visible, old: subcategory.visible ?? true },
             photoFile: photoFileInput.files.length
-        });
+        }, null, 2));
 
         if (!hasChanges) {
-            console.log('Зміни відсутні:', { 
+            console.log('Зміни відсутні:', JSON.stringify({ 
                 original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo, visible: subcategory.visible },
                 updated: { name, slug, photo, visible }
-            });
+            }, null, 2));
             showNotification('Зміни відсутні.');
             closeModal();
             return;
         }
 
+        // Решта коду без змін
         if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
