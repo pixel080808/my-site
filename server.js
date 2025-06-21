@@ -1798,13 +1798,41 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
             return res.status(400).json({ error: 'Невірний формат ID категорії' });
         }
 
-        const category = await Category.findByIdAndDelete(categoryId, { session });
+        const category = await Category.findById(categoryId).session(session);
         if (!category) {
             logger.error(`Категорію не знайдено: ${categoryId}`);
             await session.abortTransaction();
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
+        // Видалення зображень
+        if (category.photo) {
+            const publicId = getPublicIdFromUrl(category.photo);
+            if (publicId) {
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    logger.info(`Успішно видалено зображення категорії: ${publicId}`);
+                } catch (err) {
+                    logger.error(`Не вдалося видалити зображення категорії: ${publicId}`, err);
+                }
+            }
+        }
+
+        for (const subcategory of category.subcategories || []) {
+            if (subcategory.photo) {
+                const publicId = getPublicIdFromUrl(subcategory.photo);
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                        logger.info(`Успішно видалено зображення підкатегорії: ${publicId}`);
+                    } catch (err) {
+                        logger.error(`Не вдалося видалити зображення підкатегорії: ${publicId}`, err);
+                    }
+                }
+            }
+        }
+
+        // Оновлення продуктів
         await Product.updateMany(
             { category: category.name },
             { $set: { category: '' } },
@@ -1817,31 +1845,8 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
             { session }
         );
 
-        if (category.photo) {
-            const publicId = getPublicIdFromUrl(category.photo);
-            if (publicId) {
-                try {
-                    await cloudinary.uploader.destroy(publicId);
-                    logger.info(`Успішно видалено зображення категорії з Cloudinary: ${publicId}`);
-                } catch (err) {
-                    logger.error(`Не вдалося видалити зображення категорії з Cloudinary: ${publicId}`, err);
-                }
-            }
-        }
-
-        for (const subcategory of category.subcategories) {
-            if (subcategory.photo) {
-                const publicId = getPublicIdFromUrl(subcategory.photo);
-                if (publicId) {
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                        logger.info(`Успішно видалено зображення підкатегорії з Cloudinary: ${publicId}`);
-                    } catch (err) {
-                        logger.error(`Не вдалося видалити зображення підкатегорії з Cloudinary: ${publicId}`, err);
-                    }
-                }
-            }
-        }
+        // Видалення категорії
+        await Category.findByIdAndDelete(categoryId, { session });
 
         const categories = await Category.find().session(session);
         broadcast('categories', categories);
@@ -1857,55 +1862,62 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
     }
 });
 
-app.delete('/api/categories/:categorySlug/subcategories/:subcategorySlug', authenticateToken, csrfProtection, async (req, res) => {
+app.delete('/api/categories/:categoryId/subcategories/:subcategoryId', authenticateToken, csrfProtection, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { categorySlug, subcategorySlug } = req.params;
+        const { categoryId, subcategoryId } = req.params;
 
-        const category = await Category.findOne({ slug: categorySlug }).session(session);
+        if (!mongoose.Types.ObjectId.isValid(categoryId) || !mongoose.Types.ObjectId.isValid(subcategoryId)) {
+            logger.error(`Невірний формат ID: categoryId=${categoryId}, subcategoryId=${subcategoryId}`);
+            await session.abortTransaction();
+            return res.status(400).json({ error: 'Невірний формат ID' });
+        }
+
+        const category = await Category.findById(categoryId).session(session);
         if (!category) {
-            logger.error(`Категорію не знайдено: ${categorySlug}`);
+            logger.error(`Категорію не знайдено: ${categoryId}`);
             await session.abortTransaction();
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
-        const subcategoryIndex = category.subcategories.findIndex(sub => sub.slug === subcategorySlug);
-        if (subcategoryIndex === -1) {
-            logger.error(`Підкатегорію не знайдено: ${subcategorySlug} у категорії ${categorySlug}`);
+        const subcategory = category.subcategories.id(subcategoryId);
+        if (!subcategory) {
+            logger.error(`Підкатегорію не знайдено: ${subcategoryId}`);
             await session.abortTransaction();
             return res.status(404).json({ error: 'Підкатегорію не знайдено' });
         }
 
-        const subcategory = category.subcategories[subcategoryIndex];
-
+        // Видалення зображення
         if (subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
                 try {
                     await cloudinary.uploader.destroy(publicId);
-                    logger.info(`Успішно видалено зображення підкатегорії з Cloudinary: ${publicId}`);
+                    logger.info(`Успішно видалено зображення підкатегорії: ${publicId}`);
                 } catch (err) {
-                    logger.error(`Не вдалося видалити зображення підкатегорії з Cloudinary: ${publicId}`, err);
+                    logger.error(`Не вдалося видалити зображення підкатегорії: ${publicId}`, err);
                 }
             }
         }
 
-        category.subcategories.splice(subcategoryIndex, 1);
-        category.updatedAt = new Date();
-        await category.save({ session });
-
+        // Оновлення продуктів
         await Product.updateMany(
             { subcategory: subcategory.name },
             { $set: { subcategory: '' } },
             { session }
         );
 
+        // Видалення підкатегорії
+        category.subcategories.pull({ _id: subcategoryId });
+        category.updatedAt = new Date();
+        await category.save({ session });
+
         const categories = await Category.find().session(session);
         broadcast('categories', categories);
-        logger.info(`Підкатегоію видалено: ${subcategorySlug} з категорії ${categorySlug}`);
+        logger.info(`Підкатегоію видалено: ${subcategoryId} з категорії ${categoryId}`);
         await session.commitTransaction();
-        res.json(category);
+        res.json({ category });
     } catch (err) {
         await session.abortTransaction();
         logger.error('Помилка при видаленні підкатегорії:', err);

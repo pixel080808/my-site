@@ -2221,6 +2221,10 @@ async function deleteCategory(categoryId) {
             return;
         }
 
+        // Локально видаляємо категорію перед відправкою запиту
+        categories = categories.filter(c => c._id !== categoryId);
+        renderCategoriesAdmin();
+
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/id/${categoryId}`, {
             method: 'DELETE',
             headers: {
@@ -2230,18 +2234,19 @@ async function deleteCategory(categoryId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Помилка: ${response.status} ${JSON.stringify(errorData)}`);
+            throw new Error(`Помилка: ${errorData.error || response.statusText}`);
         }
 
-        categories = categories.filter(c => c._id !== categoryId);
         localStorage.setItem('categories', JSON.stringify(categories));
-        renderCategoriesAdmin();
         renderAdmin('products');
         showNotification('Категорію видалено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка видалення категорії:', err);
         showNotification('Не вдалося видалити категорію: ' + err.message);
+        // Відновлюємо категорії при помилці
+        categories = JSON.parse(localStorage.getItem('categories') || '[]');
+        renderCategoriesAdmin();
     } finally {
         isUpdatingCategories = false;
     }
@@ -2680,27 +2685,21 @@ async function saveEditedCategory(categoryId) {
             order: sub.order !== undefined ? sub.order : 0
         })).filter(sub => sub.name && sub.slug) : [];
 
-        // Детальне порівняння змін
-        const hasChanges = name !== category.name ||
-                           slug !== category.slug ||
-                           visible !== category.visible ||
-                           (photo || '') !== (category.photo || '') ||
+        // Спрощене порівняння змін
+        const hasChanges = name !== (category.name || '').trim() ||
+                           slug !== (category.slug || '').trim() ||
+                           visible !== (category.visible ?? true) ||
+                           photo !== (category.photo || '') ||
                            photoFileInput.files.length > 0 ||
-                           JSON.stringify(updatedSubcategories.map(s => ({
-                               _id: s._id,
-                               name: s.name,
-                               slug: s.slug,
-                               photo: s.photo || '',
-                               visible: s.visible,
-                               order: s.order
-                           }))) !== JSON.stringify(category.subcategories.map(s => ({
-                               _id: s._id,
-                               name: s.name,
-                               slug: s.slug,
-                               photo: s.photo || '',
-                               visible: s.visible,
-                               order: s.order
-                           })));
+                           updatedSubcategories.length !== (category.subcategories || []).length ||
+                           updatedSubcategories.some((sub, i) => {
+                               const oldSub = category.subcategories[i] || {};
+                               return sub.name !== (oldSub.name || '') ||
+                                      sub.slug !== (oldSub.slug || '') ||
+                                      sub.photo !== (oldSub.photo || '') ||
+                                      sub.visible !== (oldSub.visible ?? true) ||
+                                      sub.order !== (oldSub.order || 0);
+                           });
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', { category, updated: { name, slug, photo, visible, subcategories: updatedSubcategories } });
@@ -2749,6 +2748,7 @@ async function saveEditedCategory(categoryId) {
                 }
             });
             const data = await response.json();
+            if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
 
@@ -2764,13 +2764,13 @@ async function saveEditedCategory(categoryId) {
         const updatedCategory = {
             name,
             slug,
-            photo: photo || '',
+            photo: photo || undefined,
             visible,
-            order: category.order !== undefined ? category.order : 0,
+            order: category.order || 0,
             subcategories: updatedSubcategories
         };
 
-        console.log('Надсилаємо запит на оновлення категорії:', JSON.stringify(updatedCategory, null, 2));
+        console.log('Надсилаємо запит на оновлення категорії:', updatedCategory);
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2793,10 +2793,11 @@ async function saveEditedCategory(categoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification(responseData.message || 'Категорію оновлено!');
+        showNotification('Категорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
-        handleError(err, 'Не вдалося оновити категорію');
+        console.error('Помилка оновлення категорії:', err);
+        showNotification('Не вдалося оновити категорію: ' + err.message);
     } finally {
         isUpdatingCategories = false;
     }
@@ -3143,10 +3144,10 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        const hasChanges = name !== subcategory.name ||
-                           slug !== subcategory.slug ||
-                           visible !== subcategory.visible ||
-                           (photo || '') !== (subcategory.photo || '') ||
+        const hasChanges = name !== (subcategory.name || '').trim() ||
+                           slug !== (subcategory.slug || '').trim() ||
+                           visible !== (subcategory.visible ?? true) ||
+                           photo !== (subcategory.photo || '') ||
                            photoFileInput.files.length > 0;
 
         if (!hasChanges) {
@@ -3183,18 +3184,19 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
                 }
             });
             const data = await response.json();
+            if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
 
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || '',
+            photo: photo || undefined,
             visible,
-            order: subcategory.order !== undefined ? subcategory.order : 0
+            order: subcategory.order || 0
         };
 
-        console.log('Надсилаємо запит на оновлення підкатегорії:', JSON.stringify(updatedSubcategory, null, 2));
+        console.log('Надсилаємо запит на оновлення підкатегорії:', updatedSubcategory);
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3217,10 +3219,11 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification(responseData.message || 'Підкатегорію оновлено!');
+        showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
-        handleError(err, 'Не вдалося оновити підкатегорію');
+        console.error('Помилка оновлення підкатегорії:', err);
+        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
     } finally {
         isUpdatingCategories = false;
     }
@@ -3445,7 +3448,12 @@ async function deleteSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${category.slug}/subcategories/${subcategory.slug}`, {
+        // Локально видаляємо підкатегорію
+        const categoryIndex = categories.findIndex(c => c._id === categoryId);
+        categories[categoryIndex].subcategories = categories[categoryIndex].subcategories.filter(s => s._id !== subcategoryId);
+        renderCategoriesAdmin();
+
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
@@ -3458,11 +3466,10 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         }
 
         const updatedCategory = await response.json();
-        const index = categories.findIndex(c => c._id === categoryId);
-        categories[index] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
+        categories[categoryIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        // Оновлюємо товари через API
+        // Оновлюємо товари
         await fetchWithAuth(`/api/products/subcategory/${encodeURIComponent(subcategory.name)}`, {
             method: 'PUT',
             headers: {
@@ -3472,13 +3479,15 @@ async function deleteSubcategory(categoryId, subcategoryId) {
             body: JSON.stringify({ category: category.name })
         });
 
-        renderCategoriesAdmin();
         renderAdmin('products');
         showNotification('Підкатегорію видалено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка видалення підкатегорії:', err);
         showNotification('Не вдалося видалити підкатегорію: ' + err.message);
+        // Відновлюємо категорії при помилці
+        categories = JSON.parse(localStorage.getItem('categories') || '[]');
+        renderCategoriesAdmin();
     } finally {
         isUpdatingCategories = false;
     }
@@ -6225,32 +6234,34 @@ function handleCategoriesUpdate(data) {
         console.log('Ігноруємо WebSocket-оновлення для категорій, оскільки триває локальне оновлення');
         return;
     }
-    const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id);
-    categories = data.filter(cat => cat._id && isValidId(cat._id) && cat.name && cat.slug).map(newCat => ({
-        ...newCat,
-        subcategories: (newCat.subcategories || []).filter(sub => 
-            sub._id && 
-            isValidId(sub._id) && 
-            sub.name && 
-            sub.slug && 
-            typeof sub.name === 'string' && 
-            typeof sub.slug === 'string'
-        ).map(sub => ({
-            ...sub,
-            photo: sub.photo || '',
-            visible: sub.visible !== undefined ? sub.visible : true,
-            order: sub.order !== undefined ? sub.order : 0
-        }))
-    }));
-    localStorage.setItem('categories', JSON.stringify(categories));
-    console.log('Оновлено categories:', categories);
-    if (document.querySelector('#categories.active')) {
-        renderCategoriesAdmin();
-    }
-    const modal = document.getElementById('modal');
-    if (modal && modal.classList.contains('active')) {
-        updateSubcategories();
-    }
+    setTimeout(() => {
+        const isValidId = id => /^[0-9a-fA-F]{24}$/.test(id);
+        categories = data.filter(cat => cat._id && isValidId(cat._id) && cat.name && cat.slug).map(newCat => ({
+            ...newCat,
+            subcategories: (newCat.subcategories || []).filter(sub => 
+                sub._id && 
+                isValidId(sub._id) && 
+                sub.name && 
+                sub.slug && 
+                typeof sub.name === 'string' && 
+                typeof sub.slug === 'string'
+            ).map(sub => ({
+                ...sub,
+                photo: sub.photo || '',
+                visible: sub.visible !== undefined ? sub.visible : true,
+                order: sub.order !== undefined ? sub.order : 0
+            }))
+        }));
+        localStorage.setItem('categories', JSON.stringify(categories));
+        console.log('Оновлено categories:', categories);
+        if (document.querySelector('#categories.active')) {
+            renderCategoriesAdmin();
+        }
+        const modal = document.getElementById('modal');
+        if (modal && modal.classList.contains('active')) {
+            updateSubcategories();
+        }
+    }, 100);
 }
 
 function handleOrdersUpdate(data) {
