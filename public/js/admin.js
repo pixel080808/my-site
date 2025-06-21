@@ -159,7 +159,7 @@ async function loadCategories() {
 
         if (!response.ok) {
             const text = await response.text();
-            if (response.status === 401' || response.status === '403') {
+            if (response.status === 401 || response.status === 403) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('csrfToken');
                 session = { isAuthenticated: false, timestamp: 0 };
