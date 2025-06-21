@@ -2662,12 +2662,14 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
+        // Отримуємо елементи форми
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
         const photoFileInput = document.getElementById('category-photo-file');
         const visibleSelect = document.getElementById('category-visible');
 
+        // Перевірка наявності елементів
         if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
             console.error('Елементи форми відсутні:', {
                 nameInput: !!nameInput,
@@ -2680,26 +2682,27 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
+        // Отримуємо значення з форми
         const name = nameInput.value.trim();
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
+        // Валідація обов’язкових полів
         if (!name) {
             showNotification('Назва категорії є обов’язковою!');
             return;
         }
-
         if (!slug) {
             showNotification('Шлях категорії є обов’язковим!');
             return;
         }
-
         if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
+        // Знаходимо категорію
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
             showNotification('Категорію не знайдено!');
@@ -2709,9 +2712,9 @@ async function saveEditedCategory(categoryId) {
         // Формуємо updatedSubcategories
         const updatedSubcategories = (category.subcategories || []).map(sub => ({
             _id: sub._id || undefined,
-            name: sub.name || '',
-            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''),
-            photo: sub.photo || '',
+            name: (sub.name || '').trim(),
+            slug: (sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')).trim(),
+            photo: (sub.photo || '').trim(),
             visible: sub.visible !== undefined ? sub.visible : true,
             order: sub.order !== undefined ? sub.order : 0
         })).filter(sub => sub.name && sub.slug);
@@ -2720,6 +2723,8 @@ async function saveEditedCategory(categoryId) {
         const hasFile = photoFileInput.files.length > 0;
         const normalizedOldPhoto = (category.photo || '').trim();
         const normalizedNewPhoto = (photo || '').trim();
+
+        // Детальне порівняння
         const isUnchanged = (
             name.trim() === (category.name || '').trim() &&
             slug.trim() === (category.slug || '').trim() &&
@@ -2730,29 +2735,46 @@ async function saveEditedCategory(categoryId) {
                 _id: s._id || null,
                 name: s.name.trim(),
                 slug: s.slug.trim(),
-                photo: (s.photo || '').trim(),
+                photo: s.photo.trim(),
                 visible: s.visible,
                 order: s.order
-            }))) === JSON.stringify((category.subcategories || []).map(s => ({
+            }).sort((a, b) => (a._id || '').localeCompare(b._id || '')))) === 
+            JSON.stringify((category.subcategories || []).map(s => ({
                 _id: s._id || null,
                 name: (s.name || '').trim(),
                 slug: (s.slug || '').trim(),
                 photo: (s.photo || '').trim(),
                 visible: s.visible ?? true,
                 order: s.order ?? 0
-            })))
+            }).sort((a, b) => (a._id || '').localeCompare(b._id || ''))))
         );
 
-        console.log('Порівняння даних:', {
+        // Логування для дебагу
+        console.log('Порівняння даних для категорії:', {
             name: { new: name.trim(), old: (category.name || '').trim() },
             slug: { new: slug.trim(), old: (category.slug || '').trim() },
             photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
             visible: { new: visible, old: category.visible ?? true },
             hasFile,
             subcategories: {
-                new: JSON.stringify(updatedSubcategories),
-                old: JSON.stringify(category.subcategories || [])
-            }
+                new: updatedSubcategories.map(s => ({
+                    _id: s._id || null,
+                    name: s.name.trim(),
+                    slug: s.slug.trim(),
+                    photo: s.photo.trim(),
+                    visible: s.visible,
+                    order: s.order
+                })),
+                old: (category.subcategories || []).map(s => ({
+                    _id: s._id || null,
+                    name: (s.name || '').trim(),
+                    slug: (s.slug || '').trim(),
+                    photo: (s.photo || '').trim(),
+                    visible: s.visible ?? true,
+                    order: s.order ?? 0
+                }))
+            },
+            isUnchanged
         });
 
         if (isUnchanged) {
@@ -2782,11 +2804,13 @@ async function saveEditedCategory(categoryId) {
             }
         }
 
+        // Перевірка URL фотографії
         if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
+        // Обробка завантаження файлу
         if (hasFile) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2807,6 +2831,7 @@ async function saveEditedCategory(categoryId) {
             photo = data.url;
         }
 
+        // Перевірка унікальності slug підкатегорій
         const subSlugs = new Set();
         for (const sub of updatedSubcategories) {
             if (subSlugs.has(sub.slug)) {
@@ -2816,6 +2841,7 @@ async function saveEditedCategory(categoryId) {
             subSlugs.add(sub.slug);
         }
 
+        // Формуємо об’єкт для оновлення
         const updatedCategory = {
             name,
             slug,
@@ -2827,6 +2853,7 @@ async function saveEditedCategory(categoryId) {
 
         console.log('Надсилаємо запит на оновлення категорії:', JSON.stringify(updatedCategory, null, 2));
 
+        // Відправляємо запит на сервер
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
             method: 'PUT',
             headers: {
