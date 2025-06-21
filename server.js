@@ -1501,6 +1501,15 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
+        // Логування змін
+        const changes = {};
+        for (const key in categoryData) {
+            if (JSON.stringify(categoryData[key]) !== JSON.stringify(category[key])) {
+                changes[key] = { old: category[key], new: categoryData[key] };
+            }
+        }
+        logger.info('Зміни в категорії:', changes);
+
         // Нормалізація даних
         if (categoryData.photo === '') categoryData.photo = undefined;
         categoryData.subcategories = categoryData.subcategories?.map(sub => ({
@@ -1938,6 +1947,15 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             await session.abortTransaction();
             return res.status(404).json({ error: 'Підкатегорія не знайдена' });
         }
+
+        // Логування змін
+        const changes = {};
+        for (const key in subcategoryData) {
+            if (JSON.stringify(subcategoryData[key]) !== JSON.stringify(subcategory[key])) {
+                changes[key] = { old: subcategory[key], new: subcategoryData[key] };
+            }
+        }
+        logger.info('Зміни в підкатегорії:', changes);
 
         // Нормалізація даних
         if (subcategoryData.photo === '') subcategoryData.photo = undefined;
