@@ -2690,65 +2690,6 @@ async function saveEditedCategory(categoryId) {
             order: sub.order !== undefined ? sub.order : 0
         })).filter(sub => sub.name && sub.slug) : [];
 
-        // Порівнюємо нові дані зі старими
-        const hasFile = photoFileInput.files.length > 0;
-        const normalizedOldPhoto = (category.photo || '').trim();
-        const normalizedNewPhoto = (photo || '').trim();
-
-        // Детальне порівняння
-        const isUnchanged = (
-            name.trim() === (category.name || '').trim() &&
-            slug.trim() === (category.slug || '').trim() &&
-            normalizedNewPhoto === normalizedOldPhoto &&
-            visible === (category.visible ?? true) &&
-            !hasFile &&
-            JSON.stringify(
-                updatedSubcategories
-                    .map(s => ({
-                        _id: s._id || null,
-                        name: s.name.trim(),
-                        slug: s.slug.trim(),
-                        photo: s.photo.trim(),
-                        visible: s.visible,
-                        order: s.order
-                    }))
-                    .sort((a, b) => (a._id || '').toString().localeCompare(b._id || ''))
-            ) ===
-            JSON.stringify(
-                (Array.isArray(category.subcategories) ? category.subcategories : [])
-                    .map(s => ({
-                        _id: s._id || null,
-                        name: (s.name || '').trim(),
-                        slug: (s.slug || '').trim(),
-                        photo: (s.photo || '').trim(),
-                        visible: s.visible ?? true,
-                        order: s.order ?? 0
-                    }))
-                    .sort((a, b) => (a._id || '').toString().localeCompare(b._id || ''))
-            )
-        );
-
-        // Логування для дебагу
-        console.log('Порівняння даних для категорії:', {
-            name: { new: name.trim(), old: (category.name || '').trim() },
-            slug: { new: slug.trim(), old: (category.slug || '').trim() },
-            photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
-            visible: { new: visible, old: category.visible ?? true },
-            hasFile,
-            subcategories: {
-                new: updatedSubcategories,
-                old: Array.isArray(category.subcategories) ? category.subcategories : []
-            },
-            isUnchanged
-        });
-
-        if (isUnchanged) {
-            console.log('Зміни відсутні через однакові значення полів.');
-            showNotification('Зміни відсутні, категорію не оновлено.');
-            closeModal();
-            return;
-        }
-
         // Перевірка унікальності назви
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
@@ -2776,7 +2717,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         // Обробка завантаження файлу
-        if (hasFile) {
+        if (photoFileInput.files.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -2827,6 +2768,11 @@ async function saveEditedCategory(categoryId) {
             },
             body: JSON.stringify(updatedCategory)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
+        }
 
         const updatedCategoryData = await response.json();
         categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
@@ -3160,7 +3106,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/(.)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
@@ -3191,46 +3137,19 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        // Порівнюємо нові дані зі старими
-        const hasFile = photoFileInput.files.length > 0;
-        const normalizedOldPhoto = (subcategory.photo || '').trim();
-        const normalizedNewPhoto = (photo || '').trim();
-        const isUnchanged = (
-            name.trim() === (subcategory.name || '').trim() &&
-            slug.trim() === (subcategory.slug || '').trim() &&
-            normalizedNewPhoto === normalizedOldPhoto &&
-            visible === (subcategory.visible ?? true) &&
-            !hasFile
-        );
-
-        console.log('Порівняння даних:', {
-            name: { new: name.trim(), old: (subcategory.name || '').trim() },
-            slug: { new: slug.trim(), old: (subcategory.slug || '').trim() },
-            photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
-            visible: { new: visible, old: subcategory.visible ?? true },
-            order: { new: subcategory.order ?? 0, old: subcategory.order ?? 0 },
-            hasFile
-        });
-
-        if (isUnchanged) {
-            console.log('Зміни відсутні через однакові значення полів.');
-            showNotification('Зміни відсутні, підкатегорію не оновлено.');
-            closeModal();
-            return;
-        }
-
         // Перевірка унікальності slug
-        if (slug !== subcategory.slug && Array.isArray(category.subcategories) && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
+        if (slug !== subcategory.slug && Array.isArray(category.subcategories) && 
+            category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
 
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+        if (photo && !(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo))) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
-        if (hasFile) {
+        if (photoFileInput.files.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -3268,6 +3187,11 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             },
             body: JSON.stringify(updatedSubcategory)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
+        }
 
         const updatedCategoryData = await response.json();
         categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
