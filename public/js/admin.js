@@ -1733,7 +1733,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option valu▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option val▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -2681,7 +2681,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
@@ -2710,7 +2710,7 @@ async function saveEditedCategory(categoryId) {
         const updatedSubcategories = (category.subcategories || []).map(sub => ({
             _id: sub._id || undefined,
             name: sub.name || '',
-            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+            slug: sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''),
             photo: sub.photo || '',
             visible: sub.visible !== undefined ? sub.visible : true,
             order: sub.order !== undefined ? sub.order : 0
@@ -2718,27 +2718,44 @@ async function saveEditedCategory(categoryId) {
 
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
-        const normalizedOldPhoto = category.photo || '';
-        const normalizedNewPhoto = photo || '';
+        const normalizedOldPhoto = (category.photo || '').trim();
+        const normalizedNewPhoto = (photo || '').trim();
         const isUnchanged = (
-            name === category.name &&
-            slug === category.slug &&
+            name.trim() === (category.name || '').trim() &&
+            slug.trim() === (category.slug || '').trim() &&
             normalizedNewPhoto === normalizedOldPhoto &&
-            visible === category.visible &&
+            visible === (category.visible ?? true) &&
             !hasFile &&
-            JSON.stringify(updatedSubcategories.map(s => ({ ...s, _id: s._id || null }))) === JSON.stringify((category.subcategories || []).map(s => ({ ...s, _id: s._id || null })))
+            JSON.stringify(updatedSubcategories.map(s => ({
+                _id: s._id || null,
+                name: s.name.trim(),
+                slug: s.slug.trim(),
+                photo: (s.photo || '').trim(),
+                visible: s.visible,
+                order: s.order
+            }))) === JSON.stringify((category.subcategories || []).map(s => ({
+                _id: s._id || null,
+                name: (s.name || '').trim(),
+                slug: (s.slug || '').trim(),
+                photo: (s.photo || '').trim(),
+                visible: s.visible ?? true,
+                order: s.order ?? 0
+            })))
         );
 
         console.log('Порівняння даних:', {
-            name: { new: name, old: category.name },
-            slug: { new: slug, old: category.slug },
+            name: { new: name.trim(), old: (category.name || '').trim() },
+            slug: { new: slug.trim(), old: (category.slug || '').trim() },
             photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
-            visible: { new: visible, old: category.visible },
+            visible: { new: visible, old: category.visible ?? true },
             hasFile,
-            subcategories: { new: JSON.stringify(updatedSubcategories), old: JSON.stringify(category.subcategories || []) }
+            subcategories: {
+                new: JSON.stringify(updatedSubcategories),
+                old: JSON.stringify(category.subcategories || [])
+            }
         });
 
-        if (isUnchanged && !hasFile) {
+        if (isUnchanged) {
             console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, категорію не оновлено.');
             closeModal();
@@ -2802,7 +2819,7 @@ async function saveEditedCategory(categoryId) {
         const updatedCategory = {
             name,
             slug,
-            photo: photo || null, // Явно встановлюємо null, якщо photo порожнє
+            photo: photo || '',
             visible,
             order: category.order !== undefined ? category.order : 0,
             subcategories: updatedSubcategories
@@ -3151,7 +3168,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
@@ -3184,27 +3201,27 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
-        const normalizedOldPhoto = subcategory.photo || '';
-        const normalizedNewPhoto = photo || '';
+        const normalizedOldPhoto = (subcategory.photo || '').trim();
+        const normalizedNewPhoto = (photo || '').trim();
         const isUnchanged = (
-            name === subcategory.name &&
-            slug === subcategory.slug &&
+            name.trim() === (subcategory.name || '').trim() &&
+            slug.trim() === (subcategory.slug || '').trim() &&
             normalizedNewPhoto === normalizedOldPhoto &&
-            visible === subcategory.visible &&
+            visible === (subcategory.visible ?? true) &&
             !hasFile &&
-            subcategory.order === subcategory.order
+            (subcategory.order ?? 0) === (subcategory.order ?? 0)
         );
 
         console.log('Порівняння даних:', {
-            name: { new: name, old: subcategory.name },
-            slug: { new: slug, old: subcategory.slug },
+            name: { new: name.trim(), old: (subcategory.name || '').trim() },
+            slug: { new: slug.trim(), old: (subcategory.slug || '').trim() },
             photo: { new: normalizedNewPhoto, old: normalizedOldPhoto },
-            visible: { new: visible, old: subcategory.visible },
-            order: { new: subcategory.order, old: subcategory.order },
+            visible: { new: visible, old: subcategory.visible ?? true },
+            order: { new: subcategory.order ?? 0, old: subcategory.order ?? 0 },
             hasFile
         });
 
-        if (isUnchanged && !hasFile) {
+        if (isUnchanged) {
             console.log('Зміни відсутні через однакові значення полів.');
             showNotification('Зміни відсутні, підкатегорію не оновлено.');
             closeModal();
@@ -3245,7 +3262,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || null, // Явно встановлюємо null, якщо photo порожнє
+            photo: photo || '',
             visible,
             order: subcategory.order !== undefined ? subcategory.order : 0
         };
@@ -3267,7 +3284,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Підкатегорія оновлена!');
+        showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
         handleError(err, 'Не вдалося оновити підкатегорію');
