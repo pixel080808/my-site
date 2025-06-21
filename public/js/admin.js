@@ -145,13 +145,13 @@ async function loadCategories() {
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
-            return;
+            return null;
         }
 
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/categories', {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': 'Bearer ' + token.toString(),
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
@@ -159,51 +159,56 @@ async function loadCategories() {
 
         if (!response.ok) {
             const text = await response.text();
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401' || response.status === '403') {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('csrfToken');
-                session = { isActive: false, timestamp: 0 };
-                localStorage.setItem('adminSession', LZString.compressToUTF16(JSON.stringify(session)));
+                session = { isAuthenticated: false, timestamp: 0 };
+                localStorage.setItem('adminSession', JSON.stringify(session));
                 showSection('admin-login');
-                showNotification('Сесія закінчилася. Будь ласка, увійдіть знову.');
-                return;
+                showNotification('Сесія закінчилася. Будь ласка, увій знови.');
+                return null;
             }
             try {
                 const errorData = JSON.parse(text);
-                throw new Error(`Не вдалося завантажити категорії: ${errorData.error || response.statusText}`);
+                throw new Error(`Не вдалося знайти категорії: ${errorData.error || response.statusText}`);
             } catch {
-                throw new Error(`Не вдалося завантажити категорії: ${response.status} ${text}`);
+                throw new Error(`Не вдалося знайти категорії: ${response.status} ${text}`);
             }
         }
 
         const data = await response.json();
         if (!Array.isArray(data)) {
-            console.error('Отримано некоректні дані категорій:', data);
+            console.error('Invalid categories data received:', data);
             categories = [];
-            showNotification('Отримано некоректні дані категорій');
-        } else {
-            categories = data;
-            // Додаємо перевірку формату ID
-            const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-            const invalidCategories = categories.filter(cat => !isValidId(cat._id));
-            const invalidSubcategories = categories.flatMap(cat => 
-                (cat.subcategories || []).filter(sub => !isValidId(sub._id))
-            );
-            if (invalidCategories.length > 0 || invalidSubcategories.length > 0) {
-                console.error('Знайдено категорії або підкатегорії з некоректним форматом ID:', {
-                    invalidCategories,
-                    invalidSubcategories
-                });
-                showNotification('Деякі категорії або підкатегорії мають некоректний формат ID.');
-            }
-            console.log('Категорії завантажено:', categories);
-            renderCategoriesAdmin();
+            showNotification('Invalid categories data received');
+            return null;
         }
+
+        categories = data.map(c => ({
+            ...c,
+            subcategories: Array.isArray(c.subcategories) ? c.subcategories : []
+        }));
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        const invalidCategories = categories.filter(c => !c._id || !isValidId(c._id));
+        const invalidSubcategories = categories.flatMap(c => 
+            (c.subcategories || []).filter(s => !s._id || !isValidId(s._id))
+        );
+        if (invalidCategories.length > 0 || invalidSubcategories.length > 0) {
+            console.error('Found categories or subcategories with invalid ID format:', {
+                invalidCategories,
+                invalidSubcategories
+            });
+            showNotification('Some categories or subcategories have invalid ID format.');
+        }
+        console.log('Categories loaded:', categories);
+        renderCategoriesAdmin();
+        return categories;
     } catch (e) {
-        console.error('Помилка завантаження категорій:', e);
-        showNotification('Помилка завантаження категорій: ' + e.message);
+        console.error('Error loading categories:', e);
+        showNotification('Error loading categories: ' + e.message);
         categories = [];
         renderCategoriesAdmin();
+        return null;
     }
 }
 
@@ -740,6 +745,8 @@ async function checkAuth() {
 
         if (response.ok) {
             showSection('admin-panel');
+            // Завантажуємо категорії перед ініціалізацією
+            await loadCategories();
             await initializeData();
             connectAdminWebSocket();
             startTokenRefreshTimer();
@@ -1819,7 +1826,7 @@ async function updateAbout() {
 }
 
 function renderAdmin(section = activeTab, data = {}) {
-    console.log('Рендеринг адмін-панелі з activeTab:', section, 'settings:', settings);
+    console.log('Рендеринг адмін-панелі з activeTab:', section);
 
     try {
         const storeName = document.getElementById('store-name');
@@ -1845,7 +1852,7 @@ function renderAdmin(section = activeTab, data = {}) {
         const contacts = settings.contacts || { phones: '', addresses: '', schedule: '' };
         const contactPhones = document.getElementById('contact-phones');
         if (contactPhones) contactPhones.value = contacts.phones || '';
-        else console.warn('Елемент #contact-phones не знайдено');
+        else console.warn 'Очі 0_0';
 
         const contactAddresses = document.getElementById('contact-addresses');
         if (contactAddresses) contactAddresses.value = contacts.addresses || '';
@@ -1905,31 +1912,11 @@ function renderAdmin(section = activeTab, data = {}) {
 
         const catList = document.getElementById('category-list-admin');
         if (catList) {
-            console.log('Рендеринг category-list-admin, categories:', categories);
-            catList.innerHTML = categories && Array.isArray(categories) && categories.length > 0
-                ? categories.map((c, index) => `
-                    <div class="category-item">
-                        <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                        <button class="move-btn move-down" data-index="${index}" ${index === categories.length - 1 ? 'disabled' : ''}>↓</button>
-                        ${c.name} (${c.slug}) 
-                        <button class="edit-btn" data-id="${c._id}">Редагувати</button> 
-                        <button class="delete-btn" data-id="${c._id}">Видалити</button>
-                    </div>
-                    <div class="subcat-list">
-                        ${(c.subcategories && Array.isArray(c.subcategories) ? c.subcategories : []).map((sub, subIndex) => `
-                            <p>
-                                <button class="move-btn sub-move-up" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                                <button class="move-btn sub-move-down" data-cat-id="${c._id}" data-sub-index="${subIndex}" ${subIndex === (c.subcategories.length - 1) ? 'disabled' : ''}>↓</button>
-                                ${sub.name} (${sub.slug}) 
-                                <button class="edit-btn sub-edit" data-cat-id="${c._id}" data-sub-name="${sub.name}">Редагувати</button> 
-                                <button class="delete-btn sub-delete" data-cat-id="${c._id}" data-sub-name="${sub.name}">Видалити</button>
-                            </p>
-                        `).join('')}
-                    </div>
-                `).join('')
-                : '<p>Категорії відсутні</p>';
-            catList.removeEventListener('click', handleCatListClick);
-            catList.addEventListener('click', handleCatListClick);
+            if (Array.isArray(categories) && categories.length > 0) {
+                renderCategoriesAdmin();
+            } else {
+                catList.innerHTML = '<p>Категорії ще завантажуються...</p>';
+            }
         } else {
             console.warn('Елемент #category-list-admin не знайдено');
         }
@@ -1938,37 +1925,10 @@ function renderAdmin(section = activeTab, data = {}) {
         showNotification(`Помилка рендерингу вкладки ${section}: ${e.message}`);
     }
 
-    function handleCatListClick(event) {
-        const target = event.target;
-        const categoryId = target.dataset.id;
-        const subName = target.dataset.subName;
-        const catId = target.dataset.catId;
-        const subIndex = target.dataset.subIndex ? parseInt(target.dataset.subIndex) : null;
-        const index = target.dataset.index ? parseInt(target.dataset.index) : null;
-
-        if (target.classList.contains('move-up') && index !== null) {
-            moveCategoryUp(index);
-        } else if (target.classList.contains('move-down') && index !== null) {
-            moveCategoryDown(index);
-        } else if (target.classList.contains('edit-btn') && !target.classList.contains('sub-edit') && categoryId) {
-            openEditCategoryModal(categoryId);
-        } else if (target.classList.contains('delete-btn') && !target.classList.contains('sub-delete') && categoryId) {
-            deleteCategory(categoryId);
-        } else if (target.classList.contains('sub-move-up') && catId && subIndex !== null) {
-            moveSubcategoryUp(catId, subIndex);
-        } else if (target.classList.contains('sub-move-down') && catId && subIndex !== null) {
-            moveSubcategoryDown(catId, subIndex);
-        } else if (target.classList.contains('sub-edit') && catId && subName) {
-            openEditSubcategoryModal(catId, subName);
-        } else if (target.classList.contains('sub-delete') && catId && subName) {
-            deleteSubcategory(catId, subName);
-        }
-    }
-
     if (section === 'products') {
         if (!data.products && (products.length === 0 || products.length > productsPerPage)) {
             loadProducts(productsCurrentPage, productsPerPage);
-            return; // Чекаємо, поки loadProducts завершить рендеринг
+            return;
         }
 
         const productList = document.getElementById('product-list-admin');
@@ -2012,7 +1972,7 @@ function renderAdmin(section = activeTab, data = {}) {
         if (!data.products && (orders.length === 0 || orders.length > ordersPerPage) && !isLoadingOrders) {
             const statusFilter = document.getElementById('order-status-filter')?.value || '';
             loadOrders(ordersCurrentPage, ordersPerPage, statusFilter);
-            return; // Чекаємо, поки loadOrders завершить рендеринг
+            return;
         }
 
         const orderList = document.getElementById('order-list');
@@ -2070,10 +2030,13 @@ function renderAdmin(section = activeTab, data = {}) {
             console.warn('Елемент #order-list не знайдено');
         }
     } else if (section === 'categories') {
-        if (typeof renderCategoriesAdmin === 'function') {
+        if (typeof renderCategoriesAdmin === 'function' && Array.isArray(categories) && categories.length > 0) {
             renderCategoriesAdmin();
         } else {
-            console.warn('Функція renderCategoriesAdmin не визначена');
+            const catList = document.getElementById('category-list-admin');
+            if (catList) {
+                catList.innerHTML = '<p>Категорії ще завантажуються...</p>';
+            }
         }
     } else if (section === 'site-editing') {
         if (typeof renderSettingsAdmin === 'function') renderSettingsAdmin();
@@ -2107,9 +2070,9 @@ function renderCategoriesAdmin() {
     // Генеруємо HTML
     categoryList.innerHTML = sortedCategories.map((category, index) => {
         // Сортуємо підкатегорії за полем order
-        const sortedSubcategories = (category.subcategories && Array.isArray(category.subcategories)
+        const sortedSubcategories = Array.isArray(category.subcategories)
             ? [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0))
-            : []);
+            : [];
 
         return `
         <div class="category-item">
@@ -2147,7 +2110,7 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
-    // Видаляємо попередні слухачі подій, якщо вони є
+    // Видаляємо попередні слухачі подій
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2166,7 +2129,7 @@ function renderCategoriesAdmin() {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
             const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
+            if (category && Array.isArray(category.subcategories)) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
                     moveSubcategoryUp(catId, subIndex);
@@ -2176,7 +2139,7 @@ function renderCategoriesAdmin() {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
             const category = categories.find(c => c._id === catId);
-            if (category && category.subcategories) {
+            if (category && Array.isArray(category.subcategories)) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
                     moveSubcategoryDown(catId, subIndex);
@@ -2193,7 +2156,6 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-    // Видаляємо попередні слухачі, якщо вони були додані
     categoryList.removeEventListener('click', handleClick);
     categoryList.addEventListener('click', handleClick);
 
@@ -2511,13 +2473,22 @@ function openEditCategoryModal(categoryId) {
             </select><br/>
             <label for="category-visible">Видимість</label>
             <div class="modal-actions">
-                <button onclick="saveEditedCategory('${categoryId}')">Зберегти</button>
+                <button id="save-category-btn">Зберегти</button>
                 <button onclick="closeModal()">Скасувати</button>
             </div>
         </div>
     `;
     modal.classList.add('active');
     console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
+
+    // Додаємо слухач для кнопки збереження
+    const saveButton = document.getElementById('save-category-btn');
+    if (saveButton) {
+        // Видаляємо попередні слухачі
+        const newSaveButton = saveButton.cloneNode(true);
+        saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+        newSaveButton.addEventListener('click', () => saveEditedCategory(categoryId));
+    }
 
     // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
@@ -2538,7 +2509,7 @@ function openEditCategoryModal(categoryId) {
         if (slugInput) slugInput.value = category.slug || '';
         if (photoUrlInput) photoUrlInput.value = category.photo || '';
         if (visibleSelect) visibleSelect.value = category.visible ? 'true' : 'false';
-    }, 0);
+    }, 100);
 
     resetInactivityTimer();
 }
@@ -2710,14 +2681,14 @@ async function saveEditedCategory(categoryId) {
         }
 
         // Формуємо updatedSubcategories
-        const updatedSubcategories = (category.subcategories || []).map(sub => ({
+        const updatedSubcategories = Array.isArray(category.subcategories) ? category.subcategories.map(sub => ({
             _id: sub._id || undefined,
             name: (sub.name || '').trim(),
-            slug: (sub.slug || sub.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')).trim(),
+            slug: (sub.slug || (sub.name || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')).trim(),
             photo: (sub.photo || '').trim(),
             visible: sub.visible !== undefined ? sub.visible : true,
             order: sub.order !== undefined ? sub.order : 0
-        })).filter(sub => sub.name && sub.slug);
+        })).filter(sub => sub.name && sub.slug) : [];
 
         // Порівнюємо нові дані зі старими
         const hasFile = photoFileInput.files.length > 0;
@@ -2731,22 +2702,30 @@ async function saveEditedCategory(categoryId) {
             normalizedNewPhoto === normalizedOldPhoto &&
             visible === (category.visible ?? true) &&
             !hasFile &&
-            JSON.stringify(updatedSubcategories.map(s => ({
-                _id: s._id || null,
-                name: s.name.trim(),
-                slug: s.slug.trim(),
-                photo: s.photo.trim(),
-                visible: s.visible,
-                order: s.order
-            }).sort((a, b) => (a._id || '').localeCompare(b._id || '')))) === 
-            JSON.stringify((category.subcategories || []).map(s => ({
-                _id: s._id || null,
-                name: (s.name || '').trim(),
-                slug: (s.slug || '').trim(),
-                photo: (s.photo || '').trim(),
-                visible: s.visible ?? true,
-                order: s.order ?? 0
-            }).sort((a, b) => (a._id || '').localeCompare(b._id || ''))))
+            JSON.stringify(
+                updatedSubcategories
+                    .map(s => ({
+                        _id: s._id || null,
+                        name: s.name.trim(),
+                        slug: s.slug.trim(),
+                        photo: s.photo.trim(),
+                        visible: s.visible,
+                        order: s.order
+                    }))
+                    .sort((a, b) => (a._id || '').toString().localeCompare(b._id || ''))
+            ) ===
+            JSON.stringify(
+                (Array.isArray(category.subcategories) ? category.subcategories : [])
+                    .map(s => ({
+                        _id: s._id || null,
+                        name: (s.name || '').trim(),
+                        slug: (s.slug || '').trim(),
+                        photo: (s.photo || '').trim(),
+                        visible: s.visible ?? true,
+                        order: s.order ?? 0
+                    }))
+                    .sort((a, b) => (a._id || '').toString().localeCompare(b._id || ''))
+            )
         );
 
         // Логування для дебагу
@@ -2757,22 +2736,8 @@ async function saveEditedCategory(categoryId) {
             visible: { new: visible, old: category.visible ?? true },
             hasFile,
             subcategories: {
-                new: updatedSubcategories.map(s => ({
-                    _id: s._id || null,
-                    name: s.name.trim(),
-                    slug: s.slug.trim(),
-                    photo: s.photo.trim(),
-                    visible: s.visible,
-                    order: s.order
-                })),
-                old: (category.subcategories || []).map(s => ({
-                    _id: s._id || null,
-                    name: (s.name || '').trim(),
-                    slug: (s.slug || '').trim(),
-                    photo: (s.photo || '').trim(),
-                    visible: s.visible ?? true,
-                    order: s.order ?? 0
-                }))
+                new: updatedSubcategories,
+                old: Array.isArray(category.subcategories) ? category.subcategories : []
             },
             isUnchanged
         });
@@ -3235,8 +3200,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             slug.trim() === (subcategory.slug || '').trim() &&
             normalizedNewPhoto === normalizedOldPhoto &&
             visible === (subcategory.visible ?? true) &&
-            !hasFile &&
-            (subcategory.order ?? 0) === (subcategory.order ?? 0)
+            !hasFile
         );
 
         console.log('Порівняння даних:', {
@@ -3256,7 +3220,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         // Перевірка унікальності slug
-        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
+        if (slug !== subcategory.slug && Array.isArray(category.subcategories) && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
