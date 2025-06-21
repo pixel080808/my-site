@@ -286,19 +286,6 @@ async function loadSettings() {
     }
 }
 
-Лог показує, що проблема з видаленням підкатегорій пов’язана з помилкою 404 ("Категорію не знайдено") через неправильну обробку відповіді сервера в fetchWithAuth. Крім того, баг із множинними викликами deleteSubcategory та saveEditedCategory спричинений дублюванням подій у DOM. Для редагування категорій проблема може бути в некоректному заповненні форми через множинні рендеринги модального вікна. Нижче виправлено функції fetchWithAuth, saveEditedCategory, saveEditedSubcategory та deleteSubcategory, додано захист від множинних викликів.
-
-javascript
-
-Згорнути
-
-Згорни
-
-Виконати
-
-Копіювати
-let isProcessingRequest = false;
-
 async function fetchWithAuth(url, options = {}) {
     if (isProcessingRequest) {
         console.log('Запит уже виконується, пропускаємо:', url);
