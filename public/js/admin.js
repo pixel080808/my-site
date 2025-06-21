@@ -3202,7 +3202,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
-            showNotification('Категория не найдена!');
+            showNotification('Категорія не знайдена!');
             return;
         }
         const subcategory = category.subcategories.find(s => s._id === subcategoryId);
@@ -3228,7 +3228,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', {
-                original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo || '', visible: visible.false },
+                original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo || '', visible: subcategory.visible ?? true },
                 updated: { name, slug, photo, visible }
             });
             showNotification('Зміни відсутні.');
@@ -3236,7 +3236,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        if (slug !== subcategory.name && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
+        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
@@ -3255,14 +3255,14 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             }
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetchWithAuth('/api/upload', {
+            const uploadResponse = await fetchWithAuth('/api/upload', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
                 }
-        });
-            const data = await response.json();
+            });
+            const data = await uploadResponse.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
@@ -3277,23 +3277,21 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         console.log('Надсилаємо запит на оновлення підкатегорії:', updatedSubcategoryData);
 
-        const responseData = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
             body: JSON.stringify(updatedSubcategoryData)
         });
 
-        if (!responseData.ok) {
+        if (!response.ok) {
             const errorData = await response.json();
             throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
-            throw new Error(`Error updating subcategory: ${errorData.error || ''}`);
         }
 
-        const responseData = await response.json();
-        const updatedCategoryData = responseData.category || responseData;
+        const updatedCategoryData = await response.json();
         categories = categories.map(c => c._id === categoryId ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] } : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
@@ -3303,7 +3301,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         resetInactivityTimer();
     } catch (error) {
         console.error('Помилка оновлення підкатегорії:', error);
-        showNotification('Не вдалось оновити підкатегорію: ' + err.message);
+        showNotification('Не вдалось оновити підкатегорію: ' + error.message);
     } finally {
         isUpdatingCategories = false;
     }
