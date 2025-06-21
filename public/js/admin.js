@@ -2769,7 +2769,7 @@ async function saveEditedCategory(categoryId) {
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
         categories = categories.filter(c => c._id !== categoryId);
-        categories.push(updated categoryData);
+        categories.push(updatedCategoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
