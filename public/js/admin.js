@@ -2055,21 +2055,19 @@ function renderCategoriesAdmin() {
         return;
     }
 
-    // Логування для дебагу
     console.log('Рендеринг категорій:', JSON.stringify(categories, null, 2));
 
-    // Перевірка масиву categories
     if (!Array.isArray(categories) || categories.length === 0) {
         categoryList.innerHTML = '<p>Категорії відсутні.</p>';
         return;
     }
 
-    // Сортуємо категорії за полем order
-    const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    // Нормалізуємо категорії, враховуючи можливу структуру { message, category }
+    const normalizedCategories = categories.map(cat => cat.category || cat);
 
-    // Генеруємо HTML
+    const sortedCategories = [...normalizedCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+
     categoryList.innerHTML = sortedCategories.map((category, index) => {
-        // Сортуємо підкатегорії за полем order
         const sortedSubcategories = Array.isArray(category.subcategories)
             ? [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0))
             : [];
@@ -2110,7 +2108,6 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
-    // Видаляємо попередні слухачі подій
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2128,7 +2125,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-up')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
+            const category = normalizedCategories.find(c => c._id === catId);
             if (category && Array.isArray(category.subcategories)) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2138,7 +2135,7 @@ function renderCategoriesAdmin() {
         } else if (target.classList.contains('sub-move-down')) {
             const catId = target.dataset.catId;
             const subId = target.dataset.subId;
-            const category = categories.find(c => c._id === catId);
+            const category = normalizedCategories.find(c => c._id === catId);
             if (category && Array.isArray(category.subcategories)) {
                 const subIndex = category.subcategories.findIndex(s => s._id === subId);
                 if (subIndex !== -1) {
@@ -2159,7 +2156,6 @@ function renderCategoriesAdmin() {
     categoryList.removeEventListener('click', handleClick);
     categoryList.addEventListener('click', handleClick);
 
-    // Оновлюємо селектори
     const subcatSelect = document.getElementById('subcategory-category');
     if (subcatSelect) {
         const currentValue = subcatSelect.value;
@@ -2774,13 +2770,15 @@ async function saveEditedCategory(categoryId) {
             throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
         }
 
-        const updatedCategoryData = await response.json();
+        const responseData = await response.json();
+        // Обробка відповіді, яка може містити { message, category }
+        const updatedCategoryData = responseData.category || responseData;
         categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Категорію оновлено!');
+        showNotification(responseData.message || 'Категорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
         handleError(err, 'Не вдалося оновити категорію');
@@ -3106,7 +3104,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/(.)/g, '');
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
@@ -3193,13 +3191,15 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
         }
 
-        const updatedCategoryData = await response.json();
+        const responseData = await response.json();
+        // Обробка відповіді, яка може містити { message, category }
+        const updatedCategoryData = responseData.category || responseData;
         categories = categories.map(c => c._id === categoryId ? updatedCategoryData : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
         closeModal();
         renderCategoriesAdmin();
-        showNotification('Підкатегорію оновлено!');
+        showNotification(responseData.message || 'Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
         handleError(err, 'Не вдалося оновити підкатегорію');
