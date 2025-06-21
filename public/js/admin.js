@@ -2686,56 +2686,35 @@ async function saveEditedCategory(categoryId) {
         })).filter(sub => sub.name && sub.slug) : [];
 
         // Покращене порівняння змін
-        const normalizeValue = (value) => value === undefined || value === null ? '' : String(value).trim();
-        const hasChanges = normalizeValue(name) !== normalizeValue(category.name) ||
-                           normalizeValue(slug) !== normalizeValue(category.slug) ||
+        const hasChanges = name !== category.name ||
+                           slug !== category.slug ||
                            visible !== (category.visible ?? true) ||
-                           normalizeValue(photo) !== normalizeValue(category.photo) ||
+                           photo !== (category.photo || '') ||
                            photoFileInput.files.length > 0 ||
-                           updatedSubcategories.length !== (category.subcategories || []).length ||
-                           updatedSubcategories.some((sub, i) => {
-                               const oldSub = category.subcategories[i] || {};
-                               return normalizeValue(sub.name) !== normalizeValue(oldSub.name) ||
-                                      normalizeValue(sub.slug) !== normalizeValue(oldSub.slug) ||
-                                      normalizeValue(sub.photo) !== normalizeValue(oldSub.photo) ||
-                                      sub.visible !== (oldSub.visible ?? true) ||
-                                      sub.order !== (oldSub.order || 0);
-                           });
+                           JSON.stringify(updatedSubcategories) !== JSON.stringify(category.subcategories || []);
 
-        // Виправлене логування з деталями
-        console.log('Порівняння змін для категорії:', JSON.stringify({
-            name: { new: normalizeValue(name), old: normalizeValue(category.name) },
-            slug: { new: normalizeValue(slug), old: normalizeValue(category.slug) },
-            photo: { new: normalizeValue(photo), old: normalizeValue(category.photo) },
+        console.log('Порівняння змін для категорії:', {
+            name: { new: name, old: category.name },
+            slug: { new: slug, old: category.slug },
+            photo: { new: photo, old: category.photo || '' },
             visible: { new: visible, old: category.visible ?? true },
             photoFile: photoFileInput.files.length,
             subcategories: {
-                newLength: updatedSubcategories.length,
-                oldLength: (category.subcategories || []).length,
-                differences: updatedSubcategories.map((sub, i) => {
-                    const oldSub = category.subcategories[i] || {};
-                    return {
-                        name: normalizeValue(sub.name) !== normalizeValue(oldSub.name),
-                        slug: normalizeValue(sub.slug) !== normalizeValue(oldSub.slug),
-                        photo: normalizeValue(sub.photo) !== normalizeValue(oldSub.photo),
-                        visible: sub.visible !== (oldSub.visible ?? true),
-                        order: sub.order !== (oldSub.order || 0)
-                    };
-                })
+                new: updatedSubcategories,
+                old: category.subcategories || []
             }
-        }, null, 2));
+        });
 
         if (!hasChanges) {
-            console.log('Зміни відсутні:', JSON.stringify({ 
+            console.log('Зміни відсутні:', { 
                 original: { name: category.name, slug: category.slug, photo: category.photo, visible: category.visible, subcategories: category.subcategories },
                 updated: { name, slug, photo, visible, subcategories: updatedSubcategories }
-            }, null, 2));
+            });
             showNotification('Зміни відсутні.');
             closeModal();
             return;
         }
 
-        // Решта коду без змін
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
@@ -3173,33 +3152,30 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         // Покращене порівняння змін
-        const normalizeValue = (value) => value === undefined || value === null ? '' : String(value).trim();
-        const hasChanges = normalizeValue(name) !== normalizeValue(subcategory.name) ||
-                           normalizeValue(slug) !== normalizeValue(subcategory.slug) ||
+        const hasChanges = name !== subcategory.name ||
+                           slug !== subcategory.slug ||
                            visible !== (subcategory.visible ?? true) ||
-                           normalizeValue(photo) !== normalizeValue(subcategory.photo) ||
+                           photo !== (subcategory.photo || '') ||
                            photoFileInput.files.length > 0;
 
-        // Виправлене логування з деталями
-        console.log('Порівняння змін для підкатегорії:', JSON.stringify({
-            name: { new: normalizeValue(name), old: normalizeValue(subcategory.name) },
-            slug: { new: normalizeValue(slug), old: normalizeValue(subcategory.slug) },
-            photo: { new: normalizeValue(photo), old: normalizeValue(subcategory.photo) },
+        console.log('Порівняння змін для підкатегорії:', {
+            name: { new: name, old: subcategory.name },
+            slug: { new: slug, old: subcategory.slug },
+            photo: { new: photo, old: subcategory.photo || '' },
             visible: { new: visible, old: subcategory.visible ?? true },
             photoFile: photoFileInput.files.length
-        }, null, 2));
+        });
 
         if (!hasChanges) {
-            console.log('Зміни відсутні:', JSON.stringify({ 
+            console.log('Зміни відсутні:', { 
                 original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo, visible: subcategory.visible },
                 updated: { name, slug, photo, visible }
-            }, null, 2));
+            });
             showNotification('Зміни відсутні.');
             closeModal();
             return;
         }
 
-        // Решта коду без змін
         if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
@@ -3265,7 +3241,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка оновлення підкатегорії:', err);
+        console.error('Помилка оновлення підкатогорії:', err);
         showNotification('Не вдалося оновити підкатегорію: ' + err.message);
     } finally {
         isUpdatingCategories = false;
