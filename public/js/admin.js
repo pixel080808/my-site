@@ -45,7 +45,7 @@ let isModalOpen = false;
 let materials = [];
 let brands = [];
 let isLoadingProducts = false;
-let isUpdatingCategories = false; // Додаємо флаг для відстеження локальних оновлень
+let isUpdatingCategories = false;
 const orderFields = [
     { name: 'name', label: "Ім'я" },
     { name: 'surname', label: 'Прізвище' },
@@ -103,7 +103,6 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        // Перевірка структури з гнучкішою обробкою
         if (!data.products || !Array.isArray(data.products)) {
             products = [];
             totalProducts = data.total || 0;
@@ -506,9 +505,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             return;
         }
 
-        // Ініціалізація orderNumberCache, якщо він порожній
         if (orderNumberCache.size === 0) {
-            // Завантажуємо всі замовлення для ініціалізації кешу
             const allOrdersResponse = await fetchWithAuth(`/api/orders?limit=9999`);
             if (!allOrdersResponse.ok) {
                 throw new Error('Не вдалося завантажити всі замовлення для кешу');
@@ -528,7 +525,6 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
 
         totalOrders = data.total || filteredOrders.length;
 
-        // Призначаємо orderNumber з урахуванням пагінації
         const globalIndex = (page - 1) * limit + 1;
         orders = filteredOrders.map((order, index) => {
             const cachedNumber = orderNumberCache.get(order._id);
@@ -745,14 +741,12 @@ async function checkAuth() {
 
         if (response.ok) {
             showSection('admin-panel');
-            // Завантажуємо категорії перед ініціалізацією
             await loadCategories();
             await initializeData();
             connectAdminWebSocket();
             startTokenRefreshTimer();
             resetInactivityTimer();
 
-            // Завантажуємо товари для вкладки "Товари" при ініціалізації
             if (activeTab === 'products') {
                 await loadProducts(productsCurrentPage, productsPerPage);
             }
@@ -2062,7 +2056,6 @@ function renderCategoriesAdmin() {
         return;
     }
 
-    // Нормалізуємо категорії, враховуючи можливу структуру { message, category }
     const normalizedCategories = categories.map(cat => cat.category || cat);
 
     const sortedCategories = [...normalizedCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -2220,7 +2213,7 @@ async function deleteCategory(categoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${category.slug}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
@@ -2417,10 +2410,10 @@ function closeModal() {
     if (modal) {
         modal.classList.remove('active');
         modal.innerHTML = '';
-        isModalOpen = false; // Додаємо для скидання стану
+        isModalOpen = false;
         console.log('Модальне вікно закрито');
     }
-    resetInactivityTimer(); // Зберігаємо ваш виклик
+    resetInactivityTimer();
 }
 
 function validateFile(file) {
@@ -2478,16 +2471,13 @@ function openEditCategoryModal(categoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
 
-    // Додаємо слухач для кнопки збереження
     const saveButton = document.getElementById('save-category-btn');
     if (saveButton) {
-        // Видаляємо попередні слухачі
         const newSaveButton = saveButton.cloneNode(true);
         saveButton.parentNode.replaceChild(newSaveButton, saveButton);
         newSaveButton.addEventListener('click', () => saveEditedCategory(categoryId));
     }
 
-    // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2501,7 +2491,6 @@ function openEditCategoryModal(categoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
-        // Примусово встановлюємо значення
         if (nameInput) nameInput.value = category.name || '';
         if (slugInput) slugInput.value = category.slug || '';
         if (photoUrlInput) photoUrlInput.value = category.photo || '';
@@ -2787,8 +2776,10 @@ async function saveEditedCategory(categoryId) {
         categories = categories.map(c => c._id === categoryId ? { ...c, ...updatedCategoryData } : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
+        await loadCategories(); // Оновлюємо список категорій з сервера
         closeModal();
         renderCategoriesAdmin();
+        renderAdmin('products');
         showNotification(responseData.message || 'Категорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
@@ -3218,8 +3209,10 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         categories = categories.map(c => c._id === categoryId ? { ...c, ...updatedCategoryData } : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
+        await loadCategories(); // Оновлюємо список категорій з сервера
         closeModal();
         renderCategoriesAdmin();
+        renderAdmin('products');
         showNotification(responseData.message || 'Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
@@ -3399,7 +3392,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування підкатегорії відкрито:', { categoryId, subcategoryId });
 
-    // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3413,7 +3405,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
-        // Примусово встановлюємо значення
         if (nameInput) nameInput.value = subcategory.name || '';
         if (slugInput) slugInput.value = subcategory.slug || '';
         if (photoUrlInput) photoUrlInput.value = subcategory.photo || '';
@@ -3448,7 +3439,7 @@ async function deleteSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${category.slug}/subcategories/${subcategory.slug}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
@@ -3463,15 +3454,6 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         const updatedCategory = await response.json();
         categories = categories.map(c => c._id === categoryId ? { ...c, subcategories: c.subcategories.filter(s => s._id !== subcategoryId) } : c);
         localStorage.setItem('categories', JSON.stringify(categories));
-
-        await fetchWithAuth(`/api/products/subcategory/${encodeURIComponent(subcategory.name)}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            },
-            body: JSON.stringify({ category: category.name })
-        });
 
         renderCategoriesAdmin();
         renderAdmin('products');
@@ -3923,7 +3905,6 @@ async function importSiteBackup() {
 
             if (cleanedData.settings) {
                 const { _id, createdAt, updatedAt, __v, storeName, ...cleanedSettings } = cleanedData.settings;
-                // Map storeName to name if storeName exists
                 if (storeName) {
                     cleanedSettings.name = storeName;
                 }
@@ -4088,7 +4069,6 @@ async function importOrdersBackup() {
 
             const cleanedOrdersData = ordersData.map(order => {
                 const { _id, createdAt, updatedAt, __v, orderNumber, ...cleanedOrder } = order;
-                // Clean customer object by removing _id
                 if (cleanedOrder.customer && typeof cleanedOrder.customer === 'object') {
                     const { _id: customerId, ...cleanedCustomer } = cleanedOrder.customer;
                     cleanedOrder.customer = cleanedCustomer;
@@ -4436,7 +4416,6 @@ function updateSubcategories() {
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     
-    // Перевіряємо, чи це модальне вікно для редагування продукту
     if (!categorySelect || !subcategorySelect) {
         console.log('Це не модальне вікно для редагування продукту, пропускаємо оновлення підкатегорій');
         return;
@@ -5226,7 +5205,7 @@ setTimeout(() => {
 
     const subcatSelect = document.getElementById('product-subcategory');
     if (product.subcategory && subcatSelect) {
-        subcatSelect.value = product.subcategory; // Використовуємо slug напряму
+        subcatSelect.value = product.subcategory;
     }
 
     renderColorsList();
@@ -5762,7 +5741,6 @@ async function searchProducts(page = 1) {
             return;
         }
 
-        // Зберігаємо сторінку перед початком пошуку
         if (page === 1) {
             lastPageBeforeSearch = productsCurrentPage;
         }
@@ -5799,7 +5777,6 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        // Повертаємося до сторінки, з якої почали пошук
         productsCurrentPage = lastPageBeforeSearch;
         loadProducts(productsCurrentPage, productsPerPage);
     }
@@ -5842,7 +5819,6 @@ async function sortOrders(sortType) {
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        // Завжди оновлюємо orderNumberCache при сортуванні
         orderNumberCache.clear();
         filteredOrders.sort((a, b) => {
             let valA = key === 'date' ? new Date(a[key] || 0) : (a[key] || (typeof a[key] === 'number' ? 0 : ''));
@@ -5858,14 +5834,12 @@ async function sortOrders(sortType) {
             }
         });
 
-        // Призначаємо нові номери в orderNumberCache після сортування
         filteredOrders.forEach((order, idx) => {
             orderNumberCache.set(order._id, idx + 1);
         });
 
         totalOrders = filteredOrders.length;
 
-        // Обрізаємо до поточної сторінки
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
         const globalIndex = start + 1;
@@ -6248,8 +6222,8 @@ function handleCategoriesUpdate(data) {
 }
 
 function handleOrdersUpdate(data) {
-    orders = data; // Оновлюємо масив замовлень
-    totalOrders = data.length; // Оновлюємо кількість замовлень
+    orders = data;
+    totalOrders = data.length;
     console.log('Оновлено orders:', orders);
     if (document.querySelector('#orders.active')) {
         renderAdmin('orders', { total: totalOrders });
@@ -6319,7 +6293,7 @@ socket.onmessage = (event) => {
             console.log('Оновлено settings:', settings);
             renderSettingsAdmin();
         } else if (type === 'products' && Array.isArray(data)) {
-            if (isLoadingProducts) { // Виправлено: Ladders -> isLoadingProducts
+            if (isLoadingProducts) {
                 console.log('Завантаження товарів через loadProducts ще триває, ігноруємо WebSocket-оновлення для products');
                 return;
             }
