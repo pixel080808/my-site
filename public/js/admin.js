@@ -2195,10 +2195,6 @@ function renderSocialsAdmin() {
 
 async function deleteCategory(categoryId) {
     console.log('Спроба видалити категорію з ID:', categoryId);
-    if (!confirm('Ви впевнені, що хочете видалити цю категорію? Усі товари в цій категорії втратять прив’язку до неї.')) {
-        return;
-    }
-
     try {
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
@@ -2219,11 +2215,6 @@ async function deleteCategory(categoryId) {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             }
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка видалення категорії: ${errorData.error || response.statusText}`);
-        }
 
         categories = categories.filter(c => c._id !== categoryId);
         localStorage.setItem('categories', JSON.stringify(categories));
@@ -2670,20 +2661,11 @@ async function saveEditedCategory(categoryId) {
             order: sub.order !== undefined ? sub.order : 0
         })).filter(sub => sub.name && sub.slug) : [];
 
-        const originalSubcategories = Array.isArray(category.subcategories) ? category.subcategories.map(sub => ({
-            _id: sub._id,
-            name: sub.name || '',
-            slug: sub.slug || '',
-            photo: sub.photo || '',
-            visible: sub.visible !== undefined ? sub.visible : true,
-            order: sub.order !== undefined ? sub.order : 0
-        })) : [];
-
         const hasChanges = name !== (category.name || '') ||
                            slug !== (category.slug || '') ||
                            visible !== (category.visible !== undefined ? category.visible : true) ||
                            photo !== (category.photo || '') ||
-                           JSON.stringify(updatedSubcategories) !== JSON.stringify(originalSubcategories);
+                           JSON.stringify(updatedSubcategories) !== JSON.stringify(category.subcategories);
 
         if (!hasChanges && !photoFileInput.files.length) {
             showNotification('Зміни відсутні.');
@@ -2692,7 +2674,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         if (name !== category.name) {
-            const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+            const nameCheck = await fetchWithAuth(`https://mebli.onrender.com/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
             if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
                 showNotification('Назва категорії має бути унікальною!');
@@ -2701,7 +2683,7 @@ async function saveEditedCategory(categoryId) {
         }
 
         if (slug !== category.slug) {
-            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+            const slugCheck = await fetchWithAuth(`https://mebli.onrender.com/api/categories?slug=${encodeURIComponent(slug)}`);
             const existingCategories = await slugCheck.json();
             if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
                 showNotification('Шлях категорії має бути унікальним!');
@@ -2723,7 +2705,7 @@ async function saveEditedCategory(categoryId) {
             }
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetchWithAuth('/api/upload', {
+            const response = await fetchWithAuth('https://mebli.onrender.com/api/upload', {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -2766,18 +2748,12 @@ async function saveEditedCategory(categoryId) {
             body: JSON.stringify(updatedCategory)
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення категорії: ${errorData.error || response.statusText}`);
-        }
-
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
         categories = categories.filter(c => c._id !== categoryId);
         categories.push(updatedCategoryData);
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        await loadCategories();
         closeModal();
         renderCategoriesAdmin();
         renderAdmin('products');
@@ -3167,7 +3143,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             }
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetchWithAuth('/api/upload', {
+            const response = await fetchWithAuth('https://mebli.onrender.com/api/upload', {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -3199,11 +3175,6 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             },
             body: JSON.stringify(updatedSubcategory)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
-        }
 
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
@@ -3415,11 +3386,19 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
-    if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив’язку до неї.')) {
-        return;
-    }
-
+    console.log('Спроба видалити підкатегорію з ID:', subcategoryId, 'з категорії:', categoryId);
     try {
+        const category = categories.find(c => c._id === categoryId);
+        if (!category) {
+            showNotification('Категорія не знайдена!');
+            return;
+        }
+        const subcategory = category.subcategories.find(s => s._id === subcategoryId);
+        if (!subcategory) {
+            showNotification('Підкатегорія не знайдена!');
+            return;
+        }
+
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
             showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
@@ -3427,34 +3406,15 @@ async function deleteSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        const category = categories.find(c => c._id === categoryId);
-        if (!category) {
-            showNotification('Категорія не знайдена!');
-            return;
-        }
-
-        const subcategory = category.subcategories.find(s => s._id === subcategoryId);
-        if (!subcategory) {
-            showNotification('Підкатегорія не знайдена!');
-            return;
-        }
-
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${category.slug}/subcategories/${subcategory.slug}`, {
+        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Помилка видалення підкатегорії: ${errorData.error || response.statusText}`);
-        }
-
-        const updatedCategory = await response.json();
-        categories = categories.map(c => c._id === categoryId ? { ...c, subcategories: c.subcategories.filter(s => s._id !== subcategoryId) } : c);
+        category.subcategories = category.subcategories.filter(s => s._id !== subcategoryId);
         localStorage.setItem('categories', JSON.stringify(categories));
-
         renderCategoriesAdmin();
         renderAdmin('products');
         showNotification('Підкатегорію видалено!');
