@@ -400,6 +400,15 @@ async function fetchWithAuth(url, options = {}) {
     }
 }
 
+function broadcast(type, data) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type, action: 'update', data }));
+        console.log(`Broadcasting ${type} update:`, data);
+    } else {
+        console.warn(`WebSocket is not open, cannot broadcast ${type} update`);
+    }
+}
+
 async function updateSocials() {
     const maxRetries = 3;
     let retries = 0;
@@ -2439,8 +2448,6 @@ function validateFile(file) {
     }
     return { valid: true };
 }
-
-const sanitizeHtml = require('sanitize-html');
 
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
