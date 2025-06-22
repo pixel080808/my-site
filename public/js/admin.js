@@ -2624,6 +2624,9 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Затримка для забезпечення оновлення DOM
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
@@ -2654,14 +2657,14 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const name = nameInput.value.trim();
+        const name = nameInput.value ? nameInput.value.trim() : '';
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name) {
+        if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва категорії є обов’язковою!');
             return;
@@ -3085,6 +3088,9 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
+        // Затримка для забезпечення оновлення DOM
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
         const photoUrlInput = document.getElementById('subcategory-photo-url');
@@ -3115,14 +3121,14 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        const name = nameInput.value.trim();
+        const name = nameInput.value ? nameInput.value.trim() : '';
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name) {
+        if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва підкатегорії є обов’язковою!');
             return;
