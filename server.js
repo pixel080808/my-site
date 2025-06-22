@@ -810,14 +810,13 @@ app.get('/api/public/products', async (req, res) => {
             .limit(parsedLimit + 1)
             .lean();
 
-        // Валідація підкатегорій
         const categories = await Category.find().lean();
         products = products.map(product => {
             if (product.subcategory) {
                 const category = categories.find(cat => cat.name === product.category);
                 if (!category || !category.subcategories?.some(sub => sub.name === product.subcategory)) {
                     logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`);
-                    product.subcategory = null; // Очищаємо неіснуючу підкатегорію
+                    product.subcategory = null;
                 }
             }
             const { __v, ...cleanedProduct } = product;
@@ -953,7 +952,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             } else if (key === 'brand') {
                 sortOptions['brand'] = order === 'asc' ? 1 : -1;
             } else if (key === 'price') {
-                // Для сортування за ціною використаємо агрегацію
             }
         }
 
@@ -980,7 +978,7 @@ app.get('/api/products', authenticateToken, async (req, res) => {
                 { $limit: parsedLimit },
                 {
                     $project: {
-                        effectivePrice: 0 // Видаляємо тимчасове поле
+                        effectivePrice: 0
                     }
                 }
             ];
@@ -995,7 +993,6 @@ app.get('/api/products', authenticateToken, async (req, res) => {
             total = await Product.countDocuments(query);
         }
 
-        // Гарантуємо коректну відповідь навіть при порожньому результаті
         res.json({
             products: products || [],
             total: total || 0,
@@ -1501,16 +1498,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
-        // Логування змін
-        const changes = {};
-        for (const key in categoryData) {
-            if (JSON.stringify(categoryData[key]) !== JSON.stringify(category[key])) {
-                changes[key] = { old: category[key], new: categoryData[key] };
-            }
-        }
-        logger.info('Зміни в категорії:', changes);
-
-        // Нормалізація даних
         if (categoryData.photo === '') categoryData.photo = undefined;
         categoryData.subcategories = categoryData.subcategories?.map(sub => ({
             ...sub,
@@ -1520,7 +1507,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             order: sub.order || 0
         })) || [];
 
-        // Валідація
         const { error } = categorySchemaValidation.validate(categoryData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації категорії:', error.details);
@@ -1528,7 +1514,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
         }
 
-        // Перевірка унікальності
         if (categoryData.name && categoryData.name !== category.name) {
             const existingCategory = await Category.findOne({ name: categoryData.name, _id: { $ne: category._id } }).session(session);
             if (existingCategory) {
@@ -1547,7 +1532,6 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        // Видалення старого зображення
         if (category.photo && categoryData.photo && categoryData.photo !== category.photo) {
             const publicId = getPublicIdFromUrl(category.photo);
             if (publicId) {
@@ -1560,7 +1544,9 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
             }
         }
 
-        // Оновлення категорії
+        // Збереження старих даних для порівняння
+        const oldCategory = { ...category.toObject() };
+
         Object.assign(category, {
             name: categoryData.name,
             slug: categoryData.slug,
@@ -1573,20 +1559,30 @@ app.put('/api/categories/:id', authenticateToken, csrfProtection, async (req, re
 
         await category.save({ session });
 
-        // Оновлення продуктів
-        if (categoryData.name !== category.name) {
+        if (categoryData.name !== oldCategory.name) {
             await Product.updateMany(
-                { category: category.name },
+                { category: oldCategory.name },
                 { $set: { category: categoryData.name } },
                 { session }
             );
         }
 
         const categories = await Category.find().session(session);
+
+        // Формування об'єкта changesApplied
+        const changesApplied = {
+            name: categoryData.name !== oldCategory.name,
+            slug: categoryData.slug !== oldCategory.slug,
+            photo: categoryData.photo !== oldCategory.photo,
+            visible: categoryData.visible !== oldCategory.visible,
+            order: categoryData.order !== oldCategory.order,
+            subcategories: JSON.stringify(categoryData.subcategories) !== JSON.stringify(oldCategory.subcategories)
+        };
+
         broadcast('categories', categories);
         logger.info(`Категорія оновлена: ${req.params.id}`);
         await session.commitTransaction();
-        res.json({ category });
+        res.json({ category, changesApplied });
     } catch (err) {
         await session.abortTransaction();
         logger.error('Помилка при оновленні категорії:', err);
@@ -1742,7 +1738,6 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
             return res.status(404).json({ error: 'Категорію не знайдено' });
         }
 
-        // Видалення зображень
         if (category.photo) {
             const publicId = getPublicIdFromUrl(category.photo);
             if (publicId) {
@@ -1769,7 +1764,6 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
             }
         }
 
-        // Оновлення продуктів
         await Product.updateMany(
             { category: category.name },
             { $set: { category: '' } },
@@ -1782,7 +1776,6 @@ app.delete('/api/categories/id/:id', authenticateToken, csrfProtection, async (r
             { session }
         );
 
-        // Видалення категорії
         await Category.findByIdAndDelete(categoryId, { session });
 
         const categories = await Category.find().session(session);
@@ -1825,7 +1818,6 @@ app.delete('/api/categories/:categoryId/subcategories/:subcategoryId', authentic
             return res.status(404).json({ error: 'Підкатегорію не знайдено' });
         }
 
-        // Видалення зображення
         if (subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
@@ -1838,14 +1830,12 @@ app.delete('/api/categories/:categoryId/subcategories/:subcategoryId', authentic
             }
         }
 
-        // Оновлення продуктів
         await Product.updateMany(
             { subcategory: subcategory.name },
             { $set: { subcategory: '' } },
             { session }
         );
 
-        // Видалення підкатегорії
         category.subcategories.pull({ _id: subcategoryId });
         category.updatedAt = new Date();
         await category.save({ session });
@@ -1948,19 +1938,8 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             return res.status(404).json({ error: 'Підкатегорія не знайдена' });
         }
 
-        // Логування змін
-        const changes = {};
-        for (const key in subcategoryData) {
-            if (JSON.stringify(subcategoryData[key]) !== JSON.stringify(subcategory[key])) {
-                changes[key] = { old: subcategory[key], new: subcategoryData[key] };
-            }
-        }
-        logger.info('Зміни в підкатегорії:', changes);
-
-        // Нормалізація даних
         if (subcategoryData.photo === '') subcategoryData.photo = undefined;
 
-        // Валідація
         const { error } = subcategorySchemaValidation.validate(subcategoryData, { abortEarly: false });
         if (error) {
             logger.error('Помилка валідації підкатегорії:', error.details);
@@ -1968,7 +1947,6 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             return res.status(400).json({ error: 'Помилка валідації', details: error.details.map(d => d.message) });
         }
 
-        // Перевірка унікальності slug
         if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
             const existingSubcategory = category.subcategories.find(sub => sub.slug === subcategoryData.slug && sub._id.toString() !== subcategoryId);
             if (existingSubcategory) {
@@ -1978,7 +1956,6 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
-        // Видалення старого зображення
         if (subcategory.photo && subcategoryData.photo && subcategoryData.photo !== subcategory.photo) {
             const publicId = getPublicIdFromUrl(subcategory.photo);
             if (publicId) {
@@ -1991,7 +1968,9 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
             }
         }
 
-        // Оновлення підкатегорії
+        // Збереження старих даних підкатегорії для порівняння
+        const oldSubcategory = { ...subcategory.toObject() };
+
         Object.assign(subcategory, {
             name: subcategoryData.name,
             slug: subcategoryData.slug,
@@ -2003,20 +1982,29 @@ app.put('/api/categories/:categoryId/subcategories/:subcategoryId', authenticate
         category.updatedAt = new Date();
         await category.save({ session });
 
-        // Оновлення продуктів
-        if (subcategoryData.name !== subcategory.name) {
+        if (subcategoryData.name !== oldSubcategory.name) {
             await Product.updateMany(
-                { subcategory: subcategory.name },
+                { subcategory: oldSubcategory.name },
                 { $set: { subcategory: subcategoryData.name } },
                 { session }
             );
         }
 
         const categories = await Category.find().session(session);
+
+        // Формування об'єкта changesApplied
+        const changesApplied = {
+            name: subcategoryData.name !== oldSubcategory.name,
+            slug: subcategoryData.slug !== oldSubcategory.slug,
+            photo: subcategoryData.photo !== oldSubcategory.photo,
+            visible: subcategoryData.visible !== oldSubcategory.visible,
+            order: subcategoryData.order !== oldSubcategory.order
+        };
+
         broadcast('categories', categories);
         logger.info(`Підкатегорія оновлена: ${subcategoryId}`);
         await session.commitTransaction();
-        res.json({ category });
+        res.json({ category, changesApplied });
     } catch (err) {
         await session.abortTransaction();
         logger.error('Помилка при оновленні підкатегорії:', err);
@@ -2476,20 +2464,17 @@ app.post('/api/orders', csrfProtection, async (req, res) => {
             return res.status(400).json({ error: 'Помилка валідації', details: error.details });
         }
 
-        // Видаляємо id з orderData, якщо воно присутнє
         delete orderData.id;
 
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            // Генерація нового id через Counter
             let counter = await Counter.findOneAndUpdate(
                 { _id: 'orderId' },
                 { $inc: { seq: 1 } },
                 { new: true, upsert: true, session }
             );
 
-            // Перевірка, чи id уже існує
             let idExists = await Order.findOne({ id: counter.seq }).session(session);
             while (idExists) {
                 logger.warn(`id ${counter.seq} уже існує, генеруємо новий`);
@@ -2629,7 +2614,6 @@ app.post('/api/cart', csrfProtection, async (req, res) => {
                     item.price = expectedPrice;
                 }
                 item.photo = item.photo || product.photos[0] || '';
-                // Не вимагаємо color для матраців, розмір передається в size
             } else if (item.color && item.color.name) {
                 const color = product.colors.find(c => c.name === item.color.name && c.value === item.color.value);
                 if (!color) {
@@ -2743,7 +2727,7 @@ app.post('/api/cleanup-carts', authenticateToken, csrfProtection, async (req, re
 
 app.put('/api/orders/:id', authenticateToken, csrfProtection, async (req, res) => {
     try {
-        const orderId = req.params.id; // Використовуємо рядковий _id замість parseInt
+        const orderId = req.params.id;
         if (!mongoose.Types.ObjectId.isValid(orderId)) {
             logger.error(`Невірний формат ID замовлення: ${req.params.id}`);
             return res.status(400).json({ error: 'Невірний формат ID замовлення' });

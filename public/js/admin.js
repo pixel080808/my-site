@@ -45,7 +45,7 @@ let isModalOpen = false;
 let materials = [];
 let brands = [];
 let isLoadingProducts = false;
-let isUpdatingCategories = false; // Додаємо флаг для відстеження локальних оновлень
+let isUpdatingCategories = false;
 const orderFields = [
     { name: 'name', label: "Ім'я" },
     { name: 'surname', label: 'Прізвище' },
@@ -103,7 +103,6 @@ async function loadProducts(page = 1, limit = productsPerPage) {
         }
 
         const data = await response.json();
-        // Перевірка структури з гнучкішою обробкою
         if (!data.products || !Array.isArray(data.products)) {
             products = [];
             totalProducts = data.total || 0;
@@ -506,9 +505,7 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
             return;
         }
 
-        // Ініціалізація orderNumberCache, якщо він порожній
         if (orderNumberCache.size === 0) {
-            // Завантажуємо всі замовлення для ініціалізації кешу
             const allOrdersResponse = await fetchWithAuth(`/api/orders?limit=9999`);
             if (!allOrdersResponse.ok) {
                 throw new Error('Не вдалося завантажити всі замовлення для кешу');
@@ -528,7 +525,6 @@ async function loadOrders(page = 1, limit = ordersPerPage, statusFilter = '') {
 
         totalOrders = data.total || filteredOrders.length;
 
-        // Призначаємо orderNumber з урахуванням пагінації
         const globalIndex = (page - 1) * limit + 1;
         orders = filteredOrders.map((order, index) => {
             const cachedNumber = orderNumberCache.get(order._id);
@@ -745,14 +741,12 @@ async function checkAuth() {
 
         if (response.ok) {
             showSection('admin-panel');
-            // Завантажуємо категорії перед ініціалізацією
             await loadCategories();
             await initializeData();
             connectAdminWebSocket();
             startTokenRefreshTimer();
             resetInactivityTimer();
 
-            // Завантажуємо товари для вкладки "Товари" при ініціалізації
             if (activeTab === 'products') {
                 await loadProducts(productsCurrentPage, productsPerPage);
             }
@@ -2062,7 +2056,6 @@ function renderCategoriesAdmin() {
         return;
     }
 
-    // Нормалізуємо категорії, враховуючи можливу структуру { message, category }
     const normalizedCategories = categories.map(cat => cat.category || cat);
 
     const sortedCategories = [...normalizedCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -2221,7 +2214,6 @@ async function deleteCategory(categoryId) {
             return;
         }
 
-        // Локально видаляємо категорію перед відправкою запиту
         categories = categories.filter(c => c._id !== categoryId);
         renderCategoriesAdmin();
 
@@ -2244,7 +2236,6 @@ async function deleteCategory(categoryId) {
     } catch (err) {
         console.error('Помилка видалення категорії:', err);
         showNotification('Не вдалося видалити категорію: ' + err.message);
-        // Відновлюємо категорії при помилці
         categories = JSON.parse(localStorage.getItem('categories') || '[]');
         renderCategoriesAdmin();
     } finally {
@@ -2444,16 +2435,9 @@ function validateFile(file) {
 }
 
 function openEditCategoryModal(categoryId) {
-    if (isModalOpen) {
-        console.log('Модалка вже відкрита, пропускаємо.');
-        return;
-    }
-    isModalOpen = true;
-
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
         showNotification('Категорія не знайдена!');
-        isModalOpen = false;
         return;
     }
 
@@ -2461,7 +2445,6 @@ function openEditCategoryModal(categoryId) {
     if (!modal) {
         console.error('Модальне вікно не знайдено!');
         showNotification('Модальне вікно не знайдено.');
-        isModalOpen = false;
         return;
     }
 
@@ -2485,9 +2468,6 @@ function openEditCategoryModal(categoryId) {
                 <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
             </select><br/>
             <label for="category-visible">Видимість</label>
-            <h4>Підкатегорії</h4>
-            <div id="subcategories-container"></div>
-            <button type="button" id="add-subcategory-btn">Додати підкатегорію</button>
             <div class="modal-actions">
                 <button id="save-category-btn">Зберегти</button>
                 <button onclick="closeModal()">Скасувати</button>
@@ -2497,54 +2477,31 @@ function openEditCategoryModal(categoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
 
-    // Заповнення підкатегорій
-    const subcategoryContainer = document.getElementById('subcategories-container');
-    category.subcategories?.forEach(sub => {
-        const subElement = document.createElement('div');
-        subElement.classList.add('subcategory-item');
-        subElement.dataset.id = sub._id;
-        const safeSubName = sub.name ? sub.name.replace(/"/g, '&quot;') : '';
-        const safeSubSlug = sub.slug ? sub.slug.replace(/"/g, '&quot;') : '';
-        const safeSubPhoto = sub.photo ? sub.photo.replace(/"/g, '&quot;') : '';
-        subElement.innerHTML = `
-            <input type="text" class="subcategory-name" value="${safeSubName}">
-            <input type="text" class="subcategory-slug" value="${safeSubSlug}">
-            <input type="text" class="subcategory-photo-url" value="${safeSubPhoto}">
-            <select class="subcategory-visible">
-                <option value="true" ${sub.visible ? 'selected' : ''}>Показувати</option>
-                <option value="false" ${!sub.visible ? 'selected' : ''}>Приховати</option>
-            </select>
-            <input type="number" class="subcategory-order" value="${sub.order || 0}">
-            <button type="button" onclick="this.parentElement.remove()">Видалити</button>
-        `;
-        subcategoryContainer.appendChild(subElement);
-    });
-
-    // Додавання нової підкатегорії
-    document.getElementById('add-subcategory-btn').addEventListener('click', () => {
-        const subElement = document.createElement('div');
-        subElement.classList.add('subcategory-item');
-        subElement.innerHTML = `
-            <input type="text" class="subcategory-name">
-            <input type="text" class="subcategory-slug">
-            <input type="text" class="subcategory-photo-url">
-            <select class="subcategory-visible">
-                <option value="true">Показувати</option>
-                <option value="false">Приховати</option>
-            </select>
-            <input type="number" class="subcategory-order" value="0">
-            <button type="button" onclick="this.parentElement.remove()">Видалити</button>
-        `;
-        subcategoryContainer.appendChild(subElement);
-    });
-
-    // Додаємо слухач для кнопки збереження
     const saveButton = document.getElementById('save-category-btn');
     if (saveButton) {
         const newSaveButton = saveButton.cloneNode(true);
         saveButton.parentNode.replaceChild(newSaveButton, saveButton);
         newSaveButton.addEventListener('click', () => saveEditedCategory(categoryId));
     }
+
+    setTimeout(() => {
+        const nameInput = document.getElementById('category-name');
+        const slugInput = document.getElementById('category-slug');
+        const photoUrlInput = document.getElementById('category-photo-url');
+        const photoFileInput = document.getElementById('category-photo-file');
+        const visibleSelect = document.getElementById('category-visible');
+        console.log('Елементи форми після відкриття модального вікна:', {
+            nameInput: nameInput ? nameInput.value : null,
+            slugInput: slugInput ? slugInput.value : null,
+            photoUrlInput: photoUrlInput ? photoUrlInput.value : null,
+            photoFileInput: !!photoFileInput,
+            visibleSelect: visibleSelect ? visibleSelect.value : null
+        });
+        if (nameInput) nameInput.value = category.name || '';
+        if (slugInput) slugInput.value = category.slug || '';
+        if (photoUrlInput) photoUrlInput.value = category.photo || '';
+        if (visibleSelect) visibleSelect.value = category.visible ? 'true' : 'false';
+    }, 100);
 
     resetInactivityTimer();
 }
@@ -2706,47 +2663,35 @@ async function saveEditedCategory(categoryId) {
             return;
         }
 
-        // Збираємо підкатегорії з інтерфейсу
-        const updatedSubcategories = [];
-        const subcategoryElements = document.querySelectorAll('.subcategory-item');
-        subcategoryElements.forEach(el => {
-            const subId = el.dataset.id;
-            const subName = el.querySelector('.subcategory-name')?.value.trim();
-            const subSlug = el.querySelector('.subcategory-slug')?.value.trim() || subName.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
-            const subPhoto = el.querySelector('.subcategory-photo-url')?.value.trim();
-            const subVisible = el.querySelector('.subcategory-visible')?.value === 'true';
-            const subOrder = parseInt(el.querySelector('.subcategory-order')?.value) || 0;
+        // Нормалізація даних для порівняння
+        const normalizeValue = (value) => value === undefined || value === null ? '' : value;
+        const normalizeBoolean = (value) => value === undefined ? true : !!value;
 
-            if (subName && subSlug) {
-                updatedSubcategories.push({
-                    _id: subId || undefined,
-                    name: subName,
-                    slug: subSlug,
-                    photo: subPhoto || '',
-                    visible: subVisible !== undefined ? subVisible : true,
-                    order: subOrder
-                });
-            }
-        });
+        const updatedSubcategories = Array.isArray(category.subcategories) ? category.subcategories.map(sub => ({
+            _id: sub._id || undefined,
+            name: normalizeValue(sub.name).trim(),
+            slug: normalizeValue(sub.slug || sub.name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')).trim(),
+            photo: normalizeValue(sub.photo).trim(),
+            visible: normalizeBoolean(sub.visible),
+            order: sub.order !== undefined ? sub.order : 0
+        })).filter(sub => sub.name && sub.slug) : [];
 
-        // Порівняння змін
-        const hasChanges = name !== category.name ||
-                           slug !== category.slug ||
-                           visible !== (category.visible ?? true) ||
-                           photo !== (category.photo || '') ||
-                           photoFileInput.files.length > 0 ||
-                           !deepEqual(updatedSubcategories, category.subcategories || []);
+        // Порівняння з нормалізацією
+        const hasChanges =
+            normalizeValue(name) !== normalizeValue(category.name) ||
+            normalizeValue(slug) !== normalizeValue(category.slug) ||
+            normalizeBoolean(visible) !== normalizeBoolean(category.visible) ||
+            normalizeValue(photo) !== normalizeValue(category.photo) ||
+            photoFileInput.files.length > 0 ||
+            !deepEqual(updatedSubcategories, category.subcategories || []);
 
         console.log('Порівняння змін для категорії:', {
             name: { new: name, old: category.name },
             slug: { new: slug, old: category.slug },
-            photo: { new: photo, old: category.photo || '' },
-            visible: { new: visible, old: category.visible ?? true },
+            photo: { new: photo, old: category.photo },
+            visible: { new: visible, old: category.visible },
             photoFile: photoFileInput.files.length,
-            subcategories: {
-                new: updatedSubcategories,
-                old: category.subcategories || []
-            }
+            subcategories: { new: updatedSubcategories, old: category.subcategories }
         });
 
         if (!hasChanges) {
@@ -2794,9 +2739,7 @@ async function saveEditedCategory(categoryId) {
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                headers: { 'X-CSRF-Token': localStorage.getItem('csrfToken') || '' }
             });
             const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
@@ -2857,16 +2800,12 @@ async function saveEditedCategory(categoryId) {
 function deepEqual(a, b) {
     if (a === b) return true;
     if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') return false;
-
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
-
     if (keysA.length !== keysB.length) return false;
-
     for (const key of keysA) {
         if (!keysB.includes(key) || !deepEqual(a[key], b[key])) return false;
     }
-
     return true;
 }
 
@@ -3211,24 +3150,28 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        // Порівняння змін
-        const hasChanges = name !== subcategory.name ||
-                           slug !== subcategory.slug ||
-                           visible !== (subcategory.visible ?? true) ||
-                           photo !== (subcategory.photo || '') ||
-                           photoFileInput.files.length > 0;
+        // Нормалізація даних для порівняння
+        const normalizeValue = (value) => value === undefined || value === null ? '' : value;
+        const normalizeBoolean = (value) => value === undefined ? true : !!value;
+
+        const hasChanges =
+            normalizeValue(name) !== normalizeValue(subcategory.name) ||
+            normalizeValue(slug) !== normalizeValue(subcategory.slug) ||
+            normalizeBoolean(visible) !== normalizeBoolean(subcategory.visible) ||
+            normalizeValue(photo) !== normalizeValue(subcategory.photo) ||
+            photoFileInput.files.length > 0;
 
         console.log('Порівняння змін для підкатегорії:', {
             name: { new: name, old: subcategory.name },
             slug: { new: slug, old: subcategory.slug },
-            photo: { new: photo, old: subcategory.photo || '' },
-            visible: { new: visible, old: subcategory.visible ?? true },
+            photo: { new: photo, old: subcategory.photo },
+            visible: { new: visible, old: subcategory.visible },
             photoFile: photoFileInput.files.length
         });
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', {
-                original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo || '', visible: subcategory.visible ?? true },
+                original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo, visible: subcategory.visible },
                 updated: { name, slug, photo, visible }
             });
             showNotification('Зміни відсутні.');
@@ -3255,19 +3198,17 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             }
             const formData = new FormData();
             formData.append('file', file);
-            const uploadResponse = await fetchWithAuth('/api/upload', {
+            const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                headers: { 'X-CSRF-Token': localStorage.getItem('csrfToken') || '' }
             });
-            const data = await uploadResponse.json();
+            const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
 
-        const updatedSubcategoryData = {
+        const updatedSubcategory = {
             name,
             slug,
             photo: photo || undefined,
@@ -3275,7 +3216,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             order: subcategory.order || 0
         };
 
-        console.log('Надсилаємо запит на оновлення підкатегорії:', updatedSubcategoryData);
+        console.log('Надсилаємо запит на оновлення підкатегорії:', updatedSubcategory);
 
         const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3283,7 +3224,7 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(updatedSubcategoryData)
+            body: JSON.stringify(updatedSubcategory)
         });
 
         if (!response.ok) {
@@ -3291,7 +3232,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             throw new Error(`Помилка оновлення підкатегорії: ${errorData.error || response.statusText}`);
         }
 
-        const updatedCategoryData = await response.json();
+        const responseData = await response.json();
+        const updatedCategoryData = responseData.category || responseData;
         categories = categories.map(c => c._id === categoryId ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] } : c);
         localStorage.setItem('categories', JSON.stringify(categories));
 
@@ -3299,29 +3241,12 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         renderCategoriesAdmin();
         showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
-    } catch (error) {
-        console.error('Помилка оновлення підкатегорії:', error);
-        showNotification('Не вдалось оновити підкатегорію: ' + error.message);
+    } catch (err) {
+        console.error('Помилка оновлення підкатогорії:', err);
+        showNotification('Не вдалося оновити підкатегорію: ' + err.message);
     } finally {
         isUpdatingCategories = false;
     }
-}
-
-// Допоміжна функція для глибокого порівняння
-function deepEqual(a, b) {
-    if (a === b) return true;
-    if (!a || b === null || typeof a !== typeof b !== 'object') return false;
-
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (let key of keysA) {
-        if (!keysB.includes(key) || !deepEqual(a[key], b[key])) return false;
-    }
-
-    return true;
 }
 
 async function addSubcategory() {
@@ -3493,7 +3418,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     modal.classList.add('active');
     console.log('Модальне вікно для редагування підкатегорії відкрито:', { categoryId, subcategoryId });
 
-    // Перевіряємо ініціалізацію елементів
     setTimeout(() => {
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3507,7 +3431,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
             photoFileInput: !!photoFileInput,
             visibleSelect: visibleSelect ? visibleSelect.value : null
         });
-        // Примусово встановлюємо значення
         if (nameInput) nameInput.value = subcategory.name || '';
         if (slugInput) slugInput.value = subcategory.slug || '';
         if (photoUrlInput) photoUrlInput.value = subcategory.photo || '';
@@ -3543,7 +3466,6 @@ async function deleteSubcategory(categoryId, subcategoryId) {
             return;
         }
 
-        // Локально видаляємо підкатегорію
         const categoryIndex = categories.findIndex(c => c._id === categoryId);
         categories[categoryIndex].subcategories = categories[categoryIndex].subcategories.filter(s => s._id !== subcategoryId);
         renderCategoriesAdmin();
@@ -3564,7 +3486,6 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         categories[categoryIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        // Оновлюємо товари
         await fetchWithAuth(`/api/products/subcategory/${encodeURIComponent(subcategory.name)}`, {
             method: 'PUT',
             headers: {
@@ -3580,7 +3501,6 @@ async function deleteSubcategory(categoryId, subcategoryId) {
     } catch (err) {
         console.error('Помилка видалення підкатегорії:', err);
         showNotification('Не вдалося видалити підкатегорію: ' + err.message);
-        // Відновлюємо категорії при помилці
         categories = JSON.parse(localStorage.getItem('categories') || '[]');
         renderCategoriesAdmin();
     } finally {
@@ -4028,7 +3948,6 @@ async function importSiteBackup() {
 
             if (cleanedData.settings) {
                 const { _id, createdAt, updatedAt, __v, storeName, ...cleanedSettings } = cleanedData.settings;
-                // Map storeName to name if storeName exists
                 if (storeName) {
                     cleanedSettings.name = storeName;
                 }
@@ -4193,7 +4112,6 @@ async function importOrdersBackup() {
 
             const cleanedOrdersData = ordersData.map(order => {
                 const { _id, createdAt, updatedAt, __v, orderNumber, ...cleanedOrder } = order;
-                // Clean customer object by removing _id
                 if (cleanedOrder.customer && typeof cleanedOrder.customer === 'object') {
                     const { _id: customerId, ...cleanedCustomer } = cleanedOrder.customer;
                     cleanedOrder.customer = cleanedCustomer;
@@ -4541,7 +4459,6 @@ function updateSubcategories() {
     const categorySelect = document.getElementById('product-category');
     const subcategorySelect = document.getElementById('product-subcategory');
     
-    // Перевіряємо, чи це модальне вікно для редагування продукту
     if (!categorySelect || !subcategorySelect) {
         console.log('Це не модальне вікно для редагування продукту, пропускаємо оновлення підкатегорій');
         return;
@@ -5331,7 +5248,7 @@ setTimeout(() => {
 
     const subcatSelect = document.getElementById('product-subcategory');
     if (product.subcategory && subcatSelect) {
-        subcatSelect.value = product.subcategory; // Використовуємо slug напряму
+        subcatSelect.value = product.subcategory;
     }
 
     renderColorsList();
@@ -5867,7 +5784,6 @@ async function searchProducts(page = 1) {
             return;
         }
 
-        // Зберігаємо сторінку перед початком пошуку
         if (page === 1) {
             lastPageBeforeSearch = productsCurrentPage;
         }
@@ -5904,7 +5820,6 @@ function clearSearch() {
     const searchInput = document.getElementById('product-search');
     if (searchInput) {
         searchInput.value = '';
-        // Повертаємося до сторінки, з якої почали пошук
         productsCurrentPage = lastPageBeforeSearch;
         loadProducts(productsCurrentPage, productsPerPage);
     }
@@ -5947,7 +5862,6 @@ async function sortOrders(sortType) {
             ? ordersData.filter(order => unifiedStatuses.includes(order.status) && (statusFilter === 'Усі статуси' || order.status === statusFilter))
             : ordersData.filter(order => unifiedStatuses.includes(order.status));
 
-        // Завжди оновлюємо orderNumberCache при сортуванні
         orderNumberCache.clear();
         filteredOrders.sort((a, b) => {
             let valA = key === 'date' ? new Date(a[key] || 0) : (a[key] || (typeof a[key] === 'number' ? 0 : ''));
@@ -5963,14 +5877,12 @@ async function sortOrders(sortType) {
             }
         });
 
-        // Призначаємо нові номери в orderNumberCache після сортування
         filteredOrders.forEach((order, idx) => {
             orderNumberCache.set(order._id, idx + 1);
         });
 
         totalOrders = filteredOrders.length;
 
-        // Обрізаємо до поточної сторінки
         const start = (ordersCurrentPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
         const globalIndex = start + 1;
@@ -6360,8 +6272,8 @@ function handleCategoriesUpdate(data) {
 }
 
 function handleOrdersUpdate(data) {
-    orders = data; // Оновлюємо масив замовлень
-    totalOrders = data.length; // Оновлюємо кількість замовлень
+    orders = data;
+    totalOrders = data.length;
     console.log('Оновлено orders:', orders);
     if (document.querySelector('#orders.active')) {
         renderAdmin('orders', { total: totalOrders });
@@ -6431,7 +6343,7 @@ socket.onmessage = (event) => {
             console.log('Оновлено settings:', settings);
             renderSettingsAdmin();
         } else if (type === 'products' && Array.isArray(data)) {
-            if (isLoadingProducts) { // Виправлено: Ladders -> isLoadingProducts
+            if (isLoadingProducts) {
                 console.log('Завантаження товарів через loadProducts ще триває, ігноруємо WebSocket-оновлення для products');
                 return;
             }
