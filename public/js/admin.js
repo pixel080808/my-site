@@ -2451,9 +2451,9 @@ function openEditCategoryModal(categoryId) {
     }
 
     // Очищення даних для безпеки
-    const safeName = sanitizeHtml(category.name || '');
-    const safeSlug = sanitizeHtml(category.slug || '');
-    const safePhoto = sanitizeHtml(category.photo || '');
+    const safeName = (category.name || '').replace(/"/g, '&quot;');
+    const safeSlug = (category.slug || '').replace(/"/g, '&quot;');
+    const safePhoto = (category.photo || '').replace(/"/g, '&quot;');
 
     modal.innerHTML = `
         <div class="modal-content">
@@ -3374,9 +3374,9 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     }
 
     // Очищення даних для безпеки
-    const safeName = sanitizeHtml(subcategory.name || '');
-    const safeSlug = sanitizeHtml(subcategory.slug || '');
-    const safePhoto = sanitizeHtml(subcategory.photo || '');
+    const safeName = (subcategory.name || '').replace(/"/g, '&quot;');
+    const safeSlug = (subcategory.slug || '').replace(/"/g, '&quot;');
+    const safePhoto = (subcategory.photo || '').replace(/"/g, '&quot;');
 
     modal.innerHTML = `
         <div class="modal-content">
