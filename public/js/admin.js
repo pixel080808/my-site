@@ -2664,17 +2664,18 @@ async function saveEditedCategory(categoryId) {
         }
 
         // Нормалізація даних для порівняння
-        const normalizeValue = (value) => value === undefined || value === null ? '' : value;
-        const normalizeBoolean = (value) => value === undefined ? true : !!value;
+        const normalizeValue = (value) => (value === undefined || value === null ? '' : String(value).trim());
+        const normalizeBoolean = (value) => (value === undefined || value === null ? true : !!value);
+        const normalizeArray = (arr) => (Array.isArray(arr) ? arr : []);
 
-        const updatedSubcategories = Array.isArray(category.subcategories) ? category.subcategories.map(sub => ({
+        const updatedSubcategories = normalizeArray(category.subcategories).map(sub => ({
             _id: sub._id || undefined,
-            name: normalizeValue(sub.name).trim(),
-            slug: normalizeValue(sub.slug || sub.name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')).trim(),
-            photo: normalizeValue(sub.photo).trim(),
+            name: normalizeValue(sub.name),
+            slug: normalizeValue(sub.slug || sub.name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')),
+            photo: normalizeValue(sub.photo),
             visible: normalizeBoolean(sub.visible),
-            order: sub.order !== undefined ? sub.order : 0
-        })).filter(sub => sub.name && sub.slug) : [];
+            order: sub.order !== undefined ? Number(sub.order) : 0
+        })).filter(sub => sub.name && sub.slug);
 
         // Порівняння з нормалізацією
         const hasChanges =
@@ -2683,20 +2684,36 @@ async function saveEditedCategory(categoryId) {
             normalizeBoolean(visible) !== normalizeBoolean(category.visible) ||
             normalizeValue(photo) !== normalizeValue(category.photo) ||
             photoFileInput.files.length > 0 ||
-            !deepEqual(updatedSubcategories, category.subcategories || []);
+            !deepEqual(
+                updatedSubcategories,
+                normalizeArray(category.subcategories).map(sub => ({
+                    _id: sub._id || undefined,
+                    name: normalizeValue(sub.name),
+                    slug: normalizeValue(sub.slug),
+                    photo: normalizeValue(sub.photo),
+                    visible: normalizeBoolean(sub.visible),
+                    order: sub.order !== undefined ? Number(sub.order) : 0
+                }))
+            );
 
         console.log('Порівняння змін для категорії:', {
-            name: { new: name, old: category.name },
-            slug: { new: slug, old: category.slug },
-            photo: { new: photo, old: category.photo },
-            visible: { new: visible, old: category.visible },
+            name: { new: normalizeValue(name), old: normalizeValue(category.name) },
+            slug: { new: normalizeValue(slug), old: normalizeValue(category.slug) },
+            photo: { new: normalizeValue(photo), old: normalizeValue(category.photo) },
+            visible: { new: normalizeBoolean(visible), old: normalizeBoolean(category.visible) },
             photoFile: photoFileInput.files.length,
             subcategories: { new: updatedSubcategories, old: category.subcategories }
         });
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', {
-                original: { name: category.name, slug: category.slug, photo: category.photo, visible: category.visible, subcategories: category.subcategories },
+                original: {
+                    name: category.name,
+                    slug: category.slug,
+                    photo: category.photo,
+                    visible: category.visible,
+                    subcategories: category.subcategories
+                },
                 updated: { name, slug, photo, visible, subcategories: updatedSubcategories }
             });
             showNotification('Зміни відсутні.');
@@ -2782,8 +2799,17 @@ async function saveEditedCategory(categoryId) {
 
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
-        categories = categories.map(c => c._id === categoryId ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] } : c);
+
+        // Оновлюємо локальний масив категорій
+        categories = categories.map(c =>
+            c._id === categoryId
+                ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] }
+                : c
+        );
         localStorage.setItem('categories', JSON.stringify(categories));
+
+        // Викликаємо оновлення через WebSocket
+        broadcast('categories', categories);
 
         closeModal();
         renderCategoriesAdmin();
@@ -2799,10 +2825,20 @@ async function saveEditedCategory(categoryId) {
 
 function deepEqual(a, b) {
     if (a === b) return true;
-    if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') return false;
+    if (a == null || b == null) return false;
+    if (typeof a !== 'object' || typeof b !== 'object') return a === b;
+
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        const sortedA = [...a].sort((x, y) => (x._id || x.name || '').localeCompare(y._id || y.name || ''));
+        const sortedB = [...b].sort((x, y) => (x._id || x.name || '').localeCompare(y._id || y.name || ''));
+        return sortedA.every((item, index) => deepEqual(item, sortedB[index]));
+    }
+
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
     if (keysA.length !== keysB.length) return false;
+
     for (const key of keysA) {
         if (!keysB.includes(key) || !deepEqual(a[key], b[key])) return false;
     }
@@ -3151,8 +3187,8 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
         }
 
         // Нормалізація даних для порівняння
-        const normalizeValue = (value) => value === undefined || value === null ? '' : value;
-        const normalizeBoolean = (value) => value === undefined ? true : !!value;
+        const normalizeValue = (value) => (value === undefined || value === null ? '' : String(value).trim());
+        const normalizeBoolean = (value) => (value === undefined || value === null ? true : !!value);
 
         const hasChanges =
             normalizeValue(name) !== normalizeValue(subcategory.name) ||
@@ -3162,16 +3198,21 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
             photoFileInput.files.length > 0;
 
         console.log('Порівняння змін для підкатегорії:', {
-            name: { new: name, old: subcategory.name },
-            slug: { new: slug, old: subcategory.slug },
-            photo: { new: photo, old: subcategory.photo },
-            visible: { new: visible, old: subcategory.visible },
+            name: { new: normalizeValue(name), old: normalizeValue(subcategory.name) },
+            slug: { new: normalizeValue(slug), old: normalizeValue(subcategory.slug) },
+            photo: { new: normalizeValue(photo), old: normalizeValue(subcategory.photo) },
+            visible: { new: normalizeBoolean(visible), old: normalizeBoolean(subcategory.visible) },
             photoFile: photoFileInput.files.length
         });
 
         if (!hasChanges) {
             console.log('Зміни відсутні:', {
-                original: { name: subcategory.name, slug: subcategory.slug, photo: subcategory.photo, visible: subcategory.visible },
+                original: {
+                    name: subcategory.name,
+                    slug: subcategory.slug,
+                    photo: subcategory.photo,
+                    visible: subcategory.visible
+                },
                 updated: { name, slug, photo, visible }
             });
             showNotification('Зміни відсутні.');
@@ -3234,8 +3275,17 @@ async function saveEditedSubcategory(categoryId, subcategoryId) {
 
         const responseData = await response.json();
         const updatedCategoryData = responseData.category || responseData;
-        categories = categories.map(c => c._id === categoryId ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] } : c);
+
+        // Оновлюємо локальний масив категорій
+        categories = categories.map(c =>
+            c._id === categoryId
+                ? { ...updatedCategoryData, subcategories: updatedCategoryData.subcategories || [] }
+                : c
+        );
         localStorage.setItem('categories', JSON.stringify(categories));
+
+        // Викликаємо оновлення через WebSocket
+        broadcast('categories', categories);
 
         closeModal();
         renderCategoriesAdmin();
