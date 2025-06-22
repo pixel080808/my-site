@@ -646,7 +646,7 @@ ws.on('message', async (message) => {
             return;
         }
 
-        const { type, action } = parsedMessage;
+        const { type, action, data } = parsedMessage;
         if (!type || !action) {
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'error', data: { error: 'Відсутні обов’язкові поля type або action' } }));
@@ -702,9 +702,17 @@ ws.on('message', async (message) => {
                     ws.send(JSON.stringify({ type: 'error', data: { error: 'Доступ заборонено для публічних клієнтів' } }));
                 }
             }
+        } else if (action === 'update' && type === 'categories' && ws.isAdmin) {
+            const categories = await Category.find();
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN && client.subscriptions.has('categories')) {
+                    client.send(JSON.stringify({ type: 'categories', data: categories }));
+                }
+            });
+            logger.info(`Розіслано оновлення категорій усім підписникам, IP: ${clientIp}`);
         } else {
             if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', data: { error: 'Невідома дія', details: `Дія "${action}" не підтримується` } }));
+                ws.send(JSON.stringify({ type: 'error', data: { error: 'Невідома дія', details: `Дія "${action}" не підтримується для типу "${type}"` } }));
             }
         }
     } catch (err) {
