@@ -2635,11 +2635,7 @@ async function updateCategoryData(categoryId) {
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name || !slug) {
-            showNotification('Назва та шлях категорії є обов’язковими!');
-            return;
-        }
-        if (!/^[a-z0-9-]+$/.test(slug)) {
+        if (!/^[a-z0-9-]+$/.test(slug) && slug) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
@@ -2647,34 +2643,6 @@ async function updateCategoryData(categoryId) {
         const category = categories.find(c => c._id === categoryId);
         if (!category) {
             showNotification('Категорію не знайдено!');
-            return;
-        }
-
-        // Спрощена перевірка змін
-        const hasChanges =
-            name !== category.name ||
-            slug !== category.slug ||
-            visible !== category.visible ||
-            photo !== (category.photo || '') ||
-            photoFileInput.files.length > 0 ||
-            !deepEqual(category.subcategories || [], []);
-
-        console.log('Порівняння змін для категорії:', {
-            name: { new: name, old: category.name },
-            slug: { new: slug, old: category.slug },
-            photo: { new: photo, old: category.photo || '' },
-            visible: { new: visible, old: category.visible },
-            photoFile: photoFileInput.files.length,
-            subcategories: { new: [], old: category.subcategories || [] }
-        });
-
-        if (!hasChanges) {
-            console.log('Зміни відсутні:', {
-                original: category,
-                updated: { name, slug, photo, visible, subcategories: [] }
-            });
-            showNotification('Зміни відсутні.');
-            closeModal();
             return;
         }
 
@@ -2687,7 +2655,7 @@ async function updateCategoryData(categoryId) {
             }
         }
 
-        if (slug !== category.slug) {
+        if (slug !== category.slug && slug) {
             const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
             const existingCategories = await slugCheck.json();
             if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
@@ -3111,11 +3079,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name || !slug) {
-            showNotification('Назва та шлях підкатегорії є обов’язковими!');
-            return;
-        }
-        if (!/^[a-z0-9-]+$/.test(slug)) {
+        if (!/^[a-z0-9-]+$/.test(slug) && slug) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
@@ -3131,33 +3095,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        // Спрощена перевірка змін
-        const hasChanges =
-            name !== subcategory.name ||
-            slug !== subcategory.slug ||
-            visible !== subcategory.visible ||
-            photo !== (subcategory.photo || '') ||
-            photoFileInput.files.length > 0;
-
-        console.log('Порівняння змін для підкатегорії:', {
-            name: { new: name, old: subcategory.name },
-            slug: { new: slug, old: subcategory.slug },
-            photo: { new: photo, old: subcategory.photo || '' },
-            visible: { new: visible, old: subcategory.visible },
-            photoFile: photoFileInput.files.length
-        });
-
-        if (!hasChanges) {
-            console.log('Зміни відсутні:', {
-                original: subcategory,
-                updated: { name, slug, photo, visible }
-            });
-            showNotification('Зміни відсутні.');
-            closeModal();
-            return;
-        }
-
-        if (slug !== subcategory.slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
+        if (slug !== subcategory.slug && slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
         }
