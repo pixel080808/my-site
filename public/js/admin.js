@@ -352,6 +352,9 @@ async function fetchWithAuth(url, options = {}) {
                     const error = new Error(errorData.error || errorData.message || `HTTP error ${newResponse.status}`);
                     error.status = newResponse.status;
                     error.errorData = errorData;
+                    if (errorData.details) {
+                        error.message += `: ${errorData.details.join(', ')}`;
+                    }
                     throw error;
                 }
                 return newResponse;
@@ -384,6 +387,9 @@ async function fetchWithAuth(url, options = {}) {
             const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
             error.status = response.status;
             error.errorData = errorData;
+            if (errorData.details) {
+                error.message += `: ${errorData.details.join(', ')}`;
+            }
             throw error;
         }
 
@@ -2635,6 +2641,12 @@ async function updateCategoryData(categoryId) {
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
+        // Додаємо перевірку на непорожність name
+        if (!name) {
+            showNotification('Назва категорії є обов’язковою!');
+            return;
+        }
+
         if (!/^[a-z0-9-]+$/.test(slug) && slug) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
@@ -3078,6 +3090,12 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
+
+        // Додаємо перевірку на непорожність name
+        if (!name) {
+            showNotification('Назва підкатегорії є обов’язковою!');
+            return;
+        }
 
         if (!/^[a-z0-9-]+$/.test(slug) && slug) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
