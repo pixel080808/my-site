@@ -1,7 +1,9 @@
+const express = require('express');
+const app = express();
+app.set('trust proxy', 1);
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const sanitizeHtml = require('sanitize-html');
-const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -42,8 +44,6 @@ const logger = winston.createLogger({
 });
 
 dotenv.config();
-
-const app = express();
 
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     logger.error('Змінні середовища для Cloudinary не визначені');
