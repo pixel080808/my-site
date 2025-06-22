@@ -626,94 +626,94 @@ wss.on('connection', (ws, req) => {
         logger.info(`Клієнт від’єднався від WebSocket, IP: ${clientIp}, Код: ${code}, Причина: ${reason || 'невідомо'}`);
     });
 
-    ws.on('message', async (message) => {
-        try {
-            if (message.length > 1024 * 1024) {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Повідомлення занадто велике' }));
-                }
-                return;
-            }
-
-            let parsedMessage;
-            try {
-                parsedMessage = JSON.parse(message);
-            } catch (parseErr) {
-                logger.error(`WebSocket: Некоректний формат повідомлення, IP: ${clientIp}:`, parseErr);
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Некоректний формат повідомлення', details: 'Очікується валідний JSON' }));
-                }
-                return;
-            }
-
-            const { type, action } = parsedMessage;
-            if (!type || !action) {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Відсутні обов’язкові поля type або action' }));
-                }
-                return;
-            }
-
-            logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
-
-            if (action === 'subscribe') {
-                ws.subscriptions.add(type);
-                logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
-
-                if (type === 'products') {
-                    const products = ws.isAdmin
-                        ? await Product.find()
-                        : await Product.find({ visible: true, active: true });
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'products', data: products }));
-                    }
-                } else if (type === 'settings') {
-                    const settings = await Settings.findOne();
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
-                    }
-                } else if (type === 'categories') {
-                    const categories = await Category.find();
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'categories', data: categories }));
-                    }
-                } else if (type === 'slides') {
-                    const slides = await Slide.find().sort({ order: 1 });
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'slides', data: slides }));
-                    }
-                } else if (type === 'orders' && ws.isAdmin) {
-                    const orders = await Order.find();
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'orders', data: orders }));
-                    }
-                } else if (type === 'materials' && ws.isAdmin) {
-                    const materials = await Material.find().distinct('name');
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'materials', data: materials }));
-                    }
-                } else if (type === 'brands' && ws.isAdmin) {
-                    const brands = await Brand.find().distinct('name');
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'brands', data: brands }));
-                    }
-                } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'error', error: 'Доступ заборонено для публічних клієнтів' }));
-                    }
-                }
-            } else {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'error', error: 'Невідома дія', details: `Дія "${action}" не підтримується` }));
-                }
-            }
-        } catch (err) {
-            logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
+ws.on('message', async (message) => {
+    try {
+        if (message.length > 1024 * 1024) {
             if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Помилка обробки повідомлення', details: err.message }));
+                ws.send(JSON.stringify({ type: 'error', data: { error: 'Повідомлення занадто велике' } }));
+            }
+            return;
+        }
+
+        let parsedMessage;
+        try {
+            parsedMessage = JSON.parse(message);
+        } catch (parseErr) {
+            logger.error(`WebSocket: Некоректний формат повідомлення, IP: ${clientIp}:`, parseErr);
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', data: { error: 'Некоректний формат повідомлення', details: 'Очікується валідний JSON' } }));
+            }
+            return;
+        }
+
+        const { type, action } = parsedMessage;
+        if (!type || !action) {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', data: { error: 'Відсутні обов’язкові поля type або action' } }));
+            }
+            return;
+        }
+
+        logger.info(`Отримано WebSocket-повідомлення: type=${type}, action=${action}, IP: ${clientIp}`);
+
+        if (action === 'subscribe') {
+            ws.subscriptions.add(type);
+            logger.info(`Клієнт підписався на ${type}, IP: ${clientIp}`);
+
+            if (type === 'products') {
+                const products = ws.isAdmin
+                    ? await Product.find()
+                    : await Product.find({ visible: true, active: true });
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'products', data: products }));
+                }
+            } else if (type === 'settings') {
+                const settings = await Settings.findOne();
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'settings', data: settings || {} }));
+                }
+            } else if (type === 'categories') {
+                const categories = await Category.find();
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'categories', data: categories }));
+                }
+            } else if (type === 'slides') {
+                const slides = await Slide.find().sort({ order: 1 });
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'slides', data: slides }));
+                }
+            } else if (type === 'orders' && ws.isAdmin) {
+                const orders = await Order.find();
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'orders', data: orders }));
+                }
+            } else if (type === 'materials' && ws.isAdmin) {
+                const materials = await Material.find().distinct('name');
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'materials', data: materials }));
+                }
+            } else if (type === 'brands' && ws.isAdmin) {
+                const brands = await Brand.find().distinct('name');
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'brands', data: brands }));
+                }
+            } else if (!ws.isAdmin && ['orders', 'materials', 'brands'].includes(type)) {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'error', data: { error: 'Доступ заборонено для публічних клієнтів' } }));
+                }
+            }
+        } else {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', data: { error: 'Невідома дія', details: `Дія "${action}" не підтримується` } }));
             }
         }
-    });
+    } catch (err) {
+        logger.error(`Помилка обробки WebSocket-повідомлення, IP: ${clientIp}:`, err);
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'error', data: { error: 'Помилка обробки повідомлення', details: err.message } }));
+        }
+    }
+});
 
     ws.on('error', (err) => logger.error(`Помилка WebSocket, IP: ${clientIp}:`, err));
 });

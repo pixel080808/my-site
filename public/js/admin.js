@@ -6339,6 +6339,7 @@ socket.onmessage = (event) => {
     try {
         const { type, data } = JSON.parse(event.data);
         console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
+
         if (type === 'settings' && data) {
             settings = { ...settings, ...data };
             console.log('Оновлено settings:', settings);
@@ -6383,13 +6384,17 @@ socket.onmessage = (event) => {
             console.log('Оновлено brands:', brands);
             updateBrandOptions();
         } else if (type === 'error') {
-            console.error('WebSocket помилка від сервера:', data);
-            showNotification('Помилка WebSocket: ' + data.error);
-            if (data.error.includes('неавторизований')) {
+            // Перевіряємо, чи є data об'єктом і чи має властивість error
+            const errorMessage = data && typeof data === 'object' && data.error ? data.error : 'Невідома помилка';
+            console.error('WebSocket помилка від сервера:', errorMessage);
+            showNotification(`Помилка WebSocket: ${errorMessage}`);
+            if (errorMessage.includes('неавторизований')) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminSession');
                 showSection('admin-login');
             }
+        } else {
+            console.warn(`Невідомий тип WebSocket-повідомлення: ${type}`);
         }
     } catch (e) {
         console.error('Помилка обробки WebSocket-повідомлення:', e);
