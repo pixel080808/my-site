@@ -893,28 +893,14 @@ function initializeEditors() {
         [{ 'font': [] }],
         [{ 'align': [] }],
         ['clean'],
-        ['image', 'video'],
-        [{ 'undo': 'undo' }, { 'redo': 'redo' }]
+        ['image', 'video']
     ];
 
     try {
-        Quill.register('modules/undo', function(quill) {
-            return { undo: () => quill.history.undo() };
-        }, true);
-        Quill.register('modules/redo', function(quill) {
-            return { redo: () => quill.history.redo() };
-        }, true);
-
         aboutEditor = new Quill('#about-editor', {
             theme: 'snow',
             modules: {
-                toolbar: {
-                    container: aboutToolbarOptions,
-                    handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
-                    }
-                },
+                toolbar: aboutToolbarOptions,
                 history: {
                     delay: 1000,
                     maxStack: 500,
@@ -923,23 +909,63 @@ function initializeEditors() {
             }
         });
 
+        // Обробка додавання зображень
+        const toolbar = aboutEditor.getModule('toolbar');
+        toolbar.addHandler('image', async () => {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp');
+            input.click();
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (file) {
+                    const validation = validateFile(file);
+                    if (!validation.valid) {
+                        showNotification(validation.error);
+                        return;
+                    }
+
+                    try {
+                        const tokenRefreshed = await refreshToken();
+                        if (!tokenRefreshed) {
+                            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                            showSection('admin-login');
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const response = await fetchWithAuth('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+                        if (data.url) {
+                            const range = aboutEditor.getSelection() || { index: 0 };
+                            aboutEditor.insertEmbed(range.index, 'image', data.url);
+                            setDefaultVideoSizes(aboutEditor, 'about-edit');
+                            document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+                            unsavedChanges = true;
+                        }
+                    } catch (err) {
+                        console.error('Помилка завантаження зображення:', err);
+                        showNotification('Не вдалося завантажити зображення: ' + err.message);
+                    }
+                }
+            };
+        });
+
         aboutEditor.on('text-change', () => {
             const content = aboutEditor.root.innerHTML;
             document.getElementById('about-edit').value = content;
             console.log('Вміст редактора змінено:', content);
             unsavedChanges = true;
             resetInactivityTimer();
-
-            const undoButton = document.querySelector('.ql-undo');
-            const redoButton = document.querySelector('.ql-redo');
-            if (undoButton && redoButton) {
-                aboutEditor.history.stack.undo.length > 0
-                    ? undoButton.removeAttribute('disabled')
-                    : undoButton.setAttribute('disabled', 'true');
-                aboutEditor.history.stack.redo.length > 0
-                    ? redoButton.removeAttribute('disabled')
-                    : redoButton.setAttribute('disabled', 'true');
-            }
         });
 
         const observer = new MutationObserver(() => {
@@ -1018,20 +1044,13 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         productEditor = new Quill('#product-description-editor', {
             theme: 'snow',
             modules: {
-                toolbar: {
-                    container: [
-                        ['bold', 'italic', 'underline'],
-                        [{ 'header': 2 }, { 'header': 3 }],
-                        ['link', 'image', 'video'],
-                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                        [{ 'undo': 'undo' }, { 'redo': 'redo' }],
-                        ['clean']
-                    ],
-                    handlers: {
-                        undo: function() { this.quill.history.undo(); },
-                        redo: function() { this.quill.history.redo(); }
-                    }
-                },
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'header': 2 }, { 'header': 3 }],
+                    ['link', 'image', 'video'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['clean']
+                ],
                 history: {
                     delay: 1000,
                     maxStack: 100,
@@ -1749,7 +1768,7 @@ async function editSocial(index) {
         <option value="📘" ${social.icon === '📘' ? 'selected' : ''}>Facebook (📘)</option>
         <option value="📸" ${social.icon === '📸' ? 'selected' : ''}>Instagram (📸)</option>
         <option value="🐦" ${social.icon === '🐦' ? 'selected' : ''}>Twitter (🐦)</option>
-        <option val▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
+        <option va▶️" ${social.icon === '▶️' ? 'selected' : ''}>YouTube (▶️)</option>
         <option value="✈️" ${social.icon === '✈️' ? 'selected' : ''}>Telegram (✈️)</option>
     `;
     const iconPrompt = document.createElement('div');
@@ -1813,24 +1832,37 @@ async function updateAbout() {
             return;
         }
 
-        settings.about = document.getElementById('about-edit').value;
+        const aboutContent = document.getElementById('about-edit').value;
+        if (!aboutContent) {
+            showNotification('Вміст "Про нас" не може бути порожнім!');
+            return;
+        }
 
-        console.log('Надсилаємо "Про нас":', settings.about);
+        const updatedSettings = {
+            about: aboutContent
+        };
+
+        console.log('Надсилаємо оновлення "Про нас":', updatedSettings);
 
         const response = await fetchWithAuth('/api/settings', {
             method: 'PUT',
-            body: JSON.stringify({ about: settings.about })
+            body: JSON.stringify(updatedSettings)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка оновлення "Про нас": ${errorData.error || response.statusText}`);
+        }
 
         const serverSettings = await response.json();
         settings = { ...settings, ...serverSettings };
         renderSettingsAdmin();
-        showNotification('Інформацію "Про нас" оновлено!');
+        showNotification('Розділ "Про нас" оновлено!');
         unsavedChanges = false;
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення "Про нас":', err);
-        showNotification('Помилка оновлення "Про нас": ' + err.message);
+        showNotification('Не вдалося оновити "Про нас": ' + err.message);
     }
 }
 
@@ -2115,7 +2147,6 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
-    // Видаляємо старий слухач подій, якщо він існує
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2161,9 +2192,8 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-    // Видаляємо попередній слухач, якщо він був доданий
     categoryList.removeEventListener('click', categoryList._clickHandler);
-    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
+    categoryList._clickHandler = handleClick;
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2455,31 +2485,34 @@ function openEditCategoryModal(categoryId) {
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Модальне вікно з id="modal" не знайдено!');
+        showNotification('Помилка: модальне вікно не знайдено');
         return;
     }
 
-    const category = categories.find(c => c._id === categoryId);
+    const category = categories.find(c => c._id === categoryId || (c.category && c.category._id === categoryId));
     if (!category) {
         console.error('Категорію з id', categoryId, 'не знайдено');
+        showNotification('Помилка: категорію не знайдено');
         return;
     }
 
-    // Формуємо HTML для модального вікна редагування категорії
+    const normalizedCategory = category.category || category;
+
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати категорію</h3>
             <form id="edit-category-form">
-                <input id="category-name" placeholder="Назва категорії" type="text" value="${category.name || ''}"/><br/>
+                <input id="category-name" placeholder="Назва категорії" type="text" value="${normalizedCategory.name || ''}"/><br/>
                 <label for="category-name">Назва категорії</label>
-                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${category.slug || ''}"/><br/>
+                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${normalizedCategory.slug || ''}"/><br/>
                 <label for="category-slug">Шлях категорії</label>
-                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${category.photo || ''}"/><br/>
+                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${normalizedCategory.photo || ''}"/><br/>
                 <label for="category-photo-url">URL зображення</label>
                 <input accept="image/*" id="category-photo-file" type="file"/><br/>
                 <label for="category-photo-file">Завантажте зображення</label>
                 <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+                    <option value="true" ${normalizedCategory.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!normalizedCategory.visible ? 'selected' : ''}>Приховати</option>
                 </select><br/>
                 <label for="category-visible">Видимість</label>
                 <div class="modal-actions">
@@ -2494,7 +2527,6 @@ function openEditCategoryModal(categoryId) {
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування категорії:', categoryId);
 
-    // Додаємо обробник для збереження змін
     const form = document.getElementById('edit-category-form');
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -2656,14 +2688,14 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const name = nameInput.value ? nameInput.value.trim() : '';
+        const name = nameInput.value.trim();
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name || name.length === 0) {
+        if (!name) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва категорії є обов’язковою!');
             return;
@@ -3120,14 +3152,14 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        const name = nameInput.value ? nameInput.value.trim() : '';
+        const name = nameInput.value.trim();
         const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
-        if (!name || name.length === 0) {
+        if (!name) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва підкатегорії є обов’язковою!');
             return;
@@ -3348,22 +3380,25 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Модальне вікно з id="modal" не знайдено!');
+        showNotification('Помилка: модальне вікно не знайдено');
         return;
     }
 
-    const category = categories.find(c => c._id === categoryId);
+    const category = categories.find(c => c._id === categoryId || (c.category && c.category._id === categoryId));
     if (!category) {
         console.error('Категорію з id', categoryId, 'не знайдено');
+        showNotification('Помилка: категорію не знайдено');
         return;
     }
 
-    const subcategory = category.subcategories.find(s => s._id === subcategoryId);
+    const normalizedCategory = category.category || category;
+    const subcategory = normalizedCategory.subcategories.find(s => s._id === subcategoryId);
     if (!subcategory) {
         console.error('Підкатегорію з id', subcategoryId, 'не знайдено');
+        showNotification('Помилка: підкатегорію не знайдено');
         return;
     }
 
-    // Формуємо HTML для модального вікна редагування підкатегорії
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати підкатегорію</h3>
@@ -3393,7 +3428,6 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування підкатегорії:', subcategoryId);
 
-    // Додаємо обробник для збереження змін
     const form = document.getElementById('edit-subcategory-form');
     form.addEventListener('submit', (e) => {
         e.preventDefault();
