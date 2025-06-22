@@ -2072,7 +2072,6 @@ function renderCategoriesAdmin() {
     }
 
     const normalizedCategories = categories.map(cat => cat.category || cat);
-
     const sortedCategories = [...normalizedCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
     categoryList.innerHTML = sortedCategories.map((category, index) => {
@@ -2116,6 +2115,7 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
+    // Видаляємо старий слухач подій, якщо він існує
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2161,7 +2161,9 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-    categoryList.removeEventListener('click', handleClick);
+    // Видаляємо попередній слухач, якщо він був доданий
+    categoryList.removeEventListener('click', categoryList._clickHandler);
+    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2450,58 +2452,56 @@ function validateFile(file) {
 }
 
 function openEditCategoryModal(categoryId) {
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        console.error('Модальне вікно з id="modal" не знайдено!');
+        return;
+    }
+
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
-        showNotification('Категорію не знайдено!');
+        console.error('Категорію з id', categoryId, 'не знайдено');
         return;
     }
 
-    console.log('Відкриття модального вікна для категорії:', categoryId, 'Значення name:', category.name);
+    // Формуємо HTML для модального вікна редагування категорії
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати категорію</h3>
+            <form id="edit-category-form">
+                <input id="category-name" placeholder="Назва категорії" type="text" value="${category.name || ''}"/><br/>
+                <label for="category-name">Назва категорії</label>
+                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${category.slug || ''}"/><br/>
+                <label for="category-slug">Шлях категорії</label>
+                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${category.photo || ''}"/><br/>
+                <label for="category-photo-url">URL зображення</label>
+                <input accept="image/*" id="category-photo-file" type="file"/><br/>
+                <label for="category-photo-file">Завантажте зображення</label>
+                <select id="category-visible">
+                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+                </select><br/>
+                <label for="category-visible">Видимість</label>
+                <div class="modal-actions">
+                    <button type="submit">Зберегти</button>
+                    <button type="button" onclick="closeModal()">Скасувати</button>
+                </div>
+            </form>
+        </div>
+    `;
 
-    const modal = document.getElementById('edit-category-modal');
-    if (!modal) {
-        console.error('Модальне вікно не знайдено!');
-        return;
-    }
+    modal.classList.add('active');
+    isModalOpen = true;
+    console.log('Відкрито модальне вікно для редагування категорії:', categoryId);
 
-    // Очищення попередніх слухачів для уникнення множинного спрацьовування
-    const saveButton = document.getElementById('save-category-btn');
-    const newSaveButton = saveButton.cloneNode(true);
-    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-
-    const nameInput = document.getElementById('category-name');
-    const slugInput = document.getElementById('category-slug');
-    const photoUrlInput = document.getElementById('category-photo-url');
-    const photoFileInput = document.getElementById('category-photo-file');
-    const visibleSelect = document.getElementById('category-visible');
-
-    if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-        console.error('Елементи форми не знайдено!');
-        return;
-    }
-
-    // Ініціалізація значень
-    const safeName = category.name || '';
-    nameInput.value = safeName;
-    slugInput.value = category.slug || '';
-    photoUrlInput.value = category.photo || '';
-    photoFileInput.value = '';
-    visibleSelect.value = category.visible.toString();
-
-    console.log('Елементи форми після ініціалізації:', {
-        name: nameInput.value,
-        slug: slugInput.value,
-        photoUrl: photoUrlInput.value,
-        visible: visibleSelect.value
-    });
-
-    // Додавання слухача для кнопки збереження
-    newSaveButton.addEventListener('click', () => {
-        console.log('Натискання кнопки збереження для категорії:', categoryId);
+    // Додаємо обробник для збереження змін
+    const form = document.getElementById('edit-category-form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
         updateCategoryData(categoryId);
     });
 
-    modal.style.display = 'block';
+    resetInactivityTimer();
 }
 
 function openAddCategoryModal() {
@@ -3345,59 +3345,62 @@ async function addSubcategory() {
 }
 
 function openEditSubcategoryModal(categoryId, subcategoryId) {
-    const category = categories.find(c => c._id === categoryId);
-    const subcategory = category?.subcategories.find(s => s._id === subcategoryId);
-    if (!category || !subcategory) {
-        showNotification('Категорію або підкатегорію не знайдено!');
-        return;
-    }
-
-    console.log('Відкриття модального вікна для підкатегорії:', subcategoryId, 'Значення name:', subcategory.name);
-
-    const modal = document.getElementById('edit-subcategory-modal');
+    const modal = document.getElementById('modal');
     if (!modal) {
-        console.error('Модальне вікно не знайдено!');
+        console.error('Модальне вікно з id="modal" не знайдено!');
         return;
     }
 
-    // Очищення попередніх слухачів
-    const saveButton = document.getElementById('save-subcategory-btn');
-    const newSaveButton = saveButton.cloneNode(true);
-    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-
-    const nameInput = document.getElementById('subcategory-name');
-    const slugInput = document.getElementById('subcategory-slug');
-    const photoUrlInput = document.getElementById('subcategory-photo-url');
-    const photoFileInput = document.getElementById('subcategory-photo-file');
-    const visibleSelect = document.getElementById('subcategory-visible');
-
-    if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-        console.error('Елементи форми не знайдено!');
+    const category = categories.find(c => c._id === categoryId);
+    if (!category) {
+        console.error('Категорію з id', categoryId, 'не знайдено');
         return;
     }
 
-    // Ініціалізація значень
-    const safeName = subcategory.name || '';
-    nameInput.value = safeName;
-    slugInput.value = subcategory.slug || '';
-    photoUrlInput.value = subcategory.photo || '';
-    photoFileInput.value = '';
-    visibleSelect.value = subcategory.visible.toString();
+    const subcategory = category.subcategories.find(s => s._id === subcategoryId);
+    if (!subcategory) {
+        console.error('Підкатегорію з id', subcategoryId, 'не знайдено');
+        return;
+    }
 
-    console.log('Елементи форми після ініціалізації:', {
-        name: nameInput.value,
-        slug: slugInput.value,
-        photoUrl: photoUrlInput.value,
-        visible: visibleSelect.value
-    });
+    // Формуємо HTML для модального вікна редагування підкатегорії
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати підкатегорію</h3>
+            <form id="edit-subcategory-form">
+                <input id="subcategory-name" placeholder="Назва підкатегорії" type="text" value="${subcategory.name || ''}"/><br/>
+                <label for="subcategory-name">Назва підкатегорії</label>
+                <input id="subcategory-slug" placeholder="Шлях підкатегорії" type="text" value="${subcategory.slug || ''}"/><br/>
+                <label for="subcategory-slug">Шлях підкатегорії</label>
+                <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${subcategory.photo || ''}"/><br/>
+                <label for="subcategory-photo-url">URL зображення</label>
+                <input accept="image/*" id="subcategory-photo-file" type="file"/><br/>
+                <label for="subcategory-photo-file">Завантажте зображення</label>
+                <select id="subcategory-visible">
+                    <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
+                </select><br/>
+                <label for="subcategory-visible">Видимість</label>
+                <div class="modal-actions">
+                    <button type="submit">Зберегти</button>
+                    <button type="button" onclick="closeModal()">Скасувати</button>
+                </div>
+            </form>
+        </div>
+    `;
 
-    // Додавання слухача для кнопки збереження
-    newSaveButton.addEventListener('click', () => {
-        console.log('Натискання кнопки збереження для підкатегорії:', subcategoryId);
+    modal.classList.add('active');
+    isModalOpen = true;
+    console.log('Відкрито модальне вікно для редагування підкатегорії:', subcategoryId);
+
+    // Додаємо обробник для збереження змін
+    const form = document.getElementById('edit-subcategory-form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
         updateSubcategoryData(categoryId, subcategoryId);
     });
 
-    modal.style.display = 'block';
+    resetInactivityTimer();
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
