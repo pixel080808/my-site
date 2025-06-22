@@ -2452,57 +2452,56 @@ function validateFile(file) {
 function openEditCategoryModal(categoryId) {
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
-        showNotification('Категорія не знайдена!');
+        showNotification('Категорію не знайдено!');
         return;
     }
 
-    const modal = document.getElementById('modal');
+    console.log('Відкриття модального вікна для категорії:', categoryId, 'Значення name:', category.name);
+
+    const modal = document.getElementById('edit-category-modal');
     if (!modal) {
         console.error('Модальне вікно не знайдено!');
-        showNotification('Модальне вікно не знайдено.');
         return;
     }
 
-    // Очищення даних для безпеки
-    const safeName = (category.name || '').replace(/"/g, '&quot;');
-    const safeSlug = (category.slug || '').replace(/"/g, '&quot;');
-    const safePhoto = (category.photo || '').replace(/"/g, '&quot;');
+    // Очищення попередніх слухачів для уникнення множинного спрацьовування
+    const saveButton = document.getElementById('save-category-btn');
+    const newSaveButton = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
 
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Редагувати категорію</h3>
-            <form id="edit-category-form" onsubmit="event.preventDefault(); updateCategoryData('${categoryId}');">
-                <input type="text" id="category-name" value="${safeName}" placeholder="Назва категорії"><br/>
-                <label for="category-name">Назва категорії</label>
-                <input type="text" id="category-slug" value="${safeSlug}" placeholder="Шлях категорії"><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input type="text" id="category-photo-url" value="${safePhoto}" placeholder="URL фотографії"><br/>
-                <label for="category-photo-url">URL фотографії</label>
-                <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-                <label for="category-photo-file">Завантажте фотографію</label>
-                <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="category-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button type="submit">Зберегти</button>
-                    <button type="button" onclick="closeModal()">Скасувати</button>
-                </div>
-            </form>
-        </div>
-    `;
-    modal.classList.add('active');
+    const nameInput = document.getElementById('category-name');
+    const slugInput = document.getElementById('category-slug');
+    const photoUrlInput = document.getElementById('category-photo-url');
+    const photoFileInput = document.getElementById('category-photo-file');
+    const visibleSelect = document.getElementById('category-visible');
 
-    console.log('Модальне вікно для редагування категорії відкрито:', categoryId);
+    if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
+        console.error('Елементи форми не знайдено!');
+        return;
+    }
+
+    // Ініціалізація значень
+    const safeName = category.name || '';
+    nameInput.value = safeName;
+    slugInput.value = category.slug || '';
+    photoUrlInput.value = category.photo || '';
+    photoFileInput.value = '';
+    visibleSelect.value = category.visible.toString();
+
     console.log('Елементи форми після ініціалізації:', {
-        name: safeName,
-        slug: safeSlug,
-        photo: safePhoto,
-        visible: category.visible ? 'true' : 'false'
+        name: nameInput.value,
+        slug: slugInput.value,
+        photoUrl: photoUrlInput.value,
+        visible: visibleSelect.value
     });
 
-    resetInactivityTimer();
+    // Додавання слухача для кнопки збереження
+    newSaveButton.addEventListener('click', () => {
+        console.log('Натискання кнопки збереження для категорії:', categoryId);
+        updateCategoryData(categoryId);
+    });
+
+    modal.style.display = 'block';
 }
 
 function openAddCategoryModal() {
@@ -3347,64 +3346,58 @@ async function addSubcategory() {
 
 function openEditSubcategoryModal(categoryId, subcategoryId) {
     const category = categories.find(c => c._id === categoryId);
-    if (!category) {
-        showNotification('Категорія не знайдена!');
+    const subcategory = category?.subcategories.find(s => s._id === subcategoryId);
+    if (!category || !subcategory) {
+        showNotification('Категорію або підкатегорію не знайдено!');
         return;
     }
 
-    const subcategory = category.subcategories.find(s => s._id === subcategoryId);
-    if (!subcategory) {
-        showNotification('Підкатегорія не знайдена!');
-        return;
-    }
+    console.log('Відкриття модального вікна для підкатегорії:', subcategoryId, 'Значення name:', subcategory.name);
 
-    const modal = document.getElementById('modal');
+    const modal = document.getElementById('edit-subcategory-modal');
     if (!modal) {
         console.error('Модальне вікно не знайдено!');
-        showNotification('Модальне вікно не знайдено.');
         return;
     }
 
-    // Очищення даних для безпеки
-    const safeName = (subcategory.name || '').replace(/"/g, '&quot;');
-    const safeSlug = (subcategory.slug || '').replace(/"/g, '&quot;');
-    const safePhoto = (subcategory.photo || '').replace(/"/g, '&quot;');
+    // Очищення попередніх слухачів
+    const saveButton = document.getElementById('save-subcategory-btn');
+    const newSaveButton = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
 
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Редагувати підкатегорію</h3>
-            <form id="edit-subcategory-form" onsubmit="event.preventDefault(); updateSubcategoryData('${categoryId}', '${subcategoryId}');">
-                <input type="text" id="subcategory-name" value="${safeName}" placeholder="Назва підкатегорії"><br/>
-                <label for="subcategory-name">Назва підкатегорії</label>
-                <input type="text" id="subcategory-slug" value="${safeSlug}" placeholder="Шлях підкатегорії"><br/>
-                <label for="subcategory-slug">Шлях підкатегорії</label>
-                <input type="text" id="subcategory-photo-url" value="${safePhoto}" placeholder="URL фотографії"><br/>
-                <label for="subcategory-photo-url">URL фотографії</label>
-                <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-                <label for="subcategory-photo-file">Завантажте фотографію</label>
-                <select id="subcategory-visible">
-                    <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="subcategory-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button type="submit">Зберегти</button>
-                    <button type="button" onclick="closeModal()">Скасувати</button>
-                </div>
-            </form>
-        </div>
-    `;
-    modal.classList.add('active');
+    const nameInput = document.getElementById('subcategory-name');
+    const slugInput = document.getElementById('subcategory-slug');
+    const photoUrlInput = document.getElementById('subcategory-photo-url');
+    const photoFileInput = document.getElementById('subcategory-photo-file');
+    const visibleSelect = document.getElementById('subcategory-visible');
 
-    console.log('Модальне вікно для редагування підкатегорії відкрито:', { categoryId, subcategoryId });
+    if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
+        console.error('Елементи форми не знайдено!');
+        return;
+    }
+
+    // Ініціалізація значень
+    const safeName = subcategory.name || '';
+    nameInput.value = safeName;
+    slugInput.value = subcategory.slug || '';
+    photoUrlInput.value = subcategory.photo || '';
+    photoFileInput.value = '';
+    visibleSelect.value = subcategory.visible.toString();
+
     console.log('Елементи форми після ініціалізації:', {
-        name: safeName,
-        slug: safeSlug,
-        photo: safePhoto,
-        visible: subcategory.visible ? 'true' : 'false'
+        name: nameInput.value,
+        slug: slugInput.value,
+        photoUrl: photoUrlInput.value,
+        visible: visibleSelect.value
     });
 
-    resetInactivityTimer();
+    // Додавання слухача для кнопки збереження
+    newSaveButton.addEventListener('click', () => {
+        console.log('Натискання кнопки збереження для підкатегорії:', subcategoryId);
+        updateSubcategoryData(categoryId, subcategoryId);
+    });
+
+    modal.style.display = 'block';
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
