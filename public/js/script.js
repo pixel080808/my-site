@@ -1317,8 +1317,10 @@ function renderCatalogDropdown() {
         span.style.textDecoration = 'none';
         span.style.cursor = 'pointer';
         span.style.display = 'block';
-        span.style.padding = '5px 15px';
+        span.style.padding = '8px 15px'; // Більший відступ для категорій
         span.style.margin = '0';
+        span.style.fontWeight = 'bold'; // Жирний шрифт для категорій
+        span.style.fontSize = '16px'; // Більший розмір шрифту для категорій
 
         // Універсальна функція для перемикання підкатегорій
         const toggleSubDropdown = (e) => {
@@ -1366,7 +1368,7 @@ function renderCatalogDropdown() {
         const subList = document.createElement('div');
         subList.className = 'sub-list';
         subList.style.display = 'none'; // Приховуємо за замовчуванням
-        subList.style.paddingLeft = '20px'; // Відступ для підкатегорій
+        subList.style.paddingLeft = '30px'; // Збільшений відступ для підкатегорій
 
         // Показуємо subList при додаванні класу active
         const styleObserver = new MutationObserver(() => {
@@ -1381,6 +1383,8 @@ function renderCatalogDropdown() {
             p.style.padding = '5px 15px';
             p.style.margin = '0';
             p.style.cursor = 'pointer';
+            p.style.fontWeight = 'normal'; // Нормальна вага шрифту для підкатегорій
+            p.style.fontSize = '14px'; // Менший розмір шрифту для підкатегорій
             p.onmouseover = (e) => {
                 e.target.style.backgroundColor = '#f0f0f0';
             };
