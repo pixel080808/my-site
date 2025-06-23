@@ -1323,6 +1323,17 @@ function renderCatalogDropdown() {
                 subDropdown.classList.add('active');
             }
         };
+        span.ontouchstart = (e) => {
+            e.preventDefault();
+            const currentItem = e.target.closest('.dropdown-item');
+            const subDropdown = currentItem.querySelector('.sub-dropdown');
+            if (subDropdown) {
+                // Ховаємо всі інші підкатегорії
+                document.querySelectorAll('.sub-dropdown').forEach(sd => sd.classList.remove('active'));
+                // Показуємо підкатегорії для поточної категорії
+                subDropdown.classList.toggle('active');
+            }
+        };
         span.onclick = (e) => {
             e.preventDefault();
             currentProduct = null;
@@ -1597,6 +1608,8 @@ function createControlsContainer() {
     filterBtn.style.cursor = 'pointer';
     filterBtn.style.display = 'inline-flex';
     filterBtn.style.alignItems = 'center';
+    filterBtn.style.width = '120px'; // Фіксована ширина для відповідності кнопці сортування
+    filterBtn.style.justifyContent = 'center';
     filterBtn.onclick = () => {
         const filters = document.querySelector('.filters');
         if (filters) filters.classList.toggle('active');
@@ -1627,6 +1640,8 @@ function createSortMenu() {
     sortBtn.style.cursor = 'pointer';
     sortBtn.style.display = 'inline-flex';
     sortBtn.style.alignItems = 'center';
+    sortBtn.style.width = '120px'; // Фіксована ширина для узгодження з кнопкою фільтру
+    sortBtn.style.justifyContent = 'center';
     sortBtn.onclick = (e) => {
         e.stopPropagation();
         sortDropdown.style.display = sortDropdown.style.display === 'block' ? 'none' : 'block';
@@ -1639,7 +1654,7 @@ function createSortMenu() {
     sortDropdown.style.position = 'absolute';
     sortDropdown.style.backgroundColor = '#fff';
     sortDropdown.style.border = '1px solid #ccc';
-    sortDropdown.style.borderRadius = '7px';
+    sortDropdown.style.borderRadius = '12px';
     sortDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
     sortDropdown.style.zIndex = '1000';
     sortDropdown.style.marginTop = '5px';
