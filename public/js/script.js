@@ -1315,61 +1315,80 @@ function renderCatalogDropdown() {
         const span = document.createElement('span');
         span.textContent = cat.name;
         span.style.textDecoration = 'none';
-        span.onmouseover = (e) => {
+        span.style.cursor = 'pointer';
+        span.style.display = 'block';
+        span.style.padding = '5px 15px';
+        span.style.margin = '0';
+
+        // Універсальна функція для перемикання підкатегорій
+        const toggleSubDropdown = (e) => {
             e.preventDefault();
-            const currentItem = e.target.closest('.dropdown-item');
-            const subDropdown = currentItem.querySelector('.sub-dropdown');
-            if (subDropdown) {
-                subDropdown.classList.add('active');
+            e.stopPropagation();
+            const currentItem = itemDiv;
+            const subList = currentItem.querySelector('.sub-list');
+            const isActive = subList.classList.contains('active');
+
+            // Ховаємо всі підкатегорії
+            document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+
+            // Якщо підкатегорії ще не активні, показуємо їх
+            if (!isActive && subList) {
+                subList.classList.add('active');
             }
-        };
-        span.ontouchstart = (e) => {
-            e.preventDefault();
-            const currentItem = e.target.closest('.dropdown-item');
-            const subDropdown = currentItem.querySelector('.sub-dropdown');
-            if (subDropdown) {
-                // Ховаємо всі інші підкатегорії
-                document.querySelectorAll('.sub-dropdown').forEach(sd => sd.classList.remove('active'));
-                // Показуємо підкатегорії для поточної категорії
-                subDropdown.classList.toggle('active');
-            }
-        };
-        span.onclick = (e) => {
-            e.preventDefault();
-            currentProduct = null;
-            currentCategory = cat.name;
-            currentSubcategory = null;
-            isSearchActive = false;
-            searchQuery = '';
-            searchResults = [];
-            baseSearchResults = [];
-            saveToStorage('isSearchActive', false);
-            saveToStorage('searchQuery', '');
-            saveToStorage('searchResults', []);
-            showSection('catalog');
         };
 
-        const subDropdown = document.createElement('div');
-        subDropdown.className = 'sub-dropdown';
-        subDropdown.onmouseover = (e) => {
-            e.currentTarget.classList.add('active');
-        };
-        subDropdown.onmouseout = (e) => {
-            if (!e.relatedTarget.closest('.sub-dropdown') && !e.relatedTarget.closest('.dropdown-item')) {
-                e.currentTarget.classList.remove('active');
+        // Обробка для мишки (click) і сенсорних екранів (touchend)
+        span.addEventListener('click', toggleSubDropdown);
+        span.addEventListener('touchend', toggleSubDropdown);
+
+        // Перехід до каталогу при подвійному кліку або якщо немає підкатегорій
+        span.addEventListener('click', (e) => {
+            if (!cat.subcategories || cat.subcategories.length === 0) {
+                e.preventDefault();
+                currentProduct = null;
+                currentCategory = cat.name;
+                currentSubcategory = null;
+                isSearchActive = false;
+                searchQuery = '';
+                searchResults = [];
+                baseSearchResults = [];
+                saveToStorage('isSearchActive', false);
+                saveToStorage('searchQuery', '');
+                saveToStorage('searchResults', []);
+                showSection('catalog');
+                dropdown.classList.remove('active');
             }
-        };
+        });
+
+        itemDiv.appendChild(span);
+
+        // Створюємо контейнер для підкатегорій у вигляді списку
+        const subList = document.createElement('div');
+        subList.className = 'sub-list';
+        subList.style.display = 'none'; // Приховуємо за замовчуванням
+        subList.style.paddingLeft = '20px'; // Відступ для підкатегорій
+
+        // Показуємо subList при додаванні класу active
+        const styleObserver = new MutationObserver(() => {
+            subList.style.display = subList.classList.contains('active') ? 'block' : 'none';
+        });
+        styleObserver.observe(subList, { attributes: true, attributeFilter: ['class'] });
+
         (cat.subcategories || []).forEach(sub => {
             const p = document.createElement('p');
             p.textContent = sub.name;
             p.style.textDecoration = 'none';
+            p.style.padding = '5px 15px';
+            p.style.margin = '0';
+            p.style.cursor = 'pointer';
             p.onmouseover = (e) => {
                 e.target.style.backgroundColor = '#f0f0f0';
             };
             p.onmouseout = (e) => {
                 e.target.style.backgroundColor = '';
             };
-            p.onclick = () => {
+            p.onclick = (e) => {
+                e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.name;
                 currentSubcategory = sub.slug || transliterate(sub.name.replace('ь', ''));
@@ -1381,23 +1400,29 @@ function renderCatalogDropdown() {
                 saveToStorage('searchQuery', '');
                 saveToStorage('searchResults', []);
                 showSection('catalog');
+                dropdown.classList.remove('active');
+                document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
             };
-            subDropdown.appendChild(p);
+            subList.appendChild(p);
         });
-        itemDiv.appendChild(span);
-        itemDiv.appendChild(subDropdown);
 
+        itemDiv.appendChild(subList);
         dropdown.appendChild(itemDiv);
     });
 
+    // Закриваємо меню при кліку поза ним
     document.addEventListener('click', (e) => {
         const isClickInsideDropdown = dropdown.contains(e.target);
         const isClickInsideToggle = document.getElementById('catalog-toggle').contains(e.target);
         if (!isClickInsideDropdown && !isClickInsideToggle) {
             dropdown.classList.remove('active');
-            const allSubDropdowns = document.querySelectorAll('.sub-dropdown');
-            allSubDropdowns.forEach(sd => sd.classList.remove('active'));
+            document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
         }
+    });
+
+    // Запобігаємо закриттю меню при кліку всередині
+    dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
     });
 }
 
