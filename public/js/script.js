@@ -1009,6 +1009,12 @@ function showSection(sectionId) {
             saveToStorage('parentGroupProduct', null);
             renderCart();
             newPath = '/cart';
+        } else if (sectionId === 'contacts') {
+            renderContacts();
+            newPath = '/contacts'; // Унікальний шлях для контактів
+        } else if (sectionId === 'about') {
+            renderAbout();
+            newPath = '/about'; // Унікальний шлях для "Про нас"
         } else if (sectionId === 'product-details') {
             if (!currentProduct) {
                 showNotification('Товар не знайдено!', 'error');
@@ -2605,6 +2611,55 @@ function renderProductDetails() {
     }
 }
 
+function sanitizeHTML(html) {
+    // Декодуємо HTML-сутності
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = html;
+    const decodedHTML = textarea.value;
+
+    const allowedTags = ['p', 'br', 'strong', 'em', 'ul', 'li', 'img'];
+    const allowedAttributes = {
+        img: ['src', 'alt', 'width', 'height', 'class']
+    };
+    
+    const div = document.createElement('div');
+    div.innerHTML = decodedHTML;
+    
+    function cleanElement(element) {
+        if (element.nodeType !== Node.ELEMENT_NODE) return;
+        
+        const tagName = element.tagName.toLowerCase();
+        if (!allowedTags.includes(tagName)) {
+            element.replaceWith(...element.childNodes);
+            return;
+        }
+        
+        const allowedAttrs = allowedAttributes[tagName] || [];
+        Array.from(element.attributes).forEach(attr => {
+            if (!allowedAttrs.includes(attr.name)) {
+                element.removeAttribute(attr.name);
+            } else if (attr.name === 'src' && tagName === 'img') {
+                const src = attr.value;
+                if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
+                    element.removeAttribute('src');
+                }
+            }
+        });
+        
+        Array.from(element.children).forEach(cleanElement);
+    }
+    
+    Array.from(div.children).forEach(cleanElement);
+    return div; // Повертаємо DOM-елемент замість HTML-рядка
+}
+
+function formatNumber(value) {
+    if (typeof value === 'number') {
+        return value.toLocaleString('uk-UA', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).replace(',', ',');
+    }
+    return value.toString();
+}
+
 function changeGroupQuantity(groupProductId, productId, change) {
     const qtyInput = document.getElementById(`group-quantity-${groupProductId}-${productId}`);
     if (qtyInput) {
@@ -2653,20 +2708,22 @@ function updateGroupSelectionWithQuantity(productId) {
 function createCharP(label, value) {
     const p = document.createElement('p');
     const strong = document.createElement('strong');
-    strong.textContent = `${label}:`;
+    strong.textContent = `${label}: `;
     p.appendChild(strong);
 
-    const items = label === 'Адреси' 
-        ? [value.trim()]
-        : value.split(/[,;\n]+/).map(item => item.trim()).filter(item => item);
-
-    items.forEach(item => {
+    if (typeof value === 'string') {
         const span = document.createElement('span');
-        span.textContent = item;
-        span.style.display = 'block';
+        span.innerHTML = value; // Використовуємо innerHTML для обробки <br>
         span.style.marginLeft = '10px';
+        span.style.whiteSpace = 'pre-wrap'; // Дозволяє відображати перенос рядків
         p.appendChild(span);
-    });
+    } else {
+        const span = document.createElement('span');
+        span.innerHTML = value;
+        span.style.marginLeft = '10px';
+        span.style.whiteSpace = 'pre-wrap';
+        p.appendChild(span);
+    }
 
     return p;
 }
@@ -4027,9 +4084,47 @@ function renderContacts() {
     h2.className = 'section-heading';
     contactInfo.appendChild(h2);
 
-    contactInfo.appendChild(createCharP('Телефони', settings.contacts?.phones || 'Немає даних'));
-    contactInfo.appendChild(createCharP('Адреси', settings.contacts?.addresses || 'Немає даних'));
-    contactInfo.appendChild(createCharP('Графік роботи', settings.contacts?.schedule || 'Немає даних'));
+    const phones = settings.contacts?.phones || 'Немає даних';
+    const addresses = settings.contacts?.addresses || 'Немає даних';
+    const schedule = settings.contacts?.schedule || 'Немає даних';
+
+    const phonesLines = phones.split(/[\n,]+/).map(p => p.trim()).filter(p => p);
+    const addressesLines = addresses.split(/[\n,]+/).map(a => a.trim()).filter(a => a);
+    const scheduleLines = schedule.split(/[\n,]+/).map(s => s.trim()).filter(s => s);
+
+    const phonesP = document.createElement('p');
+    const strongPhones = document.createElement('strong');
+    strongPhones.textContent = 'Телефони: ';
+    phonesP.appendChild(strongPhones);
+    phonesLines.forEach((line, index) => {
+        const span = document.createElement('span');
+        span.textContent = line;
+        span.style.display = 'block';
+        phonesP.appendChild(span);
+    });
+    contactInfo.appendChild(phonesP);
+
+    const addressesP = document.createElement('p');
+    const strongAddresses = document.createElement('strong');
+    strongAddresses.textContent = 'Адреси: ';
+    addressesP.appendChild(strongAddresses);
+    const addressSpan = document.createElement('span');
+    addressSpan.textContent = addressesLines.join(', ');
+    addressSpan.style.display = 'block';
+    addressesP.appendChild(addressSpan);
+    contactInfo.appendChild(addressesP);
+
+    const scheduleP = document.createElement('p');
+    const strongSchedule = document.createElement('strong');
+    strongSchedule.textContent = 'Графік роботи: ';
+    scheduleP.appendChild(strongSchedule);
+    scheduleLines.forEach((line, index) => {
+        const span = document.createElement('span');
+        span.textContent = line;
+        span.style.display = 'block';
+        scheduleP.appendChild(span);
+    });
+    contactInfo.appendChild(scheduleP);
 
     if (settings.showSocials && settings.socials?.length > 0) {
         const h3 = document.createElement('h3');
