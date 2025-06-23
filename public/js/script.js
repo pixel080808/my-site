@@ -1315,13 +1315,16 @@ function renderCatalogDropdown() {
         const span = document.createElement('span');
         span.textContent = cat.name;
         span.style.textDecoration = 'none';
-        span.onclick = (e) => {
+        span.onmouseover = (e) => {
             e.preventDefault();
             const currentItem = e.target.closest('.dropdown-item');
             const subDropdown = currentItem.querySelector('.sub-dropdown');
             if (subDropdown) {
-                subDropdown.classList.toggle('active');
+                subDropdown.classList.add('active');
             }
+        };
+        span.onclick = (e) => {
+            e.preventDefault();
             currentProduct = null;
             currentCategory = cat.name;
             currentSubcategory = null;
@@ -1334,14 +1337,27 @@ function renderCatalogDropdown() {
             saveToStorage('searchResults', []);
             showSection('catalog');
         };
-        itemDiv.appendChild(span);
 
         const subDropdown = document.createElement('div');
         subDropdown.className = 'sub-dropdown';
+        subDropdown.onmouseover = (e) => {
+            e.currentTarget.classList.add('active');
+        };
+        subDropdown.onmouseout = (e) => {
+            if (!e.relatedTarget.closest('.sub-dropdown') && !e.relatedTarget.closest('.dropdown-item')) {
+                e.currentTarget.classList.remove('active');
+            }
+        };
         (cat.subcategories || []).forEach(sub => {
             const p = document.createElement('p');
             p.textContent = sub.name;
             p.style.textDecoration = 'none';
+            p.onmouseover = (e) => {
+                e.target.style.backgroundColor = '#f0f0f0';
+            };
+            p.onmouseout = (e) => {
+                e.target.style.backgroundColor = '';
+            };
             p.onclick = () => {
                 currentProduct = null;
                 currentCategory = cat.name;
@@ -1354,11 +1370,10 @@ function renderCatalogDropdown() {
                 saveToStorage('searchQuery', '');
                 saveToStorage('searchResults', []);
                 showSection('catalog');
-                const allSubDropdowns = document.querySelectorAll('.sub-dropdown');
-                allSubDropdowns.forEach(sd => sd.classList.remove('active'));
             };
             subDropdown.appendChild(p);
         });
+        itemDiv.appendChild(span);
         itemDiv.appendChild(subDropdown);
 
         dropdown.appendChild(itemDiv);
@@ -1565,14 +1580,23 @@ function createControlsContainer() {
 
     const filterBtn = document.createElement('button');
     filterBtn.className = 'filter-btn';
-    filterBtn.textContent = 'Фільтр';
-    filterBtn.style.padding = '8px 35px';
+    filterBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="filter-icon" style="vertical-align: middle; margin-right: 5px;">
+            <path d="M3 8h18"/>
+            <path d="M4 12h16"/>
+            <path d="M5 16h14"/>
+        </svg>
+        Фільтр
+    `;
+    filterBtn.style.padding = '8px 16px';
     filterBtn.style.fontSize = '13px';
     filterBtn.style.whiteSpace = 'nowrap';
     filterBtn.style.border = '1px solid #ccc';
     filterBtn.style.borderRadius = '20px';
     filterBtn.style.backgroundColor = '#ffffff';
     filterBtn.style.cursor = 'pointer';
+    filterBtn.style.display = 'inline-flex';
+    filterBtn.style.alignItems = 'center';
     filterBtn.onclick = () => {
         const filters = document.querySelector('.filters');
         if (filters) filters.classList.toggle('active');
@@ -1593,14 +1617,16 @@ function createSortMenu() {
 
     const sortBtn = document.createElement('button');
     sortBtn.className = 'sort-btn';
-    sortBtn.textContent = 'Сортування ▼';
-    sortBtn.style.padding = '8px 9px';
+    sortBtn.innerHTML = 'Сортування ▼';
+    sortBtn.style.padding = '8px 16px';
     sortBtn.style.fontSize = '13px';
     sortBtn.style.whiteSpace = 'nowrap';
     sortBtn.style.border = '1px solid #ccc';
     sortBtn.style.borderRadius = '20px';
     sortBtn.style.backgroundColor = '#ffffff';
     sortBtn.style.cursor = 'pointer';
+    sortBtn.style.display = 'inline-flex';
+    sortBtn.style.alignItems = 'center';
     sortBtn.onclick = (e) => {
         e.stopPropagation();
         sortDropdown.style.display = sortDropdown.style.display === 'block' ? 'none' : 'block';
@@ -1630,7 +1656,7 @@ function createSortMenu() {
         btn.textContent = opt.text;
         btn.className = currentSort === opt.value ? 'selected' : '';
         btn.style.display = 'block';
-        btn.style.padding = '8px 9px';
+        btn.style.padding = '8px 16px';
         btn.style.width = '100%';
         btn.style.textAlign = 'left';
         btn.style.border = 'none';
