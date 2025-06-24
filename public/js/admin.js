@@ -2624,7 +2624,7 @@ async function updateCategoryData(categoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2656,11 +2656,11 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Отримуємо значення з більш надійною перевіркою
-        const name = (nameInput.value || '').trim();
-        const slug = (slugInput.value || '').trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        // Отримуємо значення з форми
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = (photoUrlInput.value || '').trim();
+        let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
@@ -2681,6 +2681,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Перевірка унікальності назви
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
@@ -2690,6 +2691,7 @@ async function updateCategoryData(categoryId) {
             }
         }
 
+        // Перевірка унікальності slug
         if (slug !== category.slug && slug) {
             const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
             const existingCategories = await slugCheck.json();
@@ -2704,6 +2706,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Завантаження нового фото
         if (photoFileInput.files.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -3071,7 +3074,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3103,11 +3106,11 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        // Отримуємо значення з більш надійною перевіркою
-        const name = (nameInput.value || '').trim();
-        const slug = (slugInput.value || '').trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        // Отримуємо значення з форми
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = (photoUrlInput.value || '').trim();
+        let photo = photoUrlInput.value.trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
@@ -3133,6 +3136,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
+        // Перевірка унікальності slug в межах категорії
         if (slug !== subcategory.slug && slug && category.subcategories.some(s => s.slug === slug && s._id !== subcategoryId)) {
             showNotification('Шлях підкатегорії має бути унікальним у цій категорії!');
             return;
@@ -3143,6 +3147,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
+        // Завантаження нового фото
         if (photoFileInput.files.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -3201,7 +3206,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         showNotification('Підкатегорію оновлено!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка оновлення підкатогорії:', err);
+        console.error('Помилка оновлення підкатегорії:', err);
         showNotification('Не вдалося оновити підкатегорію: ' + err.message);
     } finally {
         isUpdatingCategories = false;
