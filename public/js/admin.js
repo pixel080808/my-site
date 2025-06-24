@@ -2623,8 +2623,8 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Затримка для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Збільшуємо затримку для забезпечення оновлення DOM
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2656,20 +2656,21 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const name = nameInput.value ? nameInput.value.trim() : '';
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        // Отримуємо значення з більш надійною перевіркою
+        const name = (nameInput.value || '').trim();
+        const slug = (slugInput.value || '').trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput.value.trim();
+        let photo = (photoUrlInput.value || '').trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
-            showNotification('Назва категорії є обов’язковою!');
+            showNotification('Назва категорії є обов'язковою!');
             return;
         }
 
-        if (!/^[a-z0-9-]+$/.test(slug) && slug) {
+        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
@@ -2732,7 +2733,7 @@ async function updateCategoryData(categoryId) {
 
         console.log('Надсилаємо запит на оновлення категорії:', updatedCategory);
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}`, {
+        const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -2923,27 +2924,18 @@ async function moveCategoryUp(index) {
         const category1 = categories[index];
         const category2 = categories[index - 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        // Перевіряємо валідність ObjectId
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
         }
 
-        const orders = categories.map(c => c.order);
-        const newOrders = [...orders];
-        newOrders[index] = index - 1;
-        newOrders[index - 1] = index;
-        if (new Set(newOrders).size !== newOrders.length) {
-            console.error('Дублювання значень order у категоріях:', newOrders);
-            showNotification('Значення order повинні бути унікальними.');
-            return;
-        }
-
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: index - 1 },
-                { _id: category2._id, order: index }
+                { _id: String(category1._id), order: index - 1 },
+                { _id: String(category2._id), order: index }
             ]
         };
 
@@ -2983,27 +2975,18 @@ async function moveCategoryDown(index) {
         const category1 = categories[index];
         const category2 = categories[index + 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        // Перевіряємо валідність ObjectId
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
             console.error('Невірний формат ID категорії:', { id1: category1._id, id2: category2._id });
             showNotification('Невірний формат ID категорії. Перевірте дані.');
             return;
         }
 
-        const orders = categories.map(c => c.order);
-        const newOrders = [...orders];
-        newOrders[index] = index + 1;
-        newOrders[index + 1] = index;
-        if (new Set(newOrders).size !== newOrders.length) {
-            console.error('Дублювання значень order у категоріях:', newOrders);
-            showNotification('Значення order повинні бути унікальними.');
-            return;
-        }
-
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: index + 1 },
-                { _id: category2._id, order: index }
+                { _id: String(category1._id), order: index + 1 },
+                { _id: String(category2._id), order: index }
             ]
         };
 
@@ -3087,8 +3070,8 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        // Затримка для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Збільшуємо затримку для забезпечення оновлення DOM
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3120,20 +3103,21 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        const name = nameInput.value ? nameInput.value.trim() : '';
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        // Отримуємо значення з більш надійною перевіркою
+        const name = (nameInput.value || '').trim();
+        const slug = (slugInput.value || '').trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput.value.trim();
+        let photo = (photoUrlInput.value || '').trim();
 
         console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
-            showNotification('Назва підкатегорії є обов’язковою!');
+            showNotification('Назва підкатегорії є обов'язковою!');
             return;
         }
 
-        if (!/^[a-z0-9-]+$/.test(slug) && slug) {
+        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
@@ -3187,7 +3171,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
 
         console.log('Надсилаємо запит на оновлення підкатегорії:', updatedSubcategory);
 
-        const response = await fetchWithAuth(`https://mebli.onrender.com/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -3478,27 +3462,18 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         const sub1 = category.subcategories[subIndex];
         const sub2 = category.subcategories[subIndex - 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        // Перевіряємо валідність ObjectId
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
         }
 
-        const orders = category.subcategories.map(s => s.order);
-        const newOrders = [...orders];
-        newOrders[subIndex] = subIndex - 1;
-        newOrders[subIndex - 1] = subIndex;
-        if (new Set(newOrders).size !== newOrders.length) {
-            console.error('Дублювання значень order у підкатегоріях:', newOrders);
-            showNotification('Значення order повинні бути унікальними.');
-            return;
-        }
-
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: subIndex - 1 },
-                { _id: sub2._id, order: subIndex }
+                { _id: String(sub1._id), order: subIndex - 1 },
+                { _id: String(sub2._id), order: subIndex }
             ]
         };
 
@@ -3542,27 +3517,18 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         const sub1 = category.subcategories[subIndex];
         const sub2 = category.subcategories[subIndex + 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        // Перевіряємо валідність ObjectId
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
             console.error('Невірний формат ID підкатегорії:', { id1: sub1._id, id2: sub2._id });
             showNotification('Невірний формат ID підкатегорії. Перевірте дані.');
             return;
         }
 
-        const orders = category.subcategories.map(s => s.order);
-        const newOrders = [...orders];
-        newOrders[subIndex] = subIndex + 1;
-        newOrders[subIndex + 1] = subIndex;
-        if (new Set(newOrders).size !== newOrders.length) {
-            console.error('Дублювання значень order у підкатегоріях:', newOrders);
-            showNotification('Значення order повинні бути унікальними.');
-            return;
-        }
-
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: subIndex + 1 },
-                { _id: sub2._id, order: subIndex }
+                { _id: String(sub1._id), order: subIndex + 1 },
+                { _id: String(sub2._id), order: subIndex }
             ]
         };
 
