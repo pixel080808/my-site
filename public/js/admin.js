@@ -2464,32 +2464,35 @@ function openEditCategoryModal(categoryId) {
         return;
     }
 
-    // Формуємо HTML для модального вікна редагування категорії
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Редагувати категорію</h3>
-            <form id="edit-category-form">
-                <input id="category-name" placeholder="Назва категорії" type="text" value="${category.name || ''}"/><br/>
-                <label for="category-name">Назва категорії</label>
-                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${category.slug || ''}"/><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${category.photo || ''}"/><br/>
-                <label for="category-photo-url">URL зображення</label>
-                <input accept="image/*" id="category-photo-file" type="file"/><br/>
-                <label for="category-photo-file">Завантажте зображення</label>
-                <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="category-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button type="submit">Зберегти</button>
-                    <button type="button" onclick="closeModal()">Скасувати</button>
-                </div>
-            </form>
-        </div>
+    // Очищаємо попередній вміст модального вікна
+    modal.innerHTML = '';
+
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.innerHTML = `
+        <h3>Редагувати категорію</h3>
+        <form id="edit-category-form">
+            <input id="category-name" placeholder="Назва категорії" type="text" value="${category.name || ''}"/><br/>
+            <label for="category-name">Назва категорії</label>
+            <input id="category-slug" placeholder="Шлях категорії" type="text" value="${category.slug || ''}"/><br/>
+            <label for="category-slug">Шлях категорії</label>
+            <input id="category-photo-url" placeholder="URL зображення" type="text" value="${category.photo || ''}"/><br/>
+            <label for="category-photo-url">URL зображення</label>
+            <input accept="image/*" id="category-photo-file" type="file"/><br/>
+            <label for="category-photo-file">Завантажте зображення</label>
+            <select id="category-visible">
+                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+            </select><br/>
+            <label for="category-visible">Видимість</label>
+            <div class="modal-actions">
+                <button type="submit">Зберегти</button>
+                <button type="button" onclick="closeModal()">Скасувати</button>
+            </div>
+        </form>
     `;
 
+    modal.appendChild(modalContent);
     modal.classList.add('active');
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування категорії:', categoryId);
@@ -3352,32 +3355,35 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
         return;
     }
 
-    // Формуємо HTML для модального вікна редагування підкатегорії
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Редагувати підкатегорію</h3>
-            <form id="edit-subcategory-form">
-                <input id="subcategory-name" placeholder="Назва підкатегорії" type="text" value="${subcategory.name || ''}"/><br/>
-                <label for="subcategory-name">Назва підкатегорії</label>
-                <input id="subcategory-slug" placeholder="Шлях підкатегорії" type="text" value="${subcategory.slug || ''}"/><br/>
-                <label for="subcategory-slug">Шлях підкатегорії</label>
-                <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${subcategory.photo || ''}"/><br/>
-                <label for="subcategory-photo-url">URL зображення</label>
-                <input accept="image/*" id="subcategory-photo-file" type="file"/><br/>
-                <label for="subcategory-photo-file">Завантажте зображення</label>
-                <select id="subcategory-visible">
-                    <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
-                </select><br/>
-                <label for="subcategory-visible">Видимість</label>
-                <div class="modal-actions">
-                    <button type="submit">Зберегти</button>
-                    <button type="button" onclick="closeModal()">Скасувати</button>
-                </div>
-            </form>
-        </div>
+    // Очищуємо попередній вміст модального вікна
+    modal.innerHTML = '';
+
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.innerHTML = `
+        <h3>Редагувати підкатегорію</h3>
+        <form id="edit-subcategory-form">
+            <input id="subcategory-name" placeholder="Назва підкатегорії" type="text" value="${subcategory.name || ''}"/><br/>
+            <label for="subcategory-name">Назва підкатегорії</label>
+            <input id="subcategory-slug" placeholder="Шлях підкатегорії" type="text" value="${subcategory.slug || ''}"/><br/>
+            <label for="subcategory-slug">Шлях підкатегорії</label>
+            <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${subcategory.photo || ''}"/><br/>
+            <label for="subcategory-photo-url">URL зображення</label>
+            <input accept="image/*" id="subcategory-photo-file" type="file"/><br/>
+            <label for="subcategory-photo-file">Завантажте зображення</label>
+            <select id="subcategory-visible">
+                <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
+                <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
+            </select><br/>
+            <label for="subcategory-visible">Видимість</label>
+            <div class="modal-actions">
+                <button type="submit">Зберегти</button>
+                <button type="button" onclick="closeModal()">Скасувати</button>
+            </div>
+        </form>
     `;
 
+    modal.appendChild(modalContent);
     modal.classList.add('active');
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування підкатегорії:', subcategoryId);
