@@ -2666,7 +2666,7 @@ async function updateCategoryData(categoryId) {
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
-            showNotification('Назва категорії є обов'язковою!');
+            showNotification('Назва категорії є обов\'язковою!');
             return;
         }
 
