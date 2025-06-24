@@ -3113,7 +3113,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
-            showNotification('Назва підкатегорії є обов'язковою!');
+            showNotification('Назва підкатегорії є обов\'язковою!');
             return;
         }
 
