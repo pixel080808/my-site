@@ -2328,13 +2328,18 @@ function openNewSlideModal() {
                 <label for="slide-link">Посилання слайду</label>
                 <input id="slide-link-text" placeholder="Текст посилання" type="text"/>
                 <label for="slide-link-text">Текст посилання</label>
-                <input id="slide-order" placeholder="Порядковий номер" type="number"/>
+                <input id="slide-order" placeholder="Порядковий номер" type="number" value="0"/>
                 <label for="slide-order">Порядок слайду</label>
-                <button type="submit">Додати слайд</button>
+                <div class="modal-actions">
+                    <button type="submit">Додати слайд</button>
+                    <button type="button" onclick="closeModal()">Скасувати</button>
+                </div>
             </form>
         </div>
     `;
     modal.style.display = 'block';
+    modal.classList.add('active');
+    resetInactivityTimer();
 }
 
 function renderSlidesAdmin() {
@@ -2627,7 +2632,7 @@ async function updateCategoryData(categoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2647,12 +2652,10 @@ async function updateCategoryData(categoryId) {
             visibleValue: visibleSelect?.value
         });
 
-        if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми відсутні:', {
+        if (!nameInput || !slugInput || !visibleSelect) {
+            console.error('Критичні елементи форми відсутні:', {
                 nameInput: !!nameInput,
                 slugInput: !!slugInput,
-                photoUrlInput: !!photoUrlInput,
-                photoFileInput: !!photoFileInput,
                 visibleSelect: !!visibleSelect
             });
             showNotification('Елементи форми для редагування категорії не знайдено.');
@@ -2660,12 +2663,12 @@ async function updateCategoryData(categoryId) {
         }
 
         // Отримуємо значення з форми
-        const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const name = nameInput.value?.trim();
+        const slug = slugInput.value?.trim() || name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput.value.trim();
+        let photo = photoUrlInput?.value?.trim() || '';
 
-        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
+        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput?.files?.length });
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
@@ -2704,13 +2707,13 @@ async function updateCategoryData(categoryId) {
             }
         }
 
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo)) {
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
         // Завантаження нового фото
-        if (photoFileInput.files.length > 0) {
+        if (photoFileInput?.files?.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -3077,7 +3080,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
@@ -3097,12 +3100,10 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             visibleValue: visibleSelect?.value
         });
 
-        if (!nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми відсутні:', {
+        if (!nameInput || !slugInput || !visibleSelect) {
+            console.error('Критичні елементи форми відсутні:', {
                 nameInput: !!nameInput,
                 slugInput: !!slugInput,
-                photoUrlInput: !!photoUrlInput,
-                photoFileInput: !!photoFileInput,
                 visibleSelect: !!visibleSelect
             });
             showNotification('Елементи форми для редагування підкатегорії не знайдено.');
@@ -3110,12 +3111,12 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         }
 
         // Отримуємо значення з форми
-        const name = nameInput.value.trim();
-        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const name = nameInput.value?.trim();
+        const slug = slugInput.value?.trim() || name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput.value.trim();
+        let photo = photoUrlInput?.value?.trim() || '';
 
-        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput.files.length });
+        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput?.files?.length });
 
         if (!name || name.length === 0) {
             console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
@@ -3145,13 +3146,13 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        if (photo && !(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photo))) {
+        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
         // Завантаження нового фото
-        if (photoFileInput.files.length > 0) {
+        if (photoFileInput?.files?.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
             if (!validation.valid) {
@@ -3635,21 +3636,31 @@ async function addSlide() {
             return;
         }
 
+        // Перевіряємо наявність елементів форми
         const photoUrlInput = document.getElementById('slide-photo-url');
         const photoFileInput = document.getElementById('slide-photo-file');
+        const titleInput = document.getElementById('slide-title');
+        const textInput = document.getElementById('slide-text');
         const linkInput = document.getElementById('slide-link');
-        const positionInput = document.getElementById('slide-position');
-        const activeCheckbox = document.getElementById('slide-active');
+        const linkTextInput = document.getElementById('slide-link-text');
+        const orderInput = document.getElementById('slide-order');
 
-        if (!photoUrlInput || !photoFileInput || !positionInput || !activeCheckbox) {
+        if (!photoUrlInput || !photoFileInput || !orderInput) {
             showNotification('Елементи форми для слайду не знайдено');
+            console.error('Відсутні критичні елементи форми:', {
+                photoUrlInput: !!photoUrlInput,
+                photoFileInput: !!photoFileInput,
+                orderInput: !!orderInput
+            });
             return;
         }
 
         let photo = photoUrlInput.value.trim();
-        const link = linkInput ? linkInput.value.trim() : '';
-        const position = parseInt(positionInput.value) || slides.length + 1;
-        const active = activeCheckbox.checked;
+        const title = titleInput?.value.trim() || '';
+        const text = textInput?.value.trim() || '';
+        const link = linkInput?.value.trim() || '';
+        const linkText = linkTextInput?.value.trim() || '';
+        const order = parseInt(orderInput.value) || 0;
 
         if (!photo && !photoFileInput.files[0]) {
             showNotification('Виберіть фото або вкажіть URL!');
@@ -3669,24 +3680,43 @@ async function addSlide() {
                 method: 'POST',
                 body: formData
             });
+            
+            if (!response.ok) {
+                throw new Error('Помилка завантаження зображення');
+            }
+            
             const data = await response.json();
             photo = data.url;
         }
 
+        const slideData = {
+            id: slides.length + 1, // Тимчасовий ID, сервер призначить правильний
+            photo,
+            title,
+            text,
+            link,
+            linkText,
+            order
+        };
+
+        console.log('Надсилаємо дані слайду:', slideData);
+
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
-            body: JSON.stringify({ photo, link, position, active })
+            body: JSON.stringify(slideData)
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Помилка створення слайду: ${errorData.error || response.statusText}`);
+        }
 
         const newSlide = await response.json();
         slides.push(newSlide);
+        
+        closeModal();
         renderSlidesAdmin();
         showNotification('Слайд додано!');
-        photoUrlInput.value = '';
-        if (linkInput) linkInput.value = '';
-        positionInput.value = '';
-        activeCheckbox.checked = true;
-        photoFileInput.value = '';
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
@@ -4715,19 +4745,36 @@ function deleteMattressSize(index) {
 }
 
 function searchGroupProducts() {
-    const query = document.getElementById('group-product-search').value.toLowerCase();
+    const query = document.getElementById('group-product-search')?.value?.toLowerCase() || '';
     const results = document.getElementById('group-product-results');
+    
+    if (!results) {
+        console.error('Елемент group-product-results не знайдено');
+        return;
+    }
+
+    if (!query) {
+        results.innerHTML = '';
+        return;
+    }
+
+    // Фільтруємо тільки прості товари, виключаємо групові та матраци
     const filteredProducts = products.filter(p => 
         p.active && 
         p.type === 'simple' && 
-        (p.name.toLowerCase().includes(query) || p._id.toString().includes(query))
+        (p.name.toLowerCase().includes(query) || 
+         (p.brand && p.brand.toLowerCase().includes(query)) ||
+         p._id.toString().includes(query))
     );
-    results.innerHTML = filteredProducts.slice(0, 5).map(p => `
-        <div>
-            #${p._id} ${p.name}
-            <button onclick="addGroupProduct('${p._id}')">Додати</button>
+
+    results.innerHTML = filteredProducts.slice(0, 10).map(p => `
+        <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
+            <strong>${p.name}</strong>
+            ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
+            <br><small>Ціна: ${p.price || 0} грн</small>
         </div>
     `).join('');
+    
     resetInactivityTimer();
 }
 
@@ -5349,6 +5396,20 @@ async function saveEditedProduct(productId) {
             return;
         }
 
+        // Валідація groupProducts - перевіряємо, що всі товари існують
+        if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
+            const groupProductsCheck = await fetchWithAuth(`/api/products`);
+            const allProducts = await groupProductsCheck.json();
+            const existingProductIds = allProducts.products.map(p => p._id);
+            
+            const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
+            if (missingProducts.length > 0) {
+                console.error('Відсутні товари в groupProducts:', missingProducts);
+                showNotification('Деякі продукти в groupProducts не знайдені. Оновіть список товарів.');
+                return;
+            }
+        }
+
         let validatedSizes = newProduct.sizes;
         if (newProduct.type === 'mattresses') {
             validatedSizes = newProduct.sizes.filter(size => {
@@ -5408,36 +5469,36 @@ async function saveEditedProduct(productId) {
             }
         }
 
-let product = {
-    type: newProduct.type,
-    name,
-    slug,
-    brand: brand || '',
-    category,
-    subcategory: subcategorySlug,
-    material: material || '',
-    salePrice: salePrice || null,
-    saleEnd: saleEnd || null,
-    description,
-    widthCm,
-    depthCm,
-    heightCm,
-    lengthCm,
-    photos: [],
-    colors: validatedColors.map(color => ({
-        name: color.name,
-        value: color.value,
-        priceChange: color.priceChange || 0,
-        photo: color.photo || null
-    })),
-    sizes: validatedSizes.map(size => ({
-        name: size.name,
-        price: size.price
-    })),
-    groupProducts: validatedGroupProducts,
-    active: newProduct.active,
-    visible
-};
+        let product = {
+            type: newProduct.type,
+            name,
+            slug,
+            brand: brand || '',
+            category,
+            subcategory: subcategorySlug,
+            material: material || '',
+            salePrice: salePrice || null,
+            saleEnd: saleEnd || null,
+            description,
+            widthCm,
+            depthCm,
+            heightCm,
+            lengthCm,
+            photos: [],
+            colors: validatedColors.map(color => ({
+                name: color.name,
+                value: color.value,
+                priceChange: color.priceChange || 0,
+                photo: color.photo || null
+            })),
+            sizes: validatedSizes.map(size => ({
+                name: size.name,
+                price: size.price
+            })),
+            groupProducts: validatedGroupProducts,
+            active: newProduct.active,
+            visible
+        };
 
         if (newProduct.type === 'simple') {
             product.price = price;
