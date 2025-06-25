@@ -419,6 +419,7 @@ const cartIdSchema = Joi.string()
   })
 
 const slideSchemaValidation = Joi.object({
+  id: Joi.number().required(),
   photo: Joi.string().uri().allow("").optional(),
   name: Joi.string().allow(""),
   link: Joi.string().uri().allow("").optional(),
@@ -2188,20 +2189,17 @@ app.post("/api/slides", authenticateToken, csrfProtection, async (req, res) => {
     session.startTransaction()
     try {
       const maxIdSlide = await Slide.findOne().sort({ id: -1 }).session(session)
-      let nextId = 1;
-      if (maxIdSlide) {
-          nextId = maxIdSlide.id + 1;
-      }
+      slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1
       const slide = new Slide({
-          id: nextId,
-          photo: slideData.photo,
-          name: slideData.name,
-          link: slideData.link,
-          title: slideData.title,
-          text: slideData.text,
-          linkText: slideData.linkText,
-          order: slideData.order
-      });
+        id: slideData.id,
+        photo: slideData.photo,
+        name: slideData.name,
+        link: slideData.link,
+        title: slideData.title,
+        text: slideData.text,
+        linkText: slideData.linkText,
+        order: slideData.order,
+      })
       await slide.save({ session })
 
       const slides = await Slide.find().sort({ order: 1 }).session(session)
