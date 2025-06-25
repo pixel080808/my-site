@@ -419,7 +419,6 @@ const cartIdSchema = Joi.string()
   })
 
 const slideSchemaValidation = Joi.object({
-  id: Joi.number().required(),
   photo: Joi.string().uri().allow("").optional(),
   name: Joi.string().allow(""),
   link: Joi.string().uri().allow("").optional(),
@@ -2196,9 +2195,10 @@ app.post("/api/slides", authenticateToken, csrfProtection, async (req, res) => {
       const slide = new Slide({
           id: nextId,
           photo: slideData.photo,
+          name: slideData.name,
+          link: slideData.link,
           title: slideData.title,
           text: slideData.text,
-          link: slideData.link,
           linkText: slideData.linkText,
           order: slideData.order
       });
