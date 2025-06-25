@@ -1700,7 +1700,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
 
     const bulkOps = categories.map(({ _id, order }) => ({
       updateOne: {
-        filter: { _id: mongoose.Types.ObjectId(_id) },
+        filter: { _id: new mongoose.Types.ObjectId(_id) },
         update: { $set: { order } },
       },
     }))

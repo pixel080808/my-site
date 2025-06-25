@@ -2933,8 +2933,9 @@ async function addCategory() {
 async function moveCategoryUp(index) {
     if (index <= 0 || index >= categories.length) return;
     try {
-        const category1 = categories[index];
-        const category2 = categories[index - 1];
+        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const category1 = sortedCategories[index];
+        const category2 = sortedCategories[index - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
@@ -2944,8 +2945,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order },
-                { _id: category2._id, order: category1.order }
+                { _id: category1._id, order: category2.order || 0 },
+                { _id: category2._id, order: category1.order || 0 }
             ]
         };
 
@@ -2979,8 +2980,9 @@ async function moveCategoryUp(index) {
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
-        const category1 = categories[index];
-        const category2 = categories[index + 1];
+        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const category1 = sortedCategories[index];
+        const category2 = sortedCategories[index + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
@@ -2990,8 +2992,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order },
-                { _id: category2._id, order: category1.order }
+                { _id: category1._id, order: category2.order || 0 },
+                { _id: category2._id, order: category1.order || 0 }
             ]
         };
 
@@ -3616,7 +3618,7 @@ async function updateSlide(slideId) {
             photo = uploadData.url;
         }
 
-        const slide = slides.find(s => s._id === slideId);
+        const slide = slides.find(s => s._id === slideId || s.id === slideId);
         if (!slide) {
             showNotification('Слайд не знайдено!');
             return;
@@ -3630,7 +3632,9 @@ async function updateSlide(slideId) {
 
         console.log('Надсилаємо оновлені дані слайду:', slideData);
 
-        const response = await fetchWithAuth(`/api/slides/${slideId}`, {
+        // Використовуємо slide.id замість slideId для API запиту
+        const apiId = slide.id || slideId;
+        const response = await fetchWithAuth(`/api/slides/${apiId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -3645,7 +3649,7 @@ async function updateSlide(slideId) {
         }
 
         const updatedSlide = await response.json();
-        const index = slides.findIndex(s => s._id === slideId);
+        const index = slides.findIndex(s => s._id === slideId || s.id === slideId);
         if (index !== -1) {
             slides[index] = updatedSlide;
         }
@@ -3713,11 +3717,6 @@ async function addSlide() {
             return;
         }
 
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
-            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
-            return;
-        }
-
         const slideData = {
             photo,
             link,
@@ -3745,6 +3744,9 @@ async function addSlide() {
         renderSlidesAdmin();
         closeModal();
         showNotification('Слайд додано!');
+        
+        // Оновлюємо список слайдів з сервера
+        await loadSlides();
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
@@ -4773,23 +4775,49 @@ function deleteMattressSize(index) {
 }
 
 async function searchGroupProducts(query = '') {
+    const searchInput = document.getElementById('group-product-search');
+    const actualQuery = query || (searchInput ? searchInput.value.trim() : '');
+    
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
     
-    if (!results || !pagination) {
-        console.error('Елементи group-product-results або group-product-pagination не знайдено');
+    if (!results) {
+        console.error('Елемент group-product-results не знайдено');
         return;
     }
 
     try {
-        const response = await fetchWithAuth(`/api/products?page=${groupProductPage}&limit=${groupProductLimit}&search=${encodeURIComponent(query)}&type=simple`);
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
+        }
+
+        // Формуємо параметри запиту
+        const params = new URLSearchParams({
+            page: groupProductPage.toString(),
+            limit: groupProductLimit.toString(),
+            type: 'simple' // Шукаємо тільки прості товари
+        });
+
+        if (actualQuery) {
+            params.append('search', actualQuery);
+        }
+
+        const response = await fetchWithAuth(`/api/products?${params.toString()}`);
+        
+        if (!response.ok) {
+            throw new Error(`Помилка запиту: ${response.status} ${response.statusText}`);
+        }
+
         const data = await response.json();
         if (!data.products || !Array.isArray(data.products)) {
             throw new Error('Некоректна відповідь сервера');
         }
 
-        groupProducts = data.products;
-        groupProductTotal = data.totalItems || 0;
+        const groupProducts = data.products;
+        const groupProductTotal = data.total || 0;
 
         results.innerHTML = groupProducts.map(p => `
             <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
@@ -4800,19 +4828,24 @@ async function searchGroupProducts(query = '') {
         `).join('');
 
         // Рендеринг пагінації
-        const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
-        pagination.innerHTML = `
-            <div style="margin-top: 10px; text-align: center;">
-                ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${query}')">Попередня</button>` : ''}
-                <span>Сторінка ${groupProductPage} з ${totalPages}</span>
-                ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${query}')">Наступна</button>` : ''}
-            </div>
-        `;
+        if (pagination) {
+            const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
+            pagination.innerHTML = `
+                <div style="margin-top: 10px; text-align: center;">
+                    ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${actualQuery}')">Попередня</button>` : ''}
+                    <span>Сторінка ${groupProductPage} з ${totalPages}</span>
+                    ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${actualQuery}')">Наступна</button>` : ''}
+                </div>
+            `;
+        }
 
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка пошуку групових товарів:', err);
         showNotification('Не вдалося завантажити товари: ' + err.message);
+        if (results) {
+            results.innerHTML = '<p>Помилка завантаження товарів</p>';
+        }
     }
 }
 
