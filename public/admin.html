@@ -1471,25 +1471,42 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                         <button type="submit">Додати підкатегорію</button>
                     </form>
                 </div>
-<!-- Слайдшоу -->
-<div class="admin-section">
-    <h3>Слайдшоу</h3>
-    <form id="slideshow-settings-form" onsubmit="event.preventDefault(); updateSlideshowSettings();">
-        <input id="slide-width" max="100" min="10" placeholder="Ширина слайду (%, 10-100)" type="number"/><br/>
-        <label for="slide-width">Ширина слайду (%)</label>
-        <input id="slide-height" max="500" min="100" placeholder="Висота слайду (px, 100-500)" type="number"/><br/>
-        <label for="slide-height">Висота слайду (px)</label>
-        <input id="slide-interval" placeholder="Інтервал (мс)" type="number"/><br/>
-        <label for="slide-interval">Інтервал слайдів (мс)</label>
-        <button type="submit">Зберегти налаштування</button>
-    </form>
-    <button id="add-slide-btn">Додати новий слайд</button>
-    <label>
-        <input id="slide-toggle" onchange="toggleSlideshow()" type="checkbox"/>
-        Показати слайдшоу
-    </label>
-    <div id="slides-list-admin"></div>
-</div>
+                <!-- Слайдшоу -->
+                <div class="admin-section">
+                    <h3>Слайдшоу</h3>
+                    <form id="slideshow-settings-form" onsubmit="event.preventDefault(); updateSlideshowSettings();">
+                        <input id="slide-width" max="100" min="10" placeholder="Ширина слайду (%, 10-100)" type="number"/><br/>
+                        <label for="slide-width">Ширина слайду (%)</label>
+                        <input id="slide-height" max="500" min="100" placeholder="Висота слайду (px, 100-500)" type="number"/><br/>
+                        <label for="slide-height">Висота слайду (px)</label>
+                        <input id="slide-interval" placeholder="Інтервал (мс)" type="number"/><br/>
+                        <label for="slide-interval">Інтервал слайдів (мс)</label>
+                        <button type="submit">Зберегти налаштування</button>
+                    </form>
+                    <button id="add-slide-btn">Додати новий слайд</button>
+                    <form id="slide-form" onsubmit="event.preventDefault(); addSlide();">
+                        <input id="slide-photo-url" placeholder="URL картинки" type="text"/>
+                        <label for="slide-photo-url">URL зображення слайду</label>
+                        <input accept="image/*" id="slide-photo-file" type="file"/>
+                        <label for="slide-photo-file">Завантажте зображення</label>
+                        <input id="slide-title" placeholder="Заголовок слайду" type="text"/><br/>
+                        <label for="slide-title">Заголовок слайду</label>
+                        <input id="slide-text" placeholder="Текст слайду" type="text"/><br/>
+                        <label for="slide-text">Текст слайду</label>
+                        <input id="slide-link" placeholder="Посилання" type="text"/><br/>
+                        <label for="slide-link">Посилання слайду</label>
+                        <input id="slide-link-text" placeholder="Текст посилання" type="text"/><br/>
+                        <label for="slide-link-text">Текст посилання</label>
+                        <input id="slide-order" placeholder="Порядковий номер" type="number"/><br/>
+                        <label for="slide-order">Порядок слайду</label>
+                        <button type="submit">Додати слайд</button>
+                    </form>
+                    <label>
+                        <input id="slide-toggle" onchange="toggleSlideshow()" type="checkbox"/>
+                        Показати слайдшоу
+                    </label>
+                    <div id="slides-list-admin"></div>
+                </div>
                 <!-- Бекап -->
                 <div class="admin-section">
                     <h3>Бекап</h3>
