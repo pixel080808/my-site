@@ -2962,7 +2962,8 @@ async function moveCategoryUp(index) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            showNotification('Не вдалося змінити порядок: ' + (errorData.error || 'Не вдалося змінити порядок'));
+            return;
         }
 
         [categories[index], categories[index - 1]] = [categories[index - 1], categories[index]];
@@ -3074,7 +3075,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         isUpdatingCategories = true;
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
@@ -3558,7 +3559,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('Помилка сервера при зміні порядку:', { status: response.status, errorData });
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            showNotification('Не вдалося змінити порядок: ' + (errorData.error || 'Не вдалося змінити порядок'));
+            return;
         }
 
         [category.subcategories[subIndex], category.subcategories[subIndex + 1]] = [
@@ -3690,7 +3692,6 @@ async function addSlide() {
         }
 
         const slideData = {
-            id: slides.length + 1, // Тимчасовий ID, сервер призначить правильний
             photo,
             title,
             text,
@@ -3703,6 +3704,10 @@ async function addSlide() {
 
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+            },
             body: JSON.stringify(slideData)
         });
 
@@ -4795,7 +4800,7 @@ function renderGroupProducts() {
             const p = products.find(pr => pr._id === pid);
             return p ? `
                 <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                    #${p._id} ${p.name}
+                    ${p.name}
                     <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
                 </div>
             ` : '';
@@ -5397,13 +5402,17 @@ async function saveEditedProduct(productId) {
         }
 
         // Валідація groupProducts - перевіряємо, що всі товари існують
-        if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
-            const groupProductsCheck = await fetchWithAuth(`/api/products`);
-            const allProducts = await groupProductsCheck.json();
-            const existingProductIds = allProducts.products.map(p => p._id);
-            
-            const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
-            if (missingProducts.length > 0) {
+        if (newProduct.type === 'group') {
+            const invalidIds = newProduct.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
+            if (invalidIds.length > 0) {
+                console.error('Некоректні ObjectId у groupProducts:', invalidIds);
+                showNotification('Некоректні ObjectId у groupProducts. Оновіть список товарів.');
+                return;
+            }
+
+            const existingProducts = await Product.find({ _id: { $in: newProduct.groupProducts } });
+            if (existingProducts.length !== newProduct.groupProducts.length) {
+                const missingProducts = newProduct.groupProducts.filter(id => !existingProducts.find(p => p._id.toString() === id));
                 console.error('Відсутні товари в groupProducts:', missingProducts);
                 showNotification('Деякі продукти в groupProducts не знайдені. Оновіть список товарів.');
                 return;
