@@ -2624,6 +2624,7 @@ async function saveAddCategory() {
     }
 }
 
+// Виправлена функція updateCategoryData в admin.js
 async function updateCategoryData(categoryId) {
     try {
         isUpdatingCategories = true;
@@ -2635,7 +2636,7 @@ async function updateCategoryData(categoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2661,7 +2662,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Отримуємо значення з форми
+        // Отримуємо значення з форми з додатковою перевіркою
         const name = nameInput.value?.trim();
         const slug = slugInput.value?.trim() || name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
@@ -2924,6 +2925,7 @@ async function addCategory() {
     }
 }
 
+// Виправлена функція moveCategoryUp в admin.js
 async function moveCategoryUp(index) {
     if (index <= 0 || index >= categories.length) return;
     try {
@@ -2931,16 +2933,18 @@ async function moveCategoryUp(index) {
         const category1 = sortedCategories[index];
         const category2 = sortedCategories[index - 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
+        // Перевірка валідності ObjectId
+        if (!category1._id || !category2._id || 
+            !/^[0-9a-fA-F]{24}$/.test(String(category1._id)) || 
+            !/^[0-9a-fA-F]{24}$/.test(String(category2._id))) {
             showNotification('Невірний формат ID категорії.');
             return;
         }
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || 0 },
-                { _id: category2._id, order: category1.order || 0 }
+                { _id: String(category1._id), order: category2.order || 0 },
+                { _id: String(category2._id), order: category1.order || 0 }
             ]
         };
 
@@ -2971,6 +2975,7 @@ async function moveCategoryUp(index) {
     }
 }
 
+// Виправлена функція moveCategoryDown в admin.js
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
@@ -2978,16 +2983,18 @@ async function moveCategoryDown(index) {
         const category1 = sortedCategories[index];
         const category2 = sortedCategories[index + 1];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
+        // Перевірка валідності ObjectId
+        if (!category1._id || !category2._id || 
+            !/^[0-9a-fA-F]{24}$/.test(String(category1._id)) || 
+            !/^[0-9a-fA-F]{24}$/.test(String(category2._id))) {
             showNotification('Невірний формат ID категорії.');
             return;
         }
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || 0 },
-                { _id: category2._id, order: category1.order || 0 }
+                { _id: String(category1._id), order: category2.order || 0 },
+                { _id: String(category2._id), order: category1.order || 0 }
             ]
         };
 
@@ -3577,6 +3584,7 @@ async function updateSlideshowSettings() {
     }
 }
 
+// Виправлена функція updateSlide в admin.js
 async function updateSlide(slideId) {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3645,13 +3653,20 @@ async function updateSlide(slideId) {
         if (index !== -1) {
             slides[index] = updatedSlide;
         }
-        renderSlidesAdmin();
+        
+        // Закриваємо модальне вікно ПЕРЕД рендерингом
         closeModal();
+        
+        // Рендеримо слайди
+        renderSlidesAdmin();
+        
         showNotification('Слайд оновлено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення слайду:', err);
         showNotification('Не вдалося оновити слайд: ' + err.message);
+        // Закриваємо модальне вікно навіть при помилці
+        closeModal();
     }
 }
 
@@ -3669,6 +3684,7 @@ function debounce(func, wait) {
 
 const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
+// Виправлена функція addSlide в admin.js
 async function addSlide() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3733,8 +3749,13 @@ async function addSlide() {
 
         const newSlide = await response.json();
         slides.push(newSlide);
-        renderSlidesAdmin();
+        
+        // Закриваємо модальне вікно ПЕРЕД рендерингом
         closeModal();
+        
+        // Рендеримо слайди
+        renderSlidesAdmin();
+        
         showNotification('Слайд додано!');
         
         // Оновлюємо список слайдів з сервера
@@ -3743,6 +3764,8 @@ async function addSlide() {
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
         showNotification('Не вдалося додати слайд: ' + err.message);
+        // Закриваємо модальне вікно навіть при помилці
+        closeModal();
     }
 }
 
@@ -4766,6 +4789,7 @@ function deleteMattressSize(index) {
     resetInactivityTimer();
 }
 
+// Виправлена функція searchGroupProducts в admin.js
 async function searchGroupProducts(query = '') {
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
@@ -4809,7 +4833,9 @@ async function searchGroupProducts(query = '') {
         groupProductTotal = data.total || 0;
 
         results.innerHTML = groupProducts.map(p => `
-            <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
+            <div class="group-product-result-item" 
+                 style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer; background: white;" 
+                 onclick="addGroupProduct('${p._id}')">
                 <strong>${p.name}</strong>
                 ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
                 <br><small>Ціна: ${p.price || 0} грн</small>
@@ -4845,13 +4871,28 @@ function changeGroupProductPage(page, query) {
     searchGroupProducts(query);
 }
 
+// Виправлена функція addGroupProduct в admin.js
 function addGroupProduct(productId) {
+    // Перевіряємо, чи товар вже доданий
     if (!newProduct.groupProducts.includes(productId)) {
         newProduct.groupProducts.push(productId);
         renderGroupProducts();
-        document.getElementById('group-product-search').value = '';
-        document.getElementById('group-product-results').innerHTML = '';
+        
+        // Очищаємо пошук
+        const searchInput = document.getElementById('group-product-search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        const results = document.getElementById('group-product-results');
+        if (results) {
+            results.innerHTML = '';
+        }
+        
+        showNotification('Товар додано до групи!');
         resetInactivityTimer();
+    } else {
+        showNotification('Цей товар вже доданий до групи!');
     }
 }
 
@@ -5381,6 +5422,7 @@ setTimeout(() => {
     resetInactivityTimer();
 }
 
+// Виправлена функція saveEditedProduct в admin.js (частина для групових товарів)
 async function saveEditedProduct(productId) {
     const saveButton = document.querySelector('.modal-actions button:first-child');
     if (saveButton) {
@@ -5394,6 +5436,7 @@ async function saveEditedProduct(productId) {
             showSection('admin-login');
             return;
         }
+
 
         if (!Array.isArray(products)) {
             console.error('Список продуктів не ініціалізований');
@@ -5482,7 +5525,7 @@ async function saveEditedProduct(productId) {
         // Валідація groupProducts
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             // Перевіряємо, чи всі ID є валідними ObjectId
-            const invalidIds = newProduct.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
+            const invalidIds = newProduct.groupProducts.filter(id => !/^[0-9a-fA-F]{24}$/.test(id));
             if (invalidIds.length > 0) {
                 console.error('Некоректні ObjectId у groupProducts:', invalidIds);
                 showNotification('Деякі ID товарів у групі некоректні. Оновіть список товарів.');
@@ -5507,10 +5550,11 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        const validatedColors = newProduct.colors.filter(color => {
-            const isValid = color.name && color.value;
+        // Валідація розмірів матраців
+        const validatedSizes = newProduct.sizes.filter(size => {
+            const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
             if (!isValid) {
-                console.warn('Некоректний колір видалено:', color);
+                console.warn('Некоректний розмір видалено:', size);
             }
             return isValid;
         });
