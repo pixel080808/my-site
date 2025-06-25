@@ -2626,7 +2626,7 @@ async function updateCategoryData(categoryId) {
         isUpdatingCategories = true;
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Увійдіть знову.');
+            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
             showSection('admin-login');
             return;
         }
@@ -5538,8 +5538,8 @@ async function saveEditedProduct(productId) {
                         mediaUrls.push({ oldUrl: src, newUrl: uploadData.url });
                     }
                 } catch (err) {
-                    console.error('Помилка завантаження зображення:', err);
-                    showNotification('Не вдалося завантажити зображення: ' + err.message);
+                    console.error('Помилка завантаження зображення з опису:', err);
+                    showNotification('Не вдалося завантажити зображення з опису: ' + err.message);
                     return;
                 }
             }

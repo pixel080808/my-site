@@ -2189,17 +2189,19 @@ app.post("/api/slides", authenticateToken, csrfProtection, async (req, res) => {
     session.startTransaction()
     try {
       const maxIdSlide = await Slide.findOne().sort({ id: -1 }).session(session)
-      slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1
+      let nextId = 1;
+      if (maxIdSlide) {
+          nextId = maxIdSlide.id + 1;
+      }
       const slide = new Slide({
-        id: slideData.id,
-        photo: slideData.photo,
-        name: slideData.name,
-        link: slideData.link,
-        title: slideData.title,
-        text: slideData.text,
-        linkText: slideData.linkText,
-        order: slideData.order,
-      })
+          id: nextId,
+          photo: slideData.photo,
+          title: slideData.title,
+          text: slideData.text,
+          link: slideData.link,
+          linkText: slideData.linkText,
+          order: slideData.order
+      });
       await slide.save({ session })
 
       const slides = await Slide.find().sort({ order: 1 }).session(session)
