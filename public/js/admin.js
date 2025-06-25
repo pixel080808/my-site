@@ -2634,6 +2634,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Збільшуємо затримку для забезпечення оновлення DOM
         await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('category-name');
@@ -2642,23 +2643,41 @@ async function updateCategoryData(categoryId) {
         const photoFileInput = document.getElementById('category-photo-file');
         const visibleSelect = document.getElementById('category-visible');
 
+        console.log('Елементи форми перед зчитуванням:', {
+            nameInput: !!nameInput,
+            slugInput: !!slugInput,
+            photoUrlInput: !!photoUrlInput,
+            photoFileInput: !!photoFileInput,
+            visibleSelect: !!visibleSelect,
+            nameValue: nameInput?.value,
+            slugValue: slugInput?.value,
+            photoValue: photoUrlInput?.value,
+            visibleValue: visibleSelect?.value
+        });
+
         if (!nameInput || !slugInput || !visibleSelect) {
-            console.error('Критичні елементи форми відсутні');
+            console.error('Критичні елементи форми відсутні:', {
+                nameInput: !!nameInput,
+                slugInput: !!slugInput,
+                visibleSelect: !!visibleSelect
+            });
             showNotification('Елементи форми для редагування категорії не знайдено.');
             return;
         }
 
+        // Отримуємо значення з форми
         const name = nameInput.value?.trim();
-        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value?.trim() || name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        if (!name) {
+        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput?.files?.length });
+
+        if (!name || name.length === 0) {
+            console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва категорії є обов\'язковою!');
             return;
         }
-
-        console.log('Дані категорії перед відправкою:', { name, slug, visible, photo });
 
         if (slug && !/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
@@ -2671,6 +2690,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Перевірка унікальності назви
         if (name !== category.name) {
             const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
             const existingCategoriesByName = await nameCheck.json();
@@ -2680,6 +2700,7 @@ async function updateCategoryData(categoryId) {
             }
         }
 
+        // Перевірка унікальності slug
         if (slug !== category.slug && slug) {
             const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
             const existingCategories = await slugCheck.json();
@@ -2694,6 +2715,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Завантаження нового фото
         if (photoFileInput?.files?.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2721,7 +2743,7 @@ async function updateCategoryData(categoryId) {
             subcategories: category.subcategories || []
         };
 
-        console.log('Надсилаємо оновлені дані категорії:', updatedCategory);
+        console.log('Надсилаємо запит на оновлення категорії:', updatedCategory);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
