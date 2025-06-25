@@ -419,7 +419,6 @@ const cartIdSchema = Joi.string()
   })
 
 const slideSchemaValidation = Joi.object({
-  id: Joi.number().required(),
   photo: Joi.string().uri().allow("").optional(),
   name: Joi.string().allow(""),
   link: Joi.string().uri().allow("").optional(),
@@ -1673,6 +1672,19 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
   try {
     const { categories } = req.body
 
+    const categoryOrderSchema = Joi.object({
+      categories: Joi.array()
+        .items(
+          Joi.object({
+            _id: Joi.string()
+              .pattern(/^[0-9a-fA-F]{24}$/)
+              .required(),
+            order: Joi.number().required(),
+          }),
+        )
+        .required(),
+    })
+
     const { error } = categoryOrderSchema.validate({ categories }, { abortEarly: false })
     if (error) {
       logger.error("Помилка валідації порядку категорій:", error.details)
@@ -1701,7 +1713,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
 
     const bulkOps = categories.map(({ _id, order }) => ({
       updateOne: {
-        filter: { _id: mongoose.Types.ObjectId(_id) },
+        filter: { _id: mongoose.Types.ObjectId.createFromHexString(_id) },
         update: { $set: { order } },
       },
     }))
@@ -2189,17 +2201,20 @@ app.post("/api/slides", authenticateToken, csrfProtection, async (req, res) => {
     session.startTransaction()
     try {
       const maxIdSlide = await Slide.findOne().sort({ id: -1 }).session(session)
-      slideData.id = maxIdSlide ? maxIdSlide.id + 1 : 1
+      let nextId = 1;
+      if (maxIdSlide) {
+          nextId = maxIdSlide.id + 1;
+      }
       const slide = new Slide({
-        id: slideData.id,
-        photo: slideData.photo,
-        name: slideData.name,
-        link: slideData.link,
-        title: slideData.title,
-        text: slideData.text,
-        linkText: slideData.linkText,
-        order: slideData.order,
-      })
+          id: nextId,
+          photo: slideData.photo,
+          name: slideData.name,
+          link: slideData.link,
+          title: slideData.title,
+          text: slideData.text,
+          linkText: slideData.linkText,
+          order: slideData.order
+      });
       await slide.save({ session })
 
       const slides = await Slide.find().sort({ order: 1 }).session(session)
