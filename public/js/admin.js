@@ -2624,7 +2624,7 @@ async function saveAddCategory() {
     }
 }
 
-// Виправлена функція updateCategoryData в admin.js
+// Виправлена функція updateCategoryData
 async function updateCategoryData(categoryId) {
     try {
         isUpdatingCategories = true;
@@ -2636,25 +2636,13 @@ async function updateCategoryData(categoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
         const photoFileInput = document.getElementById('category-photo-file');
         const visibleSelect = document.getElementById('category-visible');
-
-        console.log('Елементи форми перед зчитуванням:', {
-            nameInput: !!nameInput,
-            slugInput: !!slugInput,
-            photoUrlInput: !!photoUrlInput,
-            photoFileInput: !!photoFileInput,
-            visibleSelect: !!visibleSelect,
-            nameValue: nameInput?.value,
-            slugValue: slugInput?.value,
-            photoValue: photoUrlInput?.value,
-            visibleValue: visibleSelect?.value
-        });
 
         if (!nameInput || !slugInput || !visibleSelect) {
             console.error('Критичні елементи форми відсутні');
@@ -2668,10 +2656,7 @@ async function updateCategoryData(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput?.files?.length });
-
         if (!name || name.length === 0) {
-            console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
             showNotification('Назва категорії є обов\'язковою!');
             return;
         }
@@ -2737,8 +2722,6 @@ async function updateCategoryData(categoryId) {
             order: category.order || 0,
             subcategories: category.subcategories || []
         };
-
-        console.log('Надсилаємо запит на оновлення категорії:', updatedCategory);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2975,7 +2958,7 @@ async function moveCategoryUp(index) {
     }
 }
 
-// Виправлена функція moveCategoryDown в admin.js
+// Виправлена функція moveCategoryDown
 async function moveCategoryDown(index) {
     if (index >= categories.length - 1 || index < 0) return;
     try {
@@ -2998,15 +2981,13 @@ async function moveCategoryDown(index) {
             ]
         };
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', categoryOrder);
-
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(subcategoriesOrder)
+            body: JSON.stringify(categoryOrder)
         });
 
         if (!response.ok) {
@@ -3014,13 +2995,13 @@ async function moveCategoryDown(index) {
             throw new Error(errorData.error || 'Не вдалося змінити порядок');
         }
 
-        const updatedCategory = await response.json();
-        categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
+        const updatedCategories = await response.json();
+        categories.splice(0, categories.length, ...updatedCategories);
         renderCategoriesAdmin();
-        showNotification('Порядок підкатегорій змінено!');
+        showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка зміни порядку підкатегорій:', err);
+        console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
     }
 }
@@ -3688,7 +3669,7 @@ function debounce(func, wait) {
 
 const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
-// Виправлена функція addSlide в admin.js
+// Виправлена функція addSlide
 async function addSlide() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3734,8 +3715,6 @@ async function addSlide() {
             link,
             order
         };
-
-        console.log('Надсилаємо дані слайду:', slideData);
 
         const response = await fetchWithAuth('/api/slides', {
             method: 'POST',
@@ -4793,7 +4772,7 @@ function deleteMattressSize(index) {
     resetInactivityTimer();
 }
 
-// Виправлена функція searchGroupProducts в admin.js
+// Виправлена функція searchGroupProducts
 async function searchGroupProducts(query = '') {
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
@@ -4811,7 +4790,7 @@ async function searchGroupProducts(query = '') {
             return;
         }
 
-        // Формуємо параметри запиту
+        // Формуємо параметри запиту для пошуку по всіх товарах
         const params = new URLSearchParams({
             page: groupProductPage.toString(),
             limit: groupProductLimit.toString(),
