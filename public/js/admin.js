@@ -2635,7 +2635,7 @@ async function updateCategoryData(categoryId) {
         }
 
         // Збільшуємо затримку для забезпечення оновлення DOM
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
@@ -2656,11 +2656,7 @@ async function updateCategoryData(categoryId) {
         });
 
         if (!nameInput || !slugInput || !visibleSelect) {
-            console.error('Критичні елементи форми відсутні:', {
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                visibleSelect: !!visibleSelect
-            });
+            console.error('Критичні елементи форми відсутні');
             showNotification('Елементи форми для редагування категорії не знайдено.');
             return;
         }
@@ -2692,9 +2688,8 @@ async function updateCategoryData(categoryId) {
 
         // Перевірка унікальності назви
         if (name !== category.name) {
-            const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-            const existingCategoriesByName = await nameCheck.json();
-            if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
+            const existingCategory = categories.find(c => c.name === name && c._id !== categoryId);
+            if (existingCategory) {
                 showNotification('Назва категорії має бути унікальною!');
                 return;
             }
@@ -2702,9 +2697,8 @@ async function updateCategoryData(categoryId) {
 
         // Перевірка унікальності slug
         if (slug !== category.slug && slug) {
-            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-            const existingCategories = await slugCheck.json();
-            if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+            const existingCategory = categories.find(c => c.slug === slug && c._id !== categoryId);
+            if (existingCategory) {
                 showNotification('Шлях категорії має бути унікальним!');
                 return;
             }
@@ -3618,7 +3612,7 @@ async function updateSlide(slideId) {
             photo = uploadData.url;
         }
 
-        const slide = slides.find(s => s._id === slideId || s.id === slideId);
+        const slide = slides.find(s => s.id === parseInt(slideId) || s._id === slideId);
         if (!slide) {
             showNotification('Слайд не знайдено!');
             return;
@@ -3632,9 +3626,7 @@ async function updateSlide(slideId) {
 
         console.log('Надсилаємо оновлені дані слайду:', slideData);
 
-        // Використовуємо slide.id замість slideId для API запиту
-        const apiId = slide.id || slideId;
-        const response = await fetchWithAuth(`/api/slides/${apiId}`, {
+        const response = await fetchWithAuth(`/api/slides/${slide.id || slideId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -3649,7 +3641,7 @@ async function updateSlide(slideId) {
         }
 
         const updatedSlide = await response.json();
-        const index = slides.findIndex(s => s._id === slideId || s.id === slideId);
+        const index = slides.findIndex(s => s.id === slide.id || s._id === slideId);
         if (index !== -1) {
             slides[index] = updatedSlide;
         }
@@ -4775,9 +4767,6 @@ function deleteMattressSize(index) {
 }
 
 async function searchGroupProducts(query = '') {
-    const searchInput = document.getElementById('group-product-search');
-    const actualQuery = query || (searchInput ? searchInput.value.trim() : '');
-    
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
     
@@ -4801,8 +4790,8 @@ async function searchGroupProducts(query = '') {
             type: 'simple' // Шукаємо тільки прості товари
         });
 
-        if (actualQuery) {
-            params.append('search', actualQuery);
+        if (query && query.trim()) {
+            params.append('search', query.trim());
         }
 
         const response = await fetchWithAuth(`/api/products?${params.toString()}`);
@@ -4817,13 +4806,14 @@ async function searchGroupProducts(query = '') {
         }
 
         const groupProducts = data.products;
-        const groupProductTotal = data.total || 0;
+        groupProductTotal = data.total || 0;
 
         results.innerHTML = groupProducts.map(p => `
             <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
                 <strong>${p.name}</strong>
                 ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
                 <br><small>Ціна: ${p.price || 0} грн</small>
+                ${p.category ? `<br><small>Категорія: ${p.category}</small>` : ''}
             </div>
         `).join('');
 
@@ -4832,9 +4822,9 @@ async function searchGroupProducts(query = '') {
             const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
             pagination.innerHTML = `
                 <div style="margin-top: 10px; text-align: center;">
-                    ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${actualQuery}')">Попередня</button>` : ''}
-                    <span>Сторінка ${groupProductPage} з ${totalPages}</span>
-                    ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${actualQuery}')">Наступна</button>` : ''}
+                    ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${query}')">Попередня</button>` : ''}
+                    <span>Сторінка ${groupProductPage} з ${totalPages} (Знайдено: ${groupProductTotal})</span>
+                    ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${query}')">Наступна</button>` : ''}
                 </div>
             `;
         }
@@ -4843,8 +4833,9 @@ async function searchGroupProducts(query = '') {
     } catch (err) {
         console.error('Помилка пошуку групових товарів:', err);
         showNotification('Не вдалося завантажити товари: ' + err.message);
-        if (results) {
-            results.innerHTML = '<p>Помилка завантаження товарів</p>';
+        results.innerHTML = '<p>Помилка завантаження товарів</p>';
+        if (pagination) {
+            pagination.innerHTML = '';
         }
     }
 }
@@ -5490,27 +5481,28 @@ async function saveEditedProduct(productId) {
 
         // Валідація groupProducts
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
-            const response = await fetchWithAuth(`/api/products?ids=${encodeURIComponent(newProduct.groupProducts.join(','))}`);
-            const existingProducts = await response.json();
-            if (!existingProducts.products || existingProducts.products.length !== newProduct.groupProducts.length) {
-                console.error('Деякі продукти в groupProducts не знайдені:', newProduct.groupProducts);
-                showNotification('Деякі продукти в групі не знайдені. Оновіть список товарів.');
+            // Перевіряємо, чи всі ID є валідними ObjectId
+            const invalidIds = newProduct.groupProducts.filter(id => !mongoose.Types.ObjectId.isValid(id));
+            if (invalidIds.length > 0) {
+                console.error('Некоректні ObjectId у groupProducts:', invalidIds);
+                showNotification('Деякі ID товарів у групі некоректні. Оновіть список товарів.');
                 return;
             }
-        }
 
-        let validatedSizes = newProduct.sizes;
-        if (newProduct.type === 'mattresses') {
-            validatedSizes = newProduct.sizes.filter(size => {
-                const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
-                if (!isValid) {
-                    console.warn('Некоректний розмір видалено:', size);
-                }
-                return isValid;
-            });
-
-            if (validatedSizes.length === 0) {
-                showNotification('Усі розміри для матрацу некоректні! Додайте коректний розмір.');
+            // Перевіряємо існування товарів через окремий запит
+            const existingProductsResponse = await fetchWithAuth(`/api/products?page=1&limit=1000&type=simple`);
+            if (!existingProductsResponse.ok) {
+                throw new Error('Не вдалося завантажити список товарів для перевірки');
+            }
+            const existingProductsData = await existingProductsResponse.json();
+            const existingProducts = existingProductsData.products || [];
+            
+            const existingProductIds = existingProducts.map(p => p._id);
+            const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
+            
+            if (missingProducts.length > 0) {
+                console.error('Деякі продукти в groupProducts не знайдені:', missingProducts);
+                showNotification('Деякі продукти в групі не знайдені. Оновіть список товарів.');
                 return;
             }
         }
