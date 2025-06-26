@@ -511,7 +511,7 @@ h3:hover {
     bottom: 20px;
     left: 20px;
     color: #FFFFFF;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(0 0 0 / 0%);
     padding: 15px;
     border-radius: 8px;
     max-width: 400px;

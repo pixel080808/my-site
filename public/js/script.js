@@ -4241,8 +4241,16 @@ function renderSlideshow() {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
+        // Додаємо клікабельність до слайду, якщо є посилання
+        if (slide.link) {
+            slideDiv.style.cursor = 'pointer';
+            slideDiv.onclick = () => {
+                window.location.href = slide.link;
+            };
+        }
+
         const img = document.createElement('img');
-        img.src = slide.url || NO_IMAGE_URL;
+        img.src = slide.photo || NO_IMAGE_URL;
         img.alt = slide.name || `Слайд ${i + 1}`;
         img.loading = 'lazy';
         slideDiv.appendChild(img);
@@ -4255,10 +4263,6 @@ function renderSlideshow() {
         const p = document.createElement('p');
         p.textContent = slide.text || '';
         contentDiv.appendChild(p);
-        const a = document.createElement('a');
-        a.href = slide.link || '#';
-        a.textContent = slide.linkText || 'Дізнатися більше';
-        contentDiv.appendChild(a);
         slideDiv.appendChild(contentDiv);
 
         slideshow.appendChild(slideDiv);
