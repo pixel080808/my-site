@@ -4249,6 +4249,35 @@ function renderSlideshow() {
             };
         }
 
+        // Додаємо підтримку сенсорних жестів
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50; // Мінімальна відстань для свайпу (в пікселях)
+
+        slideDiv.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        slideDiv.addEventListener('touchmove', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        slideDiv.addEventListener('touchend', () => {
+            const swipeDistance = touchEndX - touchStartX;
+
+            if (Math.abs(swipeDistance) > minSwipeDistance) {
+                if (swipeDistance < 0) {
+                    // Свайп вліво: наступний слайд
+                    currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+                } else {
+                    // Свайп вправо: попередній слайд
+                    currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+                }
+                renderSlideshow();
+                startSlideshow();
+            }
+        }, { passive: true });
+
         const img = document.createElement('img');
         img.src = slide.photo || NO_IMAGE_URL;
         img.alt = slide.name || `Слайд ${i + 1}`;
