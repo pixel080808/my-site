@@ -3602,7 +3602,7 @@ async function updateSlideshowSettings() {
     }
 }
 
-// Виправлена функція updateSlide з правильним закриттям модального вікна
+// Виправлена функція updateSlide в admin.js
 async function updateSlide(slideId) {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3698,9 +3698,7 @@ function debounce(func, wait) {
     };
 }
 
-const debouncedRenderAdmin = debounce(renderAdmin, 100);
-
-// Виправлена функція addSlide з правильним закриттям модального вікна
+// Виправлена функція addSlide
 async function addSlide() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -4798,7 +4796,7 @@ function deleteMattressSize(index) {
     resetInactivityTimer();
 }
 
-// Виправлена функція searchGroupProducts для показу всіх товарів
+// Виправлена функція searchGroupProducts
 async function searchGroupProducts(query = '') {
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
@@ -4816,11 +4814,11 @@ async function searchGroupProducts(query = '') {
             return;
         }
 
-        // Збільшуємо ліміт для показу більшої кількості товарів
+        // Формуємо параметри запиту для пошуку по всіх товарах
         const params = new URLSearchParams({
             page: groupProductPage.toString(),
-            limit: '50', // Збільшено з 15 до 50
-            type: 'simple'
+            limit: groupProductLimit.toString(),
+            type: 'simple' // Шукаємо тільки прості товари
         });
 
         if (query && query.trim()) {
@@ -4841,29 +4839,24 @@ async function searchGroupProducts(query = '') {
         const groupProducts = data.products;
         groupProductTotal = data.total || 0;
 
-        // Фільтруємо товари, які вже додані до групи
-        const availableProducts = groupProducts.filter(p => !newProduct.groupProducts.includes(p._id));
-
-        results.innerHTML = availableProducts.length > 0 
-            ? availableProducts.map(p => `
-                <div class="group-product-result-item" 
-                     style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer; background: white;" 
-                     onclick="addGroupProduct('${p._id}')">
-                    <strong>${p.name}</strong>
-                    ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
-                    <br><small>Ціна: ${p.price || 0} грн</small>
-                    ${p.category ? `<br><small>Категорія: ${p.category}</small>` : ''}
-                </div>
-            `).join('')
-            : '<p>Немає доступних товарів для додавання</p>';
+        results.innerHTML = groupProducts.map(p => `
+            <div class="group-product-result-item" 
+                 style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer; background: white;" 
+                 onclick="addGroupProduct('${p._id}')">
+                <strong>${p.name}</strong>
+                ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
+                <br><small>Ціна: ${p.price || 0} грн</small>
+                ${p.category ? `<br><small>Категорія: ${p.category}</small>` : ''}
+            </div>
+        `).join('');
 
         // Рендеринг пагінації
         if (pagination) {
-            const totalPages = Math.ceil(groupProductTotal / 50);
+            const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
             pagination.innerHTML = `
                 <div style="margin-top: 10px; text-align: center;">
                     ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${query}')">Попередня</button>` : ''}
-                    <span>Сторінка ${groupProductPage} з ${totalPages} (Знайдено: ${groupProductTotal}, Доступно: ${availableProducts.length})</span>
+                    <span>Сторінка ${groupProductPage} з ${totalPages} (Знайдено: ${groupProductTotal})</span>
                     ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${query}')">Наступна</button>` : ''}
                 </div>
             `;
@@ -5436,7 +5429,7 @@ setTimeout(() => {
     resetInactivityTimer();
 }
 
-// Виправлена функція saveEditedProduct для групових товарів
+// Виправлена функція saveEditedProduct в admin.js (частина для групових товарів)
 async function saveEditedProduct(productId) {
     const saveButton = document.querySelector('.modal-actions button:first-child');
     if (saveButton) {
@@ -5535,7 +5528,7 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Виправлена валідація groupProducts - завантажуємо всі товари для перевірки
+        // Валідація groupProducts
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             // Перевіряємо, чи всі ID є валідними ObjectId
             const invalidIds = newProduct.groupProducts.filter(id => !/^[0-9a-fA-F]{24}$/.test(id));
@@ -5545,27 +5538,20 @@ async function saveEditedProduct(productId) {
                 return;
             }
 
-            // Завантажуємо ВСІ прості товари для перевірки існування
-            try {
-                const allProductsResponse = await fetchWithAuth(`/api/products?type=simple&limit=10000`);
-                if (!allProductsResponse.ok) {
-                    throw new Error('Не вдалося завантажити список товарів для перевірки');
-                }
-                const allProductsData = await allProductsResponse.json();
-                const allProducts = allProductsData.products || [];
-                
-                const existingProductIds = allProducts.map(p => p._id);
-                const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
-                
-                if (missingProducts.length > 0) {
-                    console.log('Деякі продукти в groupProducts не знайдені:', missingProducts);
-                    // Видаляємо відсутні товари замість показу помилки
-                    newProduct.groupProducts = newProduct.groupProducts.filter(id => existingProductIds.includes(id));
-                    showNotification(`Видалено ${missingProducts.length} неіснуючих товарів з групи.`);
-                }
-            } catch (error) {
-                console.error('Помилка перевірки групових товарів:', error);
-                showNotification('Помилка перевірки групових товарів: ' + error.message);
+            // Перевіряємо існування товарів через окремий запит
+            const existingProductsResponse = await fetchWithAuth(`/api/products?page=1&limit=1000&type=simple`);
+            if (!existingProductsResponse.ok) {
+                throw new Error('Не вдалося завантажити список товарів для перевірки');
+            }
+            const existingProductsData = await existingProductsResponse.json();
+            const existingProducts = existingProductsData.products || [];
+            
+            const existingProductIds = existingProducts.map(p => p._id);
+            const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
+            
+            if (missingProducts.length > 0) {
+                console.error('Деякі продукти в groupProducts не знайдені:', missingProducts);
+                showNotification('Деякі продукти в групі не знайдені. Оновіть список товарів.');
                 return;
             }
         }
@@ -5575,15 +5561,6 @@ async function saveEditedProduct(productId) {
             const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
             if (!isValid) {
                 console.warn('Некоректний розмір видалено:', size);
-            }
-            return isValid;
-        });
-
-        // Валідація кольорів
-        const validatedColors = newProduct.colors.filter(color => {
-            const isValid = color.name && color.value;
-            if (!isValid) {
-                console.warn('Некоректний колір видалено:', color);
             }
             return isValid;
         });
