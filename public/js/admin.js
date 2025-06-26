@@ -1193,6 +1193,7 @@ function showSection(sectionId) {
     }
 }
 
+// Виправлена функція showModal для правильного відкриття
 function showModal(content) {
     const modal = document.getElementById('modal');
     if (!modal) {
@@ -1200,12 +1201,35 @@ function showModal(content) {
         showNotification('Помилка: модальне вікно не знайдено');
         return;
     }
+    
+    // Очищаємо попередній вміст
     modal.innerHTML = content;
+    
+    // Показуємо модальне вікно
     modal.style.display = 'block';
     modal.classList.add('active');
+    
+    // Додаємо клас для затемнення фону
+    document.body.classList.add('modal-open');
+    
     isModalOpen = true;
     resetInactivityTimer();
 }
+
+// Додаткова функція для обробки кліків поза модальним вікном
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('modal');
+    if (modal && modal.classList.contains('active') && event.target === modal) {
+        closeModal();
+    }
+});
+
+// Додаткова функція для обробки клавіші Escape
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && isModalOpen) {
+        closeModal();
+    }
+});
 
 session = { isActive: false, timestamp: 0 };
 
@@ -2436,12 +2460,21 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     container.appendChild(nextBtn);
 }
 
+// Виправлена функція closeModal для правильного закриття
 function closeModal() {
     const modal = document.getElementById('modal');
     if (modal) {
+        // Видаляємо всі класи та очищаємо вміст
         modal.classList.remove('active');
+        modal.style.display = 'none';
         modal.innerHTML = '';
+        
+        // Видаляємо затемнення фону
+        document.body.classList.remove('modal-open');
+        
+        // Скидаємо прапорець модального вікна
         isModalOpen = false;
+        
         console.log('Модальне вікно закрито');
     }
     resetInactivityTimer();
@@ -3569,7 +3602,7 @@ async function updateSlideshowSettings() {
     }
 }
 
-// Виправлена функція updateSlide в admin.js
+// Виправлена функція updateSlide з правильним закриттям модального вікна
 async function updateSlide(slideId) {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3639,18 +3672,16 @@ async function updateSlide(slideId) {
             slides[index] = updatedSlide;
         }
         
-        // Закриваємо модальне вікно ПЕРЕД рендерингом
-        closeModal();
+        showNotification('Слайд оновлено!');
         
         // Рендеримо слайди
         renderSlidesAdmin();
-        
-        showNotification('Слайд оновлено!');
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка оновлення слайду:', err);
         showNotification('Не вдалося оновити слайд: ' + err.message);
-        // Закриваємо модальне вікно навіть при помилці
+    } finally {
+        // Завжди закриваємо модальне вікно
         closeModal();
     }
 }
@@ -3669,7 +3700,7 @@ function debounce(func, wait) {
 
 const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
-// Виправлена функція addSlide
+// Виправлена функція addSlide з правильним закриттям модального вікна
 async function addSlide() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -3733,12 +3764,6 @@ async function addSlide() {
         const newSlide = await response.json();
         slides.push(newSlide);
         
-        // Закриваємо модальне вікно ПЕРЕД рендерингом
-        closeModal();
-        
-        // Рендеримо слайди
-        renderSlidesAdmin();
-        
         showNotification('Слайд додано!');
         
         // Оновлюємо список слайдів з сервера
@@ -3747,7 +3772,8 @@ async function addSlide() {
     } catch (err) {
         console.error('Помилка додавання слайду:', err);
         showNotification('Не вдалося додати слайд: ' + err.message);
-        // Закриваємо модальне вікно навіть при помилці
+    } finally {
+        // Завжди закриваємо модальне вікно
         closeModal();
     }
 }
@@ -4772,7 +4798,7 @@ function deleteMattressSize(index) {
     resetInactivityTimer();
 }
 
-// Виправлена функція searchGroupProducts
+// Виправлена функція searchGroupProducts для показу всіх товарів
 async function searchGroupProducts(query = '') {
     const results = document.getElementById('group-product-results');
     const pagination = document.getElementById('group-product-pagination');
@@ -4790,11 +4816,11 @@ async function searchGroupProducts(query = '') {
             return;
         }
 
-        // Формуємо параметри запиту для пошуку по всіх товарах
+        // Збільшуємо ліміт для показу більшої кількості товарів
         const params = new URLSearchParams({
             page: groupProductPage.toString(),
-            limit: groupProductLimit.toString(),
-            type: 'simple' // Шукаємо тільки прості товари
+            limit: '50', // Збільшено з 15 до 50
+            type: 'simple'
         });
 
         if (query && query.trim()) {
@@ -4815,24 +4841,29 @@ async function searchGroupProducts(query = '') {
         const groupProducts = data.products;
         groupProductTotal = data.total || 0;
 
-        results.innerHTML = groupProducts.map(p => `
-            <div class="group-product-result-item" 
-                 style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer; background: white;" 
-                 onclick="addGroupProduct('${p._id}')">
-                <strong>${p.name}</strong>
-                ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
-                <br><small>Ціна: ${p.price || 0} грн</small>
-                ${p.category ? `<br><small>Категорія: ${p.category}</small>` : ''}
-            </div>
-        `).join('');
+        // Фільтруємо товари, які вже додані до групи
+        const availableProducts = groupProducts.filter(p => !newProduct.groupProducts.includes(p._id));
+
+        results.innerHTML = availableProducts.length > 0 
+            ? availableProducts.map(p => `
+                <div class="group-product-result-item" 
+                     style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer; background: white;" 
+                     onclick="addGroupProduct('${p._id}')">
+                    <strong>${p.name}</strong>
+                    ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
+                    <br><small>Ціна: ${p.price || 0} грн</small>
+                    ${p.category ? `<br><small>Категорія: ${p.category}</small>` : ''}
+                </div>
+            `).join('')
+            : '<p>Немає доступних товарів для додавання</p>';
 
         // Рендеринг пагінації
         if (pagination) {
-            const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
+            const totalPages = Math.ceil(groupProductTotal / 50);
             pagination.innerHTML = `
                 <div style="margin-top: 10px; text-align: center;">
                     ${groupProductPage > 1 ? `<button onclick="changeGroupProductPage(${groupProductPage - 1}, '${query}')">Попередня</button>` : ''}
-                    <span>Сторінка ${groupProductPage} з ${totalPages} (Знайдено: ${groupProductTotal})</span>
+                    <span>Сторінка ${groupProductPage} з ${totalPages} (Знайдено: ${groupProductTotal}, Доступно: ${availableProducts.length})</span>
                     ${groupProductPage < totalPages ? `<button onclick="changeGroupProductPage(${groupProductPage + 1}, '${query}')">Наступна</button>` : ''}
                 </div>
             `;
@@ -5405,7 +5436,7 @@ setTimeout(() => {
     resetInactivityTimer();
 }
 
-// Виправлена функція saveEditedProduct в admin.js (частина для групових товарів)
+// Виправлена функція saveEditedProduct для групових товарів
 async function saveEditedProduct(productId) {
     const saveButton = document.querySelector('.modal-actions button:first-child');
     if (saveButton) {
@@ -5475,7 +5506,7 @@ async function saveEditedProduct(productId) {
 
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
-            showNotification('Обрана категорія не існу!');
+            showNotification('Обрана категорія не існує!');
             return;
         }
 
@@ -5504,7 +5535,7 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Валідація groupProducts
+        // Виправлена валідація groupProducts - завантажуємо всі товари для перевірки
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             // Перевіряємо, чи всі ID є валідними ObjectId
             const invalidIds = newProduct.groupProducts.filter(id => !/^[0-9a-fA-F]{24}$/.test(id));
@@ -5514,20 +5545,27 @@ async function saveEditedProduct(productId) {
                 return;
             }
 
-            // Перевіряємо існування товарів через окремий запит
-            const existingProductsResponse = await fetchWithAuth(`/api/products?page=1&limit=1000&type=simple`);
-            if (!existingProductsResponse.ok) {
-                throw new Error('Не вдалося завантажити список товарів для перевірки');
-            }
-            const existingProductsData = await existingProductsResponse.json();
-            const existingProducts = existingProductsData.products || [];
-            
-            const existingProductIds = existingProducts.map(p => p._id);
-            const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
-            
-            if (missingProducts.length > 0) {
-                console.error('Деякі продукти в groupProducts не знайдені:', missingProducts);
-                showNotification('Деякі продукти в групі не знайдені. Оновіть список товарів.');
+            // Завантажуємо ВСІ прості товари для перевірки існування
+            try {
+                const allProductsResponse = await fetchWithAuth(`/api/products?type=simple&limit=10000`);
+                if (!allProductsResponse.ok) {
+                    throw new Error('Не вдалося завантажити список товарів для перевірки');
+                }
+                const allProductsData = await allProductsResponse.json();
+                const allProducts = allProductsData.products || [];
+                
+                const existingProductIds = allProducts.map(p => p._id);
+                const missingProducts = newProduct.groupProducts.filter(id => !existingProductIds.includes(id));
+                
+                if (missingProducts.length > 0) {
+                    console.log('Деякі продукти в groupProducts не знайдені:', missingProducts);
+                    // Видаляємо відсутні товари замість показу помилки
+                    newProduct.groupProducts = newProduct.groupProducts.filter(id => existingProductIds.includes(id));
+                    showNotification(`Видалено ${missingProducts.length} неіснуючих товарів з групи.`);
+                }
+            } catch (error) {
+                console.error('Помилка перевірки групових товарів:', error);
+                showNotification('Помилка перевірки групових товарів: ' + error.message);
                 return;
             }
         }
@@ -5537,6 +5575,15 @@ async function saveEditedProduct(productId) {
             const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
             if (!isValid) {
                 console.warn('Некоректний розмір видалено:', size);
+            }
+            return isValid;
+        });
+
+        // Валідація кольорів
+        const validatedColors = newProduct.colors.filter(color => {
+            const isValid = color.name && color.value;
+            if (!isValid) {
+                console.warn('Некоректний колір видалено:', color);
             }
             return isValid;
         });
