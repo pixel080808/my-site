@@ -3677,6 +3677,7 @@ function debounce(func, wait) {
 const debouncedRenderAdmin = debounce(renderAdmin, 100);
 
 // Виправлена функція addSlide
+// Виправлена функція addSlide
 async function addSlide() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -4817,7 +4818,7 @@ async function searchGroupProducts(query = '') {
         
         // Фільтруємо товари, які вже додані до групи
         const availableProducts = groupProducts.filter(p => 
-            !newProduct.groupProducts.includes(p._id) && p._id !== productId
+            !newProduct.groupProducts.includes(p._id)
         );
 
         results.innerHTML = availableProducts.length > 0 
@@ -5478,7 +5479,7 @@ async function saveEditedProduct(productId) {
 
         const categoryObj = categories.find(c => c.name === category);
         if (!categoryObj) {
-            showNotification('Обрана категорія не існу!');
+            showNotification('Обрана категорія не існує!');
             return;
         }
 
@@ -5551,6 +5552,15 @@ async function saveEditedProduct(productId) {
             const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
             if (!isValid) {
                 console.warn('Некоректний розмір видалено:', size);
+            }
+            return isValid;
+        });
+
+        // Валідація кольорів
+        const validatedColors = newProduct.colors.filter(color => {
+            const isValid = color.name && color.value;
+            if (!isValid) {
+                console.warn('Некоректний колір видалено:', color);
             }
             return isValid;
         });
@@ -5724,7 +5734,9 @@ async function saveEditedProduct(productId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
+            console.error('Помилка оновлення товару:', errorData);
+            showNotification(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
+            return;
         }
 
         const updatedProduct = await response.json();
