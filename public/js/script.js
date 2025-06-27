@@ -4241,18 +4241,56 @@ function renderSlideshow() {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
-        // Додаємо клікабельність до слайду, якщо є посилання
+        // Додаємо клікабельність лише для переходу за посиланням, якщо воно є
         if (slide.link) {
-            slideDiv.style.cursor = 'pointer';
-            slideDiv.onclick = () => {
-                window.location.href = slide.link;
-            };
+            const linkWrapper = document.createElement('a');
+            linkWrapper.href = slide.link;
+            linkWrapper.target = '_blank'; // Відкриває посилання у новій вкладці (можна змінити на _self)
+            linkWrapper.style.display = 'block';
+            linkWrapper.style.width = '100%';
+            linkWrapper.style.height = '100%';
+            linkWrapper.style.cursor = 'pointer';
+            linkWrapper.style.textDecoration = 'none'; // Прибираємо підкреслення
+
+            const img = document.createElement('img');
+            img.src = slide.photo || NO_IMAGE_URL;
+            img.alt = slide.name || `Слайд ${i + 1}`;
+            img.loading = 'lazy';
+            linkWrapper.appendChild(img);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'slide-content';
+            const h2 = document.createElement('h2');
+            h2.textContent = slide.title || '';
+            contentDiv.appendChild(h2);
+            const p = document.createElement('p');
+            p.textContent = slide.text || '';
+            contentDiv.appendChild(p);
+            linkWrapper.appendChild(contentDiv);
+
+            slideDiv.appendChild(linkWrapper);
+        } else {
+            const img = document.createElement('img');
+            img.src = slide.photo || NO_IMAGE_URL;
+            img.alt = slide.name || `Слайд ${i + 1}`;
+            img.loading = 'lazy';
+            slideDiv.appendChild(img);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'slide-content';
+            const h2 = document.createElement('h2');
+            h2.textContent = slide.title || '';
+            contentDiv.appendChild(h2);
+            const p = document.createElement('p');
+            p.textContent = slide.text || '';
+            contentDiv.appendChild(p);
+            slideDiv.appendChild(contentDiv);
         }
 
         // Додаємо підтримку сенсорних жестів
         let touchStartX = 0;
         let touchEndX = 0;
-        const minSwipeDistance = 50; // Мінімальна відстань для свайпу (в пікселях)
+        const minSwipeDistance = 50; // Мінімальна відстань для свайпу
 
         slideDiv.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
@@ -4267,32 +4305,14 @@ function renderSlideshow() {
 
             if (Math.abs(swipeDistance) > minSwipeDistance) {
                 if (swipeDistance < 0) {
-                    // Свайп вліво: наступний слайд
                     currentSlideIndex = (currentSlideIndex + 1) % slides.length;
                 } else {
-                    // Свайп вправо: попередній слайд
                     currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
                 }
                 renderSlideshow();
                 startSlideshow();
             }
         }, { passive: true });
-
-        const img = document.createElement('img');
-        img.src = slide.photo || NO_IMAGE_URL;
-        img.alt = slide.name || `Слайд ${i + 1}`;
-        img.loading = 'lazy';
-        slideDiv.appendChild(img);
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'slide-content';
-        const h2 = document.createElement('h2');
-        h2.textContent = slide.title || '';
-        contentDiv.appendChild(h2);
-        const p = document.createElement('p');
-        p.textContent = slide.text || '';
-        contentDiv.appendChild(p);
-        slideDiv.appendChild(contentDiv);
 
         slideshow.appendChild(slideDiv);
     });
