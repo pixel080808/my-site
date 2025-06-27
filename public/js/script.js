@@ -4241,16 +4241,17 @@ function renderSlideshow() {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
-        // Додаємо клікабельність лише для переходу за посиланням, якщо воно є
+        // Обробка вмісту слайду
         if (slide.link) {
             const linkWrapper = document.createElement('a');
             linkWrapper.href = slide.link;
-            linkWrapper.target = '_blank'; // Відкриває посилання у новій вкладці (можна змінити на _self)
+            linkWrapper.target = '_blank'; // Відкриває у новій вкладці
             linkWrapper.style.display = 'block';
             linkWrapper.style.width = '100%';
             linkWrapper.style.height = '100%';
             linkWrapper.style.cursor = 'pointer';
-            linkWrapper.style.textDecoration = 'none'; // Прибираємо підкреслення
+            linkWrapper.style.textDecoration = 'none'; // Без підкреслення
+            linkWrapper.style.pointerEvents = 'auto'; // Дозволяємо кліки на посиланні
 
             const img = document.createElement('img');
             img.src = slide.photo || NO_IMAGE_URL;
@@ -4287,24 +4288,32 @@ function renderSlideshow() {
             slideDiv.appendChild(contentDiv);
         }
 
-        // Додаємо підтримку сенсорних жестів
+        // Підтримка сенсорних жестів (тільки свайп)
         let touchStartX = 0;
         let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
         const minSwipeDistance = 50; // Мінімальна відстань для свайпу
+        const maxVerticalDistance = 30; // Максимальна вертикальна відстань для розпізнавання свайпу
 
         slideDiv.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+            touchEndX = 0;
+            touchEndY = 0;
         }, { passive: true });
 
         slideDiv.addEventListener('touchmove', (e) => {
             touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         slideDiv.addEventListener('touchend', () => {
-            const swipeDistance = touchEndX - touchStartX;
+            const swipeDistanceX = touchEndX - touchStartX;
+            const swipeDistanceY = Math.abs(touchEndY - touchStartY);
 
-            if (Math.abs(swipeDistance) > minSwipeDistance) {
-                if (swipeDistance < 0) {
+            if (Math.abs(swipeDistanceX) > minSwipeDistance && swipeDistanceY < maxVerticalDistance) {
+                if (swipeDistanceX < 0) {
                     currentSlideIndex = (currentSlideIndex + 1) % slides.length;
                 } else {
                     currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
@@ -4313,6 +4322,12 @@ function renderSlideshow() {
                 startSlideshow();
             }
         }, { passive: true });
+
+        // Блокуємо будь-який клік для перемикання
+        slideDiv.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
 
         slideshow.appendChild(slideDiv);
     });
