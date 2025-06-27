@@ -503,7 +503,7 @@ h3:hover {
 }
 
 .slide img:hover {
-    transform: scale(1.02);
+    transform: scale(1.00);
 }
 
 .slide-content {
@@ -607,7 +607,7 @@ h3:hover {
 
 .slide-arrow:hover {
     background: rgba(49, 130, 206, 0.7);
-    transform: scale(1.1);
+    transform: scale(1.0);
 }
 
 .categories {
