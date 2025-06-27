@@ -2798,8 +2798,8 @@ s {
 .gallery-modal-content {
     position: relative;
     width: 100%;
-    max-width: 750px; /* Збільшено ширину полотна */
-    max-height: 85vh;
+    max-width: 720px; /* Збільшено ширину полотна */
+    max-height: 88vh;
     padding: 30px; /* Збільшено відступ для кращого простору */
     border-radius: 12px;
     overflow: hidden;
@@ -4816,15 +4816,15 @@ s {
     }
 
 .gallery-modal-content {
-        padding: 55px;
+        padding: 1px;
     }
 
     .gallery-prev {
-        left: 2px;
+        left: 5px;
     }
 
     .gallery-next {
-        right: 2px;
+        right: 5px;
     }
 
 .group-products {
