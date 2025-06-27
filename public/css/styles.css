@@ -474,10 +474,11 @@ h3:hover {
 
 .slideshow {
     position: relative;
-    margin: 15px 0;
+    margin: 15px auto;
     border-radius: 12px;
     overflow: hidden;
     width: 100%;
+    max-width: 1200px;
     box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     transition: box-shadow var(--transition-speed) ease;
@@ -489,6 +490,11 @@ h3:hover {
 
 .slide {
     display: none;
+    width: 100%;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
 }
 
 .slide.active {
@@ -497,13 +503,11 @@ h3:hover {
 
 .slide img {
     width: 100%;
-    height: 400px;
+    height: auto;
+    max-height: 400px;
     object-fit: cover;
-    transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
-}
-
-.slide img:hover {
-    transform: scale(1.00);
+    display: block;
+    transition: opacity var(--transition-speed) ease;
 }
 
 .slide-content {
@@ -519,13 +523,13 @@ h3:hover {
 
 .slide-content h2 {
     font-size: 24px;
-    margin-bottom: 10px;
+    margin: 0 0 10px 0;
     color: #FFFFFF;
 }
 
 .slide-content p {
     font-size: 16px;
-    margin-bottom: 15px;
+    margin: 0 0 15px 0;
     color: #FFFFFF;
 }
 
@@ -534,7 +538,7 @@ h3:hover {
     text-decoration: none;
     font-weight: 500;
     padding: 8px 15px;
-    background: rgba(255, 255, 250, 0.9);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 25px;
     display: inline-block;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
@@ -555,21 +559,18 @@ h3:hover {
 }
 
 .slide-btn {
-    display: inline-block;
     width: 10px;
     height: 10px;
     background: rgba(255, 255, 255, 0.7);
     border-radius: 50%;
     border: 2px solid var(--primary-color);
-    margin: 0 6px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
+    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
 .slide-btn.active {
     background: var(--primary-color);
     transform: scale(1.3);
-    border-color: var(--secondary-color);
 }
 
 .slide-btn:hover {
@@ -579,26 +580,18 @@ h3:hover {
 .slide-arrow {
     position: absolute;
     top: 50%;
-    width: 50px;
-    height: 50px;
-    background: rgba(0, 0, 0, 0.5);
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.6);
     color: #FFFFFF;
-    font-size: 24px;
-    line-height: 50px;
+    font-size: 20px;
+    line-height: 40px;
     text-align: center;
     cursor: pointer;
-    opacity: 0;
-    transition: opacity var(--transition-speed) ease, background var(--transition-speed) ease, transform var(--transition-speed) ease;
     border-radius: 50%;
-    margin-top: -25px;
-}
-
-.slide-arrow-prev {
-    left: 15px;
-}
-
-.slide-arrow-next {
-    right: 15px;
+    transition: background var(--transition-speed) ease, opacity var(--transition-speed) ease;
+    opacity: 0;
 }
 
 .slideshow:hover .slide-arrow {
@@ -607,7 +600,14 @@ h3:hover {
 
 .slide-arrow:hover {
     background: rgba(49, 130, 206, 0.7);
-    transform: scale(1.0);
+}
+
+.slide-arrow-prev {
+    left: 15px;
+}
+
+.slide-arrow-next {
+    right: 15px;
 }
 
 .categories {
@@ -2798,14 +2798,17 @@ s {
 .gallery-modal-content {
     position: relative;
     width: 100%;
-    max-width: 800px;
+    max-width: 900px; /* Збільшено для ширшої рамки */
     max-height: 85vh;
-    /* background: var(--card-bg); */
-    padding: 1px;
+    padding: 20px; /* Додано відступ навколо вмісту */
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
     transition: transform var(--transition-speed) ease;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff; /* Біле тло для світлої теми */
+    border: 1px solid #e5e7eb; /* Легка рамка для стилю */
 }
 
 .gallery-modal-content:hover {
@@ -2820,6 +2823,47 @@ s {
     object-fit: cover !important;
     border-radius: 8px;
     transition: opacity var(--transition-speed) ease;
+    margin-bottom: 15px; /* Додано відступ між зображенням і мініатюрами */
+}
+
+.gallery-thumbnails {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Збільшено відстань між мініатюрами */
+    padding: 15px 20px; /* Додано внутрішній відступ для контейнера мініатюр */
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+    background-color: inherit; /* Успадковує тло від .gallery-modal-content */
+}
+
+.gallery-thumbnails::-webkit-scrollbar {
+    height: 6px;
+}
+
+.gallery-thumbnails::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 3px;
+}
+
+.gallery-thumbnails::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.thumbnail {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color var(--transition-speed) ease, opacity var(--transition-speed) ease;
+    opacity: 0.6; /* Початкова прозорість для неактивних мініатюр */
+}
+
+.thumbnail.active {
+    border-color: var(--primary-color);
+    opacity: 1; /* Чітке відображення активної мініатюри */
 }
 
 .gallery-close {
@@ -2851,7 +2895,7 @@ s {
     height: 50px;
     background: rgba(0, 0, 0, 0.5);
     color: white;
-    font-size: 23px;
+    font-size: 25px;
     line-height: 50px;
     text-align: center;
     cursor: pointer;
@@ -2863,11 +2907,11 @@ s {
 }
 
 .gallery-prev {
-    left: 2px;
+    left: 5px;
 }
 
 .gallery-next {
-    right: 2px;
+    right: 5px;
 }
 
 .gallery-prev:hover,
@@ -3371,6 +3415,44 @@ s {
         font-size: 12px;
     }
 
+.gallery-modal-content {
+        max-width: 90%;
+        max-height: 80vh;
+        padding: 10px;
+    }
+
+    .gallery-image {
+        max-height: 50vh;
+        margin-bottom: 10px;
+    }
+
+    .gallery-thumbnails {
+        gap: 5px;
+        padding: 10px;
+    }
+
+    .thumbnail {
+        width: 40px;
+        height: 30px;
+    }
+
+    .gallery-prev,
+    .gallery-next {
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
+        line-height: 30px;
+        margin-top: -15px;
+    }
+
+    .gallery-prev {
+        left: 5px;
+    }
+
+    .gallery-next {
+        right: 5px;
+    }
+
 .group-products {
         grid-template-columns: repeat(2, 1fr);
         gap: 5px;
@@ -3475,7 +3557,7 @@ s {
     }
 
     .slide img {
-        height: 200px;
+        max-height: 200px;
     }
 
     .slide-content {
@@ -3483,6 +3565,7 @@ s {
         left: 10px;
         padding: 10px;
         max-width: 250px;
+        background: rgb(0 0 0 / 0%);
     }
 
     .slide-content h2 {
@@ -3499,12 +3582,17 @@ s {
         font-size: 14px;
     }
 
+    .slide-nav {
+        bottom: 10px;
+    }
+
+    .slide-btn {
+        width: 8px;
+        height: 8px;
+    }
+
     .slide-arrow {
-        width: 30px;
-        height: 30px;
-        font-size: 18px;
-        line-height: 30px;
-        margin-top: -15px;
+        display: none; /* Hide arrows on small screens */
     }
 
     .categories {
@@ -4116,6 +4204,38 @@ s {
         font-size: 12px;
     }
 
+.gallery-modal-content {
+        max-width: 95%;
+        padding: 15px;
+    }
+
+    .gallery-image {
+        max-height: 60vh;
+        margin-bottom: 12px;
+    }
+
+    .gallery-thumbnails {
+        gap: 10px;
+        padding: 12px 15px;
+    }
+
+    .gallery-prev,
+    .gallery-next {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        line-height: 40px;
+        margin-top: -20px;
+    }
+
+    .gallery-prev {
+        left: 5px;
+    }
+
+    .gallery-next {
+        right: 5px;
+    }
+
 .group-products {
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
@@ -4237,13 +4357,13 @@ s {
     }
 
     .slide img {
-        height: 250px;
+        max-height: 250px;
     }
 
     .slide-content {
-        bottom: 10px;
-        left: 10px;
-        padding: 10px;
+        bottom: 15px;
+        left: 15px;
+        padding: 12px;
         max-width: 300px;
     }
 
@@ -4252,21 +4372,20 @@ s {
     }
 
     .slide-content p {
-        font-size: 14px;
-        margin-bottom: 10px;
+        font-size: 15px;
+        margin-bottom: 12px;
     }
 
     .slide-content a {
-        padding: 5px 10px;
-        font-size: 14px;
+        padding: 6px 12px;
+        font-size: 15px;
     }
 
     .slide-arrow {
         width: 35px;
         height: 35px;
-        font-size: 20px;
+        font-size: 18px;
         line-height: 35px;
-        margin-top: -17px;
     }
 
     .categories {
@@ -4697,6 +4816,18 @@ s {
         margin-right: 15px;
     }
 
+.gallery-modal-content {
+        padding: 20px;
+    }
+
+    .gallery-prev {
+        left: 10px;
+    }
+
+    .gallery-next {
+        right: 10px;
+    }
+
 .group-products {
         grid-template-columns: repeat(4, 1fr);
         gap: 10px;
@@ -4762,7 +4893,7 @@ s {
     }
 
     .slide img {
-        height: 400px;
+        max-height: 400px;
     }
 
     .slide-content {
@@ -4783,6 +4914,13 @@ s {
     .slide-content a {
         padding: 8px 15px;
         font-size: 16px;
+    }
+
+    .slide-arrow {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        line-height: 40px;
     }
 
     .category {
@@ -5449,21 +5587,6 @@ s {
         background: rgba(0, 0, 0, 0.7);
     }
 
-    .slide-content h2,
-    .slide-content p {
-        color: #FFFFFF;
-    }
-
-    .slide-content a {
-        background: var(--button-background);
-        color: var(--button-text-color);
-    }
-
-    .slide-content a:hover {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
-    }
-
     .slide-btn {
         background: rgba(255, 255, 255, 0.3);
         border-color: var(--primary-color);
@@ -5471,7 +5594,6 @@ s {
 
     .slide-btn.active {
         background: var(--primary-color);
-        border-color: var(--secondary-color);
     }
 
     .slide-btn:hover {
@@ -6002,13 +6124,14 @@ s {
         color: var(--primary-color);
     }
 
-    .gallery-modal {
+.gallery-modal {
         background: rgba(0, 0, 0, 0.9);
     }
 
     .gallery-modal-content {
-        background: var(--card-bg);
+        background-color: #1f2937; /* Темне тло для темної теми */
         box-shadow: 0 6px 20px var(--shadow-color);
+        border-color: #374151; /* Темніша рамка для темної теми */
     }
 
     .gallery-close {
@@ -6027,6 +6150,14 @@ s {
     .gallery-prev:hover,
     .gallery-next:hover {
         background: rgba(96, 165, 250, 0.7);
+    }
+
+    .gallery-thumbnails::-webkit-scrollbar-thumb {
+        background-color: #555;
+    }
+
+    .gallery-thumbnails::-webkit-scrollbar-track {
+        background: #333;
     }
 
     .cart-modal {

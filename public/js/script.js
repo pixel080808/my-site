@@ -4340,19 +4340,67 @@ function openGallery(productSlug, index = 0) {
         return;
     }
     console.log('Відкриття галереї для товару:', product.name, 'Slug:', product.slug, 'Фотографії:', product.photos);
-    currentGalleryImages = []; 
     currentGalleryImages = [...product.photos];
-    console.log('currentGalleryImages:', currentGalleryImages);
     currentGalleryIndex = Math.max(0, Math.min(index, product.photos.length - 1));
     const modal = document.getElementById('gallery-modal');
     const img = document.getElementById('gallery-image');
-    if (modal && img) {
+    const thumbnails = document.getElementById('gallery-thumbnails');
+    if (modal && img && thumbnails) {
         img.src = currentGalleryImages[currentGalleryIndex];
         console.log('Встановлено зображення:', img.src);
+
+        // Clear and rebuild thumbnails
+        thumbnails.innerHTML = '';
+        currentGalleryImages.forEach((photo, i) => {
+            const thumbImg = document.createElement('img');
+            thumbImg.src = photo;
+            thumbImg.className = `thumbnail ${i === currentGalleryIndex ? 'active' : ''}`;
+            thumbImg.alt = `Мініатюра ${i + 1}`;
+            thumbImg.onclick = () => {
+                currentGalleryIndex = i;
+                img.src = currentGalleryImages[currentGalleryIndex];
+                updateThumbnails();
+            };
+            thumbnails.appendChild(thumbImg);
+        });
+
         modal.style.display = 'flex';
         modal.classList.add('active');
     } else {
-        console.error('Модальне вікно або зображення не знайдено:', { modal, img });
+        console.error('Модальне вікно, зображення або контейнер мініатюр не знайдено:', { modal, img, thumbnails });
+    }
+}
+
+function updateThumbnails() {
+    const thumbnails = document.getElementById('gallery-thumbnails');
+    if (thumbnails) {
+        const thumbImages = thumbnails.getElementsByClassName('thumbnail');
+        for (let thumb of thumbImages) {
+            thumb.classList.remove('active');
+            if (thumb.src === currentGalleryImages[currentGalleryIndex]) {
+                thumb.classList.add('active');
+            }
+        }
+    }
+}
+
+function prevGalleryImage() {
+    if (currentGalleryImages.length === 0) return;
+    currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryImages.length) % currentGalleryImages.length;
+    const img = document.getElementById('gallery-image');
+    if (img) {
+        img.src = currentGalleryImages[currentGalleryIndex];
+        updateThumbnails();
+    }
+}
+
+function nextGalleryImage() {
+    if (currentGalleryImages.length === 0) return;
+    currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryImages.length;
+    const img = document.getElementById('gallery-image');
+    if (img) {
+        img.src = currentGalleryImages[currentGalleryIndex];
+        updateThumbnails();
     }
 }
 
@@ -4365,20 +4413,6 @@ function closeGallery() {
     currentGalleryImages = []; 
     currentGalleryIndex = 0;
     console.log('Галерею закрито, currentGalleryImages очищено');
-}
-
-function prevGalleryImage() {
-    if (currentGalleryImages.length === 0) return;
-    currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryImages.length) % currentGalleryImages.length;
-    const img = document.getElementById('gallery-image');
-    if (img) img.src = currentGalleryImages[currentGalleryIndex];
-}
-
-function nextGalleryImage() {
-    if (currentGalleryImages.length === 0) return;
-    currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryImages.length;
-    const img = document.getElementById('gallery-image');
-    if (img) img.src = currentGalleryImages[currentGalleryIndex];
 }
 
 function showNotification(message, type = 'success') {

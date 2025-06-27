@@ -8,488 +8,365 @@
     <meta name="robots" content="index, follow"/>
     <meta property="og:title" content="Меблевий магазин"/>
     <meta property="og:description" content="Якісні меблі для вашого дому за доступними цінами."/>
-    <meta property="og:image" content="https://picsum.photos/1200/630"/> <!-- Замініть на реальне зображення -->
-    <meta property="og:url" content="https://mebli.onrender.com"/> <!-- Оновлено URL -->
+    <meta property="og:image" content="https://picsum.photos/1200/630"/>
+    <meta property="og:url" content="https://mebli.onrender.com"/>
     <meta property="og:type" content="website"/>
     <title>Меблевий магазин</title>
     <link href="/css/styles.css" rel="stylesheet"/>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <!-- Основний скрипт із defer -->
-    <script type="text/javascript" src="/js/script.js?v=1.0.23" defer></script>
-    <!-- Google Analytics асинхронно -->
+    <script type="text/javascript" src="/js/script.js?v=1.0.24" defer></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX'); // Замініть G-XXXXXXXXXX на ваш ID Google Analytics
+        gtag('config', 'G-XXXXXXXXXX');
     </script>
-    <!-- LZ-String із defer -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-.logo {
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    width: 150px;
-    height: auto; 
-    padding-top: 18%;
-    cursor: pointer;
-    position: relative;
-}
-#about-text img,
-#about-text iframe {
-    max-width: 100%;
-    height: auto;
-    margin: 10px 0;
-}
-.group-product-item {
-    display: flex;
-    align-items: center;
-    margin: 20px 0;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
-}
-
-.group-product-item:hover {
-    transform: translateY(-3px);
-}
-
-.group-product-item img {
-    width: 150px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 5px;
-    margin-right: 20px;
-    cursor: pointer;
-}
-
-.group-product-item label {
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
-
-.group-product-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    margin-right: 15px;
-    cursor: pointer;
-}
-
-.group-product-item .group-product-info {
-    flex: 1;
-}
-
-.group-product-item .group-product-info h4 {
-    margin: 0 0 8px 0;
-    font-size: 18px;
-    color: #333;
-    cursor: pointer;
-}
-
-.group-product-item .group-product-info h4:hover {
-    color: #333;
-}
-
-.group-product-item .group-product-info .price {
-    margin: 8px 0;
-}
-
-.group-product-item .group-product-info .price .sale-price {
-    color: #EF4444;
-    font-size: 20px;
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.group-product-item .group-product-info .price s {
-    color: #999;
-    font-size: 16px;
-}
-
-.group-product-item .group-product-info .price .regular-price {
-    color: #000;
-    font-size: 18px;
-}
-
-.group-product-item .group-product-info .dimensions {
-    font-size: 14px;
-    margin-top: 8px;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 15px;
-}
-
-.group-product-item .group-product-info .dimensions .dimension-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.group-product-item .group-product-info .dimensions .dimension-item .label {
-    font-weight: bold;
-    min-width: 60px;
-    margin-bottom: 2px;
-}
-
-.group-product-item .group-product-info .dimensions .dimension-item .value {
-    margin-right: 0;
-}
-
-.group-product-item .group-product-info .dimensions .values {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-}
-
-.group-product-item .group-product-info .dimensions .values .value + .value::before {
-    content: "×";
-    margin: 0 5px;
-}
-
-.sale-timer {
-    font-size: 14px;
-    color: #EF4444;
-    margin-top: 5px;
-}
-.custom-select {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-    background-color: #fff;
-    cursor: pointer;
-}
-.price-start {
-    font-size: 16px;
-    display: inline;
-}
-.price-value {
-    font-size: 22px;
-    color: #000; 
-    display: inline;
-}
-
-.price .regular-price {
-    color: #000; 
-    font-size: 18px;
-}
-.price .sale-price {
-    color: #EF4444;
-    font-size: 22px;
-    font-weight: bold;
-    margin-right: 10px;
-}
-.price s {
-    color: #999;
-    font-size: 16px;
-}
-
-.product-item {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin: 10px;
-    border-radius: 5px;
-    text-align: center;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
-}
-.product-item:hover {
-    transform: translateY(-3px);
-}
-.product-item img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 5px;
-}
-.product-item h3 {
-    font-size: 18px;
-    margin: 10px 0;
-    color: #333;
-}
-.product-item a {
-    display: inline-block;
-    margin-top: 10px;
-    color: #007bff;
-    text-decoration: none;
-}
-.product-item a:hover {
-    text-decoration: underline;
-}
-
-.cart-item-image, .cart-item span {
-    cursor: pointer;
-}
-
-.products {
-    flex: 1;
-    padding: 1px;
-    min-width: 0;
-    margin-top: 60px;
-}
-
-.product-detail-price {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-}
-
-.product-detail-price s {
-    font-size: 20px;
-    color: #999;
-    text-decoration: line-through;
-    order: 1; /* Перекреслена звичайна ціна зверху */
-}
-
-.product-detail-price .sale-price {
-    font-size: 28px;
-    color: #EF4444;
-    font-weight: bold;
-    order: 2; /* Акційна ціна знизу */
-}
-
-.product-detail-price .regular-price {
-    font-size: 24px;
-    color: #000; /* Для неакційних товарів */
-}
-
-.back-to-group-btn {
-    background-color: #E2E8F0; 
-    color: #2D3748;
-    border: 1px solid var(--border-color);
-    border-radius: 25px;
-    padding: 12px 20px; 
-    font-weight: 500;
-    font-size: 14px; 
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    width: 100%; 
-    max-width: 255px; 
-    height: 48px; 
-    display: flex; 
-    align-items: center;
-    justify-content: center;
-    margin: 15px auto; 
-    box-sizing: border-box;
-}
-
-.back-to-group-btn:hover {
-    background-color: #D1D5DB; 
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-#socials {
-    margin-top: 20px;
-}
-
-#socials h3 {
-    font-size: 1.5em;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.social-link {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 15px;
-    margin-bottom: 10px;
-    text-decoration: none;
-    color: #007bff;
-    font-size: 1.1em;
-    transition: color 0.2s;
-}
-
-.social-link:hover {
-    color: #0056b3;
-    text-decoration: underline;
-}
-
-.social-link .social-icon {
-    margin-right: 5px;
-    font-size: 1.2em;
-}
-
-@media (max-width: 600px) {
-    .social-link {
-        display: flex;
-        margin-bottom: 15px;
-        font-size: 1em;
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    #socials h3 {
-    font-size: 1.5em;
-    margin-bottom: 10px;
-    color: #e6e6e6;
-    }
-}
+        .logo {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 150px;
+            height: auto;
+            padding-top: 18%;
+            cursor: pointer;
+            position: relative;
+        }
+        #about-text img,
+        #about-text iframe {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+        }
+        .group-product-item {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .group-product-item:hover {
+            transform: translateY(-3px);
+        }
+        .group-product-item img {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-right: 20px;
+            cursor: pointer;
+        }
+        .group-product-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .group-product-item .group-product-info h4 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #333;
+            cursor: pointer;
+        }
+        .group-product-item .group-product-info .price {
+            margin: 8px 0;
+        }
+        .group-product-item .group-product-info .price .sale-price {
+            color: #EF4444;
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .group-product-item .group-product-info .price s {
+            color: #999;
+            font-size: 16px;
+        }
+        .group-product-item .group-product-info .price .regular-price {
+            color: #000;
+            font-size: 18px;
+        }
+        .group-product-item .group-product-info .dimensions {
+            font-size: 14px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+        }
+        .sale-timer {
+            font-size: 14px;
+            color: #EF4444;
+            margin-top: 5px;
+        }
+        .custom-select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .price-start {
+            font-size: 16px;
+            display: inline;
+        }
+        .price-value {
+            font-size: 22px;
+            color: #000;
+            display: inline;
+        }
+        .price .regular-price {
+            color: #000;
+            font-size: 18px;
+        }
+        .price .sale-price {
+            color: #EF4444;
+            font-size: 22px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .price s {
+            color: #999;
+            font-size: 16px;
+        }
+        .product-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+            text-align: center;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .product-item:hover {
+            transform: translateY(-3px);
+        }
+        .product-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .product-item h3 {
+            font-size: 18px;
+            margin: 10px 0;
+            color: #333;
+        }
+        .product-item a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .cart-item-image, .cart-item span {
+            cursor: pointer;
+        }
+        .products {
+            flex: 1;
+            padding: 1px;
+            min-width: 0;
+            margin-top: 60px;
+        }
+        .product-detail-price {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        .product-detail-price s {
+            font-size: 20px;
+            color: #999;
+            text-decoration: line-through;
+            order: 1;
+        }
+        .product-detail-price .sale-price {
+            font-size: 28px;
+            color: #EF4444;
+            font-weight: bold;
+            order: 2;
+        }
+        .product-detail-price .regular-price {
+            font-size: 24px;
+            color: #000;
+        }
+        .back-to-group-btn {
+            background-color: #E2E8F0;
+            color: #2D3748;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+            width: 100%;
+            max-width: 255px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px auto;
+            box-sizing: border-box;
+        }
+        .back-to-group-btn:hover {
+            background-color: #D1D5DB;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        #socials {
+            margin-top: 20px;
+        }
+        #socials h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 15px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #007bff;
+            font-size: 1.1em;
+            transition: color 0.2s;
+        }
+        .social-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        .social-link .social-icon {
+            margin-right: 5px;
+            font-size: 1.2em;
+        }
+        @media (prefers-color-scheme: dark) {
+            #socials h3 {
+                color: #e6e6e6;
+            }
+        }
     </style>
 </head>
 <body>
-<header>
-    <div class="logo" id="logo" onclick="showSection('home')">
-    </div>
-    <div class="logo-text" id="logo-text">
-    </div>
-    <div class="phones" id="phones">
-    </div>
-    <div class="search-cart-container">
-        <div class="search-bar">
-            <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
-            <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
+    <header>
+        <div class="logo" id="logo" onclick="showSection('home')"></div>
+        <div class="logo-text" id="logo-text"></div>
+        <div class="phones" id="phones"></div>
+        <div class="search-cart-container">
+            <div class="search-bar">
+                <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
+                <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
+            </div>
+            <div class="cart" onclick="showSection('cart')">
+                <span class="cart-count">0</span>
+            </div>
         </div>
-        <div class="cart" onclick="showSection('cart')">
-            <span class="cart-count">
-                0
-            </span>
+    </header>
+    <nav class="nav">
+        <a href="#" id="nav-home" onclick="showSection('home'); return false;">Головна</a>
+        <div class="catalog-menu">
+            <a href="#" id="catalog-toggle">Каталог</a>
+            <div class="dropdown" id="catalog-dropdown"></div>
         </div>
-    </div>
-</header>
-<nav class="nav">
-    <a href="#" id="nav-home" onclick="showSection('home'); return false;">
-        Головна
-    </a>
-<div class="catalog-menu">
-    <a href="#" id="catalog-toggle">
-        Каталог
-    </a>
-    <div class="dropdown" id="catalog-dropdown"></div>
-</div>
-    <a href="#" id="nav-contacts" onclick="showSection('contacts'); return false;">
-        Контакти
-    </a>
-    <a href="#" id="nav-about" onclick="showSection('about'); return false;">
-        Про нас
-    </a>
-</nav>
-    <div class="breadcrumbs" id="breadcrumbs">
-    </div>
+        <a href="#" id="nav-contacts" onclick="showSection('contacts'); return false;">Контакти</a>
+        <a href="#" id="nav-about" onclick="showSection('about'); return false;">Про нас</a>
+    </nav>
+    <div class="breadcrumbs" id="breadcrumbs"></div>
     <div class="content">
         <div class="section active" id="home">
-            <div class="slideshow" id="slideshow">
-            </div>
-            <div class="categories" id="categories">
-            </div>
+            <div class="slideshow" id="slideshow"></div>
+            <div class="categories" id="categories"></div>
         </div>
-<div class="section" id="catalog">
-    <div class="container">
-<div class="filters">
-    <div class="filter-scroll" id="filter-list"></div>
-    <button class="back-btn">Назад</button>
-</div>
-        <div class="products" id="products">
-            <div class="filter-sort-container">
-                <div class="sort-menu">
-                    <button class="sort-btn">Сортування</button>
-                    <div class="sort-dropdown">
-                        <button onclick="sortProducts('price-asc')">За ціною (зростання)</button>
-                        <button onclick="sortProducts('price-desc')">За ціною (спадання)</button>
-                        <button onclick="sortProducts('name-asc')">За назвою (А-Я)</button>
-                        <button onclick="sortProducts('name-desc')">За назвою (Я-А)</button>
+        <div class="section" id="catalog">
+            <div class="container">
+                <div class="filters">
+                    <div class="filter-scroll" id="filter-list"></div>
+                    <button class="back-btn">Назад</button>
+                </div>
+                <div class="products" id="products">
+                    <div class="filter-sort-container">
+                        <div class="sort-menu">
+                            <button class="sort-btn">Сортування</button>
+                            <div class="sort-dropdown">
+                                <button onclick="sortProducts('price-asc')">За ціною (зростання)</button>
+                                <button onclick="sortProducts('price-desc')">За ціною (спадання)</button>
+                                <button onclick="sortProducts('name-asc')">За назвою (А-Я)</button>
+                                <button onclick="sortProducts('name-desc')">За назвою (Я-А)</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-grid" id="product-grid"></div>
+                    <div class="pagination-container">
+                        <button class="show-more-btn" onclick="loadMoreProducts()">Показати ще</button>
+                        <div class="pagination">
+                            <button class="page-btn active" onclick="changePage(1)">1</button>
+                            <button class="page-btn" onclick="changePage(2)">2</button>
+                            <button class="page-btn" onclick="changePage(3)">3</button>
+                            <button class="page-btn" onclick="changePage(4)">4</button>
+                            <button class="page-btn" onclick="changePage(5)">5</button>
+                            <button class="pagination-arrow" onclick="nextPage()">></button>
+                            <button class="pagination-arrow" onclick="prevPage()"><</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="product-grid" id="product-grid"></div>
-            <div class="pagination-container">
-                <button class="show-more-btn" onclick="loadMoreProducts()">Показати ще</button>
-                <div class="pagination">
-                    <button class="page-btn active" onclick="changePage(1)">1</button>
-                    <button class="page-btn" onclick="changePage(2)">2</button>
-                    <button class="page-btn" onclick="changePage(3)">3</button>
-                    <button class="page-btn" onclick="changePage(4)">4</button>
-                    <button class="page-btn" onclick="changePage(5)">5</button>
-                    <button class="pagination-arrow" onclick="nextPage()">></button>
-                    <button class="pagination-arrow" onclick="prevPage()"><</button>
-                </div>
-            </div>
         </div>
-    </div>
-</div>
         <div class="section" id="cart">
-            <div id="cart-items">
-            </div>
-            <div id="cart-content">
-            </div>
+            <div id="cart-items"></div>
+            <div id="cart-content"></div>
         </div>
         <div class="section" id="contacts">
-            <div id="contact-info">
-            </div>
-            <div id="socials">
-            </div>
+            <div id="contact-info"></div>
+            <div id="socials"></div>
         </div>
         <div class="section" id="about">
-            <div id="about-text">
-            </div>
+            <div id="about-text"></div>
         </div>
-        <div class="section" id="product-details">
-        </div>
+        <div class="section" id="product-details"></div>
     </div>
-    <div class="notification" id="notification">
-    </div>
+    <div class="notification" id="notification"></div>
     <div class="confirm-modal" id="confirm-modal">
         <div class="confirm-modal-content">
-            <p>
-                Чи дійсно видалити товар з кошика?
-            </p>
-            <button class="confirm-btn" onclick="confirmRemoveFromCart()">
-                Так
-            </button>
-            <button class="cancel-btn" onclick="closeConfirmModal()">
-                Ні
-            </button>
+            <p>Чи дійсно видалити товар з кошика?</p>
+            <button class="confirm-btn" onclick="confirmRemoveFromCart()">Так</button>
+            <button class="cancel-btn" onclick="closeConfirmModal()">Ні</button>
         </div>
     </div>
-    <div class="gallery-modal" id="gallery-modal">
-        <div class="gallery-modal-content">
-            <span class="gallery-close" onclick="closeGallery()">
-                ×
-            </span>
-            <button class="gallery-prev" onclick="prevGalleryImage()">
-                ◄
-            </button>
-            <img alt="" class="gallery-image" id="gallery-image" loading="lazy"/>
-            <button class="gallery-next" onclick="nextGalleryImage()">
-                ►
-            </button>
-        </div>
-    </div>
-<!-- Бургер-меню -->
-<div class="burger-menu" id="burger-menu">
-    <div class="burger-icon" id="burger-icon">
-        <span></span>
-        <span></span>
-        <span></span>
-    </div>
-    <div class="burger-content" id="burger-content">
-        <div class="burger-search">
-            <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
-            <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
-        </div>
-        <a href="#" onclick="showSection('home'); return false;">Головна</a>
-        <div class="burger-catalog">
-            <a href="#" id="burger-catalog-toggle">Каталог</a>
-            <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
-        </div>
+<div class="gallery-modal" id="gallery-modal">
+    <div class="gallery-modal-content">
+        <span class="gallery-close" onclick="closeGallery()">×</span>
+        <button class="gallery-prev" onclick="prevGalleryImage()">◄</button>
+        <img alt="" class="gallery-image" id="gallery-image" loading="lazy"/>
+        <button class="gallery-next" onclick="nextGalleryImage()">►</button>
+        <div id="gallery-thumbnails"></div>
     </div>
 </div>
+    <div class="burger-menu" id="burger-menu">
+        <div class="burger-icon" id="burger-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="burger-content" id="burger-content">
+            <div class="burger-search">
+                <input aria-label="Пошук товарів" id="burger-search" placeholder="Пошук..." type="text"/>
+                <button aria-label="Шукати" class="burger-search-btn" onclick="searchProducts()"></button>
+            </div>
+            <a href="#" onclick="showSection('home'); return false;">Головна</a>
+            <div class="burger-catalog">
+                <a href="#" id="burger-catalog-toggle">Каталог</a>
+                <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
+            </div>
+        </div>
     </div>
-<!-- Плаваючий кошик -->
-<div class="floating-cart" id="floating-cart">
-    <span class="cart-count"></span>
-</div>
-    <!-- Підключаємо script.js -->
+    <div class="floating-cart" id="floating-cart">
+        <span class="cart-count"></span>
+    </div>
     <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
 </html>
