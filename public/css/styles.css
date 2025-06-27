@@ -2798,9 +2798,9 @@ s {
 .gallery-modal-content {
     position: relative;
     width: 100%;
-    max-width: 900px; /* Збільшено для ширшої рамки */
-    max-height: 85vh;
-    padding: 20px; /* Додано відступ навколо вмісту */
+    max-width: 900px; /* Збільшено ширину полотна */
+    max-height: 90vh;
+    padding: 30px; /* Збільшено відступ для кращого простору */
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
@@ -2808,29 +2808,28 @@ s {
     display: flex;
     flex-direction: column;
     background-color: #ffffff; /* Біле тло для світлої теми */
-    border: 1px solid #e5e7eb; /* Легка рамка для стилю */
 }
 
 .gallery-modal-content:hover {
-    transform: scale(1.00);
+    transform: scale(1.00); /* Елегантне масштабування */
 }
 
 .gallery-image {
     width: 100%;
-    max-height: 70vh;
+    max-height: 120vh;
     height: auto;
     aspect-ratio: 4 / 3 !important;
     object-fit: cover !important;
     border-radius: 8px;
     transition: opacity var(--transition-speed) ease;
-    margin-bottom: 15px; /* Додано відступ між зображенням і мініатюрами */
+    margin-bottom: 15px; /* Відступ між зображенням і мініатюрами */
 }
 
 .gallery-thumbnails {
     display: flex;
     justify-content: center;
-    gap: 15px; /* Збільшено відстань між мініатюрами */
-    padding: 15px 20px; /* Додано внутрішній відступ для контейнера мініатюр */
+    gap: 15px; /* Відстань між мініатюрами */
+    padding: 15px 20px; /* Внутрішній відступ для контейнера */
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
@@ -2858,12 +2857,12 @@ s {
     border-radius: 4px;
     cursor: pointer;
     transition: border-color var(--transition-speed) ease, opacity var(--transition-speed) ease;
-    opacity: 0.6; /* Початкова прозорість для неактивних мініатюр */
+    opacity: 0.6; /* Прозорість для неактивних */
 }
 
 .thumbnail.active {
     border-color: var(--primary-color);
-    opacity: 1; /* Чітке відображення активної мініатюри */
+    opacity: 1; /* Чіткість для активної */
 }
 
 .gallery-close {
@@ -3416,13 +3415,13 @@ s {
     }
 
 .gallery-modal-content {
-        max-width: 90%;
+        max-width: 99%;
         max-height: 80vh;
-        padding: 10px;
+        padding: 1px;
     }
 
     .gallery-image {
-        max-height: 50vh;
+        max-height: 100vh;
         margin-bottom: 10px;
     }
 
@@ -4205,12 +4204,12 @@ s {
     }
 
 .gallery-modal-content {
-        max-width: 95%;
-        padding: 15px;
+        max-width: 90%;
+        padding: 1px;
     }
 
     .gallery-image {
-        max-height: 60vh;
+        max-height: 90vh;
         margin-bottom: 12px;
     }
 
@@ -4229,11 +4228,11 @@ s {
     }
 
     .gallery-prev {
-        left: 5px;
+        left: 2px;
     }
 
     .gallery-next {
-        right: 5px;
+        right: 2px;
     }
 
 .group-products {
@@ -4817,15 +4816,15 @@ s {
     }
 
 .gallery-modal-content {
-        padding: 20px;
+        padding: 55px;
     }
 
     .gallery-prev {
-        left: 10px;
+        left: 2px;
     }
 
     .gallery-next {
-        right: 10px;
+        right: 2px;
     }
 
 .group-products {
@@ -6131,7 +6130,7 @@ s {
     .gallery-modal-content {
         background-color: #1f2937; /* Темне тло для темної теми */
         box-shadow: 0 6px 20px var(--shadow-color);
-        border-color: #374151; /* Темніша рамка для темної теми */
+        border-color: #374151; /* Темніша рамка */
     }
 
     .gallery-close {
