@@ -2798,8 +2798,8 @@ s {
 .gallery-modal-content {
     position: relative;
     width: 100%;
-    max-width: 900px; /* Збільшено ширину полотна */
-    max-height: 90vh;
+    max-width: 750px; /* Збільшено ширину полотна */
+    max-height: 85vh;
     padding: 30px; /* Збільшено відступ для кращого простору */
     border-radius: 12px;
     overflow: hidden;
@@ -2889,12 +2889,12 @@ s {
 .gallery-prev,
 .gallery-next {
     position: absolute;
-    top: 50%;
-    width: 50px;
-    height: 50px;
+    top: 45%;
+    width: 45px;
+    height: 45px;
     background: rgba(0, 0, 0, 0.5);
     color: white;
-    font-size: 25px;
+    font-size: 24px;
     line-height: 50px;
     text-align: center;
     cursor: pointer;
@@ -4204,7 +4204,7 @@ s {
     }
 
 .gallery-modal-content {
-        max-width: 90%;
+        max-width: 80%;
         padding: 1px;
     }
 
