@@ -488,13 +488,40 @@ h3:hover {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
 }
 
+/* Стиль для слайдів */
 .slide {
     display: none;
     width: 100%;
     position: relative;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: pan-y;
+    touch-action: manipulation; /* Обмежуємо обробку лише тапами та свайпами */
+}
+
+/* Стиль для посилання */
+.slide-link {
+    display: block; /* Змінено для повного покриття слайду */
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Решта стилів */
+.slideshow {
+    position: relative;
+    margin: 15px auto;
+    border-radius: 12px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 1200px;
+    box-sizing: border-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: box-shadow var(--transition-speed) ease;
+}
+
+.slideshow:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
 }
 
 .slide.active {
@@ -515,7 +542,7 @@ h3:hover {
     bottom: 20px;
     left: 20px;
     color: #FFFFFF;
-    background: rgb(0 0 0 / 0%);
+    background: rgba(0, 0, 0, 0.7);
     padding: 15px;
     border-radius: 8px;
     max-width: 400px;
@@ -530,22 +557,6 @@ h3:hover {
 .slide-content p {
     font-size: 16px;
     margin: 0 0 15px 0;
-    color: #FFFFFF;
-}
-
-.slide-content a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
-    padding: 8px 15px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 25px;
-    display: inline-block;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.slide-content a:hover {
-    background: var(--secondary-color);
     color: #FFFFFF;
 }
 
@@ -3555,7 +3566,7 @@ s {
         font-size: 18px;
     }
 
-    .slide img {
+.slide img {
         max-height: 200px;
     }
 
@@ -3564,7 +3575,6 @@ s {
         left: 10px;
         padding: 10px;
         max-width: 250px;
-        background: rgb(0 0 0 / 0%);
     }
 
     .slide-content h2 {
@@ -3574,11 +3584,6 @@ s {
     .slide-content p {
         font-size: 14px;
         margin-bottom: 10px;
-    }
-
-    .slide-content a {
-        padding: 5px 10px;
-        font-size: 14px;
     }
 
     .slide-nav {
@@ -3591,7 +3596,7 @@ s {
     }
 
     .slide-arrow {
-        display: none; /* Hide arrows on small screens */
+        display: none;
     }
 
     .categories {
@@ -4355,7 +4360,7 @@ s {
         font-size: 20px;
     }
 
-    .slide img {
+.slide img {
         max-height: 250px;
     }
 
@@ -4373,11 +4378,6 @@ s {
     .slide-content p {
         font-size: 15px;
         margin-bottom: 12px;
-    }
-
-    .slide-content a {
-        padding: 6px 12px;
-        font-size: 15px;
     }
 
     .slide-arrow {
@@ -4891,7 +4891,7 @@ s {
         font-size: 23px;
     }
 
-    .slide img {
+.slide img {
         max-height: 400px;
     }
 
@@ -4907,11 +4907,6 @@ s {
     }
 
     .slide-content p {
-        font-size: 16px;
-    }
-
-    .slide-content a {
-        padding: 8px 15px;
         font-size: 16px;
     }
 
@@ -5574,7 +5569,7 @@ s {
         color: var(--primary-color);
     }
 
-    .slideshow {
+.slideshow {
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 

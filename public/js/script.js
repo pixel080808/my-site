@@ -4237,6 +4237,8 @@ function renderSlideshow() {
     slideshow.style.display = 'block';
     while (slideshow.firstChild) slideshow.removeChild(slideshow.firstChild);
 
+    let isProcessing = false; // Захист від повторних викликів
+
     slides.forEach((slide, i) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
@@ -4245,13 +4247,12 @@ function renderSlideshow() {
         if (slide.link) {
             const linkWrapper = document.createElement('a');
             linkWrapper.href = slide.link;
-            linkWrapper.target = '_blank'; // Відкриває у новій вкладці
+            linkWrapper.className = 'slide-link'; // Використовуємо клас для стилізації
             linkWrapper.style.display = 'block';
             linkWrapper.style.width = '100%';
             linkWrapper.style.height = '100%';
             linkWrapper.style.cursor = 'pointer';
-            linkWrapper.style.textDecoration = 'none'; // Без підкреслення
-            linkWrapper.style.pointerEvents = 'auto'; // Дозволяємо кліки на посиланні
+            linkWrapper.style.textDecoration = 'none';
 
             const img = document.createElement('img');
             img.src = slide.photo || NO_IMAGE_URL;
@@ -4297,18 +4298,22 @@ function renderSlideshow() {
         const maxVerticalDistance = 30; // Максимальна вертикальна відстань для розпізнавання свайпу
 
         slideDiv.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Запобігаємо стандартній поведінці браузера
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
             touchEndX = 0;
             touchEndY = 0;
-        }, { passive: true });
+        }, { passive: false });
 
         slideDiv.addEventListener('touchmove', (e) => {
             touchEndX = e.changedTouches[0].screenX;
             touchEndY = e.changedTouches[0].screenY;
         }, { passive: true });
 
-        slideDiv.addEventListener('touchend', () => {
+        slideDiv.addEventListener('touchend', (e) => {
+            if (isProcessing) return;
+            isProcessing = true;
+
             const swipeDistanceX = touchEndX - touchStartX;
             const swipeDistanceY = Math.abs(touchEndY - touchStartY);
 
@@ -4321,12 +4326,17 @@ function renderSlideshow() {
                 renderSlideshow();
                 startSlideshow();
             }
+
+            setTimeout(() => {
+                isProcessing = false;
+            }, 100);
         }, { passive: true });
 
-        // Блокуємо будь-який клік для перемикання
+        // Запобігаємо перемиканню слайдів при кліках (крім посилань)
         slideDiv.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (!slide.link) {
+                e.preventDefault(); // Блокуємо кліки для слайдів без посилань
+            }
         }, { passive: false });
 
         slideshow.appendChild(slideDiv);
@@ -4337,7 +4347,15 @@ function renderSlideshow() {
     slides.forEach((_, i) => {
         const btn = document.createElement('button');
         btn.className = `slide-btn${i === currentSlideIndex ? ' active' : ''}`;
-        btn.onclick = () => { currentSlideIndex = i; renderSlideshow(); startSlideshow(); };
+        btn.onclick = () => { 
+            if (!isProcessing) {
+                isProcessing = true;
+                currentSlideIndex = i;
+                renderSlideshow();
+                startSlideshow();
+                setTimeout(() => { isProcessing = false; }, 100);
+            }
+        };
         navDiv.appendChild(btn);
     });
     slideshow.appendChild(navDiv);
@@ -4346,14 +4364,30 @@ function renderSlideshow() {
     prevBtn.className = 'slide-arrow slide-arrow-prev';
     prevBtn.setAttribute('aria-label', 'Попередній слайд');
     prevBtn.textContent = '◄';
-    prevBtn.onclick = () => { currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length; renderSlideshow(); startSlideshow(); };
+    prevBtn.onclick = () => { 
+        if (!isProcessing) {
+            isProcessing = true;
+            currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+            renderSlideshow();
+            startSlideshow();
+            setTimeout(() => { isProcessing = false; }, 100);
+        }
+    };
     slideshow.appendChild(prevBtn);
 
     const nextBtn = document.createElement('button');
     nextBtn.className = 'slide-arrow slide-arrow-next';
     nextBtn.setAttribute('aria-label', 'Наступний слайд');
     nextBtn.textContent = '►';
-    nextBtn.onclick = () => { currentSlideIndex = (currentSlideIndex + 1) % slides.length; renderSlideshow(); startSlideshow(); };
+    nextBtn.onclick = () => { 
+        if (!isProcessing) {
+            isProcessing = true;
+            currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+            renderSlideshow();
+            startSlideshow();
+            setTimeout(() => { isProcessing = false; }, 100);
+        }
+    };
     slideshow.appendChild(nextBtn);
 
     startSlideshow();
