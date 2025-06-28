@@ -4247,7 +4247,7 @@ function renderSlideshow() {
         if (slide.link) {
             const linkWrapper = document.createElement('a');
             linkWrapper.href = slide.link;
-            linkWrapper.className = 'slide-link'; // Використовуємо клас для стилізації
+            linkWrapper.className = 'slide-link';
             linkWrapper.style.display = 'block';
             linkWrapper.style.width = '100%';
             linkWrapper.style.height = '100%';
@@ -4298,12 +4298,14 @@ function renderSlideshow() {
         const maxVerticalDistance = 30; // Максимальна вертикальна відстань для розпізнавання свайпу
 
         slideDiv.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Запобігаємо стандартній поведінці браузера
+            if (!slide.link) {
+                e.preventDefault(); // Блокуємо стандартну поведінку лише для слайдів без посилань
+            }
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
             touchEndX = 0;
             touchEndY = 0;
-        }, { passive: false });
+        }, { passive: !slide.link }); // passive: false лише для слайдів без посилань
 
         slideDiv.addEventListener('touchmove', (e) => {
             touchEndX = e.changedTouches[0].screenX;

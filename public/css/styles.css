@@ -472,23 +472,6 @@ h3:hover {
     padding: 0;
 }
 
-.slideshow {
-    position: relative;
-    margin: 15px auto;
-    border-radius: 12px;
-    overflow: hidden;
-    width: 100%;
-    max-width: 1200px;
-    box-sizing: border-box;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    transition: box-shadow var(--transition-speed) ease;
-}
-
-.slideshow:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-}
-
-/* Стиль для слайдів */
 .slide {
     display: none;
     width: 100%;
@@ -500,7 +483,7 @@ h3:hover {
 
 /* Стиль для посилання */
 .slide-link {
-    display: block; /* Змінено для повного покриття слайду */
+    display: block; /* Повне покриття слайду */
     width: 100%;
     height: 100%;
     text-decoration: none;
@@ -542,7 +525,6 @@ h3:hover {
     bottom: 20px;
     left: 20px;
     color: #FFFFFF;
-    background: rgba(0, 0, 0, 0.7);
     padding: 15px;
     border-radius: 8px;
     max-width: 400px;
@@ -5575,10 +5557,6 @@ s {
 
     .slideshow:hover {
         box-shadow: 0 6px 18px var(--shadow-color);
-    }
-
-    .slide-content {
-        background: rgba(0, 0, 0, 0.7);
     }
 
     .slide-btn {
