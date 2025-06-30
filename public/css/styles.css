@@ -3418,19 +3418,23 @@ s {
     }
 
 .gallery-modal-content {
-        width: 95vw;
-        max-height: 95vh;
-        padding: 15px; /* Зменшено, але достатньо для кнопки */
+        width: 100vw; /* Заповнення всієї ширини екрана */
+        height: auto; /* Динамічна висота для вмісту */
+        padding: 10px 0 0 0; /* Додати верхній відступ 10px, прибрати бічні */
     }
 
     .gallery-image {
-        max-height: 65vh;
+        width: 100%;
+        height: auto; /* Динамічна висота для повного відображення */
         margin-bottom: 10px;
+        object-fit: contain; /* Повне відображення без обрізання */
+        padding: 0; /* Прибрати внутрішні відступи */
+        aspect-ratio: 4 / 3; /* Фіксована пропорція для всіх фото */
     }
 
     .gallery-thumbnails {
         gap: 8px;
-        padding: 8px 10px;
+        padding: 8px 0; /* Прибрати горизонтальні відступи */
         padding-bottom: 8px;
     }
 
@@ -3439,8 +3443,18 @@ s {
         height: 36px;
     }
 
+    .gallery-close {
+        position: absolute;
+        top: 10px; /* Розташування на зображенні */
+        right: 10px;
+        margin: 0; /* Прибрати зовнішній відступ */
+    }
+
     .gallery-prev,
     .gallery-next {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
         width: 30px;
         height: 30px;
         font-size: 18px;
@@ -3453,12 +3467,6 @@ s {
 
     .gallery-next {
         right: 5px;
-    }
-
-    .gallery-close {
-        top: 15px;
-        right: 15px;
-        margin: 3px;
     }
 
 .group-products {
