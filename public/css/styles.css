@@ -263,6 +263,7 @@ header.scrolled {
 .catalog-menu {
     display: inline-block;
     position: relative;
+    text-align: center;
 }
 
 #catalog-dropdown,
@@ -280,6 +281,7 @@ header.scrolled {
     padding: 8px 0;
     transition: opacity var(--transition-speed) ease;
     font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    font-size: 16px; /* Базовий розмір шрифту для адаптації */
 }
 
 .catalog-menu #catalog-dropdown.active,
@@ -293,6 +295,7 @@ header.scrolled {
     position: relative;
     transition: background var(--transition-speed) ease;
     cursor: pointer;
+    text-align: left;
 }
 
 .dropdown-item:hover {
@@ -304,6 +307,7 @@ header.scrolled {
     color: var(--text-color);
     font-weight: 500;
     transition: color var(--transition-speed) ease;
+    font-size: inherit;
 }
 
 .dropdown-item:hover span {
@@ -316,6 +320,10 @@ header.scrolled {
     padding: 4px 0;
     margin-top: 4px;
     transition: opacity 0.2s ease;
+    left: 0;
+    position: absolute;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .dropdown-item .sub-dropdown.active {
@@ -326,9 +334,10 @@ header.scrolled {
 .sub-dropdown p {
     padding: 8px 20px;
     color: var(--muted-text);
-    font-size: 14px;
+    font-size: inherit;
     transition: color var(--transition-speed) ease, background 0.2s ease;
     cursor: pointer;
+    text-align: left;
 }
 
 .sub-dropdown p:hover {
@@ -2168,7 +2177,7 @@ s {
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
     border-radius: 10px;
     padding: 15px;
-    min-width: 300px;
+    min-width: 290px;
     max-width: 90vw;
     height: 80vh;
     max-height: 600px;
@@ -3430,6 +3439,31 @@ s {
         font-size: 12px;
     }
 
+#contacts h3.contacts-heading {
+        font-size: 16px; /* Зменшений розмір заголовка */
+    }
+
+    #contacts p,
+    #contacts a,
+    #contacts span {
+        font-size: 14px; /* Зменшений розмір тексту */
+    }
+
+#catalog-dropdown,
+    .dropdown {
+        font-size: 14px;
+        min-width: 180px;
+    }
+
+    .dropdown-item {
+        padding: 8px 15px;
+    }
+
+    .sub-dropdown p {
+        font-size: inherit;
+        padding: 6px 15px;
+    }
+
 .gallery-modal-content {
         width: 100vw; /* Заповнення всієї ширини екрана */
         height: auto; /* Динамічна висота для вмісту */
@@ -3515,7 +3549,7 @@ s {
     .burger-content {
         top: 60px;
         right: 5px;
-        min-width: 290px;
+        min-width: 285px;
         max-width: 80vw;
         height: 80vh;
         max-height: 600px;
@@ -4228,6 +4262,31 @@ s {
         font-size: 12px;
     }
 
+#contacts h3.contacts-heading {
+        font-size: 17px; /* Зменшений розмір заголовка */
+    }
+
+    #contacts p,
+    #contacts a,
+    #contacts span {
+        font-size: 15px; /* Зменшений розмір тексту */
+    }
+
+#catalog-dropdown,
+    .dropdown {
+        font-size: 15px;
+        min-width: 190px;
+    }
+
+    .dropdown-item {
+        padding: 9px 18px;
+    }
+
+    .sub-dropdown p {
+        font-size: inherit;
+        padding: 7px 18px;
+    }
+
 .gallery-modal-content {
         width: 92vw;
         max-height: 92vh;
@@ -4846,6 +4905,20 @@ s {
         margin-right: 15px;
     }
 
+#catalog-dropdown,
+    .dropdown {
+        min-width: 220px;
+    }
+
+    .dropdown-item {
+        padding: 12px 25px;
+    }
+
+    .sub-dropdown p {
+        font-size: inherit;
+        padding: 10px 25px;
+    }
+
 .gallery-modal-content {
         width: 90vw;
         max-height: 90vh;
@@ -5243,7 +5316,7 @@ s {
 }
 
 @media (min-width: 0px) {
-    .catalog-menu {
+.catalog-menu {
         display: inline-block;
         position: relative;
     }
@@ -5320,20 +5393,9 @@ s {
         background: rgba(229, 231, 235, 0.5);
     }
 
-.sub-dropdown:empty {
-    display: none !important;
-}
-
-.dropdown-item {
-    padding: 10px 20px;
-    position: relative;
-    transition: background var(--transition-speed) ease;
-    cursor: pointer;
-}
-
-.dropdown-item:hover {
-    background: #F7FAFC;
-}
+    .sub-dropdown:empty {
+        display: none !important;
+    }
 }
 
 @media (min-width: 1400px) {
@@ -5538,7 +5600,7 @@ s {
         color: var(--primary-color);
     }
 
-    #catalog-dropdown,
+#catalog-dropdown,
     .dropdown {
         background: var(--card-bg);
         box-shadow: 0 6px 15px var(--shadow-color);
@@ -5568,6 +5630,7 @@ s {
     .sub-dropdown p:hover {
         color: var(--primary-color);
         background: var(--button-background);
+        transition: background var(--transition-speed) ease;
     }
 
     .breadcrumbs {

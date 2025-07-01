@@ -1317,12 +1317,19 @@ function renderCatalogDropdown() {
         span.style.textDecoration = 'none';
         span.style.cursor = 'pointer';
         span.style.display = 'block';
-        span.style.padding = '8px 15px'; // Більший відступ для категорій
+        span.style.padding = '8px 15px';
         span.style.margin = '0';
-        span.style.fontWeight = 'bold'; // Жирний шрифт для категорій
-        span.style.fontSize = '16px'; // Більший розмір шрифту для категорій
+        span.style.fontWeight = 'bold';
 
-        // Універсальна функція для перемикання підкатегорій
+        // Динамічний розмір шрифту залежно від розміру екрану
+        if (window.innerWidth <= 650) {
+            span.style.fontSize = '14px';
+        } else if (window.innerWidth <= 920) {
+            span.style.fontSize = '15px';
+        } else {
+            span.style.fontSize = '16px';
+        }
+
         const toggleSubDropdown = (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1330,20 +1337,16 @@ function renderCatalogDropdown() {
             const subList = currentItem.querySelector('.sub-list');
             const isActive = subList.classList.contains('active');
 
-            // Ховаємо всі підкатегорії
             document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
 
-            // Якщо підкатегорії ще не активні, показуємо їх
             if (!isActive && subList) {
                 subList.classList.add('active');
             }
         };
 
-        // Обробка для мишки (click) і сенсорних екранів (touchend)
         span.addEventListener('click', toggleSubDropdown);
         span.addEventListener('touchend', toggleSubDropdown);
 
-        // Перехід до каталогу при подвійному кліку або якщо немає підкатегорій
         span.addEventListener('click', (e) => {
             if (!cat.subcategories || cat.subcategories.length === 0) {
                 e.preventDefault();
@@ -1364,13 +1367,11 @@ function renderCatalogDropdown() {
 
         itemDiv.appendChild(span);
 
-        // Створюємо контейнер для підкатегорій у вигляді списку
         const subList = document.createElement('div');
         subList.className = 'sub-list';
-        subList.style.display = 'none'; // Приховуємо за замовчуванням
-        subList.style.paddingLeft = '30px'; // Збільшений відступ для підкатегорій
+        subList.style.display = 'none';
+        subList.style.paddingLeft = '30px';
 
-        // Показуємо subList при додаванні класу active
         const styleObserver = new MutationObserver(() => {
             subList.style.display = subList.classList.contains('active') ? 'block' : 'none';
         });
@@ -1383,14 +1384,25 @@ function renderCatalogDropdown() {
             p.style.padding = '5px 15px';
             p.style.margin = '0';
             p.style.cursor = 'pointer';
-            p.style.fontWeight = 'normal'; // Нормальна вага шрифту для підкатегорій
-            p.style.fontSize = '14px'; // Менший розмір шрифту для підкатегорій
+            p.style.fontWeight = 'normal';
+
+            // Динамічний розмір шрифту для підкатегорій
+            if (window.innerWidth <= 650) {
+                p.style.fontSize = '12px';
+            } else if (window.innerWidth <= 920) {
+                p.style.fontSize = '13px';
+            } else {
+                p.style.fontSize = '14px';
+            }
+
             p.onmouseover = (e) => {
-                e.target.style.backgroundColor = '#f0f0f0';
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    e.target.style.backgroundColor = '#6b869c'; // Темний колір для темної теми
+                } else {
+                    e.target.style.backgroundColor = '#d8d8d8'; // Світлий колір для світлої теми
+                }
             };
-            p.onmouseout = (e) => {
-                e.target.style.backgroundColor = '';
-            };
+            p.onmouseout = (e) => { e.target.style.backgroundColor = ''; };
             p.onclick = (e) => {
                 e.stopPropagation();
                 currentProduct = null;
@@ -1414,7 +1426,6 @@ function renderCatalogDropdown() {
         dropdown.appendChild(itemDiv);
     });
 
-    // Закриваємо меню при кліку поза ним
     document.addEventListener('click', (e) => {
         const isClickInsideDropdown = dropdown.contains(e.target);
         const isClickInsideToggle = document.getElementById('catalog-toggle').contains(e.target);
@@ -1424,7 +1435,6 @@ function renderCatalogDropdown() {
         }
     });
 
-    // Запобігаємо закриттю меню при кліку всередині
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation();
     });
