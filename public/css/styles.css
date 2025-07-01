@@ -2404,7 +2404,7 @@ s {
 
 .burger-contact-info {
     margin: 1px 0;
-    padding: 15px 1px;
+    padding: 1px 1px;
     border-top: 1px solid var(--border-color);
     font-size: 14px;
     color: var(--text-color);
@@ -2769,6 +2769,7 @@ s {
     font-weight: 700;
 }
 
+/* Модальне вікно галереї */
 .gallery-modal {
     position: fixed;
     top: 0;
@@ -2809,6 +2810,15 @@ s {
     transform: scale(1.02); /* Легкий ефект наведення */
 }
 
+.gallery-image-container {
+    position: relative; /* Контейнер для зображення та стрілок */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Запобігає виходу зображення за межі контейнера */
+}
+
 .gallery-image {
     width: 100%;
     height: auto;
@@ -2818,7 +2828,6 @@ s {
     border-radius: 8px;
     margin-bottom: 15px; /* Відступ до мініатюр */
     background-color: #ffffff; /* Білі поля для світлої теми */
-    position: relative; /* Для позиціонування стрілок */
 }
 
 .gallery-thumbnails {
@@ -3360,13 +3369,17 @@ s {
         margin-left: 10px;
     }
 
-    .phones {
-        font-size: 16px;
-        padding: 0;
-        margin: 0;
-        text-align: center;
-        max-width: calc(100% - 30px);
-    }
+.phones {
+    font-size: 18px;
+    color: var(--text-color);
+    padding-right: var(--base-padding);
+    cursor: default;
+    margin-left: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
 
     .search-cart-container {
         width: 100%;
@@ -3452,9 +3465,6 @@ s {
 
     .gallery-prev,
     .gallery-next {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
         width: 30px;
         height: 30px;
         font-size: 18px;
@@ -3504,11 +3514,11 @@ s {
 
     .burger-content {
         top: 60px;
-        right: 10px;
-        min-width: 230px;
+        right: 0px;
+        min-width: 290px;
         max-width: 80vw;
-        height: 60vh;
-        max-height: 500px;
+        height: 80vh;
+        max-height: 600px;
     }
 
     .burger-catalog-dropdown {
@@ -4173,9 +4183,13 @@ s {
     }
 
     .phones {
-        font-size: 18px;
-        margin-right: 0;
-        flex-shrink: 0;
+        font-size: 16px;
+        padding: 0;
+        margin: 0;
+        text-align: center;
+        max-width: calc(100% - 30px);
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .search-cart-container {
@@ -4221,7 +4235,6 @@ s {
     }
 
     .gallery-image {
-        max-height: 68vh;
         margin-bottom: 12px;
     }
 
@@ -4837,10 +4850,6 @@ s {
         width: 90vw;
         max-height: 90vh;
         padding: 30px;
-    }
-
-    .gallery-image {
-        max-height: 70vh;
     }
 
     .gallery-prev {
@@ -6136,6 +6145,10 @@ s {
 
     .product-characteristics p:hover {
         color: var(--primary-color);
+    }
+
+.gallery-modal {
+        background: rgba(0, 0, 0, 0.95); /* Темніший фон */
     }
 
 .gallery-modal {

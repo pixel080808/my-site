@@ -340,9 +340,11 @@
 <div class="gallery-modal" id="gallery-modal">
     <div class="gallery-modal-content">
         <span class="gallery-close" onclick="closeGallery()">×</span>
-        <button class="gallery-prev" onclick="prevGalleryImage()">◄</button>
-        <img alt="" class="gallery-image" id="gallery-image" loading="lazy"/>
-        <button class="gallery-next" onclick="nextGalleryImage()">►</button>
+        <div class="gallery-image-container">
+            <img alt="" class="gallery-image" id="gallery-image" loading="lazy"/>
+            <button class="gallery-prev" onclick="prevGalleryImage()">◄</button>
+            <button class="gallery-next" onclick="nextGalleryImage()">►</button>
+        </div>
         <div id="gallery-thumbnails"></div>
     </div>
 </div>
