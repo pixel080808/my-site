@@ -5430,7 +5430,7 @@ async function saveEditedProduct(productId) {
 
         // Оновлення списку товарів перед валідацією
         await loadProducts(productsCurrentPage, productsPerPage);
-        console.log('Оновлений список продуктів:', products);
+        console.log('Оновлений список продуктів:', products.map(p => ({ _id: p._id, name: p.name })));
 
         const name = document.getElementById('product-name')?.value.trim();
         const slug = document.getElementById('product-slug')?.value.trim();
@@ -5526,7 +5526,7 @@ async function saveEditedProduct(productId) {
                 renderGroupProducts(); // Оновлюємо UI
                 if (validatedGroupProducts.length === 0) {
                     showNotification('Усі товари в групі не знайдені. Будь ласка, додайте коректні товари.');
-                    return; // Не закриваємо модальне вікно, даємо можливість додати товари
+                    return; // Не закриваємо модальне вікно
                 }
             }
         } else if (newProduct.type !== 'group') {
@@ -5721,8 +5721,9 @@ async function saveEditedProduct(productId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Помилка сервера:', errorData);
-            throw new Error(`Помилка оновлення товару: ${errorData.error || errorData.message || response.statusText}`);
+            console.error('Помилка сервера для PUT /api/products:', errorData);
+            showNotification(`Помилка оновлення товару: ${errorData.error || errorData.message || response.statusText}`);
+            return; // Не закриваємо модальне вікно
         }
 
         const updatedProduct = await response.json();
