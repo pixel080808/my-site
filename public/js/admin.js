@@ -356,7 +356,13 @@ async function fetchWithAuth(url, options = {}) {
                     error.status = newResponse.status;
                     error.errorData = errorData;
                     if (errorData.details) {
-                        error.message += `: ${errorData.details.join(', ')}`;
+                        if (Array.isArray(errorData.details)) {
+                            error.message += `: ${errorData.details.join(', ')}`;
+                        } else if (typeof errorData.details === 'string') {
+                            error.message += `: ${errorData.details}`;
+                        } else if (typeof errorData.details === 'object') {
+                            error.message += `: ${JSON.stringify(errorData.details)}`;
+                        }
                     }
                     throw error;
                 }
@@ -391,7 +397,13 @@ async function fetchWithAuth(url, options = {}) {
             error.status = response.status;
             error.errorData = errorData;
             if (errorData.details) {
-                error.message += `: ${errorData.details.join(', ')}`;
+                if (Array.isArray(errorData.details)) {
+                    error.message += `: ${errorData.details.join(', ')}`;
+                } else if (typeof errorData.details === 'string') {
+                    error.message += `: ${errorData.details}`;
+                } else if (typeof errorData.details === 'object') {
+                    error.message += `: ${JSON.stringify(errorData.details)}`;
+                }
             }
             throw error;
         }
@@ -5418,6 +5430,7 @@ async function saveEditedProduct(productId) {
 
         // Оновлення списку товарів перед валідацією
         await loadProducts(productsCurrentPage, productsPerPage);
+        console.log('Оновлений список продуктів:', products);
 
         const name = document.getElementById('product-name')?.value.trim();
         const slug = document.getElementById('product-slug')?.value.trim();
@@ -5496,6 +5509,7 @@ async function saveEditedProduct(productId) {
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             const response = await fetchWithAuth(`/api/products?ids=${encodeURIComponent(newProduct.groupProducts.join(','))}`);
             const existingProducts = await response.json();
+            console.log('Відповідь сервера для groupProducts:', existingProducts);
             if (!existingProducts.products || !Array.isArray(existingProducts.products)) {
                 console.error('Некоректна відповідь сервера:', existingProducts);
                 showNotification('Помилка перевірки групових товарів.');
@@ -5506,15 +5520,14 @@ async function saveEditedProduct(productId) {
             const missingIds = newProduct.groupProducts.filter(id => !existingIds.includes(id));
             if (missingIds.length > 0) {
                 console.error('Деякі продукти в groupProducts не знайдені:', missingIds);
-                // Автоматично видаляємо некоректні ID
                 validatedGroupProducts = newProduct.groupProducts.filter(id => existingIds.includes(id));
-                if (validatedGroupProducts.length === 0) {
-                    showNotification('Усі товари в групі не знайдені. Додайте коректні товари.');
-                    return;
-                }
                 showNotification(`Видалено ${missingIds.length} некоректних товарів із групи. Залишилось ${validatedGroupProducts.length} товарів.`);
                 newProduct.groupProducts = validatedGroupProducts;
                 renderGroupProducts(); // Оновлюємо UI
+                if (validatedGroupProducts.length === 0) {
+                    showNotification('Усі товари в групі не знайдені. Будь ласка, додайте коректні товари.');
+                    return; // Не закриваємо модальне вікно, даємо можливість додати товари
+                }
             }
         } else if (newProduct.type !== 'group') {
             validatedGroupProducts = [];
@@ -5708,7 +5721,8 @@ async function saveEditedProduct(productId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Помилка оновлення товару: ${errorData.error || response.statusText}`);
+            console.error('Помилка сервера:', errorData);
+            throw new Error(`Помилка оновлення товару: ${errorData.error || errorData.message || response.statusText}`);
         }
 
         const updatedProduct = await response.json();
