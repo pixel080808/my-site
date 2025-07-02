@@ -1317,7 +1317,7 @@ function renderCatalogDropdown() {
         span.style.textDecoration = 'none';
         span.style.cursor = 'pointer';
         span.style.display = 'block';
-        span.style.padding = '8px 15px';
+        span.style.padding = '8px 5px';
         span.style.margin = '0';
         span.style.fontWeight = 'bold';
 
@@ -1381,7 +1381,7 @@ function renderCatalogDropdown() {
             const p = document.createElement('p');
             p.textContent = sub.name;
             p.style.textDecoration = 'none';
-            p.style.padding = '5px 15px';
+            p.style.padding = '5px 5px';
             p.style.margin = '0';
             p.style.cursor = 'pointer';
             p.style.fontWeight = 'normal';

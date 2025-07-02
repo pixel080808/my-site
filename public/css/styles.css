@@ -2210,7 +2210,7 @@ s {
 .burger-content a:hover {
     background: var(--border-color);
     color: var(--primary-color);
-    transform: translateX(-3px);
+    transform: translateX(0px);
 }
 
 .burger-content .cart {
@@ -2408,7 +2408,7 @@ s {
 .burger-subcategory a:hover {
     background: var(--border-color);
     color: var(--primary-color);
-    transform: translateX(-2px);
+    transform: translateX(0px);
 }
 
 .burger-contact-info {
