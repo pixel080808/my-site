@@ -5723,7 +5723,7 @@ async function saveEditedProduct(productId) {
             const errorData = await response.json();
             console.error('Помилка сервера для PUT /api/products:', errorData);
             showNotification(`Помилка оновлення товару: ${errorData.error || errorData.message || response.statusText}`);
-            return; // Не закриваємо модальне вікно
+            return; // Не закриваємо модальне вікно при помилці
         }
 
         const updatedProduct = await response.json();
@@ -5740,7 +5740,8 @@ async function saveEditedProduct(productId) {
         resetInactivityTimer();
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
-        showNotification('Не вдалося оновити товар: ' + err.message);
+        showNotification(`Не вдалося оновити товар: ${err.message}`);
+        // Не закриваємо модальне вікно
     } finally {
         if (saveButton) {
             saveButton.disabled = false;
