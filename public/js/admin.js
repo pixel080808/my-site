@@ -2456,6 +2456,8 @@ function closeModal() {
         isModalOpen = false;
         console.log('Модальне вікно закрито');
     }
+    newProduct = {}; // Скидаємо newProduct
+    unsavedChanges = false; // Скидаємо прапорець незбережених змін
     resetInactivityTimer();
 }
 
@@ -4461,7 +4463,7 @@ function renderPriceFields() {
     }
 }
 
-function updateSubcategories() {
+async function updateSubcategories() {
     const modal = document.getElementById('modal');
     if (!modal || !modal.classList.contains('active')) {
         console.log('Модальне вікно не активне, пропускаємо оновлення підкатегорій');
@@ -4495,19 +4497,21 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.name; // Використовуємо name як значення
+                option.value = sub.name; // Використовуємо name як значення для відображення
                 option.textContent = sub.name;
+                option.dataset.slug = sub.slug; // Зберігаємо slug у dataset
                 subcategorySelect.appendChild(option);
             }
         });
     }
 
-    // Відновлюємо вибір підкатегорії після заповнення селекту
+    // Відновлюємо вибір підкатегорії
     if (newProduct.subcategory) {
-        const subcategoryObj = category && category.subcategories ? category.subcategories.find(sub => sub.slug === newProduct.subcategory) : null;
+        const subcategoryObj = category && category.subcategories ? 
+            category.subcategories.find(sub => sub.slug === newProduct.subcategory) : null;
         if (subcategoryObj) {
             subcategorySelect.value = subcategoryObj.name;
-            console.log('Відновлено subcategory:', newProduct.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcategorySelect.value);
+            console.log('Відновлено subcategory:', newProduct.subcategory, 'як', subcategoryObj.name);
         } else {
             console.warn('Підкатегорія не знайдена для slug:', newProduct.subcategory);
             subcategorySelect.value = '';
@@ -5342,7 +5346,7 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    // Викликаємо updateSubcategories і чекаємо її завершення
+// Викликаємо updateSubcategories і чекаємо її завершення
     const categorySelect = document.getElementById('product-category');
     const subcatSelect = document.getElementById('product-subcategory');
     if (categorySelect && subcatSelect) {
@@ -5353,16 +5357,18 @@ async function openEditProductModal(productId) {
             if (category && category.subcategories) {
                 const subcategoryObj = category.subcategories.find(sub => sub.slug === product.subcategory);
                 if (subcategoryObj) {
-                    subcatSelect.value = subcategoryObj.name;
-                    console.log('Встановлено subcategory:', product.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcatSelect.value);
+                    subcatSelect.value = subcategoryObj.name; // Встановлюємо name як значення
+                    console.log('Встановлено subcategory:', product.subcategory, 'як', subcategoryObj.name);
                 } else {
                     console.warn('Підкатегорія не знайдена для slug:', product.subcategory);
-                    subcatSelect.value = ''; // Скидаємо до "Без підкатегорії", якщо slug не знайдено
+                    subcatSelect.value = ''; // Скидаємо до "Без підкатегорії"
                 }
             } else {
                 console.warn('Категорія не знайдена або не має підкатегорій:', product.category);
                 subcatSelect.value = '';
             }
+        } else {
+            subcatSelect.value = ''; // Якщо subcategory не встановлена, вибираємо "Без підкатегорії"
         }
         categorySelect.addEventListener('change', updateSubcategories);
     } else {
@@ -5508,13 +5514,20 @@ async function saveEditedProduct(productId) {
         // Перевіряємо і встановлюємо subcategory
         let subcategorySlug = '';
         if (subcategory && subcategory !== 'Без підкатегорії') {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name.trim() === subcategory);
-            if (!subcategoryObj) {
-                showNotification('Обрана підкатегорія не існує в цій категорії!');
-                return;
+            const selectedOption = document.getElementById('product-subcategory').querySelector(`option[value="${subcategory}"]`);
+            if (selectedOption && selectedOption.dataset.slug) {
+                subcategorySlug = selectedOption.dataset.slug;
+                console.log('Встановлено subcategorySlug:', subcategorySlug);
+            } else {
+                const subcategoryObj = categoryObj.subcategories.find(sub => sub.name.trim() === subcategory);
+                if (subcategoryObj) {
+                    subcategorySlug = subcategoryObj.slug;
+                    console.log('Встановлено subcategorySlug (альтернативний метод):', subcategorySlug);
+                } else {
+                    showNotification('Обрана підкатегорія не існує в цій категорії!');
+                    return;
+                }
             }
-            subcategorySlug = subcategoryObj.slug;
-            console.log('Встановлено subcategorySlug:', subcategorySlug);
         } else {
             console.log('Підкатегорія не вибрана, використовуємо порожній рядок');
         }
