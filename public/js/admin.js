@@ -4465,7 +4465,7 @@ function updateSubcategories() {
     const modal = document.getElementById('modal');
     if (!modal || !modal.classList.contains('active')) {
         console.log('Модальне вікно не активне, пропускаємо оновлення підкатегорій');
-        return;
+        return Promise.resolve();
     }
 
     const categorySelect = document.getElementById('product-category');
@@ -4473,7 +4473,7 @@ function updateSubcategories() {
     
     if (!categorySelect || !subcategorySelect) {
         console.log('Це не модальне вікно для редагування продукту, пропускаємо оновлення підкатегорій');
-        return;
+        return Promise.resolve();
     }
 
     const categoryName = categorySelect.value;
@@ -4486,7 +4486,7 @@ function updateSubcategories() {
         if (addSubcategoryBtn) {
             addSubcategoryBtn.style.display = 'none';
         }
-        return;
+        return Promise.resolve();
     }
 
     const category = categories.find(c => c.name === categoryName);
@@ -4495,7 +4495,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.name; // Використовуємо name замість slug
+                option.value = sub.name; // Використовуємо name як значення
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -4508,6 +4508,9 @@ function updateSubcategories() {
         if (subcategoryObj) {
             subcategorySelect.value = subcategoryObj.name;
             console.log('Відновлено subcategory:', newProduct.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcategorySelect.value);
+        } else {
+            console.warn('Підкатегорія не знайдена для slug:', newProduct.subcategory);
+            subcategorySelect.value = '';
         }
     }
 
@@ -4543,6 +4546,7 @@ function updateSubcategories() {
     }
 
     resetInactivityTimer();
+    return Promise.resolve();
 }
 
 async function saveSubcategory(categoryId, subcategory) {
@@ -5338,11 +5342,11 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    // Викликаємо updateSubcategories синхронно перед встановленням значення subcategory
+    // Викликаємо updateSubcategories і чекаємо її завершення
     const categorySelect = document.getElementById('product-category');
     const subcatSelect = document.getElementById('product-subcategory');
     if (categorySelect && subcatSelect) {
-        updateSubcategories(); // Заповнюємо підкатегорії
+        await updateSubcategories(); // Чекаємо завершення оновлення підкатегорій
         if (product.subcategory) {
             // Знаходимо підкатегорію за slug і встановлюємо її name
             const category = categories.find(c => c.name === product.category);
@@ -5351,7 +5355,13 @@ async function openEditProductModal(productId) {
                 if (subcategoryObj) {
                     subcatSelect.value = subcategoryObj.name;
                     console.log('Встановлено subcategory:', product.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcatSelect.value);
+                } else {
+                    console.warn('Підкатегорія не знайдена для slug:', product.subcategory);
+                    subcatSelect.value = ''; // Скидаємо до "Без підкатегорії", якщо slug не знайдено
                 }
+            } else {
+                console.warn('Категорія не знайдена або не має підкатегорій:', product.category);
+                subcatSelect.value = '';
             }
         }
         categorySelect.addEventListener('change', updateSubcategories);
@@ -5498,13 +5508,15 @@ async function saveEditedProduct(productId) {
         // Перевіряємо і встановлюємо subcategory
         let subcategorySlug = '';
         if (subcategory && subcategory !== 'Без підкатегорії') {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name.trim() === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
             subcategorySlug = subcategoryObj.slug;
             console.log('Встановлено subcategorySlug:', subcategorySlug);
+        } else {
+            console.log('Підкатегорія не вибрана, використовуємо порожній рядок');
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
