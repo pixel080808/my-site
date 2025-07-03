@@ -5496,14 +5496,15 @@ async function saveEditedProduct(productId) {
         }
 
         // Перевіряємо і встановлюємо subcategory
-        let subcategoryName = '';
+        let subcategorySlug = '';
         if (subcategory && subcategory !== 'Без підкатегорії') {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategoryName = subcategoryObj.name;
+            subcategorySlug = subcategoryObj.slug;
+            console.log('Встановлено subcategorySlug:', subcategorySlug);
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
@@ -5610,7 +5611,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategoryName || null, // Використовуємо name замість slug
+            subcategory: subcategorySlug, // Використовуємо slug замість name або null
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
