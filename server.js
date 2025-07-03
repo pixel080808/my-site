@@ -1098,16 +1098,17 @@ app.post("/api/products", authenticateToken, csrfProtection, async (req, res) =>
     }
 
     const { error } = productSchemaValidation.validate(productData, { abortEarly: false })
-    if (error) {
-      logger.error("Помилка валідації продукту:", JSON.stringify(error.details, null, 2))
-      return res.status(400).json({
+if (error) {
+    logger.error("Помилка валідації продукту:", JSON.stringify(error.details, null, 2));
+    return res.status(400).json({
         error: "Помилка валідації",
-        details: error.details.map((detail) => ({
-          message: detail.message,
-          path: detail.path.join("."),
-        })),
-      })
-    }
+        details: error.details.map(detail => ({
+            message: detail.message,
+            path: detail.path.join('.'),
+            value: detail.context.value
+        }))
+    });
+}
 
     const existingProduct = await Product.findOne({ slug: productData.slug })
     if (existingProduct) {
