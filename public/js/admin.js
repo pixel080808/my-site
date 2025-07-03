@@ -5479,14 +5479,15 @@ async function saveEditedProduct(productId) {
             return;
         }
 
+        // Виправлення: Перевіряємо і встановлюємо subcategorySlug
         let subcategorySlug = '';
-        if (subcategory) {
+        if (subcategory && subcategory !== 'Без підкатегорії') {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategorySlug = subcategory;
+            subcategorySlug = subcategoryObj.slug;
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
@@ -5523,10 +5524,10 @@ async function saveEditedProduct(productId) {
                 validatedGroupProducts = newProduct.groupProducts.filter(id => existingIds.includes(id));
                 showNotification(`Видалено ${missingIds.length} некоректних товарів із групи. Залишилось ${validatedGroupProducts.length} товарів.`);
                 newProduct.groupProducts = validatedGroupProducts;
-                renderGroupProducts(); // Оновлюємо UI
+                renderGroupProducts();
                 if (validatedGroupProducts.length === 0) {
                     showNotification('Усі товари в групі не знайдені. Будь ласка, додайте коректні товари.');
-                    return; // Не закриваємо модальне вікно
+                    return;
                 }
             }
         } else if (newProduct.type !== 'group') {
@@ -5593,7 +5594,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug,
+            subcategory: subcategorySlug || null, // Виправлення: Явно встановлюємо null, якщо підкатегорія не вибрана
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
@@ -5723,7 +5724,7 @@ async function saveEditedProduct(productId) {
             const errorData = await response.json();
             console.error('Помилка сервера для PUT /api/products:', errorData);
             showNotification(`Помилка оновлення товару: ${errorData.error || errorData.message || response.statusText}`);
-            return; // Не закриваємо модальне вікно при помилці
+            return;
         }
 
         const updatedProduct = await response.json();
@@ -5741,7 +5742,6 @@ async function saveEditedProduct(productId) {
     } catch (err) {
         console.error('Помилка при оновленні товару:', err);
         showNotification(`Не вдалося оновити товар: ${err.message}`);
-        // Не закриваємо модальне вікно
     } finally {
         if (saveButton) {
             saveButton.disabled = false;
