@@ -4502,6 +4502,12 @@ function updateSubcategories() {
         });
     }
 
+    // Відновлюємо вибір підкатегорії після заповнення селекту
+    if (newProduct.subcategory) {
+        subcategorySelect.value = newProduct.subcategory;
+        console.log('Відновлено subcategory:', newProduct.subcategory, 'в селекті:', subcategorySelect.value);
+    }
+
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
     if (addSubcategoryBtn) {
         addSubcategoryBtn.style.display = 'block';
@@ -5226,7 +5232,7 @@ async function openEditProductModal(productId) {
         groupProducts: [...product.groupProducts]
     };
 
-    const escapedName = product.name.replace(/"/g, '&quot;');
+    const escapedName = product.name.replace(/"/g, '"');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5328,18 +5334,18 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-setTimeout(() => {
+    // Викликаємо updateSubcategories синхронно перед встановленням значення subcategory
     const categorySelect = document.getElementById('product-category');
-    if (categorySelect) {
-        categorySelect.addEventListener('change', updateSubcategories);
-        updateSubcategories();
-    } else {
-        console.warn('Елемент #product-category не знайдено');
-    }
-
     const subcatSelect = document.getElementById('product-subcategory');
-    if (product.subcategory && subcatSelect) {
-        subcatSelect.value = product.subcategory;
+    if (categorySelect && subcatSelect) {
+        updateSubcategories(); // Заповнюємо підкатегорії
+        if (product.subcategory) {
+            subcatSelect.value = product.subcategory; // Встановлюємо значення після заповнення
+            console.log('Встановлено subcategory:', product.subcategory, 'в селекті:', subcatSelect.value);
+        }
+        categorySelect.addEventListener('change', updateSubcategories);
+    } else {
+        console.warn('Елемент #product-category або #product-subcategory не знайдено');
     }
 
     renderColorsList();
@@ -5397,7 +5403,6 @@ setTimeout(() => {
     } else {
         console.warn('Кнопка #cancel-product-btn не знайдена');
     }
-}, 0);
 
     resetInactivityTimer();
 }
