@@ -4495,7 +4495,7 @@ function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.slug;
+                option.value = sub.name; // Використовуємо name замість slug
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -4504,8 +4504,11 @@ function updateSubcategories() {
 
     // Відновлюємо вибір підкатегорії після заповнення селекту
     if (newProduct.subcategory) {
-        subcategorySelect.value = newProduct.subcategory;
-        console.log('Відновлено subcategory:', newProduct.subcategory, 'в селекті:', subcategorySelect.value);
+        const subcategoryObj = category && category.subcategories ? category.subcategories.find(sub => sub.slug === newProduct.subcategory) : null;
+        if (subcategoryObj) {
+            subcategorySelect.value = subcategoryObj.name;
+            console.log('Відновлено subcategory:', newProduct.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcategorySelect.value);
+        }
     }
 
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
@@ -5232,7 +5235,8 @@ async function openEditProductModal(productId) {
         groupProducts: [...product.groupProducts]
     };
 
-    const escapedName = product.name.replace(/"/g, '"');
+    // Екранування HTML-символів для назви товару
+    const escapedName = product.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5340,8 +5344,15 @@ async function openEditProductModal(productId) {
     if (categorySelect && subcatSelect) {
         updateSubcategories(); // Заповнюємо підкатегорії
         if (product.subcategory) {
-            subcatSelect.value = product.subcategory; // Встановлюємо значення після заповнення
-            console.log('Встановлено subcategory:', product.subcategory, 'в селекті:', subcatSelect.value);
+            // Знаходимо підкатегорію за slug і встановлюємо її name
+            const category = categories.find(c => c.name === product.category);
+            if (category && category.subcategories) {
+                const subcategoryObj = category.subcategories.find(sub => sub.slug === product.subcategory);
+                if (subcategoryObj) {
+                    subcatSelect.value = subcategoryObj.name;
+                    console.log('Встановлено subcategory:', product.subcategory, 'як', subcategoryObj.name, 'в селекті:', subcatSelect.value);
+                }
+            }
         }
         categorySelect.addEventListener('change', updateSubcategories);
     } else {
@@ -5484,15 +5495,15 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        // Перевіряємо і встановлюємо subcategorySlug
-        let subcategorySlug = '';
+        // Перевіряємо і встановлюємо subcategory
+        let subcategoryName = '';
         if (subcategory && subcategory !== 'Без підкатегорії') {
-            const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
             if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
-            subcategorySlug = subcategoryObj.slug;
+            subcategoryName = subcategoryObj.name;
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
@@ -5599,6 +5610,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
+            subcategory: subcategoryName || null, // Використовуємо name замість slug
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
@@ -5622,11 +5634,6 @@ async function saveEditedProduct(productId) {
             active: newProduct.active,
             visible
         };
-
-        // Додаємо subcategory тільки якщо subcategorySlug не порожній
-        if (subcategorySlug) {
-            product.subcategory = subcategorySlug;
-        }
 
         if (newProduct.type === 'simple') {
             product.price = price;
