@@ -4502,15 +4502,17 @@ async function updateSubcategories() {
                 subcategorySelect.appendChild(option);
             }
         });
+    } else {
+        console.warn('Категорія не знайдена або subcategories не є масивом:', category);
     }
 
     // Відновлюємо вибір підкатегорії
-    if (newProduct.subcategory && category && category.subcategories.some(sub => sub.slug === newProduct.subcategory)) {
+    if (newProduct.subcategory) {
         subcategorySelect.value = newProduct.subcategory;
-        console.log('Відновлено subcategory:', newProduct.subcategory);
+        console.log('Спроба відновлення subcategory:', newProduct.subcategory, 'Опції:', Array.from(subcategorySelect.options).map(opt => opt.value));
     } else {
         subcategorySelect.value = '';
-        console.log('Підкатегорія не відновлена, вибрано порожнє значення');
+        console.log('Підкатегорія не встановлена, вибрано порожнє значення');
     }
 
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
@@ -5239,7 +5241,7 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
+    const escapedName = product.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5342,15 +5344,26 @@ async function openEditProductModal(productId) {
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
     setTimeout(async () => {
+        // Оновлюємо категорії перед оновленням підкатегорій
+        try {
+            await loadCategories();
+            console.log('Категорії оновлено:', categories);
+        } catch (err) {
+            console.error('Помилка завантаження категорій:', err);
+            showNotification('Не вдалося завантажити категорії: ' + err.message);
+            return;
+        }
+
         const categorySelect = document.getElementById('product-category');
         const subcatSelect = document.getElementById('product-subcategory');
         if (categorySelect && subcatSelect) {
             categorySelect.addEventListener('change', updateSubcategories);
             await updateSubcategories();
             // Встановлюємо підкатегорію після оновлення списку
+            console.log('Значення product.subcategory:', product.subcategory);
             if (product.subcategory) {
                 subcatSelect.value = product.subcategory;
-                console.log('Встановлено subcategory:', product.subcategory);
+                console.log('Встановлено subcategory:', product.subcategory, 'Опції:', Array.from(subcatSelect.options).map(opt => opt.value));
             } else {
                 subcatSelect.value = '';
                 console.log('Підкатегорія не встановлена, вибрано порожнє значення');
@@ -5497,7 +5510,7 @@ async function saveEditedProduct(productId) {
         }
 
         // Перевіряємо і встановлюємо subcategory
-        let subcategorySlug = null; // Використовуємо null замість порожнього рядка для явної відсутності підкатегорії
+        let subcategorySlug = null;
         if (subcategory) {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
             if (!subcategoryObj) {
@@ -5612,7 +5625,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Використовуємо null, якщо підкатегорія не вибрана
+            subcategory: subcategorySlug,
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
