@@ -4505,9 +4505,12 @@ async function updateSubcategories() {
     }
 
     // Відновлюємо вибір підкатегорії
-    if (newProduct.subcategory) {
+    if (newProduct.subcategory && category && category.subcategories.some(sub => sub.slug === newProduct.subcategory)) {
         subcategorySelect.value = newProduct.subcategory;
         console.log('Відновлено subcategory:', newProduct.subcategory);
+    } else {
+        subcategorySelect.value = '';
+        console.log('Підкатегорія не відновлена, вибрано порожнє значення');
     }
 
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
@@ -5236,7 +5239,7 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/&/g, '&').replace(/"/g, '"').replace(/'/g, '\'').replace(/</g, '<').replace(/>/g, '>');
+    const escapedName = product.name.replace(/"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5344,11 +5347,13 @@ async function openEditProductModal(productId) {
         if (categorySelect && subcatSelect) {
             categorySelect.addEventListener('change', updateSubcategories);
             await updateSubcategories();
+            // Встановлюємо підкатегорію після оновлення списку
             if (product.subcategory) {
                 subcatSelect.value = product.subcategory;
                 console.log('Встановлено subcategory:', product.subcategory);
             } else {
                 subcatSelect.value = '';
+                console.log('Підкатегорія не встановлена, вибрано порожнє значення');
             }
         } else {
             console.warn('Елемент #product-category або #product-subcategory не знайдено');
@@ -5492,7 +5497,7 @@ async function saveEditedProduct(productId) {
         }
 
         // Перевіряємо і встановлюємо subcategory
-        let subcategorySlug = '';
+        let subcategorySlug = null; // Використовуємо null замість порожнього рядка для явної відсутності підкатегорії
         if (subcategory) {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
             if (!subcategoryObj) {
@@ -5501,6 +5506,7 @@ async function saveEditedProduct(productId) {
             }
             subcategorySlug = subcategory;
         }
+        console.log('Підкатегорія для збереження:', subcategorySlug);
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
             showNotification('Введіть коректну ціну для простого товару!');
@@ -5606,7 +5612,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug,
+            subcategory: subcategorySlug, // Використовуємо null, якщо підкатегорія не вибрана
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
