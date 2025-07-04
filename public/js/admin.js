@@ -5248,7 +5248,13 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/"/g, '"').replace(/'/g, ''').replace(/</g, '<').replace(/>/g, '>').replace(/&/g, '&');
+    const escapedName = product.name
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5311,7 +5317,7 @@ async function openEditProductModal(productId) {
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
             <h4>Кольори</h4>
-            <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
+            <input type="text" id="product-color-name organisme
             <label for="product-color-name">Назва кольору</label>
             <input type="color" id="product-color-value" value="#000000"><br/>
             <label for="product-color-value">Значення кольору</label>
