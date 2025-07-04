@@ -4497,7 +4497,7 @@ async function updateSubcategories() {
         category.subcategories.forEach(sub => {
             if (sub.name && sub.slug) {
                 const option = document.createElement('option');
-                option.value = sub.slug; // Використовуємо slug як значення
+                option.value = sub.slug;
                 option.textContent = sub.name;
                 subcategorySelect.appendChild(option);
             }
@@ -5236,7 +5236,7 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escapedName = product.name.replace(/&/g, '&').replace(/"/g, '"').replace(/'/g, ''').replace(/</g, '<').replace(/>/g, '>');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5338,76 +5338,78 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    const categorySelect = document.getElementById('product-category');
-    const subcatSelect = document.getElementById('product-subcategory');
-    if (categorySelect && subcatSelect) {
-        await updateSubcategories(); // Чекаємо завершення оновлення підкатегорій
-        if (product.subcategory) {
-            subcatSelect.value = product.subcategory; // Встановлюємо slug як значення
-            console.log('Встановлено subcategory:', product.subcategory);
+    setTimeout(async () => {
+        const categorySelect = document.getElementById('product-category');
+        const subcatSelect = document.getElementById('product-subcategory');
+        if (categorySelect && subcatSelect) {
+            categorySelect.addEventListener('change', updateSubcategories);
+            await updateSubcategories();
+            if (product.subcategory) {
+                subcatSelect.value = product.subcategory;
+                console.log('Встановлено subcategory:', product.subcategory);
+            } else {
+                subcatSelect.value = '';
+            }
         } else {
-            subcatSelect.value = ''; // Якщо subcategory не встановлена, вибираємо "Без підкатегорії"
+            console.warn('Елемент #product-category або #product-subcategory не знайдено');
         }
-        categorySelect.addEventListener('change', updateSubcategories);
-    } else {
-        console.warn('Елемент #product-category або #product-subcategory не знайдено');
-    }
 
-    renderColorsList();
-    renderPhotoList();
-    renderMattressSizes();
-    renderGroupProducts();
+        renderColorsList();
+        renderPhotoList();
+        renderMattressSizes();
+        renderGroupProducts();
 
-    const photoInput = document.getElementById('product-photo-file');
-    if (photoInput) {
-        photoInput.addEventListener('change', () => {
-            const files = photoInput.files;
-            Array.from(files).forEach(file => {
-                if (!newProduct.photos.includes(file)) {
-                    newProduct.photos.push(file);
+        const photoInput = document.getElementById('product-photo-file');
+        if (photoInput) {
+            photoInput.addEventListener('change', () => {
+                const files = photoInput.files;
+                Array.from(files).forEach(file => {
+                    if (!newProduct.photos.includes(file)) {
+                        newProduct.photos.push(file);
+                    }
+                });
+                renderPhotoList();
+                resetInactivityTimer();
+            });
+        }
+
+        const colorPhotoInput = document.getElementById('product-color-photo-file');
+        if (colorPhotoInput) {
+            colorPhotoInput.addEventListener('change', () => {
+                const file = colorPhotoInput.files[0];
+                if (file) {
+                    const name = document.getElementById('product-color-name').value;
+                    const value = document.getElementById('product-color-value').value;
+                    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+                    if (name && value) {
+                        const color = { name, value, priceChange, photo: file };
+                        newProduct.colors.push(color);
+                        document.getElementById('product-color-name').value = '';
+                        document.getElementById('product-color-value').value = '#000000';
+                        document.getElementById('product-color-price-change').value = '';
+                        document.getElementById('product-color-photo-url').value = '';
+                        document.getElementById('product-color-photo-file').value = '';
+                        renderColorsList();
+                        resetInactivityTimer();
+                    }
                 }
             });
-            renderPhotoList();
-            resetInactivityTimer();
-        });
-    }
+        }
 
-    const colorPhotoInput = document.getElementById('product-color-photo-file');
-    if (colorPhotoInput) {
-        colorPhotoInput.addEventListener('change', () => {
-            const file = colorPhotoInput.files[0];
-            if (file) {
-                const name = document.getElementById('product-color-name').value;
-                const value = document.getElementById('product-color-value').value;
-                const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-                if (name && value) {
-                    const color = { name, value, priceChange, photo: file };
-                    newProduct.colors.push(color);
-                    document.getElementById('product-color-name').value = '';
-                    document.getElementById('product-color-value').value = '#000000';
-                    document.getElementById('product-color-price-change').value = '';
-                    document.getElementById('product-color-photo-url').value = '';
-                    document.getElementById('product-color-photo-file').value = '';
-                    renderColorsList();
-                    resetInactivityTimer();
-                }
-            }
-        });
-    }
+        const saveButton = document.getElementById('save-product-btn');
+        if (saveButton) {
+            saveButton.addEventListener('click', () => saveEditedProduct(productId));
+        } else {
+            console.warn('Кнопка #save-product-btn не знайдена');
+        }
 
-    const saveButton = document.getElementById('save-product-btn');
-    if (saveButton) {
-        saveButton.addEventListener('click', () => saveEditedProduct(productId));
-    } else {
-        console.warn('Кнопка #save-product-btn не знайдена');
-    }
-
-    const cancelButton = document.getElementById('cancel-product-btn');
-    if (cancelButton) {
-        cancelButton.addEventListener('click', closeModal);
-    } else {
-        console.warn('Кнопка #cancel-product-btn не знайдена');
-    }
+        const cancelButton = document.getElementById('cancel-product-btn');
+        if (cancelButton) {
+            cancelButton.addEventListener('click', closeModal);
+        } else {
+            console.warn('Кнопка #cancel-product-btn не знайдена');
+        }
+    }, 0);
 
     resetInactivityTimer();
 }
@@ -5491,15 +5493,13 @@ async function saveEditedProduct(productId) {
 
         // Перевіряємо і встановлюємо subcategory
         let subcategorySlug = '';
-        if (subcategory && subcategory !== 'Без підкатегорії') {
+        if (subcategory) {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
-            if (subcategoryObj) {
-                subcategorySlug = subcategoryObj.slug;
-                console.log('Встановлено subcategorySlug:', subcategorySlug);
-            } else {
+            if (!subcategoryObj) {
                 showNotification('Обрана підкатегорія не існує в цій категорії!');
                 return;
             }
+            subcategorySlug = subcategory;
         }
 
         if (newProduct.type === 'simple' && (price === null || price < 0)) {
@@ -5606,7 +5606,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Використовуємо slug або порожній рядок
+            subcategory: subcategorySlug,
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
