@@ -1247,116 +1247,103 @@ if (error) {
 
 app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res) => {
   try {
-    const productData = { ...req.body };
-    logger.info("Отримано дані для оновлення продукту:", JSON.stringify(productData, null, 2));
+    const productData = { ...req.body }
+    logger.info("Отримано дані для оновлення продукту:", productData)
 
     if (productData.img && !productData.photos) {
-      productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
-      delete productData.img;
+      productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img]
+      delete productData.img
     }
     if (productData.colors) {
       productData.colors = productData.colors.map((color) => {
         if (color.img && !color.photo) {
-          color.photo = color.img;
-          delete color.img;
+          color.photo = color.img
+          delete color.img
         }
-        return color;
-      });
+        return color
+      })
     }
 
-    delete productData._id;
-    delete productData.__v;
+    delete productData._id
+    delete productData.__v
     if (productData.colors) {
       productData.colors = productData.colors.map((color) => {
-        const { _id, ...rest } = color;
-        return rest;
-      });
+        const { _id, ...rest } = color
+        return rest
+      })
     }
 
-    const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
+    const { error } = productSchemaValidation.validate(productData)
     if (error) {
-      logger.error("Помилка валідації продукту:", JSON.stringify(error.details, null, 2));
-      return res.status(400).json({
-        error: "Помилка валідації",
-        details: error.details.map(detail => ({
-          message: detail.message,
-          path: detail.path.join('.'),
-          value: detail.context.value
-        }))
-      });
+      logger.error("Помилка валідації продукту:", error.details)
+      return res.status(400).json({ error: "Помилка валідації", details: error.details })
     }
 
-    const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } });
+    const existingProduct = await Product.findOne({ slug: productData.slug, _id: { $ne: req.params.id } })
     if (existingProduct) {
-      logger.error("Продукт з таким slug вже існує:", productData.slug);
-      return res.status(400).json({ error: "Продукт з таким slug вже існує" });
+      logger.error("Продукт з таким slug вже існує:", productData.slug)
+      return res.status(400).json({ error: "Продукт з таким slug вже існує" })
     }
 
-    if (productData.brand && productData.brand.trim()) {
-      const brand = await Brand.findOne({ name: productData.brand });
+    if (productData.brand) {
+      const brand = await Brand.findOne({ name: productData.brand })
       if (!brand) {
-        logger.error("Бренд не знайдено:", productData.brand);
-        return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` });
+        logger.error("Бренд не знайдено:", productData.brand)
+        return res.status(400).json({ error: `Бренд "${productData.brand}" не знайдено` })
       }
     }
 
-    if (productData.material && productData.material.trim()) {
-      const material = await Material.findOne({ name: productData.material });
+    if (productData.material) {
+      const material = await Material.findOne({ name: productData.material })
       if (!material) {
-        logger.error("Матеріал не знайдено:", productData.material);
-        return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` });
+        logger.error("Матеріал не знайдено:", productData.material)
+        return res.status(400).json({ error: `Матеріал "${productData.material}" не знайдено` })
       }
     }
 
-    const category = await Category.findOne({ name: productData.category });
+    const category = await Category.findOne({ name: productData.category })
     if (!category) {
-      logger.error("Категорія не знайдено:", productData.category);
-      return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+      logger.error("Категорія не знайдено:", productData.category)
+      return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` })
     }
 
-    if (productData.subcategory && productData.subcategory.trim()) {
-      const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
+    if (productData.subcategory) {
+      const subcategoryExists = category.subcategories.some((sub) => sub.slug === productData.subcategory)
       if (!subcategoryExists) {
-        logger.error("Підкатегорія не знайдено:", productData.subcategory);
+        logger.error("Підкатегорія не знайдено:", productData.subcategory)
         return res.status(400).json({
-          error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`
-        });
+          error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+        })
       }
     }
 
     if (productData.groupProducts && productData.groupProducts.length > 0) {
-      const invalidIds = productData.groupProducts.filter((id) => !mongoose.Types.ObjectId.isValid(id));
+      const invalidIds = productData.groupProducts.filter((id) => !mongoose.Types.ObjectId.isValid(id))
       if (invalidIds.length > 0) {
-        logger.error("Некоректні ObjectId у groupProducts:", invalidIds);
-        return res.status(400).json({ error: "Некоректні ObjectId у groupProducts", details: invalidIds });
+        logger.error("Некоректні ObjectId у groupProducts:", invalidIds)
+        return res.status(400).json({ error: "Некоректні ObjectId у groupProducts", details: invalidIds })
       }
 
-      const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } });
+      const existingProducts = await Product.find({ _id: { $in: productData.groupProducts } })
       if (existingProducts.length !== productData.groupProducts.length) {
-        const missingIds = productData.groupProducts.filter(
-          (id) => !existingProducts.some((p) => p._id.toString() === id)
-        );
-        logger.error("Деякі продукти в groupProducts не знайдені:", missingIds);
-        return res.status(400).json({
-          error: "Деякі продукти в groupProducts не знайдені",
-          details: missingIds
-        });
+        logger.error("Деякі продукти в groupProducts не знайдені:", productData.groupProducts)
+        return res.status(400).json({ error: "Деякі продукти в groupProducts не знайдені" })
       }
 
-      productData.groupProducts = productData.groupProducts.map((id) => new mongoose.Types.ObjectId(id));
+      productData.groupProducts = productData.groupProducts.map((id) => mongoose.Types.ObjectId(id))
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true });
-    if (!product) return res.status(404).json({ error: "Товар не знайдено" });
+    const product = await Product.findByIdAndUpdate(req.params.id, productData, { new: true })
+    if (!product) return res.status(404).json({ error: "Товар не знайдено" })
 
-    const products = await Product.find();
-    broadcast("products", products);
-    res.json(product);
+    const products = await Product.find()
+    broadcast("products", products)
+    res.json(product)
   } catch (err) {
-    logger.error("Помилка при оновленні товару:", err);
-    res.status(400).json({ error: "Невірні дані", details: err.message });
+    logger.error("Помилка при оновленні товару:", err)
+    res.status(400).json({ error: "Невірні дані", details: err.message })
   }
-});
+})
 
 app.delete("/api/products/:id", authenticateToken, csrfProtection, async (req, res) => {
   try {
