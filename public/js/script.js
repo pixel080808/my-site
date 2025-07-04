@@ -938,6 +938,7 @@ function showSection(sectionId) {
     const burgerContent = document.getElementById('burger-content');
     const filters = document.querySelector('.filters');
     const floatingCart = document.getElementById('floating-cart');
+    const floatingGroupCart = document.getElementById('floating-group-cart');
 
     if (filters && window.innerWidth < 992) {
         filters.classList.remove('active');
@@ -962,9 +963,16 @@ function showSection(sectionId) {
             if (window.scrollY > headerHeight) {
                 burgerMenu.classList.add('visible');
                 floatingCart.classList.add('visible');
+                // Відображаємо floating-group-cart для product-details, якщо продукт груповий
+                if (sectionId === 'product-details' && floatingGroupCart) {
+                    floatingGroupCart.classList.add('visible');
+                }
             } else {
                 burgerMenu.classList.remove('visible');
                 floatingCart.classList.remove('visible');
+                if (floatingGroupCart) {
+                    floatingGroupCart.classList.remove('visible');
+                }
                 burgerMenu.classList.remove('active');
                 burgerContent.classList.remove('active');
             }
@@ -981,6 +989,23 @@ function showSection(sectionId) {
     if (burgerMenu && burgerContent) {
         burgerMenu.classList.remove('active');
         burgerContent.classList.remove('active');
+    }
+
+    // Керуємо floating-group-cart для групових товарів
+    if (floatingGroupCart) {
+        if (sectionId === 'product-details') {
+            floatingGroupCart.classList.add('visible');
+            // Оновлюємо загальну ціну після рендерингу деталей продукту
+            if (typeof renderProductDetails === 'function') {
+                renderProductDetails().then(() => {
+                    if (typeof updateFloatingGroupCart === 'function' && parentGroupProduct) {
+                        updateFloatingGroupCart();
+                    }
+                });
+            }
+        } else {
+            floatingGroupCart.classList.remove('visible');
+        }
     }
 
     let newPath = '/';
@@ -1055,7 +1080,15 @@ function showSection(sectionId) {
             return;
         }
         if (typeof renderProductDetails === 'function') {
-            renderProductDetails();
+            renderProductDetails().then(() => {
+                // Перевіряємо parentGroupProduct після рендерингу
+                if (parentGroupProduct && floatingGroupCart) {
+                    floatingGroupCart.classList.add('visible');
+                    if (typeof updateFloatingGroupCart === 'function') {
+                        updateFloatingGroupCart();
+                    }
+                }
+            });
         } else {
             console.error('renderProductDetails function is not defined');
             showSection('home');
@@ -5018,36 +5051,72 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSection('catalog');
             }
         } else if (parts.length >= 2) {
-            // Обробка шляху продукту
             const slug = parts[parts.length - 1];
             const subCatSlug = parts.length >= 3 ? parts[parts.length - 2] : null;
             const catSlug = parts[0];
-            console.log('DOMContentLoaded: Обробка шляху продукту, slug:', slug, 'catSlug:', catSlug, 'subCatSlug:', subCatSlug);
+            console.log('DOMContentLoaded: Обробка шляху, slug:', slug, 'catSlug:', catSlug, 'subCatSlug:', subCatSlug);
 
-            const product = products.find(p => p.slug === slug) || await fetchProductBySlug(slug);
-            if (product) {
-                currentProduct = product;
-                currentCategory = product.category;
-                currentSubcategory = product.subcategory || null;
-                const newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${slug}`;
-                const state = {
-                    sectionId: 'product-details',
-                    path: newPath,
-                    stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    currentPage: 1,
-                    currentCategory: currentCategory,
-                    currentSubcategory: currentSubcategory,
-                    isSearchActive: false,
-                    searchQuery: '',
-                    productId: product._id
-                };
-                history.replaceState(state, '', newPath);
-                console.log('DOMContentLoaded: history.replaceState виконано:', state);
-                console.log('DOMContentLoaded: Відображаємо product-details для продукту:', product.name);
-                showSection('product-details');
+            // Знайти категорію за catSlug
+            const category = categories.find(c => transliterate(c.name.replace('ь', '')) === catSlug);
+            
+            if (category) {
+                // Перевірити, чи slug є підкатегорією
+                const subcategory = category.subcategories?.find(sub => 
+                    sub.slug === slug || transliterate(sub.name.replace('ь', '')) === slug
+                );
+
+                if (subcategory) {
+                    // Це підкатегорія, відображаємо каталог
+                    currentCategory = category.name;
+                    currentSubcategory = subcategory.name;
+                    console.log('DOMContentLoaded: Знайдено підкатегорію:', currentSubcategory);
+                    renderCatalog(currentCategory, currentSubcategory);
+                    showSection('catalog');
+                    const newPath = `/${catSlug}/${slug}`;
+                    const state = {
+                        sectionId: 'catalog',
+                        path: newPath,
+                        stateId: `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        currentPage: 1,
+                        currentCategory: currentCategory,
+                        currentSubcategory: currentSubcategory,
+                        isSearchActive: false,
+                        searchQuery: ''
+                    };
+                    history.replaceState(state, '', newPath);
+                    console.log('DOMContentLoaded: history.replaceState виконано для каталогу:', state);
+                } else {
+                    // Це може бути продукт, перевіряємо
+                    const product = products.find(p => p.slug === slug) || await fetchProductBySlug(slug);
+                    if (product) {
+                        currentProduct = product;
+                        currentCategory = product.category;
+                        currentSubcategory = product.subcategory || null;
+                        const newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${slug}`;
+                        const state = {
+                            sectionId: 'product-details',
+                            path: newPath,
+                            stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            currentPage: 1,
+                            currentCategory: currentCategory,
+                            currentSubcategory: currentSubcategory,
+                            isSearchActive: false,
+                            searchQuery: '',
+                            productId: product._id
+                        };
+                        history.replaceState(state, '', newPath);
+                        console.log('DOMContentLoaded: history.replaceState виконано:', state);
+                        console.log('DOMContentLoaded: Відображаємо product-details для продукту:', product.name);
+                        showSection('product-details');
+                    } else {
+                        console.error('DOMContentLoaded: Продукт не знайдено для slug:', slug);
+                        showNotification('Товар не знайдено!', 'error');
+                        showSection('home');
+                    }
+                }
             } else {
-                console.error('DOMContentLoaded: Продукт не знайдено для slug:', slug);
-                showNotification('Товар не знайдено!', 'error');
+                console.error('DOMContentLoaded: Категорія не знайдена для catSlug:', catSlug);
+                showNotification('Категорія не знайдена!', 'error');
                 showSection('home');
             }
         } else {
@@ -5315,11 +5384,38 @@ window.addEventListener('popstate', async (event) => {
                     console.warn('popstate: Запит пошуку відсутній, показуємо каталог');
                     showSection('catalog');
                 }
-            } else if (parts.length >= 3) {
-                const slug = parts.pop();
-                const subCatSlug = parts.pop() || null;
-                const catSlug = parts.pop() || null;
+            } else if (parts.length >= 2) {
+                const slug = parts[parts.length - 1];
+                const subCatSlug = parts.length >= 3 ? parts[parts.length - 2] : null;
+                const catSlug = parts[0];
 
+                const category = categories.find(c => transliterate(c.name.replace('ь', '')) === catSlug);
+                if (category) {
+                    const subcategory = category.subcategories?.find(sub => 
+                        sub.slug === slug || transliterate(sub.name.replace('ь', '')) === slug
+                    );
+                    if (subcategory) {
+                        currentCategory = category.name;
+                        currentSubcategory = subcategory.name;
+                        console.log('popstate: Знайдено підкатегорію:', currentSubcategory);
+                        renderCatalog(currentCategory, currentSubcategory);
+                        showSection('catalog');
+                        const state = {
+                            sectionId: 'catalog',
+                            path: `/${catSlug}/${slug}`,
+                            stateId: `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            currentPage: 1,
+                            currentCategory: currentCategory,
+                            currentSubcategory: currentSubcategory,
+                            isSearchActive: false,
+                            searchQuery: ''
+                        };
+                        history.replaceState(state, '', `/${catSlug}/${slug}`);
+                        console.log('popstate: history.replaceState виконано:', state);
+                        return;
+                    }
+                }
+                // Продовжити обробку як продукт
                 if (slug && slug !== '[object Object]') {
                     console.log('popstate: Спроба знайти продукт за slug:', slug);
                     currentProduct = products.find(p => p.slug === slug) || await fetchProductBySlug(slug);
