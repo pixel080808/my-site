@@ -4511,13 +4511,15 @@ async function updateSubcategories() {
     }
 
     // Відновлюємо вибір підкатегорії
-    console.log('Спроба відновлення subcategory:', newProduct.subcategory, 'Опції:', Array.from(subcategorySelect.options).map(opt => opt.value));
-    if (newProduct.subcategory && Array.from(subcategorySelect.options).some(opt => opt.value === newProduct.subcategory)) {
-        subcategorySelect.value = newProduct.subcategory;
-        console.log('Встановлено subcategory:', newProduct.subcategory);
-    } else {
-        subcategorySelect.value = '';
-        console.warn('Підкатегорія не знайдена в опціях або не встановлена:', newProduct.subcategory);
+    if (newProduct.subcategory) {
+        const category = categories.find(c => c.name === categoryName);
+        if (category && category.subcategories.some(sub => sub.slug === newProduct.subcategory)) {
+            subcategorySelect.value = newProduct.subcategory;
+            console.log('Встановлено subcategory:', newProduct.subcategory);
+        } else {
+            subcategorySelect.value = '';
+            console.warn('Підкатегорія не знайдена в опціях:', newProduct.subcategory);
+        }
     }
 
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
@@ -5246,7 +5248,7 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
+    const escapedName = product.name.replace(/"/g, '"').replace(/'/g, ''').replace(/</g, '<').replace(/>/g, '>').replace(/&/g, '&');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
@@ -5348,102 +5350,90 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    setTimeout(async () => {
-        // Оновлюємо категорії перед оновленням підкатегорій
-        try {
-            const loadedCategories = await loadCategories();
-            if (!loadedCategories) {
-                console.error('Не вдалося завантажити категорії');
-                return;
-            }
-            console.log('Категорії оновлено:', JSON.stringify(categories, null, 2));
-        } catch (err) {
-            console.error('Помилка завантаження категорій:', err);
-            showNotification('Не вдалося завантажити категорії: ' + err.message);
-            return;
-        }
+    // Завантажуємо категорії перед оновленням підкатегорій
+    await loadCategories();
 
-        const categorySelect = document.getElementById('product-category');
-        const subcatSelect = document.getElementById('product-subcategory');
-        if (categorySelect && subcatSelect) {
-            // Оновлюємо список категорій у <select>
-            categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
-                categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
-            categorySelect.addEventListener('change', updateSubcategories);
-            
-            // Оновлюємо підкатегорії
-            await updateSubcategories();
-            
-            // Встановлюємо підкатегорію після оновлення списку
-            console.log('Значення product.subcategory:', product.subcategory);
-            console.log('Доступні опції підкатегорій:', Array.from(subcatSelect.options).map(opt => opt.value));
-            if (product.subcategory && Array.from(subcatSelect.options).some(opt => opt.value === product.subcategory)) {
+    const categorySelect = document.getElementById('product-category');
+    const subcatSelect = document.getElementById('product-subcategory');
+    if (categorySelect && subcatSelect) {
+        // Оновлюємо список категорій
+        categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
+            categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
+        categorySelect.addEventListener('change', updateSubcategories);
+
+        // Оновлюємо підкатегорії
+        await updateSubcategories();
+
+        // Встановлюємо підкатегорію
+        if (product.subcategory) {
+            const category = categories.find(c => c.name === product.category);
+            if (category && category.subcategories.some(sub => sub.slug === product.subcategory)) {
                 subcatSelect.value = product.subcategory;
                 console.log('Встановлено subcategory:', product.subcategory);
             } else {
                 subcatSelect.value = '';
-                console.warn('Підкатегорія не знайдена в опціях або не встановлена:', product.subcategory);
+                console.warn('Підкатегорія не знайдена в опціях:', product.subcategory);
             }
-        } else {
-            console.warn('Елемент #product-category або #product-subcategory не знайдено');
         }
+    } else {
+        console.warn('Елемент #product-category або #product-subcategory не знайдено');
+    }
 
-        renderColorsList();
-        renderPhotoList();
-        renderMattressSizes();
-        renderGroupProducts();
+    renderColorsList();
+    renderPhotoList();
+    renderMattressSizes();
+    renderGroupProducts();
 
-        const photoInput = document.getElementById('product-photo-file');
-        if (photoInput) {
-            photoInput.addEventListener('change', () => {
-                const files = photoInput.files;
-                Array.from(files).forEach(file => {
-                    if (!newProduct.photos.includes(file)) {
-                        newProduct.photos.push(file);
-                    }
-                });
-                renderPhotoList();
-                resetInactivityTimer();
-            });
-        }
-
-        const colorPhotoInput = document.getElementById('product-color-photo-file');
-        if (colorPhotoInput) {
-            colorPhotoInput.addEventListener('change', () => {
-                const file = colorPhotoInput.files[0];
-                if (file) {
-                    const name = document.getElementById('product-color-name').value;
-                    const value = document.getElementById('product-color-value').value;
-                    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-                    if (name && value) {
-                        const color = { name, value, priceChange, photo: file };
-                        newProduct.colors.push(color);
-                        document.getElementById('product-color-name').value = '';
-                        document.getElementById('product-color-value').value = '#000000';
-                        document.getElementById('product-color-price-change').value = '';
-                        document.getElementById('product-color-photo-url').value = '';
-                        document.getElementById('product-color-photo-file').value = '';
-                        renderColorsList();
-                        resetInactivityTimer();
-                    }
+    const photoInput = document.getElementById('product-photo-file');
+    if (photoInput) {
+        photoInput.addEventListener('change', () => {
+            const files = photoInput.files;
+            Array.from(files).forEach(file => {
+                if (!newProduct.photos.includes(file)) {
+                    newProduct.photos.push(file);
                 }
             });
-        }
+            renderPhotoList();
+            resetInactivityTimer();
+        });
+    }
 
-        const saveButton = document.getElementById('save-product-btn');
-        if (saveButton) {
-            saveButton.addEventListener('click', () => saveEditedProduct(productId));
-        } else {
-            console.warn('Кнопка #save-product-btn не знайдена');
-        }
+    const colorPhotoInput = document.getElementById('product-color-photo-file');
+    if (colorPhotoInput) {
+        colorPhotoInput.addEventListener('change', () => {
+            const file = colorPhotoInput.files[0];
+            if (file) {
+                const name = document.getElementById('product-color-name').value;
+                const value = document.getElementById('product-color-value').value;
+                const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
+                if (name && value) {
+                    const color = { name, value, priceChange, photo: file };
+                    newProduct.colors.push(color);
+                    document.getElementById('product-color-name').value = '';
+                    document.getElementById('product-color-value').value = '#000000';
+                    document.getElementById('product-color-price-change').value = '';
+                    document.getElementById('product-color-photo-url').value = '';
+                    document.getElementById('product-color-photo-file').value = '';
+                    renderColorsList();
+                    resetInactivityTimer();
+                }
+            }
+        });
+    }
 
-        const cancelButton = document.getElementById('cancel-product-btn');
-        if (cancelButton) {
-            cancelButton.addEventListener('click', closeModal);
-        } else {
-            console.warn('Кнопка #cancel-product-btn не знайдена');
-        }
-    }, 0);
+    const saveButton = document.getElementById('save-product-btn');
+    if (saveButton) {
+        saveButton.addEventListener('click', () => saveEditedProduct(productId));
+    } else {
+        console.warn('Кнопка #save-product-btn не знайдена');
+    }
+
+    const cancelButton = document.getElementById('cancel-product-btn');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', closeModal);
+    } else {
+        console.warn('Кнопка #cancel-product-btn не знайдена');
+    }
 
     resetInactivityTimer();
 }
