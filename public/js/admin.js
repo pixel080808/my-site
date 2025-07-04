@@ -193,16 +193,20 @@ async function loadCategories() {
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         const invalidCategories = categories.filter(c => !c._id || !isValidId(c._id));
         const invalidSubcategories = categories.flatMap(c => 
-            (c.subcategories || []).filter(s => !s._id || !isValidId(s._id))
+            (c.subcategories || []).filter(s => !s._id || !isValidId(s._id) || !s.slug || !s.name)
         );
         if (invalidCategories.length > 0 || invalidSubcategories.length > 0) {
-            console.error('Found categories or subcategories with invalid ID format:', {
+            console.error('Found categories or subcategories with invalid format:', {
                 invalidCategories,
                 invalidSubcategories
             });
-            showNotification('Some categories or subcategories have invalid ID format.');
+            showNotification('Some categories or subcategories have invalid format.');
+            categories = categories.filter(c => c._id && isValidId(c._id));
+            categories.forEach(c => {
+                c.subcategories = (c.subcategories || []).filter(s => s._id && isValidId(s._id) && s.slug && s.name);
+            });
         }
-        console.log('Categories loaded:', categories);
+        console.log('Categories loaded:', JSON.stringify(categories, null, 2));
         renderCategoriesAdmin();
         return categories;
     } catch (e) {
@@ -4507,12 +4511,13 @@ async function updateSubcategories() {
     }
 
     // Відновлюємо вибір підкатегорії
-    if (newProduct.subcategory) {
+    console.log('Спроба відновлення subcategory:', newProduct.subcategory, 'Опції:', Array.from(subcategorySelect.options).map(opt => opt.value));
+    if (newProduct.subcategory && Array.from(subcategorySelect.options).some(opt => opt.value === newProduct.subcategory)) {
         subcategorySelect.value = newProduct.subcategory;
-        console.log('Спроба відновлення subcategory:', newProduct.subcategory, 'Опції:', Array.from(subcategorySelect.options).map(opt => opt.value));
+        console.log('Встановлено subcategory:', newProduct.subcategory);
     } else {
         subcategorySelect.value = '';
-        console.log('Підкатегорія не встановлена, вибрано порожнє значення');
+        console.warn('Підкатегорія не знайдена в опціях або не встановлена:', newProduct.subcategory);
     }
 
     const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
@@ -5346,8 +5351,12 @@ async function openEditProductModal(productId) {
     setTimeout(async () => {
         // Оновлюємо категорії перед оновленням підкатегорій
         try {
-            await loadCategories();
-            console.log('Категорії оновлено:', categories);
+            const loadedCategories = await loadCategories();
+            if (!loadedCategories) {
+                console.error('Не вдалося завантажити категорії');
+                return;
+            }
+            console.log('Категорії оновлено:', JSON.stringify(categories, null, 2));
         } catch (err) {
             console.error('Помилка завантаження категорій:', err);
             showNotification('Не вдалося завантажити категорії: ' + err.message);
@@ -5357,16 +5366,23 @@ async function openEditProductModal(productId) {
         const categorySelect = document.getElementById('product-category');
         const subcatSelect = document.getElementById('product-subcategory');
         if (categorySelect && subcatSelect) {
+            // Оновлюємо список категорій у <select>
+            categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
+                categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
             categorySelect.addEventListener('change', updateSubcategories);
+            
+            // Оновлюємо підкатегорії
             await updateSubcategories();
+            
             // Встановлюємо підкатегорію після оновлення списку
             console.log('Значення product.subcategory:', product.subcategory);
-            if (product.subcategory) {
+            console.log('Доступні опції підкатегорій:', Array.from(subcatSelect.options).map(opt => opt.value));
+            if (product.subcategory && Array.from(subcatSelect.options).some(opt => opt.value === product.subcategory)) {
                 subcatSelect.value = product.subcategory;
-                console.log('Встановлено subcategory:', product.subcategory, 'Опції:', Array.from(subcatSelect.options).map(opt => opt.value));
+                console.log('Встановлено subcategory:', product.subcategory);
             } else {
                 subcatSelect.value = '';
-                console.log('Підкатегорія не встановлена, вибрано порожнє значення');
+                console.warn('Підкатегорія не знайдена в опціях або не встановлена:', product.subcategory);
             }
         } else {
             console.warn('Елемент #product-category або #product-subcategory не знайдено');
