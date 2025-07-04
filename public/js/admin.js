@@ -5514,19 +5514,13 @@ async function saveEditedProduct(productId) {
         // Перевіряємо і встановлюємо subcategory
         let subcategorySlug = '';
         if (subcategory && subcategory !== 'Без підкатегорії') {
-            const selectedOption = document.getElementById('product-subcategory').querySelector(`option[value="${subcategory}"]`);
-            if (selectedOption && selectedOption.dataset.slug) {
-                subcategorySlug = selectedOption.dataset.slug;
+            const subcategoryObj = categoryObj.subcategories.find(sub => sub.name === subcategory);
+            if (subcategoryObj) {
+                subcategorySlug = subcategoryObj.slug;
                 console.log('Встановлено subcategorySlug:', subcategorySlug);
             } else {
-                const subcategoryObj = categoryObj.subcategories.find(sub => sub.name.trim() === subcategory);
-                if (subcategoryObj) {
-                    subcategorySlug = subcategoryObj.slug;
-                    console.log('Встановлено subcategorySlug (альтернативний метод):', subcategorySlug);
-                } else {
-                    showNotification('Обрана підкатегорія не існує в цій категорії!');
-                    return;
-                }
+                showNotification('Обрана підкатегорія не існує в цій категорії!');
+                return;
             }
         } else {
             console.log('Підкатегорія не вибрана, використовуємо порожній рядок');
@@ -5636,7 +5630,7 @@ async function saveEditedProduct(productId) {
             slug,
             brand: brand || '',
             category,
-            subcategory: subcategorySlug, // Використовуємо slug замість name або null
+            subcategory: subcategorySlug || null, // Використовуємо null, якщо subcategorySlug порожній
             material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
