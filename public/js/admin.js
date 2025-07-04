@@ -5236,7 +5236,7 @@ async function openEditProductModal(productId) {
     };
 
     // Екранування HTML-символів для назви товару
-    const escapedName = product.name.replace(/&/g, '&').replace(/"/g, '"').replace(/'/g, ''').replace(/</g, '<').replace(/>/g, '>');
+    const escapedName = product.name.replace(/&/g, '&').replace(/"/g, '"').replace(/'/g, '\'').replace(/</g, '<').replace(/>/g, '>');
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Елемент #modal не знайдено');
