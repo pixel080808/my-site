@@ -945,7 +945,6 @@ async function updateFloatingGroupCart() {
                 const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
                 let price = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
 
-                // Враховуємо колір, якщо вибрано
                 if (product.colors?.length > 0 && selectedColors[id] !== undefined) {
                     const colorIndex = parseInt(selectedColors[id]);
                     if (product.colors[colorIndex]) {
@@ -953,7 +952,6 @@ async function updateFloatingGroupCart() {
                     }
                 }
 
-                // Враховуємо розмір, якщо товар є матрацом
                 if (product.type === 'mattresses' && selectedMattressSizes[id]) {
                     const sizeInfo = product.sizes?.find(s => s.name === selectedMattressSizes[id]);
                     if (sizeInfo) {
@@ -3415,13 +3413,28 @@ async function addGroupToCart(productId) {
         updateCartCount();
         debouncedRenderCart();
         showNotification('Вибрані товари додано до кошика!', 'success');
+
+        // Скидаємо вибір групових товарів
+        saveToStorage(`groupSelection_${productId}`, {});
+        
+        // Скидаємо значення кількості в інтерфейсі
+        product.groupProducts.forEach(id => {
+            const qtyInput = document.getElementById(`group-quantity-${productId}-${id}`);
+            if (qtyInput) {
+                qtyInput.value = '0';
+            }
+        });
+
+        // Оновлюємо ціну та плаваючу кнопку
+        const priceDiv = document.querySelector('.group-total-price');
+        if (priceDiv) {
+            priceDiv.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">0 грн</span>`;
+        }
+        await updateFloatingGroupCart();
     } catch (error) {
         console.error('Помилка синхронізації кошика з сервером:', error);
         showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
     }
-
-    // Оновлюємо плаваючу кнопку
-    await updateFloatingGroupCart();
 }
 
 async function fetchProductBySlug(slug) {
