@@ -1216,10 +1216,29 @@ function showModal(content) {
         showNotification('Помилка: модальне вікно не знайдено');
         return;
     }
+
+    // Очищаємо попередній вміст і слухачі подій
+    modal.innerHTML = '';
+    modal.classList.remove('active');
+    
+    // Створюємо елемент затемнення, якщо його немає
+    let backdrop = document.querySelector('.modal-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        document.body.appendChild(backdrop);
+    }
+
+    // Встановлюємо вміст і відображаємо модальне вікно
     modal.innerHTML = content;
     modal.style.display = 'block';
     modal.classList.add('active');
+    backdrop.style.display = 'block'; // Показуємо затемнення
     isModalOpen = true;
+    
+    // Блокуємо прокрутку сторінки
+    document.body.style.overflow = 'hidden';
+    
     resetInactivityTimer();
 }
 
@@ -2454,21 +2473,24 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
 
 function closeModal() {
     const modal = document.getElementById('modal');
-    const backdrop = document.querySelector('.modal-backdrop'); // Знаходимо затемнення
+    const backdrop = document.querySelector('.modal-backdrop');
+    
     if (modal) {
         modal.classList.remove('active');
-        modal.innerHTML = ''; // Очищаємо вміст модального вікна
+        modal.innerHTML = ''; // Очищаємо вміст
         modal.style.display = 'none'; // Приховуємо модальне вікно
         isModalOpen = false;
         console.log('Модальне вікно закрито');
     }
+    
     if (backdrop) {
-        backdrop.remove(); // Видаляємо затемнення
+        backdrop.style.display = 'none'; // Приховуємо затемнення замість видалення
     }
+    
     newProduct = {}; // Скидаємо newProduct
     unsavedChanges = false; // Скидаємо прапорець незбережених змін
-    resetInactivityTimer();
     document.body.style.overflow = 'auto'; // Відновлюємо прокрутку сторінки
+    resetInactivityTimer();
 }
 
 function validateFile(file) {
