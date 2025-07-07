@@ -2454,15 +2454,21 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
 
 function closeModal() {
     const modal = document.getElementById('modal');
+    const backdrop = document.querySelector('.modal-backdrop'); // Знаходимо затемнення
     if (modal) {
         modal.classList.remove('active');
-        modal.innerHTML = '';
+        modal.innerHTML = ''; // Очищаємо вміст модального вікна
+        modal.style.display = 'none'; // Приховуємо модальне вікно
         isModalOpen = false;
         console.log('Модальне вікно закрито');
+    }
+    if (backdrop) {
+        backdrop.remove(); // Видаляємо затемнення
     }
     newProduct = {}; // Скидаємо newProduct
     unsavedChanges = false; // Скидаємо прапорець незбережених змін
     resetInactivityTimer();
+    document.body.style.overflow = 'auto'; // Відновлюємо прокрутку сторінки
 }
 
 function validateFile(file) {
