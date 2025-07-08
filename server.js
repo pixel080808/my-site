@@ -1693,14 +1693,17 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             }
         }
 
+        const existingCategories = await Category.find({ _id: { $in: categoryUpdates.map(u => u._id) } }).session(session);
+        if (existingCategories.length !== categoryUpdates.length) {
+            logger.error("Одну або кілька категорій не знайдено");
+            await session.abortTransaction();
+            return res.status(404).json({ error: "Одну або кілька категорій не знайдено" });
+        }
+
         for (const update of categoryUpdates) {
             const category = await Category.findById(update._id).session(session);
-            if (!category) {
-                logger.error(`Категорію не знайдено: ${update._id}`);
-                await session.abortTransaction();
-                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
-            }
             category.order = update.order;
+            category.updatedAt = new Date();
             await category.save({ session });
         }
 
