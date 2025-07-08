@@ -2481,53 +2481,50 @@ function openEditCategoryModal(categoryId) {
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Модальне вікно з id="modal" не знайдено!');
+        showNotification('Модальне вікно не знайдено.');
         return;
     }
 
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
         console.error('Категорію з id', categoryId, 'не знайдено');
+        showNotification('Категорію не знайдено.');
         return;
     }
 
-    // Очищаємо попередній вміст модального вікна
-    modal.innerHTML = '';
-
-    const modalContent = document.createElement('div');
-    modalContent.className = 'modal-content';
-    modalContent.innerHTML = `
-        <h3>Редагувати категорію</h3>
-        <form id="edit-category-form">
-            <input id="category-name" placeholder="Назва категорії" type="text" value="${category.name || ''}"/><br/>
-            <label for="category-name">Назва категорії</label>
-            <input id="category-slug" placeholder="Шлях категорії" type="text" value="${category.slug || ''}"/><br/>
-            <label for="category-slug">Шлях категорії</label>
-            <input id="category-photo-url" placeholder="URL зображення" type="text" value="${category.photo || ''}"/><br/>
-            <label for="category-photo-url">URL зображення</label>
-            <input accept="image/*" id="category-photo-file" type="file"/><br/>
-            <label for="category-photo-file">Завантажте зображення</label>
-            <select id="category-visible">
-                <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
-            </select><br/>
-            <label for="category-visible">Видимість</label>
-            <div class="modal-actions">
-                <button type="submit">Зберегти</button>
-                <button type="button" onclick="closeModal()">Скасувати</button>
-            </div>
-        </form>
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати категорію</h3>
+            <form id="edit-category-form">
+                <input id="category-name" placeholder="Назва категорії" type="text" value="${sanitize(category.name) || ''}" required /><br/>
+                <label for="category-name">Назва категорії</label>
+                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${sanitize(category.slug) || ''}" required /><br/>
+                <label for="category-slug">Шлях категорії</label>
+                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${sanitize(category.photo) || ''}" /><br/>
+                <label for="category-photo-url">URL зображення</label>
+                <input accept="image/*" id="category-photo-file" type="file" /><br/>
+                <label for="category-photo-file">Завантажте зображення</label>
+                <select id="category-visible">
+                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+                </select><br/>
+                <label for="category-visible">Видимість</label>
+                <div class="modal-actions">
+                    <button type="submit">Зберегти</button>
+                    <button type="button" onclick="closeModal()">Скасувати</button>
+                </div>
+            </form>
+        </div>
     `;
 
-    modal.appendChild(modalContent);
     modal.classList.add('active');
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування категорії:', categoryId);
 
-    // Додаємо обробник для збереження змін
     const form = document.getElementById('edit-category-form');
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        updateCategoryData(categoryId);
+        await updateCategoryData(categoryId);
     });
 
     resetInactivityTimer();
@@ -2652,7 +2649,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Збільшуємо затримку для забезпечення оновлення DOM
         await new Promise(resolve => setTimeout(resolve, 200));
 
         const nameInput = document.getElementById('category-name');
@@ -2660,18 +2656,6 @@ async function updateCategoryData(categoryId) {
         const photoUrlInput = document.getElementById('category-photo-url');
         const photoFileInput = document.getElementById('category-photo-file');
         const visibleSelect = document.getElementById('category-visible');
-
-        console.log('Елементи форми перед зчитуванням:', {
-            nameInput: !!nameInput,
-            slugInput: !!slugInput,
-            photoUrlInput: !!photoUrlInput,
-            photoFileInput: !!photoFileInput,
-            visibleSelect: !!visibleSelect,
-            nameValue: nameInput?.value,
-            slugValue: slugInput?.value,
-            photoValue: photoUrlInput?.value,
-            visibleValue: visibleSelect?.value
-        });
 
         if (!nameInput || !slugInput || !visibleSelect) {
             console.error('Критичні елементи форми відсутні:', {
@@ -2683,22 +2667,18 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Отримуємо значення з форми
         const name = nameInput.value?.trim();
-        const slug = slugInput.value?.trim() || name?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        console.log('Зчитані дані з форми:', { name, slug, visible, photo, hasFile: photoFileInput?.files?.length });
-
-        if (!name || name.length === 0) {
-            console.warn('Поле name порожнє:', { nameInputValue: nameInput.value, trimmed: name });
+        if (!name) {
             showNotification('Назва категорії є обов\'язковою!');
             return;
         }
 
-        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії є обов\'язковим і може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
@@ -2708,24 +2688,18 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Перевірка унікальності назви
-        if (name !== category.name) {
-            const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-            const existingCategoriesByName = await nameCheck.json();
-            if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
-                showNotification('Назва категорії має бути унікальною!');
-                return;
-            }
+        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+        const existingCategoriesByName = await nameCheck.json();
+        if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
+            showNotification('Назва категорії має бути унікальною!');
+            return;
         }
 
-        // Перевірка унікальності slug
-        if (slug !== category.slug && slug) {
-            const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-            const existingCategories = await slugCheck.json();
-            if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-                showNotification('Шлях категорії має бути унікальним!');
-                return;
-            }
+        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+            showNotification('Шлях категорії має бути унікальним!');
+            return;
         }
 
         if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
@@ -2733,7 +2707,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Завантаження нового фото
         if (photoFileInput?.files?.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2760,8 +2733,6 @@ async function updateCategoryData(categoryId) {
             order: category.order || 0,
             subcategories: category.subcategories || []
         };
-
-        console.log('Надсилаємо запит на оновлення категорії:', updatedCategory);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
             method: 'PUT',
@@ -2963,8 +2934,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || 0 },
-                { _id: category2._id, order: category1.order || 0 }
+                { _id: category1._id, order: category2.order || index - 1 },
+                { _id: category2._id, order: category1.order || index }
             ]
         };
 
@@ -2986,6 +2957,8 @@ async function moveCategoryUp(index) {
 
         const updatedCategories = await response.json();
         categories.splice(0, categories.length, ...updatedCategories);
+        categories.forEach((cat, i) => { cat.order = i; });
+        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
@@ -3010,8 +2983,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || 0 },
-                { _id: category2._id, order: category1.order || 0 }
+                { _id: category1._id, order: category2.order || index + 1 },
+                { _id: category2._id, order: category1.order || index }
             ]
         };
 
@@ -3033,6 +3006,8 @@ async function moveCategoryDown(index) {
 
         const updatedCategories = await response.json();
         categories.splice(0, categories.length, ...updatedCategories);
+        categories.forEach((cat, i) => { cat.order = i; });
+        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
@@ -3101,7 +3076,11 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const visibleSelect = document.getElementById('subcategory-visible');
 
         if (!nameInput || !slugInput || !visibleSelect) {
-            console.error('Критичні елементи форми відсутні');
+            console.error('Критичні елементи форми відсутні:', {
+                nameInput: !!nameInput,
+                slugInput: !!slugInput,
+                visibleSelect: !!visibleSelect
+            });
             showNotification('Елементи форми для редагування підкатегорії не знайдено.');
             return;
         }
@@ -3116,10 +3095,8 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        console.log('Дані підкатегорії перед відправкою:', { name, slug, visible, photo });
-
-        if (slug && !/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
+        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях підкатегорії є обов\'язковим і може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
@@ -3135,20 +3112,16 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        if (name !== subcategory.name) {
-            const existingSubcategory = category.subcategories.find(sub => sub.name === name && sub._id !== subcategoryId);
-            if (existingSubcategory) {
-                showNotification('Назва підкатегорії має бути унікальною в цій категорії!');
-                return;
-            }
+        const existingSubcategory = category.subcategories.find(sub => sub.name === name && sub._id !== subcategoryId);
+        if (existingSubcategory) {
+            showNotification('Назва підкатегорії має бути унікальною в цій категорії!');
+            return;
         }
 
-        if (slug !== subcategory.slug && slug) {
-            const existingSubcategory = category.subcategories.find(sub => sub.slug === slug && sub._id !== subcategoryId);
-            if (existingSubcategory) {
-                showNotification('Шлях підкатегорії має бути унікальним в цій категорії!');
-                return;
-            }
+        const existingSlug = category.subcategories.find(sub => sub.slug === slug && sub._id !== subcategoryId);
+        if (existingSlug) {
+            showNotification('Шлях підкатегорії має бути унікальним в цій категорії!');
+            return;
         }
 
         if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
@@ -3181,8 +3154,6 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             visible,
             order: subcategory.order || 0
         };
-
-        console.log('Надсилаємо оновлені дані підкатегорії:', updatedSubcategory);
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
             method: 'PUT',
@@ -3345,59 +3316,57 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
     const modal = document.getElementById('modal');
     if (!modal) {
         console.error('Модальне вікно з id="modal" не знайдено!');
+        showNotification('Модальне вікно не знайдено.');
         return;
     }
 
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
         console.error('Категорію з id', categoryId, 'не знайдено');
+        showNotification('Категорію не знайдено.');
         return;
     }
 
     const subcategory = category.subcategories.find(s => s._id === subcategoryId);
     if (!subcategory) {
         console.error('Підкатегорію з id', subcategoryId, 'не знайдено');
+        showNotification('Підкатегорію не знайдено.');
         return;
     }
 
-    // Очищуємо попередній вміст модального вікна
-    modal.innerHTML = '';
-
-    const modalContent = document.createElement('div');
-    modalContent.className = 'modal-content';
-    modalContent.innerHTML = `
-        <h3>Редагувати підкатегорію</h3>
-        <form id="edit-subcategory-form">
-            <input id="subcategory-name" placeholder="Назва підкатегорії" type="text" value="${subcategory.name || ''}"/><br/>
-            <label for="subcategory-name">Назва підкатегорії</label>
-            <input id="subcategory-slug" placeholder="Шлях підкатегорії" type="text" value="${subcategory.slug || ''}"/><br/>
-            <label for="subcategory-slug">Шлях підкатегорії</label>
-            <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${subcategory.photo || ''}"/><br/>
-            <label for="subcategory-photo-url">URL зображення</label>
-            <input accept="image/*" id="subcategory-photo-file" type="file"/><br/>
-            <label for="subcategory-photo-file">Завантажте зображення</label>
-            <select id="subcategory-visible">
-                <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
-                <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
-            </select><br/>
-            <label for="subcategory-visible">Видимість</label>
-            <div class="modal-actions">
-                <button type="submit">Зберегти</button>
-                <button type="button" onclick="closeModal()">Скасувати</button>
-            </div>
-        </form>
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Редагувати підкатегорію</h3>
+            <form id="edit-subcategory-form">
+                <input id="subcategory-name" placeholder="Назва підкатегорії" type="text" value="${sanitize(subcategory.name) || ''}" required /><br/>
+                <label for="subcategory-name">Назва підкатегорії</label>
+                <input id="subcategory-slug" placeholder="Шлях підкатегорії" type="text" value="${sanitize(subcategory.slug) || ''}" required /><br/>
+                <label for="subcategory-slug">Шлях підкатегорії</label>
+                <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${sanitize(subcategory.photo) || ''}" /><br/>
+                <label for="subcategory-photo-url">URL зображення</label>
+                <input accept="image/*" id="subcategory-photo-file" type="file" /><br/>
+                <label for="subcategory-photo-file">Завантажте зображення</label>
+                <select id="subcategory-visible">
+                    <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
+                    <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
+                </select><br/>
+                <label for="subcategory-visible">Видимість</label>
+                <div class="modal-actions">
+                    <button type="submit">Зберегти</button>
+                    <button type="button" onclick="closeModal()">Скасувати</button>
+                </div>
+            </form>
+        </div>
     `;
 
-    modal.appendChild(modalContent);
     modal.classList.add('active');
     isModalOpen = true;
     console.log('Відкрито модальне вікно для редагування підкатегорії:', subcategoryId);
 
-    // Додаємо обробник для збереження змін
     const form = document.getElementById('edit-subcategory-form');
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        updateSubcategoryData(categoryId, subcategoryId);
+        await updateSubcategoryData(categoryId, subcategoryId);
     });
 
     resetInactivityTimer();
@@ -3475,8 +3444,9 @@ async function moveSubcategoryUp(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex <= 0 || subIndex >= category.subcategories.length) return;
     try {
-        const sub1 = category.subcategories[subIndex];
-        const sub2 = category.subcategories[subIndex - 1];
+        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sub1 = sortedSubcategories[subIndex];
+        const sub2 = sortedSubcategories[subIndex - 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
@@ -3486,8 +3456,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: sub2.order },
-                { _id: sub2._id, order: sub1.order }
+                { _id: sub1._id, order: sub2.order || subIndex - 1 },
+                { _id: sub2._id, order: sub1.order || subIndex }
             ]
         };
 
@@ -3509,6 +3479,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const updatedCategory = await response.json();
         categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
+        categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
+        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
@@ -3522,8 +3494,9 @@ async function moveSubcategoryDown(categoryId, subIndex) {
     const category = categories.find(cat => cat._id === categoryId);
     if (!category || subIndex >= category.subcategories.length - 1 || subIndex < 0) return;
     try {
-        const sub1 = category.subcategories[subIndex];
-        const sub2 = category.subcategories[subIndex + 1];
+        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sub1 = sortedSubcategories[subIndex];
+        const sub2 = sortedSubcategories[subIndex + 1];
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
@@ -3533,8 +3506,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: sub2.order },
-                { _id: sub2._id, order: sub1.order }
+                { _id: sub1._id, order: sub2.order || subIndex + 1 },
+                { _id: sub2._id, order: sub1.order || subIndex }
             ]
         };
 
@@ -3556,6 +3529,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const updatedCategory = await response.json();
         categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
+        categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
+        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
