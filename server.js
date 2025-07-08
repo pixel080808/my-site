@@ -1689,21 +1689,18 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для категорії: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(400).json({ error: `Невірний порядок для категорії: ${update._id}` });
+                return res.status(400).json({ error: "Невірний порядок категорії" });
             }
-        }
-
-        const existingCategories = await Category.find({ _id: { $in: categoryUpdates.map(u => u._id) } }).session(session);
-        if (existingCategories.length !== categoryUpdates.length) {
-            logger.error("Одну або кілька категорій не знайдено");
-            await session.abortTransaction();
-            return res.status(404).json({ error: "Одну або кілька категорій не знайдено" });
         }
 
         for (const update of categoryUpdates) {
             const category = await Category.findById(update._id).session(session);
+            if (!category) {
+                logger.error(`Категорію не знайдено: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
+            }
             category.order = update.order;
-            category.updatedAt = new Date();
             await category.save({ session });
         }
 
@@ -1973,7 +1970,7 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         if (!mongoose.Types.ObjectId.isValid(categoryId)) {
             logger.error(`Невірний формат ID категорії: ${categoryId}`);
             await session.abortTransaction();
-            return res.status(400).json({ error: `Невірний формат ID категорії: ${categoryId}` });
+            return res.status(400).json({ error: "Невірний формат ID категорії" });
         }
 
         if (!Array.isArray(subcategoryUpdates) || subcategoryUpdates.length === 0) {
@@ -1986,7 +1983,7 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         if (!category) {
             logger.error(`Категорію не знайдено: ${categoryId}`);
             await session.abortTransaction();
-            return res.status(404).json({ error: `Категорію не знайдено: ${categoryId}` });
+            return res.status(404).json({ error: "Категорію не знайдено" });
         }
 
         for (const update of subcategoryUpdates) {
@@ -1998,7 +1995,7 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для підкатегорії: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(400).json({ error: `Невірний порядок для підкатегорії: ${update._id}` });
+                return res.status(400).json({ error: "Невірний порядок підкатегорії" });
             }
 
             const subcategory = category.subcategories.id(update._id);
@@ -2010,7 +2007,6 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
             subcategory.order = update.order;
         }
 
-        category.subcategories.sort((a, b) => (a.order || 0) - (b.order || 0));
         category.updatedAt = new Date();
         await category.save({ session });
 
