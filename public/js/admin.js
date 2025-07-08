@@ -2477,6 +2477,17 @@ function validateFile(file) {
     return { valid: true };
 }
 
+function sanitize(str) {
+    if (!str) return '';
+    return str.replace(/[<>&"']/g, (char) => ({
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[char]);
+}
+
 function openEditCategoryModal(categoryId) {
     const modal = document.getElementById('modal');
     if (!modal) {
@@ -2934,8 +2945,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || index - 1 },
-                { _id: category2._id, order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index - 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
@@ -2959,6 +2970,7 @@ async function moveCategoryUp(index) {
         categories.splice(0, categories.length, ...updatedCategories);
         categories.forEach((cat, i) => { cat.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
@@ -2983,8 +2995,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id, order: category2.order || index + 1 },
-                { _id: category2._id, order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index + 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
@@ -3008,6 +3020,7 @@ async function moveCategoryDown(index) {
         categories.splice(0, categories.length, ...updatedCategories);
         categories.forEach((cat, i) => { cat.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
@@ -3456,8 +3469,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: sub2.order || subIndex - 1 },
-                { _id: sub2._id, order: sub1.order || subIndex }
+                { _id: sub1._id.toString(), order: sub2.order || subIndex - 1 },
+                { _id: sub2._id.toString(), order: sub1.order || subIndex }
             ]
         };
 
@@ -3481,6 +3494,7 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
         categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
@@ -3506,8 +3520,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id, order: sub2.order || subIndex + 1 },
-                { _id: sub2._id, order: sub1.order || subIndex }
+                { _id: sub1._id.toString(), order: sub2.order || subIndex + 1 },
+                { _id: sub2._id.toString(), order: sub1.order || subIndex }
             ]
         };
 
@@ -3531,6 +3545,7 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
         categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();

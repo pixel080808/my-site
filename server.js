@@ -1681,59 +1681,55 @@ const categoryOrderSchema = Joi.object({
 })
 
 app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, res) => {
-  const session = await mongoose.startSession()
-  session.startTransaction()
-  try {
-    const { categories } = req.body
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { categories: categoryUpdates } = req.body;
+        logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
 
-    const { error } = categoryOrderSchema.validate({ categories }, { abortEarly: false })
-    if (error) {
-      logger.error("Помилка валідації порядку категорій:", error.details)
-      await session.abortTransaction()
-      return res.status(400).json({ error: "Помилка валідації", details: error.details.map((d) => d.message) })
+        if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
+            logger.error("Невірний формат даних для зміни порядку категорій");
+            await session.abortTransaction();
+            return res.status(400).json({ error: "Невірний формат даних" });
+        }
+
+        for (const update of categoryUpdates) {
+            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+                logger.error(`Невірний формат ID категорії: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
+            }
+            if (typeof update.order !== 'number' || update.order < 0) {
+                logger.error(`Невірний порядок для категорії: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(400).json({ error: "Невірний порядок категорії" });
+            }
+        }
+
+        for (const update of categoryUpdates) {
+            const category = await Category.findById(update._id).session(session);
+            if (!category) {
+                logger.error(`Категорію не знайдено: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
+            }
+            category.order = update.order;
+            await category.save({ session });
+        }
+
+        const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
+        broadcast("categories", updatedCategories);
+        logger.info("Порядок категорій успішно змінено");
+        await session.commitTransaction();
+        res.json(updatedCategories);
+    } catch (err) {
+        await session.abortTransaction();
+        logger.error("Помилка при зміні порядку категорій:", err);
+        res.status(500).json({ error: "Помилка сервера", details: err.message });
+    } finally {
+        session.endSession();
     }
-
-    const categoryIds = categories.map((item) => item._id)
-    const foundCategories = await Category.find({ _id: { $in: categoryIds } }).session(session)
-    if (foundCategories.length !== categoryIds.length) {
-      logger.error("Не всі категорії знайдені:", {
-        requested: categoryIds,
-        found: foundCategories.map((cat) => cat._id.toString()),
-      })
-      await session.abortTransaction()
-      return res.status(400).json({ error: "Одна або більше категорій не знайдені" })
-    }
-
-    const orders = categories.map((item) => item.order)
-    const uniqueOrders = new Set(orders)
-    if (uniqueOrders.size !== orders.length) {
-      logger.error("Дублювання значень order у категоріях:", orders)
-      await session.abortTransaction()
-      return res.status(400).json({ error: "Значення order повинні бути унікальними" })
-    }
-
-    const bulkOps = categories.map(({ _id, order }) => ({
-      updateOne: {
-        filter: { _id: new mongoose.Types.ObjectId(_id) },
-        update: { $set: { order } },
-      },
-    }))
-
-    await Category.bulkWrite(bulkOps, { session })
-
-    const updatedCategories = await Category.find().sort({ order: 1 }).session(session)
-    broadcast("categories", updatedCategories)
-    logger.info("Порядок категорій успішно оновлено")
-    await session.commitTransaction()
-    res.status(200).json(updatedCategories)
-  } catch (err) {
-    await session.abortTransaction()
-    logger.error("Помилка оновлення порядку категорій:", err)
-    res.status(400).json({ error: "Не вдалося оновити порядок", details: err.message })
-  } finally {
-    session.endSession()
-  }
-})
+});
 
 app.delete("/api/categories/:slug", authenticateToken, csrfProtection, async (req, res) => {
   try {
@@ -1988,123 +1984,70 @@ const subcategoryOrderSchemaValidation = Joi.object({
     .required(),
 })
 
-app.put("/api/categories/:categoryId/subcategories/:subcategoryId",
-  authenticateToken,
-  csrfProtection,
-  async (req, res) => {
-    const session = await mongoose.startSession()
-    session.startTransaction()
+app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, csrfProtection, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
-      const { categoryId, subcategoryId } = req.params
-      const subcategoryData = { ...req.body }
-      logger.info("Отримано дані для оновлення підкатегорії:", subcategoryData)
+        const { categoryId } = req.params;
+        const { subcategories: subcategoryUpdates } = req.body;
+        logger.info("Отримано дані для зміни порядку підкатегорій:", subcategoryUpdates);
 
-      if (!mongoose.Types.ObjectId.isValid(categoryId) || !mongoose.Types.ObjectId.isValid(subcategoryId)) {
-        logger.error(`Невірний формат ID: categoryId=${categoryId}, subcategoryId=${subcategoryId}`)
-        await session.abortTransaction()
-        return res.status(400).json({ error: "Невірний формат ID" })
-      }
-
-      const category = await Category.findById(categoryId).session(session)
-      if (!category) {
-        logger.error(`Категорію не знайдено: ${categoryId}`)
-        await session.abortTransaction()
-        return res.status(404).json({ error: "Категорію не знайдено" })
-      }
-
-      const subcategory = category.subcategories.id(subcategoryId)
-      if (!subcategory) {
-        logger.error(`Підкатегорію не знайдено: ${subcategoryId}`)
-        await session.abortTransaction()
-        return res.status(404).json({ error: "Підкатегорію не знайдено" })
-      }
-
-      if (!subcategoryData.name || !subcategoryData.name.trim()) {
-        logger.error("Назва підкатегорії не може бути порожньою")
-        await session.abortTransaction()
-        return res.status(400).json({ error: "Назва підкатегорії є обов’язковою" })
-      }
-
-      if (!subcategoryData.slug || !subcategoryData.slug.trim()) {
-        subcategoryData.slug = subcategoryData.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')
-      }
-
-      if (subcategoryData.photo === "") subcategoryData.photo = undefined
-
-      const { error } = subcategorySchemaValidation.validate(subcategoryData, { abortEarly: false })
-      if (error) {
-        logger.error("Помилка валідації підкатегорії:", error.details)
-        await session.abortTransaction()
-        return res.status(400).json({ error: "Помилка валідації", details: error.details.map((d) => d.message) })
-      }
-
-      if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
-        const existingSubcategory = category.subcategories.find(
-          (sub) => sub.slug === subcategoryData.slug && sub._id.toString() !== subcategoryId,
-        )
-        if (existingSubcategory) {
-          logger.error(`Підкатегорія з slug "${subcategoryData.slug}" уже існує`)
-          await session.abortTransaction()
-          return res.status(400).json({ error: `Підкатегорія з slug "${subcategoryData.slug}" уже існує` })
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            logger.error(`Невірний формат ID категорії: ${categoryId}`);
+            await session.abortTransaction();
+            return res.status(400).json({ error: "Невірний формат ID категорії" });
         }
-      }
 
-      if (subcategory.photo && subcategoryData.photo && subcategoryData.photo !== subcategory.photo) {
-        const publicId = getPublicIdFromUrl(subcategory.photo)
-        if (publicId) {
-          try {
-            await cloudinary.uploader.destroy(publicId)
-            logger.info(`Видалено старе зображення підкатегорії: ${publicId}`)
-          } catch (err) {
-            logger.error(`Не вдалося видалити старе зображення підкатегорії: ${publicId}`, err)
-          }
+        if (!Array.isArray(subcategoryUpdates) || subcategoryUpdates.length === 0) {
+            logger.error("Невірний формат даних для зміни порядку підкатегорій");
+            await session.abortTransaction();
+            return res.status(400).json({ error: "Невірний формат даних" });
         }
-      }
 
-      const oldSubcategory = { ...subcategory.toObject() }
+        const category = await Category.findById(categoryId).session(session);
+        if (!category) {
+            logger.error(`Категорію не знайдено: ${categoryId}`);
+            await session.abortTransaction();
+            return res.status(404).json({ error: "Категорію не знайдено" });
+        }
 
-      Object.assign(subcategory, {
-        name: subcategoryData.name,
-        slug: subcategoryData.slug,
-        photo: subcategoryData.photo,
-        visible: subcategoryData.visible ?? subcategory.visible,
-        order: subcategoryData.order ?? subcategory.order,
-      })
+        for (const update of subcategoryUpdates) {
+            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+                logger.error(`Невірний формат ID підкатегорії: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(400).json({ error: `Невірний формат ID підкатегорії: ${update._id}` });
+            }
+            if (typeof update.order !== 'number' || update.order < 0) {
+                logger.error(`Невірний порядок для підкатегорії: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(400).json({ error: "Невірний порядок підкатегорії" });
+            }
 
-      category.updatedAt = new Date()
-      await category.save({ session })
+            const subcategory = category.subcategories.id(update._id);
+            if (!subcategory) {
+                logger.error(`Підкатегорію не знайдено: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(404).json({ error: `Підкатегорію не знайдено: ${update._id}` });
+            }
+            subcategory.order = update.order;
+        }
 
-      if (subcategoryData.name !== oldSubcategory.name) {
-        await Product.updateMany(
-          { subcategory: oldSubcategory.name },
-          { $set: { subcategory: subcategoryData.name } },
-          { session },
-        )
-      }
+        category.updatedAt = new Date();
+        await category.save({ session });
 
-      const categories = await Category.find().session(session)
-
-      const changesApplied = {
-        name: subcategoryData.name !== oldSubcategory.name,
-        slug: subcategoryData.slug !== oldSubcategory.slug,
-        photo: subcategoryData.photo !== oldSubcategory.photo,
-        visible: subcategoryData.visible !== oldSubcategory.visible,
-        order: subcategoryData.order !== oldSubcategory.order,
-      }
-
-      broadcast("categories", categories)
-      logger.info(`Підкатегорія оновлена: ${subcategoryId}`)
-      await session.commitTransaction()
-      res.json({ category, changesApplied })
+        const updatedCategory = await Category.findById(categoryId).session(session);
+        broadcast("categories", await Category.find().session(session));
+        logger.info(`Порядок підкатегорій успішно змінено для категорії: ${categoryId}`);
+        await session.commitTransaction();
+        res.json(updatedCategory);
     } catch (err) {
-      await session.abortTransaction()
-      logger.error("Помилка при оновленні підкатегорії:", err)
-      res.status(500).json({ error: "Помилка сервера", details: err.message })
+        await session.abortTransaction();
+        logger.error("Помилка при зміні порядку підкатегорій:", err);
+        res.status(500).json({ error: "Помилка сервера", details: err.message });
     } finally {
-      session.endSession()
+        session.endSession();
     }
-  },
-)
+});
 
 app.get("/api/slides", authenticateToken, async (req, res) => {
   try {
