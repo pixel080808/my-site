@@ -2478,14 +2478,13 @@ function validateFile(file) {
 }
 
 function sanitize(str) {
-    if (!str) return '';
-    return str.replace(/[<>&"']/g, (char) => ({
+    if (typeof str !== 'string' || str === null || str === undefined) return '';
+    return str.replace(/[<>"/']/g, (char) => ({
         '<': '&lt;',
         '>': '&gt;',
-        '&': '&amp;',
         '"': '&quot;',
-        "'": '&#39;'
-    })[char]);
+        "'": '&apos;'
+    })[char] || char);
 }
 
 function openEditCategoryModal(categoryId) {
@@ -2683,8 +2682,8 @@ async function updateCategoryData(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        if (!name) {
-            showNotification('Назва категорії є обов\'язковою!');
+        if (!name || name.length < 1) {
+            showNotification('Назва категорії є обов\'язковою та повинна містити хоча б 1 символ!');
             return;
         }
 
@@ -2945,8 +2944,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index - 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index - 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -2974,6 +2973,9 @@ async function moveCategoryUp(index) {
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
+
+        // Оновлення фронтенду через виклик API
+        await loadCategories();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -2995,8 +2997,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index + 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index + 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -3024,6 +3026,9 @@ async function moveCategoryDown(index) {
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
         resetInactivityTimer();
+
+        // Оновлення фронтенду через виклик API
+        await loadCategories();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -3103,8 +3108,8 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        if (!name) {
-            showNotification('Назва підкатегорії є обов\'язковою!');
+        if (!name || name.length < 1) {
+            showNotification('Назва підкатегорії є обов\'язковою та повинна містити хоча б 1 символ!');
             return;
         }
 
@@ -3469,8 +3474,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id.toString(), order: sub2.order || subIndex - 1 },
-                { _id: sub2._id.toString(), order: sub1.order || subIndex }
+                { _id: String(sub1._id), order: sub2.order || subIndex - 1 },
+                { _id: String(sub2._id), order: sub1.order || subIndex }
             ]
         };
 
@@ -3498,6 +3503,9 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
+
+        // Оновлення фронтенду через виклик API
+        await loadCategories();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -3520,8 +3528,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: sub1._id.toString(), order: sub2.order || subIndex + 1 },
-                { _id: sub2._id.toString(), order: sub1.order || subIndex }
+                { _id: String(sub1._id), order: sub2.order || subIndex + 1 },
+                { _id: String(sub2._id), order: sub1.order || subIndex }
             ]
         };
 
@@ -3549,6 +3557,9 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
+
+        // Оновлення фронтенду через виклик API
+        await loadCategories();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
