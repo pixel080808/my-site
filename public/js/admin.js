@@ -2148,7 +2148,6 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
-    // Видаляємо старий слухач подій, якщо він існує
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2194,9 +2193,8 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-    // Видаляємо попередній слухач, якщо він був доданий
     categoryList.removeEventListener('click', categoryList._clickHandler);
-    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
+    categoryList._clickHandler = handleClick;
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2216,6 +2214,8 @@ function renderCategoriesAdmin() {
         updateSubcategories();
     }
 
+    // Очищення кешу для фронтенду
+    broadcast('categories', categories);
     resetInactivityTimer();
 }
 
@@ -2678,10 +2678,10 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const name = nameInput.value?.trim();
-        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const name = sanitize(nameInput.value?.trim());
+        const slug = sanitize(slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''));
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput?.value?.trim() || '';
+        let photo = sanitize(photoUrlInput?.value?.trim() || '');
 
         if (!name || name.length < 1) {
             showNotification('Назва категорії є обов\'язковою та повинна містити хоча б 1 символ!');
@@ -2699,16 +2699,16 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-        const existingCategoriesByName = await nameCheck.json();
+        const nameCheckResponse = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+        const existingCategoriesByName = await nameCheckResponse.json();
         if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
             showNotification('Назва категорії має бути унікальною!');
             return;
         }
 
-        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        const existingCategories = await slugCheck.json();
-        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
+        const slugCheckResponse = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        const existingCategoriesBySlug = await slugCheckResponse.json();
+        if (existingCategoriesBySlug.some(c => c.slug === slug && c._id !== categoryId)) {
             showNotification('Шлях категорії має бути унікальним!');
             return;
         }
@@ -2729,7 +2729,10 @@ async function updateCategoryData(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
@@ -2946,8 +2949,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index - 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index - 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -2996,8 +2999,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index + 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index + 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -3099,10 +3102,10 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        const name = nameInput.value?.trim();
-        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const name = sanitize(nameInput.value?.trim());
+        const slug = sanitize(slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''));
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput?.value?.trim() || '';
+        let photo = sanitize(photoUrlInput?.value?.trim() || '');
 
         if (!name || name.length < 1) {
             showNotification('Назва підкатегорії є обов\'язковою та повинна містити хоча б 1 символ!');
@@ -3154,7 +3157,10 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
             const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
