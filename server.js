@@ -1672,7 +1672,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     session.startTransaction();
     try {
         const { categories: categoryUpdates } = req.body;
-        logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
+        logger.info("Отримано дані для зміни порядку категорій:", JSON.stringify(categoryUpdates, null, 2));
 
         if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
             logger.error("Невірний формат даних для зміни порядку категорій");

@@ -2479,7 +2479,7 @@ function validateFile(file) {
 
 function sanitize(str) {
     if (typeof str !== 'string' || str === null || str === undefined) {
-        return ''; // Повертаємо порожній рядок лише для некоректних значень
+        return str; // Повертаємо оригінальне значення, якщо воно не є рядком
     }
     return str.replace(/[<>"]/g, (char) => ({
         '<': '&lt;',
@@ -2660,8 +2660,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 200));
-
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
         const photoUrlInput = document.getElementById('category-photo-url');
@@ -2683,7 +2681,8 @@ async function updateCategoryData(categoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        if (!name || name.length < 1) {
+        // Перевірка на порожні поля
+        if (!name) {
             showNotification('Назва категорії є обов\'язковою та повинна містити хоча б 1 символ!');
             return;
         }
@@ -2699,6 +2698,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Перевірка унікальності назви
         const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
         const existingCategoriesByName = await nameCheck.json();
         if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
@@ -2706,6 +2706,7 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Перевірка унікальності шляху
         const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
         const existingCategories = await slugCheck.json();
         if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
@@ -2713,11 +2714,13 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
+        // Перевірка URL фотографії
         if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
             showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
+        // Завантаження нового зображення, якщо є
         if (photoFileInput?.files?.length > 0) {
             const file = photoFileInput.files[0];
             const validation = validateFile(file);
@@ -2946,8 +2949,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index - 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index - 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -2996,8 +2999,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: category1._id.toString(), order: category2.order || index + 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
+                { _id: String(category1._id), order: category2.order || index + 1 },
+                { _id: String(category2._id), order: category1.order || index }
             ]
         };
 
@@ -3081,8 +3084,6 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 200));
-
         const nameInput = document.getElementById('subcategory-name');
         const slugInput = document.getElementById('subcategory-slug');
         const photoUrlInput = document.getElementById('subcategory-photo-url');
@@ -3104,7 +3105,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
-        if (!name || name.length < 1) {
+        if (!name) {
             showNotification('Назва підкатегорії є обов\'язковою та повинна містити хоча б 1 символ!');
             return;
         }
@@ -6473,7 +6474,7 @@ function connectAdminWebSocket(attempt = 1) {
 socket.onmessage = (event) => {
     try {
         const { type, data } = JSON.parse(event.data);
-        console.log(`Отрирано WebSocket оновлення для ${type}:`, data);
+        console.log(`Отримано WebSocket оновлення для ${type}:`, data);
 
         if (type === 'settings' && data) {
             settings = { ...settings, ...data };
@@ -6495,7 +6496,14 @@ socket.onmessage = (event) => {
                 loadProducts(productsCurrentPage, productsPerPage);
             }
         } else if (type === 'categories' && Array.isArray(data)) {
-            handleCategoriesUpdate(data);
+            // Синхронізуємо локальний масив categories
+            categories = data.map(c => ({
+                ...c,
+                subcategories: Array.isArray(c.subcategories) ? c.subcategories : []
+            }));
+            console.log('Оновлено categories:', categories);
+            localStorage.setItem('categories', JSON.stringify(categories));
+            renderCategoriesAdmin();
         } else if (type === 'orders' && Array.isArray(data)) {
             orders = data;
             totalOrders = data.length;
@@ -6519,7 +6527,6 @@ socket.onmessage = (event) => {
             console.log('Оновлено brands:', brands);
             updateBrandOptions();
         } else if (type === 'error') {
-            // Перевіряємо, чи є data об'єктом і чи має властивість error
             const errorMessage = data && typeof data === 'object' && data.error ? data.error : 'Невідома помилка';
             console.error('WebSocket помилка від сервера:', errorMessage);
             showNotification(`Помилка WebSocket: ${errorMessage}`);
