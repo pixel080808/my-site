@@ -153,7 +153,7 @@ async function loadCategories() {
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/categories', {
             headers: {
-                'Authorization': 'Bearer ' + token.toString(),
+                'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
@@ -188,9 +188,9 @@ async function loadCategories() {
 
         categories = data.map(c => ({
             ...c,
-            subcategories: Array.isArray(c.subcategories) ? c.subcategories : []
+            subcategories: Array.isArray(c.subcategories) ? c.subcategories.sort((a, b) => (a.order || 0) - (b.order || 0)) : []
         }));
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         const invalidCategories = categories.filter(c => !c._id || !isValidId(c._id));
         const invalidSubcategories = categories.flatMap(c => 
             (c.subcategories || []).filter(s => !s._id || !isValidId(s._id) || !s.slug || !s.name)
@@ -207,6 +207,7 @@ async function loadCategories() {
             });
         }
         console.log('Categories loaded:', JSON.stringify(categories, null, 2));
+        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         return categories;
     } catch (e) {
@@ -2148,6 +2149,7 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
+    // Видаляємо старий слухач подій, якщо він існує
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2193,8 +2195,9 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
+    // Видаляємо попередній слухач, якщо він був доданий
     categoryList.removeEventListener('click', categoryList._clickHandler);
-    categoryList._clickHandler = handleClick;
+    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2214,8 +2217,6 @@ function renderCategoriesAdmin() {
         updateSubcategories();
     }
 
-    // Очищення кешу для фронтенду
-    broadcast('categories', categories);
     resetInactivityTimer();
 }
 
@@ -2479,13 +2480,9 @@ function validateFile(file) {
 
 function sanitize(str) {
     if (typeof str !== 'string' || str === null || str === undefined) {
-        return ''; // Повертаємо порожній рядок лише для некоректних значень
+        return str || ''; // Повертаємо оригінальне значення, якщо воно є, або порожній рядок
     }
-    return str.replace(/[<>"]/g, (char) => ({
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;'
-    })[char] || char).trim();
+    return str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').trim();
 }
 
 function openEditCategoryModal(categoryId) {
@@ -2678,10 +2675,10 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const name = sanitize(nameInput.value?.trim());
-        const slug = sanitize(slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''));
+        const name = nameInput.value?.trim();
+        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = sanitize(photoUrlInput?.value?.trim() || '');
+        let photo = photoUrlInput?.value?.trim() || '';
 
         if (!name || name.length < 1) {
             showNotification('Назва категорії є обов\'язковою та повинна містити хоча б 1 символ!');
@@ -2699,16 +2696,16 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        const nameCheckResponse = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-        const existingCategoriesByName = await nameCheckResponse.json();
+        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
+        const existingCategoriesByName = await nameCheck.json();
         if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
             showNotification('Назва категорії має бути унікальною!');
             return;
         }
 
-        const slugCheckResponse = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        const existingCategoriesBySlug = await slugCheckResponse.json();
-        if (existingCategoriesBySlug.some(c => c.slug === slug && c._id !== categoryId)) {
+        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
+        const existingCategories = await slugCheck.json();
+        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
             showNotification('Шлях категорії має бути унікальним!');
             return;
         }
@@ -2729,10 +2726,7 @@ async function updateCategoryData(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
             const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
@@ -3102,10 +3096,10 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        const name = sanitize(nameInput.value?.trim());
-        const slug = sanitize(slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, ''));
+        const name = nameInput.value?.trim();
+        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = sanitize(photoUrlInput?.value?.trim() || '');
+        let photo = photoUrlInput?.value?.trim() || '';
 
         if (!name || name.length < 1) {
             showNotification('Назва підкатегорії є обов\'язковою та повинна містити хоча б 1 символ!');
@@ -3157,10 +3151,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-                }
+                body: formData
             });
             const data = await response.json();
             if (!data.url) throw new Error('Помилка завантаження фото');
