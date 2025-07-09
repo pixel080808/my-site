@@ -153,7 +153,7 @@ async function loadCategories() {
         const token = localStorage.getItem('adminToken');
         const response = await fetch('/api/categories', {
             headers: {
-                'Authorization': 'Bearer ' + token,
+                'Authorization': 'Bearer ' + token.toString(),
                 'Content-Type': 'application/json'
             },
             credentials: 'include'
@@ -188,9 +188,9 @@ async function loadCategories() {
 
         categories = data.map(c => ({
             ...c,
-            subcategories: Array.isArray(c.subcategories) ? c.subcategories.sort((a, b) => (a.order || 0) - (b.order || 0)) : []
+            subcategories: Array.isArray(c.subcategories) ? c.subcategories : []
         }));
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
+        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
         const invalidCategories = categories.filter(c => !c._id || !isValidId(c._id));
         const invalidSubcategories = categories.flatMap(c => 
             (c.subcategories || []).filter(s => !s._id || !isValidId(s._id) || !s.slug || !s.name)
@@ -207,7 +207,6 @@ async function loadCategories() {
             });
         }
         console.log('Categories loaded:', JSON.stringify(categories, null, 2));
-        localStorage.setItem('categories', JSON.stringify(categories));
         renderCategoriesAdmin();
         return categories;
     } catch (e) {
@@ -2480,9 +2479,13 @@ function validateFile(file) {
 
 function sanitize(str) {
     if (typeof str !== 'string' || str === null || str === undefined) {
-        return str || ''; // Повертаємо оригінальне значення, якщо воно є, або порожній рядок
+        return ''; // Повертаємо порожній рядок лише для некоректних значень
     }
-    return str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').trim();
+    return str.replace(/[<>"]/g, (char) => ({
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;'
+    })[char] || char).trim();
 }
 
 function openEditCategoryModal(categoryId) {
@@ -2943,8 +2946,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: String(category1._id), order: category2.order || index - 1 },
-                { _id: String(category2._id), order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index - 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
@@ -2993,8 +2996,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: String(category1._id), order: category2.order || index + 1 },
-                { _id: String(category2._id), order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index + 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
