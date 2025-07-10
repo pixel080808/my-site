@@ -111,6 +111,61 @@ function saveToStorage(key, value) {
     }
 }
 
+// In the frontend JavaScript (e.g., client.js)
+async function loadCategoriesForFrontend() {
+    try {
+        const response = await fetch('/api/categories', {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch categories: ${response.status}`);
+        }
+        const categories = await response.json();
+        console.log('Frontend categories loaded:', categories);
+        renderCategoriesFrontend(categories);
+    } catch (err) {
+        console.error('Error loading categories for frontend:', err);
+    }
+}
+
+function renderCategoriesFrontend(categories) {
+    const categoryList = document.getElementById('category-list-frontend'); // Adjust ID as needed
+    if (!categoryList) return;
+    categoryList.innerHTML = categories
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(category => `
+            <div class="category">
+                <h3>${category.name}</h3>
+                ${category.subcategories
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map(sub => `<div class="subcategory">${sub.name}</div>`).join('')}
+            </div>
+        `).join('');
+}
+
+// Initialize WebSocket for frontend
+function connectFrontendWebSocket() {
+    const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mebli.onrender.com';
+    const socket = new WebSocket(wsUrl);
+    socket.onopen = () => {
+        socket.send(JSON.stringify({ type: 'categories', action: 'subscribe' }));
+    };
+    socket.onmessage = (event) => {
+        const { type, data } = JSON.parse(event.data);
+        if (type === 'categories') {
+            renderCategoriesFrontend(data);
+        }
+    };
+    socket.onerror = (err) => console.error('Frontend WebSocket error:', err);
+    socket.onclose = () => setTimeout(connectFrontendWebSocket, 5000);
+}
+
+// Call on page load
+loadCategoriesForFrontend();
+connectFrontendWebSocket();
+
 async function loadCartFromServer() {
     try {
         const cartId = localStorage.getItem('cartId');

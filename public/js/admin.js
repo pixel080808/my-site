@@ -293,128 +293,27 @@ async function loadSettings() {
 }
 
 async function fetchWithAuth(url, options = {}) {
-    console.log('Request URL:', url);
-    console.log('Request Options:', JSON.stringify(options, null, 2));
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-        throw new Error('Токен відсутній. Увійдіть знову.');
-    }
-
-    let csrfToken = localStorage.getItem('csrfToken');
-    if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-        try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include'
-            });
-            if (!csrfResponse.ok) {
-                throw new Error(`Не вдалося отримати CSRF-токен: ${csrfResponse.statusText}`);
-            }
-            const csrfData = await csrfResponse.json();
-            csrfToken = csrfData.csrfToken;
-            localStorage.setItem('csrfToken', csrfToken);
-        } catch (err) {
-            console.error('Помилка отримання CSRF-токена:', err);
-            throw err;
-        }
-    }
-
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
-    };
-
     try {
         const response = await fetch(url, {
             ...options,
-            headers,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+                ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+                ...(localStorage.getItem('csrfToken') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method) ? { 'X-CSRF-Token': localStorage.getItem('csrfToken') } : {})
+            },
             credentials: 'include'
         });
-
-        if (response.status === 401) {
-            const tokenRefreshed = await refreshToken();
-            if (tokenRefreshed) {
-                const newToken = localStorage.getItem('adminToken');
-                const newResponse = await fetch(url, {
-                    ...options,
-                    headers: {
-                        ...headers,
-                        'Authorization': `Bearer ${newToken}`,
-                        ...(csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE') ? { 'X-CSRF-Token': csrfToken } : {})
-                    },
-                    credentials: 'include'
-                });
-                if (!newResponse.ok) {
-                    let errorData;
-                    try {
-                        errorData = await newResponse.json();
-                    } catch {
-                        errorData = { error: `HTTP error ${newResponse.status}` };
-                    }
-                    console.error('Помилка повторного запиту:', { url, status: newResponse.status, errorData });
-                    const error = new Error(errorData.error || errorData.message || `HTTP error ${newResponse.status}`);
-                    error.status = newResponse.status;
-                    error.errorData = errorData;
-                    if (errorData.details) {
-                        if (Array.isArray(errorData.details)) {
-                            error.message += `: ${errorData.details.join(', ')}`;
-                        } else if (typeof errorData.details === 'string') {
-                            error.message += `: ${errorData.details}`;
-                        } else if (typeof errorData.details === 'object') {
-                            error.message += `: ${JSON.stringify(errorData.details)}`;
-                        }
-                    }
-                    throw error;
-                }
-                return newResponse;
-            }
-        } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
-            try {
-                const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    credentials: 'include'
-                });
-                if (csrfResponse.ok) {
-                    const csrfData = await csrfResponse.json();
-                    localStorage.setItem('csrfToken', csrfData.csrfToken);
-                    return fetchWithAuth(url, options);
-                }
-            } catch (err) {
-                console.error('Помилка повторного отримання CSRF-токена:', err);
-            }
-        }
-
         if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch {
-                errorData = { error: `HTTP error ${response.status}` };
-            }
-            console.error('Помилка запиту:', { url, status: response.status, errorData });
-            const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            const error = new Error(errorData.error || `HTTP error ${response.status}`);
             error.status = response.status;
-            error.errorData = errorData;
-            if (errorData.details) {
-                if (Array.isArray(errorData.details)) {
-                    error.message += `: ${errorData.details.join(', ')}`;
-                } else if (typeof errorData.details === 'string') {
-                    error.message += `: ${errorData.details}`;
-                } else if (typeof errorData.details === 'object') {
-                    error.message += `: ${JSON.stringify(errorData.details)}`;
-                }
-            }
+            error.details = errorData.details || errorData.message || 'No additional details';
+            console.error('Fetch error:', { url, status: response.status, errorData });
             throw error;
         }
-
         return response;
     } catch (err) {
-        console.error('Помилка виконання запиту:', err);
+        console.error('Fetch request failed:', err);
         throw err;
     }
 }
@@ -2093,116 +1992,86 @@ function renderAdmin(section = activeTab, data = {}) {
 function renderCategoriesAdmin() {
     const categoryList = document.getElementById('category-list-admin');
     if (!categoryList) {
-        console.error('Елемент #category-list-admin не знайдено');
+        console.error('Element #category-list-admin not found');
         return;
     }
 
-    console.log('Рендеринг категорій:', JSON.stringify(categories, null, 2));
+    console.log('Rendering categories:', JSON.stringify(categories, null, 2));
 
     if (!Array.isArray(categories) || categories.length === 0) {
-        categoryList.innerHTML = '<p>Категорії відсутні.</p>';
+        categoryList.innerHTML = '<p>No categories available.</p>';
         return;
     }
 
-    const normalizedCategories = categories.map(cat => cat.category || cat);
-    const sortedCategories = [...normalizedCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-
+    const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
     categoryList.innerHTML = sortedCategories.map((category, index) => {
         const sortedSubcategories = Array.isArray(category.subcategories)
             ? [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0))
             : [];
-
         return `
-        <div class="category-item">
-            <div class="category-order-controls">
-                <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                <button class="move-btn move-down" data-index="${index}" ${index === sortedCategories.length - 1 ? 'disabled' : ''}>↓</button>
-            </div>
-            ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
-            <div class="category-details">
-                <strong>${category.name}</strong> (Шлях: ${category.slug}, ${category.visible ? 'Показується' : 'Приховано'})
-                <div class="category-actions">
-                    <button class="edit-btn" data-id="${category._id}">Редагувати</button>
-                    <button class="delete-btn" data-id="${category._id}">Видалити</button>
+            <div class="category-item">
+                <div class="category-order-controls">
+                    <button class="move-btn move-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="move-btn move-down" data-index="${index}" ${index === sortedCategories.length - 1 ? 'disabled' : ''}>↓</button>
                 </div>
-            </div>
-            <div class="subcategories">
-                ${sortedSubcategories.length > 0 ? sortedSubcategories.map((sub, subIndex) => `
-                    <div class="subcategory-item">
-                        <div class="subcategory-order-controls">
-                            <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
-                            <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === sortedSubcategories.length - 1 ? 'disabled' : ''}>↓</button>
-                        </div>
-                        ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
-                        <div class="subcategory-details">
-                            ${sub.name} (Шлях: ${sub.slug}, ${sub.visible ? 'Показується' : 'Приховано'})
-                            <div class="subcategory-actions">
-                                <button class="sub-edit" data-cat-id="${category._id}" data-sub-id="${sub._id}">Редагувати</button>
-                                <button class="sub-delete" data-cat-id="${category._id}" data-sub-id="${sub._id}">Видалити</button>
+                ${category.photo ? `<img src="${category.photo}" alt="${category.name}" class="category-photo">` : ''}
+                <div class="category-details">
+                    <strong>${category.name}</strong> (Slug: ${category.slug}, ${category.visible ? 'Visible' : 'Hidden'})
+                    <div class="category-actions">
+                        <button class="edit-btn" data-id="${category._id}">Edit</button>
+                        <button class="delete-btn" data-id="${category._id}">Delete</button>
+                    </div>
+                </div>
+                <div class="subcategories">
+                    ${sortedSubcategories.length > 0 ? sortedSubcategories.map((sub, subIndex) => `
+                        <div class="subcategory-item">
+                            <div class="subcategory-order-controls">
+                                <button class="move-btn sub-move-up" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === 0 ? 'disabled' : ''}>↑</button>
+                                <button class="move-btn sub-move-down" data-cat-id="${category._id}" data-sub-id="${sub._id}" ${subIndex === sortedSubcategories.length - 1 ? 'disabled' : ''}>↓</button>
+                            </div>
+                            ${sub.photo ? `<img src="${sub.photo}" alt="${sub.name}" class="subcategory-photo">` : ''}
+                            <div class="subcategory-details">
+                                ${sub.name} (Slug: ${sub.slug}, ${sub.visible ? 'Visible' : 'Hidden'})
+                                <div class="subcategory-actions">
+                                    <button class="sub-edit" data-cat-id="${category._id}" data-sub-id="${sub._id}">Edit</button>
+                                    <button class="sub-delete" data-cat-id="${category._id}" data-sub-id="${sub._id}">Delete</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `).join('') : '<p>Підкатегорії відсутні</p>'}
+                    `).join('') : '<p>No subcategories</p>'}
+                </div>
             </div>
-        </div>
         `;
     }).join('');
 
-    // Видаляємо старий слухач подій, якщо він існує
+    categoryList.removeEventListener('click', categoryList._clickHandler);
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryUp(index);
+            moveCategoryUp(parseInt(target.dataset.index));
         } else if (target.classList.contains('move-down')) {
-            const index = parseInt(target.dataset.index);
-            moveCategoryDown(index);
+            moveCategoryDown(parseInt(target.dataset.index));
         } else if (target.classList.contains('edit-btn')) {
-            const id = target.dataset.id;
-            openEditCategoryModal(id);
+            openEditCategoryModal(target.dataset.id);
         } else if (target.classList.contains('delete-btn')) {
-            const id = target.dataset.id;
-            deleteCategory(id);
+            deleteCategory(target.dataset.id);
         } else if (target.classList.contains('sub-move-up')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            const category = normalizedCategories.find(c => c._id === catId);
-            if (category && Array.isArray(category.subcategories)) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryUp(catId, subIndex);
-                }
-            }
+            moveSubcategoryUp(target.dataset.catId, target.dataset.subId);
         } else if (target.classList.contains('sub-move-down')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            const category = normalizedCategories.find(c => c._id === catId);
-            if (category && Array.isArray(category.subcategories)) {
-                const subIndex = category.subcategories.findIndex(s => s._id === subId);
-                if (subIndex !== -1) {
-                    moveSubcategoryDown(catId, subIndex);
-                }
-            }
+            moveSubcategoryDown(target.dataset.catId, target.dataset.subId);
         } else if (target.classList.contains('sub-edit')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            openEditSubcategoryModal(catId, subId);
+            openEditSubcategoryModal(target.dataset.catId, target.dataset.subId);
         } else if (target.classList.contains('sub-delete')) {
-            const catId = target.dataset.catId;
-            const subId = target.dataset.subId;
-            deleteSubcategory(catId, subId);
+            deleteSubcategory(target.dataset.catId, target.dataset.subId);
         }
     }, 300);
-
-    // Видаляємо попередній слухач, якщо він був доданий
-    categoryList.removeEventListener('click', categoryList._clickHandler);
-    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
+    categoryList._clickHandler = handleClick;
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
     if (subcatSelect) {
         const currentValue = subcatSelect.value;
-        subcatSelect.innerHTML = '<option value="">Виберіть категорію</option>' +
+        subcatSelect.innerHTML = '<option value="">Select category</option>' +
             sortedCategories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
         subcatSelect.value = currentValue || '';
     }
@@ -2210,7 +2079,7 @@ function renderCategoriesAdmin() {
     const productCatSelect = document.getElementById('product-category');
     if (productCatSelect) {
         const currentValue = productCatSelect.value;
-        productCatSelect.innerHTML = '<option value="">Без категорії</option>' +
+        productCatSelect.innerHTML = '<option value="">No category</option>' +
             sortedCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
         productCatSelect.value = currentValue || '';
         updateSubcategories();
@@ -2479,7 +2348,7 @@ function validateFile(file) {
 
 function sanitize(str) {
     if (typeof str !== 'string' || str === null || str === undefined) {
-        return str; // Повертаємо оригінальне значення, якщо воно не є рядком
+        return str || ''; // Return empty string for null/undefined
     }
     return str.replace(/[<>"]/g, (char) => ({
         '<': '&lt;',
@@ -2489,55 +2358,52 @@ function sanitize(str) {
 }
 
 function openEditCategoryModal(categoryId) {
-    const modal = document.getElementById('modal');
-    if (!modal) {
-        console.error('Модальне вікно з id="modal" не знайдено!');
-        showNotification('Модальне вікно не знайдено.');
-        return;
-    }
-
     const category = categories.find(c => c._id === categoryId);
     if (!category) {
-        console.error('Категорію з id', categoryId, 'не знайдено');
-        showNotification('Категорію не знайдено.');
+        console.error('Category not found:', categoryId);
+        showNotification('Category not found.');
         return;
     }
-
+    console.log('Opening edit modal with category:', category);
+    const modal = document.getElementById('modal');
     modal.innerHTML = `
         <div class="modal-content">
-            <h3>Редагувати категорію</h3>
+            <h3>Edit Category</h3>
             <form id="edit-category-form">
-                <input id="category-name" placeholder="Назва категорії" type="text" value="${sanitize(category.name) || ''}" required /><br/>
-                <label for="category-name">Назва категорії</label>
-                <input id="category-slug" placeholder="Шлях категорії" type="text" value="${sanitize(category.slug) || ''}" required /><br/>
-                <label for="category-slug">Шлях категорії</label>
-                <input id="category-photo-url" placeholder="URL зображення" type="text" value="${sanitize(category.photo) || ''}" /><br/>
-                <label for="category-photo-url">URL зображення</label>
+                <input id="category-name" placeholder="Category Name" type="text" value="${sanitize(category.name) || ''}" required /><br/>
+                <label for="category-name">Category Name</label>
+                <input id="category-slug" placeholder="Category Slug" type="text" value="${sanitize(category.slug) || ''}" required /><br/>
+                <label for="category-slug">Category Slug</label>
+                <input id="category-photo-url" placeholder="Image URL" type="text" value="${sanitize(category.photo) || ''}" /><br/>
+                <label for="category-photo-url">Image URL</label>
                 <input accept="image/*" id="category-photo-file" type="file" /><br/>
-                <label for="category-photo-file">Завантажте зображення</label>
+                <label for="category-photo-file">Upload Image</label>
                 <select id="category-visible">
-                    <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
-                    <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
+                    <option value="true" ${category.visible ? 'selected' : ''}>Show</option>
+                    <option value="false" ${!category.visible ? 'selected' : ''}>Hide</option>
                 </select><br/>
-                <label for="category-visible">Видимість</label>
+                <label for="category-visible">Visibility</label>
                 <div class="modal-actions">
-                    <button type="submit">Зберегти</button>
-                    <button type="button" onclick="closeModal()">Скасувати</button>
+                    <button type="submit">Save</button>
+                    <button type="button" onclick="closeModal()">Cancel</button>
                 </div>
             </form>
         </div>
     `;
-
     modal.classList.add('active');
     isModalOpen = true;
-    console.log('Відкрито модальне вікно для редагування категорії:', categoryId);
-
+    console.log('Edit category modal opened for ID:', categoryId);
     const form = document.getElementById('edit-category-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log('Form submitted with values:', {
+            name: document.getElementById('category-name').value,
+            slug: document.getElementById('category-slug').value,
+            photo: document.getElementById('category-photo-url').value,
+            visible: document.getElementById('category-visible').value
+        });
         await updateCategoryData(categoryId);
     });
-
     resetInactivityTimer();
 }
 
@@ -2943,7 +2809,8 @@ async function moveCategoryUp(index) {
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
-            showNotification('Невірний формат ID категорії.');
+            console.error('Invalid category IDs:', { category1: category1._id, category2: category2._id });
+            showNotification('Invalid category ID format.');
             return;
         }
 
@@ -2954,7 +2821,7 @@ async function moveCategoryUp(index) {
             ]
         };
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', categoryOrder);
+        console.log('Sending category order update:', categoryOrder);
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -2967,7 +2834,7 @@ async function moveCategoryUp(index) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            throw new Error(errorData.error || 'Failed to update order');
         }
 
         const updatedCategories = await response.json();
@@ -2976,11 +2843,11 @@ async function moveCategoryUp(index) {
         localStorage.setItem('categories', JSON.stringify(categories));
         broadcast('categories', categories);
         renderCategoriesAdmin();
-        showNotification('Порядок категорій змінено!');
+        showNotification('Category order updated!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
+        console.error('Error updating category order:', err);
+        showNotification('Failed to update order: ' + err.message);
     }
 }
 
@@ -2993,7 +2860,8 @@ async function moveCategoryDown(index) {
 
         const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
         if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
-            showNotification('Невірний формат ID категорії.');
+            console.error('Invalid category IDs:', { category1: category1._id, category2: category2._id });
+            showNotification('Invalid category ID format.');
             return;
         }
 
@@ -3004,7 +2872,7 @@ async function moveCategoryDown(index) {
             ]
         };
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', categoryOrder);
+        console.log('Sending category order update:', categoryOrder);
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -3017,7 +2885,7 @@ async function moveCategoryDown(index) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            throw new Error(errorData.error || 'Failed to update order');
         }
 
         const updatedCategories = await response.json();
@@ -3026,11 +2894,11 @@ async function moveCategoryDown(index) {
         localStorage.setItem('categories', JSON.stringify(categories));
         broadcast('categories', categories);
         renderCategoriesAdmin();
-        showNotification('Порядок категорій змінено!');
+        showNotification('Category order updated!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
+        console.error('Error updating category order:', err);
+        showNotification('Failed to update order: ' + err.message);
     }
 }
 

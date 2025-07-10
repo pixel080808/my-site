@@ -1416,18 +1416,18 @@ app.patch("/api/products/:id/toggle-active", authenticateToken, csrfProtection, 
 })
 
 const categorySchemaValidation = Joi.object({
-  name: Joi.string().trim().min(1).max(255).required().messages({
-    "string.empty": "Назва категорії є обов’язковою",
-    "string.min": "Назва категорії повинна містити хоча б 1 символ",
-    "string.max": "Назва категорії не може перевищувати 255 символів",
-    "any.required": "Назва категорії є обов’язковою",
-  }),
-  slug: Joi.string().trim().min(1).max(255).required().messages({
-    "string.empty": "Шлях категорії є обов’язковим",
-    "string.min": "Шлях категорії повинен містити хоча б 1 символ",
-    "string.max": "Шлях категорії не може перевищувати 255 символів",
-    "any.required": "Шлях категорії є обов’язковим",
-  }),
+    name: Joi.string().trim().min(1).max(255).required().messages({
+        "string.empty": "Category name is required",
+        "string.min": "Category name must be at least 1 character",
+        "string.max": "Category name cannot exceed 255 characters",
+        "any.required": "Category name is required",
+    }),
+    slug: Joi.string().trim().min(1).max(255).required().messages({
+        "string.empty": "Category slug is required",
+        "string.min": "Category slug must be at least 1 character",
+        "string.max": "Category slug cannot exceed 255 characters",
+        "any.required": "Category slug is required",
+    }),
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
@@ -1672,33 +1672,34 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     session.startTransaction();
     try {
         const { categories: categoryUpdates } = req.body;
-        logger.info("Отримано дані для зміни порядку категорій:", JSON.stringify(categoryUpdates, null, 2));
+        logger.info("Received category order update data:", JSON.stringify(categoryUpdates, null, 2));
 
         if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
-            logger.error("Невірний формат даних для зміни порядку категорій");
+            logger.error("Invalid category order data format");
             await session.abortTransaction();
-            return res.status(400).json({ error: "Невірний формат даних" });
+            return res.status(400).json({ error: "Invalid data format" });
         }
 
         for (const update of categoryUpdates) {
+            logger.info("Validating category ID:", update._id);
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
-                logger.error(`Невірний формат ID категорії: ${update._id}`);
+                logger.error(`Invalid category ID format: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
+                return res.status(400).json({ error: `Invalid category ID format: ${update._id}` });
             }
             if (typeof update.order !== 'number' || update.order < 0) {
-                logger.error(`Невірний порядок для категорії: ${update._id}`);
+                logger.error(`Invalid order for category: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(400).json({ error: "Невірний порядок категорії" });
+                return res.status(400).json({ error: "Invalid category order" });
             }
         }
 
         for (const update of categoryUpdates) {
             const category = await Category.findById(update._id).session(session);
             if (!category) {
-                logger.error(`Категорію не знайдено: ${update._id}`);
+                logger.error(`Category not found: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
+                return res.status(404).json({ error: `Category not found: ${update._id}` });
             }
             category.order = update.order;
             await category.save({ session });
@@ -1706,13 +1707,13 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
 
         const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
         broadcast("categories", updatedCategories);
-        logger.info("Порядок категорій успішно змінено");
+        logger.info("Category order updated successfully");
         await session.commitTransaction();
         res.json(updatedCategories);
     } catch (err) {
         await session.abortTransaction();
-        logger.error("Помилка при зміні порядку категорій:", err);
-        res.status(500).json({ error: "Помилка сервера", details: err.message });
+        logger.error("Error updating category order:", err);
+        res.status(500).json({ error: "Server error", details: err.message });
     } finally {
         session.endSession();
     }
