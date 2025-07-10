@@ -1574,12 +1574,14 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
       categoryData.slug = categoryData.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
     }
 
-    if (categoryData.photo === "") categoryData.photo = undefined;
+    // Дозволяємо порожнє значення для photo
+    if (categoryData.photo === "") categoryData.photo = "";
+    
     categoryData.subcategories =
       categoryData.subcategories?.map((sub) => ({
         ...sub,
         _id: sub._id && mongoose.Types.ObjectId.isValid(sub._id) ? sub._id : undefined,
-        photo: sub.photo || undefined,
+        photo: sub.photo || "", // Дозволяємо порожнє значення
         visible: sub.visible ?? true,
         order: sub.order || 0,
       })) || [];
@@ -3280,7 +3282,7 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
 
     subcategory.name = subcategoryData.name;
     subcategory.slug = subcategoryData.slug;
-    subcategory.photo = subcategoryData.photo || "";
+    subcategory.photo = subcategoryData.photo || ""; // Дозволяємо порожнє значення
     subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : true;
     subcategory.order = typeof subcategoryData.order === "number" ? subcategoryData.order : subcategory.order;
 

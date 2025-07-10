@@ -2714,12 +2714,13 @@ async function updateCategoryData(categoryId) {
         } else if (photoUrl) {
             photo = photoUrl;
         }
+        // Якщо ні файл, ні URL не вказані, залишаємо photo порожнім
 
         const category = categories.find(c => c._id === categoryId);
         const updatedCategory = {
             name,
             slug,
-            photo: photo || (category ? category.photo : ''),
+            photo: photo, // Дозволяємо порожнє значення
             visible,
             order: category ? category.order : 0,
             subcategories: category ? category.subcategories : []
@@ -3086,11 +3087,12 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
+        // Якщо ні файл, ні URL не вказані, залишаємо photo порожнім
 
         const updatedSubcategory = {
             name,
             slug,
-            photo: photo || subcategory.photo || '',
+            photo: photo, // Дозволяємо порожнє значення
             visible,
             order: typeof subcategory.order === "number" ? subcategory.order : 0
         };
@@ -3431,6 +3433,22 @@ async function moveSubcategory(categoryId, subIndex, direction) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок підкатегорій: ' + err.message);
     }
+}
+
+async function moveCategoryUp(index) {
+    return moveCategory(index, -1);
+}
+
+async function moveCategoryDown(index) {
+    return moveCategory(index, 1);
+}
+
+async function moveSubcategoryUp(categoryId, subIndex) {
+    return moveSubcategory(categoryId, subIndex, -1);
+}
+
+async function moveSubcategoryDown(categoryId, subIndex) {
+    return moveSubcategory(categoryId, subIndex, 1);
 }
 
 async function updateSlideshowSettings() {
