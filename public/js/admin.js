@@ -2924,15 +2924,20 @@ async function moveCategory(index, direction) {
         category1.order = category2.order;
         category2.order = tempOrder;
 
-        // Відправляємо на сервер масив з _id та order (тільки ObjectId!)
+        // Перевірка валідності _id
+        const isValidId = id => typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+
         const payload = {
             categories: sortedCategories.map(cat => ({
-                _id: String(cat._id), // важливо: саме рядок, 24-символьний hex
+                _id: String(cat._id),
                 order: cat.order
-            }))
+            })).filter(cat => isValidId(cat._id))
         };
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', payload);
+        if (payload.categories.length !== sortedCategories.length) {
+            showNotification('Деякі категорії мають невірний формат ID!');
+            return;
+        }
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -3389,14 +3394,20 @@ async function moveSubcategory(categoryId, subIndex, direction) {
     sub1.order = sub2.order;
     sub2.order = tempOrder;
 
+    // Перевірка валідності _id
+    const isValidId = id => typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+
     const payload = {
         subcategories: sortedSubcategories.map(sub => ({
             _id: String(sub._id),
             order: sub.order
-        }))
+        })).filter(sub => isValidId(sub._id))
     };
 
-    console.log('Надсилаємо дані для зміни порядку підкатегорій:', payload);
+    if (payload.subcategories.length !== sortedSubcategories.length) {
+        showNotification('Деякі підкатегорії мають невірний формат ID!');
+        return;
+    }
 
     try {
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
