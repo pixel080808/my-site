@@ -2679,7 +2679,7 @@ async function updateCategoryData(categoryId) {
         }
 
         const name = nameInput.value?.trim();
-        let slug = slugInput.value?.trim();
+        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
@@ -2688,13 +2688,8 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Автоматично генеруємо slug, якщо він порожній
-        if (!slug) {
-            slug = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
-        }
-
-        if (!/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
+        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії є обов\'язковим і може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
@@ -2704,7 +2699,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Перевірка унікальності назви
         const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
         const existingCategoriesByName = await nameCheck.json();
         if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
@@ -2712,7 +2706,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        // Перевірка унікальності slug
         const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
         const existingCategories = await slugCheck.json();
         if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
@@ -2953,8 +2946,8 @@ async function moveCategoryUp(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: String(category1._id), order: category2.order || index - 1 },
-                { _id: String(category2._id), order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index - 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
@@ -3003,8 +2996,8 @@ async function moveCategoryDown(index) {
 
         const categoryOrder = {
             categories: [
-                { _id: String(category1._id), order: category2.order || index + 1 },
-                { _id: String(category2._id), order: category1.order || index }
+                { _id: category1._id.toString(), order: category2.order || index + 1 },
+                { _id: category2._id.toString(), order: category1.order || index }
             ]
         };
 
@@ -3107,7 +3100,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         }
 
         const name = nameInput.value?.trim();
-        let slug = slugInput.value?.trim();
+        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
 
@@ -3116,13 +3109,8 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        // Автоматично генеруємо slug, якщо він порожній
-        if (!slug) {
-            slug = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
-        }
-
-        if (!/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
+        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях підкатегорії є обов\'язковим і може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
@@ -3138,14 +3126,12 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-        // Перевірка унікальності назви в межах категорії
         const existingSubcategory = category.subcategories.find(sub => sub.name === name && sub._id !== subcategoryId);
         if (existingSubcategory) {
             showNotification('Назва підкатегорії має бути унікальною в цій категорії!');
             return;
         }
 
-        // Перевірка унікальності slug в межах категорії
         const existingSlug = category.subcategories.find(sub => sub.slug === slug && sub._id !== subcategoryId);
         if (existingSlug) {
             showNotification('Шлях підкатегорії має бути унікальним в цій категорії!');
@@ -3485,8 +3471,8 @@ async function moveSubcategoryUp(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: String(sub1._id), order: sub2.order || subIndex - 1 },
-                { _id: String(sub2._id), order: sub1.order || subIndex }
+                { _id: sub1._id.toString(), order: sub2.order || subIndex - 1 },
+                { _id: sub2._id.toString(), order: sub1.order || subIndex }
             ]
         };
 
@@ -3511,7 +3497,6 @@ async function moveSubcategoryUp(categoryId, subIndex) {
         categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
         broadcast('categories', categories);
-        await loadCategories(); // Явне оновлення даних
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
@@ -3537,8 +3522,8 @@ async function moveSubcategoryDown(categoryId, subIndex) {
 
         const subcategoriesOrder = {
             subcategories: [
-                { _id: String(sub1._id), order: sub2.order || subIndex + 1 },
-                { _id: String(sub2._id), order: sub1.order || subIndex }
+                { _id: sub1._id.toString(), order: sub2.order || subIndex + 1 },
+                { _id: sub2._id.toString(), order: sub1.order || subIndex }
             ]
         };
 
@@ -3563,7 +3548,6 @@ async function moveSubcategoryDown(categoryId, subIndex) {
         categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
         localStorage.setItem('categories', JSON.stringify(categories));
         broadcast('categories', categories);
-        await loadCategories(); // Явне оновлення даних
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
         resetInactivityTimer();
