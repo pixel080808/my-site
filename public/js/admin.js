@@ -2660,66 +2660,35 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 200));
-
         const nameInput = document.getElementById('category-name');
         const slugInput = document.getElementById('category-slug');
+        const fileInput = document.getElementById('category-photo-file');
         const photoUrlInput = document.getElementById('category-photo-url');
-        const photoFileInput = document.getElementById('category-photo-file');
         const visibleSelect = document.getElementById('category-visible');
 
-        if (!nameInput || !slugInput || !visibleSelect) {
-            console.error('Критичні елементи форми відсутні:', {
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                visibleSelect: !!visibleSelect
-            });
-            showNotification('Елементи форми для редагування категорії не знайдено.');
+        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect) {
+            showNotification('Не вдалося знайти всі необхідні поля форми.');
             return;
         }
 
-        const name = nameInput.value?.trim();
-        const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        const name = nameInput.value.trim();
+        const slug = slugInput.value.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
-        let photo = photoUrlInput?.value?.trim() || '';
+        const file = fileInput.files[0];
+        const photoUrl = photoUrlInput.value.trim();
 
-        if (!name || name.length < 1) {
-            showNotification('Назва категорії є обов\'язковою та повинна містити хоча б 1 символ!');
+        if (!name || !slug) {
+            showNotification('Введіть назву та шлях категорії!');
             return;
         }
 
-        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-            showNotification('Шлях категорії є обов\'язковим і може містити лише малі літери, цифри та дефіси!');
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            showNotification('Шлях категорії може містити лише малі літери, цифри та дефіси!');
             return;
         }
 
-        const category = categories.find(c => c._id === categoryId);
-        if (!category) {
-            showNotification('Категорію не знайдено!');
-            return;
-        }
-
-        const nameCheck = await fetchWithAuth(`/api/categories?name=${encodeURIComponent(name)}`);
-        const existingCategoriesByName = await nameCheck.json();
-        if (existingCategoriesByName.some(c => c.name === name && c._id !== categoryId)) {
-            showNotification('Назва категорії має бути унікальною!');
-            return;
-        }
-
-        const slugCheck = await fetchWithAuth(`/api/categories?slug=${encodeURIComponent(slug)}`);
-        const existingCategories = await slugCheck.json();
-        if (existingCategories.some(c => c.slug === slug && c._id !== categoryId)) {
-            showNotification('Шлях категорії має бути унікальним!');
-            return;
-        }
-
-        if (photo && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(photo)) {
-            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
-            return;
-        }
-
-        if (photoFileInput?.files?.length > 0) {
-            const file = photoFileInput.files[0];
+        let photo = '';
+        if (file) {
             const validation = validateFile(file);
             if (!validation.valid) {
                 showNotification(validation.error);
@@ -2729,20 +2698,30 @@ async function updateCategoryData(categoryId) {
             formData.append('file', file);
             const response = await fetchWithAuth('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
             });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Помилка завантаження зображення: ${errorData.error || response.statusText}`);
+            }
             const data = await response.json();
-            if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
+        } else if (photoUrl) {
+            photo = photoUrl;
         }
 
+        // Важливо: передавати всі поля, включаючи order, visible, subcategories
+        const category = categories.find(c => c._id === categoryId);
         const updatedCategory = {
             name,
             slug,
-            photo: photo || category.photo || '',
+            photo: photo || (category ? category.photo : ''),
             visible,
-            order: category.order || 0,
-            subcategories: category.subcategories || []
+            order: category ? category.order : 0,
+            subcategories: category ? category.subcategories : []
         };
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
@@ -2931,27 +2910,28 @@ async function addCategory() {
     }
 }
 
-async function moveCategoryUp(index) {
-    if (index <= 0 || index >= categories.length) return;
+async function moveCategory(index, direction) {
+    if ((direction === -1 && index <= 0) || (direction === 1 && index >= categories.length - 1)) return;
     try {
+        // Сортуємо по order, щоб індекси відповідали порядку
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
         const category1 = sortedCategories[index];
-        const category2 = sortedCategories[index - 1];
+        const category2 = sortedCategories[index + direction];
 
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
-            showNotification('Невірний формат ID категорії.');
-            return;
-        }
+        // Міняємо order місцями
+        const tempOrder = category1.order;
+        category1.order = category2.order;
+        category2.order = tempOrder;
 
-        const categoryOrder = {
-            categories: [
-                { _id: category1._id.toString(), order: category2.order || index - 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
-            ]
+        // Відправляємо на сервер масив з _id та order (тільки ObjectId!)
+        const payload = {
+            categories: sortedCategories.map(cat => ({
+                _id: String(cat._id), // важливо: саме рядок, 24-символьний hex
+                order: cat.order
+            }))
         };
 
-        console.log('Надсилаємо дані для зміни порядку категорій:', categoryOrder);
+        console.log('Надсилаємо дані для зміни порядку категорій:', payload);
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -2959,72 +2939,17 @@ async function moveCategoryUp(index) {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(categoryOrder)
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            throw new Error(errorData.error || response.statusText);
         }
 
-        const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
-        categories.forEach((cat, i) => { cat.order = i; });
-        localStorage.setItem('categories', JSON.stringify(categories));
-        broadcast('categories', categories);
+        await loadCategories();
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
-    }
-}
-
-async function moveCategoryDown(index) {
-    if (index >= categories.length - 1 || index < 0) return;
-    try {
-        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
-        const category1 = sortedCategories[index];
-        const category2 = sortedCategories[index + 1];
-
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!category1._id || !category2._id || !isValidId(category1._id) || !isValidId(category2._id)) {
-            showNotification('Невірний формат ID категорії.');
-            return;
-        }
-
-        const categoryOrder = {
-            categories: [
-                { _id: category1._id.toString(), order: category2.order || index + 1 },
-                { _id: category2._id.toString(), order: category1.order || index }
-            ]
-        };
-
-        console.log('Надсилаємо дані для зміни порядку категорій:', categoryOrder);
-
-        const response = await fetchWithAuth('/api/categories/order', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            },
-            body: JSON.stringify(categoryOrder)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
-        }
-
-        const updatedCategories = await response.json();
-        categories.splice(0, categories.length, ...updatedCategories);
-        categories.forEach((cat, i) => { cat.order = i; });
-        localStorage.setItem('categories', JSON.stringify(categories));
-        broadcast('categories', categories);
-        renderCategoriesAdmin();
-        showNotification('Порядок категорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
@@ -3090,11 +3015,6 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const visibleSelect = document.getElementById('subcategory-visible');
 
         if (!nameInput || !slugInput || !visibleSelect) {
-            console.error('Критичні елементи форми відсутні:', {
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                visibleSelect: !!visibleSelect
-            });
             showNotification('Елементи форми для редагування підкатегорії не знайдено.');
             return;
         }
@@ -3161,12 +3081,13 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             photo = data.url;
         }
 
+        // Важливо: передавати всі поля, включаючи order, visible
         const updatedSubcategory = {
             name,
             slug,
             photo: photo || subcategory.photo || '',
             visible,
-            order: subcategory.order || 0
+            order: typeof subcategory.order === "number" ? subcategory.order : 0
         };
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
@@ -3455,105 +3376,49 @@ async function deleteSubcategory(categoryId, subcategoryId) {
     }
 }
 
-async function moveSubcategoryUp(categoryId, subIndex) {
-    const category = categories.find(cat => cat._id === categoryId);
-    if (!category || subIndex <= 0 || subIndex >= category.subcategories.length) return;
+async function moveSubcategory(categoryId, subIndex, direction) {
+    const category = categories.find(c => c._id === categoryId);
+    if (!category) return;
+    const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    if ((direction === -1 && subIndex <= 0) || (direction === 1 && subIndex >= sortedSubcategories.length - 1)) return;
+
+    const sub1 = sortedSubcategories[subIndex];
+    const sub2 = sortedSubcategories[subIndex + direction];
+
+    const tempOrder = sub1.order;
+    sub1.order = sub2.order;
+    sub2.order = tempOrder;
+
+    const payload = {
+        subcategories: sortedSubcategories.map(sub => ({
+            _id: String(sub._id),
+            order: sub.order
+        }))
+    };
+
+    console.log('Надсилаємо дані для зміни порядку підкатегорій:', payload);
+
     try {
-        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-        const sub1 = sortedSubcategories[subIndex];
-        const sub2 = sortedSubcategories[subIndex - 1];
-
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
-            showNotification('Невірний формат ID підкатегорії.');
-            return;
-        }
-
-        const subcategoriesOrder = {
-            subcategories: [
-                { _id: sub1._id.toString(), order: sub2.order || subIndex - 1 },
-                { _id: sub2._id.toString(), order: sub1.order || subIndex }
-            ]
-        };
-
-        console.log('Надсилаємо дані для зміни порядку підкатегорій:', subcategoriesOrder);
-
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
-            body: JSON.stringify(subcategoriesOrder)
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
+            throw new Error(errorData.error || response.statusText);
         }
 
-        const updatedCategory = await response.json();
-        categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
-        categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
-        localStorage.setItem('categories', JSON.stringify(categories));
-        broadcast('categories', categories);
+        await loadCategories();
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
-        resetInactivityTimer();
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
-    }
-}
-
-async function moveSubcategoryDown(categoryId, subIndex) {
-    const category = categories.find(cat => cat._id === categoryId);
-    if (!category || subIndex >= category.subcategories.length - 1 || subIndex < 0) return;
-    try {
-        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-        const sub1 = sortedSubcategories[subIndex];
-        const sub2 = sortedSubcategories[subIndex + 1];
-
-        const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
-        if (!sub1._id || !sub2._id || !isValidId(sub1._id) || !isValidId(sub2._id)) {
-            showNotification('Невірний формат ID підкатегорії.');
-            return;
-        }
-
-        const subcategoriesOrder = {
-            subcategories: [
-                { _id: sub1._id.toString(), order: sub2.order || subIndex + 1 },
-                { _id: sub2._id.toString(), order: sub1.order || subIndex }
-            ]
-        };
-
-        console.log('Надсилаємо дані для зміни порядку підкатегорій:', subcategoriesOrder);
-
-        const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            },
-            body: JSON.stringify(subcategoriesOrder)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Не вдалося змінити порядок');
-        }
-
-        const updatedCategory = await response.json();
-        categories = categories.map(c => c._id === categoryId ? updatedCategory : c);
-        categories.find(c => c._id === categoryId).subcategories.forEach((sub, i) => { sub.order = i; });
-        localStorage.setItem('categories', JSON.stringify(categories));
-        broadcast('categories', categories);
-        renderCategoriesAdmin();
-        showNotification('Порядок підкатегорій змінено!');
-        resetInactivityTimer();
-    } catch (err) {
-        console.error('Помилка зміни порядку підкатегорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
+        showNotification('Не вдалося змінити порядок підкатегорій: ' + err.message);
     }
 }
 
