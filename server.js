@@ -1683,11 +1683,16 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
-            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+            // Перевіряємо чи _id є валідним ObjectId або рядком, який можна конвертувати
+            let objectId;
+            try {
+                objectId = new mongoose.Types.ObjectId(update._id);
+            } catch (err) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }
+            
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для категорії: ${update._id}`);
                 await session.abortTransaction();
@@ -1989,11 +1994,16 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         }
 
         for (const update of subcategoryUpdates) {
-            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+            // Перевіряємо чи _id є валідним ObjectId або рядком, який можна конвертувати
+            let objectId;
+            try {
+                objectId = new mongoose.Types.ObjectId(update._id);
+            } catch (err) {
                 logger.error(`Невірний формат ID підкатегорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID підкатегорії: ${update._id}` });
             }
+            
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для підкатегорії: ${update._id}`);
                 await session.abortTransaction();
@@ -2013,7 +2023,8 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         await category.save({ session });
 
         const updatedCategory = await Category.findById(categoryId).session(session);
-        broadcast("categories", await Category.find().session(session));
+        const allCategories = await Category.find().session(session);
+        broadcast("categories", allCategories);
         logger.info(`Порядок підкатегорій успішно змінено для категорії: ${categoryId}`);
         await session.commitTransaction();
         res.json(updatedCategory);

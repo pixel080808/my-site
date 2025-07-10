@@ -2930,7 +2930,7 @@ async function moveCategory(index, direction) {
 
         const payload = {
             categories: sortedCategories.map(cat => ({
-                _id: String(cat._id),
+                _id: cat._id, // Не конвертуємо в String, залишаємо як є
                 order: cat.order
             })).filter(cat => isValidId(cat._id))
         };
@@ -2954,7 +2954,12 @@ async function moveCategory(index, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        await loadCategories();
+        // Оновлюємо локальні дані відразу
+        const updatedCategories = await response.json();
+        categories = updatedCategories;
+        localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
+
         renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
     } catch (err) {
@@ -3401,7 +3406,7 @@ async function moveSubcategory(categoryId, subIndex, direction) {
 
     const payload = {
         subcategories: sortedSubcategories.map(sub => ({
-            _id: String(sub._id),
+            _id: sub._id, // Не конвертуємо в String, залишаємо як є
             order: sub.order
         })).filter(sub => isValidId(sub._id))
     };
@@ -3426,7 +3431,14 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        await loadCategories();
+        // Оновлюємо локальні дані відразу
+        const updatedCategory = await response.json();
+        categories = categories.map(c => 
+            c._id === categoryId ? updatedCategory : c
+        );
+        localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
+
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
     } catch (err) {
