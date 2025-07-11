@@ -2930,7 +2930,7 @@ async function moveCategory(index, direction) {
 
         const payload = {
             categories: sortedCategories.map(cat => ({
-                _id: cat._id,
+                _id: String(cat._id),
                 order: cat.order
             })).filter(cat => isValidId(cat._id))
         };
@@ -2954,7 +2954,7 @@ async function moveCategory(index, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Оновлюємо локальні дані відразу
+        // Оновлюємо локальні дані одразу
         const updatedCategories = await response.json();
         categories = updatedCategories;
         localStorage.setItem('categories', JSON.stringify(categories));
@@ -3431,9 +3431,9 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Оновлюємо локальні дані відразу
+        // Оновлюємо локальні дані одразу
         const updatedCategory = await response.json();
-        categories = categories.map(c => 
+        categories = categories.map(c =>
             c._id === categoryId ? updatedCategory : c
         );
         localStorage.setItem('categories', JSON.stringify(categories));

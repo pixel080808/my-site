@@ -1689,7 +1689,6 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }
-            
             // Перевіряємо чи order є числом
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для категорії: ${update._id}`);
@@ -1710,9 +1709,9 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
+        await session.commitTransaction();
         broadcast("categories", updatedCategories);
         logger.info("Порядок категорій успішно змінено");
-        await session.commitTransaction();
         res.json(updatedCategories);
     } catch (err) {
         await session.abortTransaction();
