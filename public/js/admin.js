@@ -2930,7 +2930,7 @@ async function moveCategory(index, direction) {
 
         const payload = {
             categories: sortedCategories.map(cat => ({
-                _id: cat._id, // Не конвертуємо в String, залишаємо як є
+                _id: cat._id,
                 order: cat.order
             })).filter(cat => isValidId(cat._id))
         };
@@ -3406,7 +3406,7 @@ async function moveSubcategory(categoryId, subIndex, direction) {
 
     const payload = {
         subcategories: sortedSubcategories.map(sub => ({
-            _id: sub._id, // Не конвертуємо в String, залишаємо як є
+            _id: sub._id,
             order: sub.order
         })).filter(sub => isValidId(sub._id))
     };
