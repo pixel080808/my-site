@@ -3429,7 +3429,9 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Не оновлюємо локальні дані тут, дочекаємось WebSocket-оновлення
+        // Оновлюємо локальні дані категорій одразу після сортування підкатегорій
+        await loadCategories();
+        renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
