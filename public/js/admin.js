@@ -2914,7 +2914,6 @@ async function addCategory() {
 
 async function moveCategory(index, direction) {
     if ((direction === -1 && index <= 0) || (direction === 1 && index >= categories.length - 1)) return;
-    isUpdatingCategories = true;
     try {
         // Сортуємо по order, щоб індекси відповідали порядку
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -2931,7 +2930,7 @@ async function moveCategory(index, direction) {
 
         const payload = {
             categories: sortedCategories.map(cat => ({
-                _id: String(cat._id),
+                _id: cat._id, // Не конвертуємо в String, залишаємо як є
                 order: cat.order
             })).filter(cat => isValidId(cat._id))
         };
@@ -2955,13 +2954,17 @@ async function moveCategory(index, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Не оновлюємо локальні дані тут, дочекаємось WebSocket-оновлення
+        // Оновлюємо локальні дані відразу
+        const updatedCategories = await response.json();
+        categories = updatedCategories;
+        localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
+
+        renderCategoriesAdmin();
         showNotification('Порядок категорій змінено!');
     } catch (err) {
         console.error('Помилка зміни порядку категорій:', err);
         showNotification('Не вдалося змінити порядок: ' + err.message);
-    } finally {
-        isUpdatingCategories = false;
     }
 }
 
@@ -3386,35 +3389,34 @@ async function deleteSubcategory(categoryId, subcategoryId) {
 }
 
 async function moveSubcategory(categoryId, subIndex, direction) {
-    isUpdatingCategories = true;
+    const category = categories.find(c => c._id === categoryId);
+    if (!category) return;
+    const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    if ((direction === -1 && subIndex <= 0) || (direction === 1 && subIndex >= sortedSubcategories.length - 1)) return;
+
+    const sub1 = sortedSubcategories[subIndex];
+    const sub2 = sortedSubcategories[subIndex + direction];
+
+    const tempOrder = sub1.order;
+    sub1.order = sub2.order;
+    sub2.order = tempOrder;
+
+    // Перевірка валідності _id
+    const isValidId = id => typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+
+    const payload = {
+        subcategories: sortedSubcategories.map(sub => ({
+            _id: sub._id, // Не конвертуємо в String, залишаємо як є
+            order: sub.order
+        })).filter(sub => isValidId(sub._id))
+    };
+
+    if (payload.subcategories.length !== sortedSubcategories.length) {
+        showNotification('Деякі підкатегорії мають невірний формат ID!');
+        return;
+    }
+
     try {
-        const category = categories.find(c => c._id === categoryId);
-        if (!category) return;
-        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-        if ((direction === -1 && subIndex <= 0) || (direction === 1 && subIndex >= sortedSubcategories.length - 1)) return;
-
-        const sub1 = sortedSubcategories[subIndex];
-        const sub2 = sortedSubcategories[subIndex + direction];
-
-        const tempOrder = sub1.order;
-        sub1.order = sub2.order;
-        sub2.order = tempOrder;
-
-        // Перевірка валідності _id
-        const isValidId = id => typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
-
-        const payload = {
-            subcategories: sortedSubcategories.map(sub => ({
-                _id: sub._id,
-                order: sub.order
-            })).filter(sub => isValidId(sub._id))
-        };
-
-        if (payload.subcategories.length !== sortedSubcategories.length) {
-            showNotification('Деякі підкатегорії мають невірний формат ID!');
-            return;
-        }
-
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
             method: 'PUT',
             headers: {
@@ -3429,15 +3431,19 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Оновлюємо локальні дані категорій одразу після сортування підкатегорій
-        await loadCategories();
+        // Оновлюємо локальні дані відразу
+        const updatedCategory = await response.json();
+        categories = categories.map(c => 
+            c._id === categoryId ? updatedCategory : c
+        );
+        localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
+
         renderCategoriesAdmin();
         showNotification('Порядок підкатегорій змінено!');
     } catch (err) {
         console.error('Помилка зміни порядку підкатегорій:', err);
         showNotification('Не вдалося змінити порядок підкатегорій: ' + err.message);
-    } finally {
-        isUpdatingCategories = false;
     }
 }
 

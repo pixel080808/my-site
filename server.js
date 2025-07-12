@@ -1682,15 +1682,17 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: "Невірний формат даних" });
         }
 
-        for (let i = 0; i < categoryUpdates.length; i++) {
-            const update = categoryUpdates[i];
-            // Перевіряємо чи _id є валідним ObjectId
-            if (!update._id || !mongoose.Types.ObjectId.isValid(update._id)) {
+        for (const update of categoryUpdates) {
+            // Перевіряємо чи _id є валідним ObjectId або рядком, який можна конвертувати
+            let objectId;
+            try {
+                objectId = new mongoose.Types.ObjectId(update._id);
+            } catch (err) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }
-            // Перевіряємо чи order є числом
+            
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для категорії: ${update._id}`);
                 await session.abortTransaction();
@@ -1698,8 +1700,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             }
         }
 
-        for (let i = 0; i < categoryUpdates.length; i++) {
-            const update = categoryUpdates[i];
+        for (const update of categoryUpdates) {
             const category = await Category.findById(update._id).session(session);
             if (!category) {
                 logger.error(`Категорію не знайдено: ${update._id}`);
@@ -1711,9 +1712,9 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
-        await session.commitTransaction();
         broadcast("categories", updatedCategories);
         logger.info("Порядок категорій успішно змінено");
+        await session.commitTransaction();
         res.json(updatedCategories);
     } catch (err) {
         await session.abortTransaction();
@@ -1993,14 +1994,16 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         }
 
         for (const update of subcategoryUpdates) {
-            // Перевіряємо чи _id є валідним ObjectId
-            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+            // Перевіряємо чи _id є валідним ObjectId або рядком, який можна конвертувати
+            let objectId;
+            try {
+                objectId = new mongoose.Types.ObjectId(update._id);
+            } catch (err) {
                 logger.error(`Невірний формат ID підкатегорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID підкатегорії: ${update._id}` });
             }
             
-            // Перевіряємо чи order є числом
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для підкатегорії: ${update._id}`);
                 await session.abortTransaction();
