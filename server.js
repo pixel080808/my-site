@@ -1674,12 +1674,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     session.startTransaction();
     try {
         const { categories: categoryUpdates } = req.body;
-        logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
-
-        // Додаткове логування для діагностики
-        console.log("DEBUG categoryUpdates type:", typeof categoryUpdates);
-        console.log("DEBUG categoryUpdates isArray:", Array.isArray(categoryUpdates));
-        console.log("DEBUG categoryUpdates keys:", categoryUpdates ? Object.keys(categoryUpdates) : 'null');
+        logger.info("Отримано дані для оновлення категорії:", categoryUpdates);
 
         if (!Array.isArray(categoryUpdates)) {
             logger.error("Отримано не масив для оновлення категорій");
@@ -1688,9 +1683,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
-            console.log("DEBUG update:", update);
-            console.log("DEBUG update._id:", update._id);
-            console.log("DEBUG update.order:", update.order);
+            logger.info(`Обробляємо категорію:`, update);
             
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
@@ -1706,17 +1699,23 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 return res.status(400).json({ error: "Невірний порядок категорії" });
             }
 
-            const category = await Category.findById(update._id).session(session);
+            // Оновлюємо категорію
+            const category = await Category.findByIdAndUpdate(
+                update._id,
+                { order: update.order },
+                { new: true, session }
+            );
+            
             if (!category) {
                 logger.error(`Категорію не знайдено: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(404).json({ error: "Категорію не знайдено" });
+                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
             }
-
-            category.order = update.order;
-            await category.save({ session });
         }
 
+        const allCategories = await Category.find().session(session);
+        broadcast("categories", allCategories);
+        
         await session.commitTransaction();
         logger.info("Порядок категорій успішно оновлено");
         res.json({ message: "Порядок категорій оновлено" });
