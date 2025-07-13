@@ -1675,8 +1675,6 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     try {
         const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для оновлення категорії:", categoryUpdates);
-        logger.info("Тип categoryUpdates:", typeof categoryUpdates);
-        logger.info("Чи є масивом:", Array.isArray(categoryUpdates));
 
         if (!Array.isArray(categoryUpdates)) {
             logger.error("Отримано не масив для оновлення категорій");
@@ -1686,6 +1684,13 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
 
         for (const update of categoryUpdates) {
             logger.info(`Обробляємо категорію: _id=${update._id}, order=${update.order}`);
+            
+            // Перевіряємо чи _id існує і є рядком
+            if (!update._id || typeof update._id !== 'string') {
+                logger.error(`Невірний формат ID категорії: ${update._id}`);
+                await session.abortTransaction();
+                return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
+            }
             
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {

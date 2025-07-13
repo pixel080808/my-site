@@ -2914,43 +2914,27 @@ async function addCategory() {
 
 async function moveCategory(categoryIndex, direction) {
     try {
-        const categoryList = document.getElementById('category-list-admin');
-        if (!categoryList) {
-            console.error('Контейнер категорій не знайдено');
+        if (categoryIndex < 0 || categoryIndex >= categories.length) {
+            showNotification('Невірний індекс категорії');
             return;
         }
 
-        const categoryElements = Array.from(categoryList.querySelectorAll('.category-item'));
-        if (categoryIndex < 0 || categoryIndex >= categoryElements.length) {
-            console.error('Невірний індекс категорії');
-            return;
-        }
+        const movedCategory = categories[categoryIndex];
+        let targetCategory;
 
-        const newIndex = direction === 'up' ? categoryIndex - 1 : categoryIndex + 1;
-        if (newIndex < 0 || newIndex >= categoryElements.length) {
+        if (direction === 'up' && categoryIndex > 0) {
+            targetCategory = categories[categoryIndex - 1];
+        } else if (direction === 'down' && categoryIndex < categories.length - 1) {
+            targetCategory = categories[categoryIndex + 1];
+        } else {
             console.log('Неможливо перемістити категорію в цьому напрямку');
             return;
         }
 
-        // Переміщуємо елемент в DOM
-        const currentElement = categoryElements[categoryIndex];
-        const targetElement = categoryElements[newIndex];
-        
-        if (direction === 'up') {
-            categoryList.insertBefore(currentElement, targetElement);
-        } else {
-            categoryList.insertBefore(currentElement, targetElement.nextSibling);
-        }
-
-        // Оновлюємо порядок в масиві категорій
-        const movedCategory = categories[categoryIndex];
-        const targetCategory = categories[newIndex];
-        
-        if (movedCategory && targetCategory) {
-            const tempOrder = movedCategory.order;
-            movedCategory.order = targetCategory.order;
-            targetCategory.order = tempOrder;
-        }
+        // Міняємо порядки
+        const tempOrder = movedCategory.order;
+        movedCategory.order = targetCategory.order;
+        targetCategory.order = tempOrder;
 
         // Сортуємо категорії за новим порядком
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
