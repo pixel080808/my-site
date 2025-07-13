@@ -1683,9 +1683,11 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
+            logger.info("Обробляємо оновлення:", update);
+            
             // Перевіряємо чи _id існує і є рядком
             if (!update._id || typeof update._id !== 'string') {
-                logger.error(`Невірний формат ID категорії: ${update._id}`);
+                logger.error(`Невірний формат ID категорії: ${update._id}, тип: ${typeof update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }
@@ -1699,10 +1701,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             
             // Перевіряємо чи order є числом
             if (typeof update.order !== 'number' || update.order < 0) {
-                logger.error(`Невірний порядок для категорії: ${update._id}`);
+                logger.error(`Невірний порядок для категорії: ${update._id}, order: ${update.order}, тип: ${typeof update.order}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: "Невірний порядок категорії" });
             }
+
+            logger.info(`Оновлюємо категорію ${update._id} з порядком ${update.order}`);
 
             // Оновлюємо категорію через findByIdAndUpdate
             const category = await Category.findByIdAndUpdate(
@@ -1716,6 +1720,8 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 await session.abortTransaction();
                 return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
             }
+            
+            logger.info(`Категорію ${update._id} успішно оновлено`);
         }
 
         const allCategories = await Category.find().session(session);
@@ -1723,7 +1729,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         
         await session.commitTransaction();
         logger.info("Порядок категорій успішно оновлено");
-        res.json({ message: "Порядок категорій оновлено" });
+        res.json({ message: "Порядок категорій оновлено", categories: allCategories });
 
     } catch (error) {
         await session.abortTransaction();

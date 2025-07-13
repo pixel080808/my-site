@@ -2958,6 +2958,13 @@ async function moveCategory(categoryIndex, direction) {
         };
 
         console.log('Відправляємо дані для оновлення порядку:', payload);
+        console.log('Тип payload.categories:', typeof payload.categories);
+        console.log('Довжина payload.categories:', payload.categories.length);
+        payload.categories.forEach((cat, index) => {
+            console.log(`Категорія ${index}:`, cat);
+            console.log(`  _id: ${cat._id} (тип: ${typeof cat._id})`);
+            console.log(`  order: ${cat.order} (тип: ${typeof cat.order})`);
+        });
 
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
@@ -2973,12 +2980,12 @@ async function moveCategory(categoryIndex, direction) {
             throw new Error(errorData.error || 'Помилка зміни порядку категорій');
         }
 
+        const result = await response.json();
         showNotification('Порядок категорій оновлено', 'success');
         
         // Оновлюємо локальні дані після успішного оновлення
-        const updatedCategories = await response.json();
-        if (updatedCategories.categories) {
-            categories = updatedCategories.categories;
+        if (result.categories) {
+            categories = result.categories;
             renderCategoriesAdmin();
         }
         
