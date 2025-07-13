@@ -2353,11 +2353,24 @@ function renderSlideModal(slide = {}) {
             <input type="number" id="slide-order" value="${slide.order !== undefined ? slide.order : slides.length}" min="0">
             <div class="modal-actions">
                 <button onclick="${slide._id ? `updateSlide('${slide._id}')` : 'addSlide()'}">Зберегти</button>
-                <button onclick="closeModal()">Скасувати</button>
+                <button onclick="closeSlideModal()">Скасувати</button>
             </div>
         </div>
     `;
     showModal(modalContent);
+}
+
+// Окрема функція для закриття модального вікна слайдів
+function closeSlideModal() {
+    const modal = document.getElementById('modal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        modal.innerHTML = '';
+        isModalOpen = false;
+        console.log('Модальне вікно слайдів закрито');
+    }
+    resetInactivityTimer();
 }
 
 function renderSlidesAdmin() {
@@ -2456,6 +2469,7 @@ function closeModal() {
     const modal = document.getElementById('modal');
     if (modal) {
         modal.classList.remove('active');
+        modal.style.display = 'none'; // Додаємо це, щоб правильно закрити модальне вікно
         modal.innerHTML = '';
         isModalOpen = false;
         console.log('Модальне вікно закрито');
@@ -3602,7 +3616,7 @@ async function updateSlide(slideId) {
             slides[index] = updatedSlide;
         }
         renderSlidesAdmin();
-        closeModal();
+        closeSlideModal();
         showNotification('Слайд оновлено!');
         resetInactivityTimer();
     } catch (err) {
@@ -3690,7 +3704,7 @@ async function addSlide() {
         const newSlide = await response.json();
         slides.push(newSlide);
         renderSlidesAdmin();
-        closeModal();
+        closeSlideModal();
         showNotification('Слайд додано!');
         
         // Оновлюємо список слайдів з сервера
@@ -3751,7 +3765,7 @@ function editSlide(order) {
         console.warn('Кнопка #save-slide-btn не знайдена');
     }
     if (cancelButton) {
-        cancelButton.addEventListener('click', closeModal);
+        cancelButton.addEventListener('click', closeSlideModal);
     } else {
         console.warn('Кнопка #cancel-slide-btn не знайдена');
     }
@@ -3784,7 +3798,7 @@ function editSlide(order) {
                     slides.push(slide);
                     slides.sort((a, b) => a.order - b.order);
                     localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                    closeModal();
+                    closeSlideModal();
                     renderAdmin();
                     showNotification('Слайд відредаговано!');
                     unsavedChanges = false;
@@ -3796,7 +3810,7 @@ function editSlide(order) {
                 slides.push(slide);
                 slides.sort((a, b) => a.order - b.order);
                 localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-                closeModal();
+                closeSlideModal();
                 renderAdmin();
                 showNotification('Слайд відредаговано!');
                 unsavedChanges = false;
