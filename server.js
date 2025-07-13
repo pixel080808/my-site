@@ -1682,7 +1682,15 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: "Невірний формат даних" });
         }
 
-        for (const update of categoryUpdates) {
+        for (let i = 0; i < categoryUpdates.length; i++) {
+            const update = categoryUpdates[i];
+            logger.info(`Обробляємо оновлення ${i}:`, update);
+            logger.info(`Тип update:`, typeof update);
+            logger.info(`update є об'єктом:`, typeof update === 'object' && update !== null);
+            logger.info(`Ключі update:`, Object.keys(update));
+            logger.info(`update._id:`, update._id);
+            logger.info(`update.order:`, update.order);
+            
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
