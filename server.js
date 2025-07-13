@@ -1676,6 +1676,11 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
 
+        // Додаткове логування для діагностики
+        console.log("DEBUG categoryUpdates type:", typeof categoryUpdates);
+        console.log("DEBUG categoryUpdates isArray:", Array.isArray(categoryUpdates));
+        console.log("DEBUG categoryUpdates keys:", categoryUpdates ? Object.keys(categoryUpdates) : 'null');
+
         if (!Array.isArray(categoryUpdates)) {
             logger.error("Отримано не масив для оновлення категорій");
             await session.abortTransaction();
@@ -1683,6 +1688,10 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
+            console.log("DEBUG update:", update);
+            console.log("DEBUG update._id:", update._id);
+            console.log("DEBUG update.order:", update.order);
+            
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
