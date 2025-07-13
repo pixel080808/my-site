@@ -6056,19 +6056,59 @@ async function uploadBulkPrices() {
             }
 
             const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line);
+            
+            if (lines.length === 0) {
+                showNotification('Файл порожній або не містить даних!');
+                return;
+            }
+            
+            console.log(`Знайдено ${lines.length} рядків у файлі`);
             let updated = 0;
+            let counter = 1;
+            
+            // Створюємо мапу порядкових номерів до товарів
+            const productMap = new Map();
+            const activeProducts = products.filter(p => p.active && p.type !== 'group');
+            
+            if (activeProducts.length === 0) {
+                showNotification('Немає активних товарів для імпорту!');
+                return;
+            }
+            
+            activeProducts.forEach(p => {
+                if (p.type === 'simple') {
+                    productMap.set(counter, p);
+                    counter++;
+                } else if (p.type === 'mattresses') {
+                    productMap.set(counter, p);
+                    counter++;
+                }
+            });
+
+            console.log(`Початок обробки ${lines.length} рядків з файлу`);
+            console.log(`Створено мапу з ${productMap.size} товарами для імпорту`);
+            console.log('Мапа товарів:', Array.from(productMap.entries()).map(([num, p]) => `${num}: ${p.name}`));
+            
             for (const line of lines) {
                 const parts = line.split(',');
-                if (parts.length < 4) continue;
-                const id = parseInt(parts[0].trim());
-                const product = products.find(p => p.id === id);
+                if (parts.length < 4) {
+                    console.warn(`Пропускаємо рядок з недостатньою кількістю частин: ${line}`);
+                    continue;
+                }
+                
+                const orderNumber = parseInt(parts[0].trim());
+                const product = productMap.get(orderNumber);
+                
+                console.log(`Обробка рядка: ${line}`);
+                console.log(`Порядковий номер: ${orderNumber}, знайдений товар:`, product ? product.name : 'не знайдено');
+                
                 if (!product) {
-                    console.error(`Продукт з id ${id} не знайдено в масиві products`);
+                    console.error(`Товар з порядковим номером ${orderNumber} не знайдено`);
                     continue;
                 }
 
                 if (!product._id) {
-                    console.error(`Продукт з id ${id} не має _id`);
+                    console.error(`Товар з порядковим номером ${orderNumber} не має _id`);
                     continue;
                 }
 
@@ -6092,15 +6132,17 @@ async function uploadBulkPrices() {
                     const price = parseFloat(parts[parts.length - 1].trim());
                     if (!isNaN(price) && price >= 0) {
                         cleanedProduct.price = price;
-                        const response = await fetchWithAuth(`/api/products/${id}`, {
+                        console.log(`Оновлюємо ціну товару "${product.name}" з ${product.price} на ${price}`);
+                        const response = await fetchWithAuth(`/api/products/${product._id}`, {
                             method: 'PUT',
                             body: JSON.stringify(cleanedProduct)
                         });
                         if (response.ok) {
                             updated++;
+                            console.log(`✅ Успішно оновлено товар "${product.name}"`);
                         } else {
                             const text = await response.text();
-                            console.error(`Помилка оновлення товару #${id}: ${text}`);
+                            console.error(`❌ Помилка оновлення товару #${orderNumber}: ${text}`);
                         }
                     }
                 } else if (product.type === 'mattresses') {
@@ -6110,22 +6152,25 @@ async function uploadBulkPrices() {
                         const size = sizePart.replace('Розмір: ', '').trim();
                         const sizeObj = cleanedProduct.sizes.find(s => s.name === size);
                         if (sizeObj && !isNaN(price) && price >= 0) {
+                            console.log(`Оновлюємо ціну матрацу "${product.name}" розміру "${size}" з ${sizeObj.price} на ${price}`);
                             sizeObj.price = price;
-                            const response = await fetchWithAuth(`/api/products/${id}`, {
+                            const response = await fetchWithAuth(`/api/products/${product._id}`, {
                                 method: 'PUT',
                                 body: JSON.stringify(cleanedProduct)
                             });
                             if (response.ok) {
                                 updated++;
+                                console.log(`✅ Успішно оновлено матрац "${product.name}" розміру "${size}"`);
                             } else {
                                 const text = await response.text();
-                                console.error(`Помилка оновлення товару #${id}: ${text}`);
+                                console.error(`❌ Помилка оновлення товару #${orderNumber}: ${text}`);
                             }
                         }
                     }
                 }
             }
 
+            console.log(`Завершено імпорт. Успішно оновлено ${updated} товарів з ${lines.length} рядків`);
             await loadProducts(productsCurrentPage, productsPerPage);
             showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
@@ -6138,18 +6183,33 @@ async function uploadBulkPrices() {
 }
 
     function exportPrices() {
-        const exportData = products
-            .filter(p => p.active && p.type !== 'group')
+        let counter = 1;
+        const activeProducts = products.filter(p => p.active && p.type !== 'group');
+        console.log(`Експортуємо ціни для ${activeProducts.length} активних товарів`);
+        
+        if (activeProducts.length === 0) {
+            showNotification('Немає активних товарів для експорту!');
+            return;
+        }
+        
+        const exportData = activeProducts
             .map(p => {
                 if (p.type === 'simple') {
-                    return `${p.id},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}`;
+                    const line = `${counter},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}`;
+                    console.log(`Експорт простого товару #${counter}: ${p.name} - ${p.price || '0'} грн`);
+                    counter++;
+                    return line;
                 } else if (p.type === 'mattresses') {
-                    return p.sizes.map(s => `${p.id},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}`).join('\n');
+                    const lines = p.sizes.map(s => `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}`);
+                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами`);
+                    counter++;
+                    return lines.join('\n');
                 }
                 return '';
             })
             .filter(line => line)
             .join('\n');
+        console.log('Експортовані дані:', exportData);
         const blob = new Blob([exportData], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
