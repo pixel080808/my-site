@@ -1683,6 +1683,8 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
+            logger.info(`Обробляємо категорію: ${update._id} з порядком ${update.order}`);
+            
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
@@ -1703,8 +1705,11 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 await session.abortTransaction();
                 return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
             }
+            
+            logger.info(`Знайдено категорію: ${category.name}, оновлюємо порядок з ${category.order} на ${update.order}`);
             category.order = update.order;
             await category.save({ session });
+            logger.info(`Категорію ${category.name} збережено з новим порядком ${category.order}`);
         }
 
         const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
