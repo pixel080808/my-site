@@ -2912,7 +2912,7 @@ async function addCategory() {
     }
 }
 
-async function moveCategory(categoryId, direction) {
+async function moveCategory(categoryIndex, direction) {
     try {
         const categoryList = document.getElementById('category-list-admin');
         if (!categoryList) {
@@ -2921,26 +2921,19 @@ async function moveCategory(categoryId, direction) {
         }
 
         const categoryElements = Array.from(categoryList.querySelectorAll('.category-item'));
-        const currentIndex = categoryElements.findIndex(el => {
-            const moveUpBtn = el.querySelector('.move-up');
-            return moveUpBtn && moveUpBtn.dataset.index && 
-                   categories[parseInt(moveUpBtn.dataset.index)] && 
-                   categories[parseInt(moveUpBtn.dataset.index)]._id === categoryId;
-        });
-
-        if (currentIndex === -1) {
-            console.error('Категорію не знайдено в DOM');
+        if (categoryIndex < 0 || categoryIndex >= categoryElements.length) {
+            console.error('Невірний індекс категорії');
             return;
         }
 
-        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        const newIndex = direction === 'up' ? categoryIndex - 1 : categoryIndex + 1;
         if (newIndex < 0 || newIndex >= categoryElements.length) {
             console.log('Неможливо перемістити категорію в цьому напрямку');
             return;
         }
 
         // Переміщуємо елемент в DOM
-        const currentElement = categoryElements[currentIndex];
+        const currentElement = categoryElements[categoryIndex];
         const targetElement = categoryElements[newIndex];
         
         if (direction === 'up') {
@@ -2950,9 +2943,8 @@ async function moveCategory(categoryId, direction) {
         }
 
         // Оновлюємо порядок в масиві категорій
-        const movedCategory = categories.find(cat => cat._id === categoryId);
-        const targetCategoryIndex = newIndex;
-        const targetCategory = categories[targetCategoryIndex];
+        const movedCategory = categories[categoryIndex];
+        const targetCategory = categories[newIndex];
         
         if (movedCategory && targetCategory) {
             const tempOrder = movedCategory.order;
@@ -2962,14 +2954,10 @@ async function moveCategory(categoryId, direction) {
 
         // Сортуємо категорії за новим порядком
         const sortedCategories = categoryElements.map((el, index) => {
-            const moveUpBtn = el.querySelector('.move-up');
-            if (moveUpBtn && moveUpBtn.dataset.index) {
-                const categoryIndex = parseInt(moveUpBtn.dataset.index);
-                const category = categories[categoryIndex];
-                if (category) {
-                    category.order = index;
-                    return category;
-                }
+            const category = categories[index];
+            if (category) {
+                category.order = index;
+                return category;
             }
             return null;
         }).filter(Boolean);
