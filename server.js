@@ -1675,10 +1675,14 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
        try {
            let { categories: categoryUpdates } = req.body;
            logger.info("req.body:", req.body, "Array.isArray(req.body.categories):", Array.isArray(categoryUpdates));
+           logger.info("Тип categoryUpdates:", typeof categoryUpdates);
+           logger.info("categoryUpdates:", JSON.stringify(categoryUpdates));
 
            if (!Array.isArray(categoryUpdates)) {
                if (categoryUpdates && typeof categoryUpdates === 'object') {
+                   logger.info("Перетворюємо об'єкт в масив через Object.values");
                    categoryUpdates = Object.values(categoryUpdates);
+                   logger.info("Після перетворення:", JSON.stringify(categoryUpdates));
                } else {
                    logger.error("categories не є масивом!");
                    await session.abortTransaction();
@@ -1686,7 +1690,12 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
                }
            }
 
+           logger.info("Починаємо цикл обробки, кількість елементів:", categoryUpdates.length);
            for (const update of categoryUpdates) {
+               logger.info("Обробляємо update:", JSON.stringify(update));
+               logger.info("update._id:", update._id, "тип:", typeof update._id);
+               logger.info("update.order:", update.order, "тип:", typeof update.order);
+               
                if (!mongoose.Types.ObjectId.isValid(update._id)) {
                    logger.error(`Невірний формат ID категорії: ${update._id}`);
                    await session.abortTransaction();
