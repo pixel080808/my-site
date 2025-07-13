@@ -1673,68 +1673,116 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        let { categories: categoryUpdates } = req.body;
+        // Детальне логування для діагностики
+        logger.info("=== ПОЧАТОК ОБРОБКИ КАТЕГОРІЙ ===");
+        logger.info("req.body:", req.body);
         
-        // Додаткове логування
-        logger.info("Отримано дані для оновлення категорії:", req.body);
-        console.log("req.body:", req.body);
-        console.log("req.body.categories:", req.body.categories);
-        console.log("Тип req.body.categories:", typeof req.body.categories);
-        console.log("Array.isArray(req.body.categories):", Array.isArray(req.body.categories));
-        console.log("categoryUpdates:", categoryUpdates);
-        console.log("Тип categoryUpdates:", typeof categoryUpdates);
-        console.log("Array.isArray(categoryUpdates):", Array.isArray(categoryUpdates));
+        // Безпечно отримуємо categories з req.body
+        const categories = req.body.categories;
+        logger.info("categories з req.body:", categories);
+        logger.info("Тип categories:", typeof categories);
+        logger.info("Array.isArray(categories):", Array.isArray(categories));
         
-        // ГАРАНТОВАНО перетворюємо в масив
-        if (!Array.isArray(categoryUpdates)) {
-            if (categoryUpdates && typeof categoryUpdates === 'object') {
-                // Перевіряємо, чи це об'єкт з числовими ключами (як масив)
-                const keys = Object.keys(categoryUpdates);
+        // Перевіряємо, чи categories існує і є масивом
+        if (!categories) {
+            logger.error("categories відсутні в req.body");
+            await session.abortTransaction();
+            return res.status(400).json({ error: "categories відсутні в запиті" });
+        }
+        
+        // Якщо categories не є масивом, спробуємо перетворити
+        let categoryUpdates = categories;
+        if (!Array.isArray(categories)) {
+            logger.info("categories не є масивом, спробуємо перетворити");
+            
+            if (typeof categories === 'object' && categories !== null) {
+                const keys = Object.keys(categories);
+                logger.info("Ключі об'єкта categories:", keys);
+                
+                // Перевіряємо, чи всі ключі числові
                 const hasNumericKeys = keys.every(key => !isNaN(parseInt(key)));
+                logger.info("Чи всі ключі числові:", hasNumericKeys);
                 
                 if (hasNumericKeys) {
-                    categoryUpdates = Object.values(categoryUpdates);
-                    console.log("Після Object.values (числові ключі):", categoryUpdates);
+                    categoryUpdates = Object.values(categories);
+                    logger.info("Перетворено в масив:", categoryUpdates);
                 } else {
-                    // Якщо це не числові ключі, можливо це об'єкт з іншими властивостями
-                    console.log("Об'єкт має нечислові ключі:", keys);
+                    logger.error("Об'єкт має нечислові ключі:", keys);
                     await session.abortTransaction();
                     return res.status(400).json({ error: "categories має неправильну структуру" });
                 }
             } else {
+                logger.error("categories не є об'єктом або масивом");
                 await session.abortTransaction();
-                return res.status(400).json({ error: "categories не є масивом або об'єктом" });
+                return res.status(400).json({ error: "categories має неправильний тип" });
             }
         }
         
-        console.log("Фінальний масив:", categoryUpdates);
-        console.log("Довжина масиву:", categoryUpdates.length);
+        logger.info("Фінальний масив categoryUpdates:", categoryUpdates);
+        logger.info("Довжина масиву:", categoryUpdates.length);
         
+        // Перевіряємо кожен елемент масиву
         for (let i = 0; i < categoryUpdates.length; i++) {
             const update = categoryUpdates[i];
-            console.log(`Обробляємо update ${i}:`, update);
-            console.log(`Тип update:`, typeof update);
-            console.log(`update._id:`, update._id);
-            console.log(`update.order:`, update.order);
+            logger.info(`Обробляємо елемент ${i}:`, update);
+            logger.info(`Тип елемента:`, typeof update);
             
-            if (!update || typeof update !== 'object' || !update._id || !mongoose.Types.ObjectId.isValid(update._id)) {
+            // Перевіряємо, чи елемент є об'єктом
+            if (!update || typeof update !== 'object') {
+                logger.error(`Елемент ${i} не є об'єктом:`, update);
                 await session.abortTransaction();
-                return res.status(400).json({ error: `Невірний формат ID категорії: ${update && update._id}` });
+                return res.status(400).json({ error: `Елемент ${i} не є об'єктом` });
             }
+            
+            // Перевіряємо _id
+            if (!update._id) {
+                logger.error(`Елемент ${i} не має _id:`, update);
+                await session.abortTransaction();
+                return res.status(400).json({ error: `Елемент ${i} не має _id` });
+            }
+            
+            // Перевіряємо валідність ObjectId
+            if (!mongoose.Types.ObjectId.isValid(update._id)) {
+                logger.error(`Невірний формат ObjectId в елементі ${i}:`, update._id);
+                await session.abortTransaction();
+                return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
+            }
+            
+            // Перевіряємо order
             if (typeof update.order !== 'number' || update.order < 0) {
+                logger.error(`Невірний порядок в елементі ${i}:`, update.order);
                 await session.abortTransaction();
-                return res.status(400).json({ error: "Невірний порядок категорії" });
+                return res.status(400).json({ error: `Невірний порядок категорії в елементі ${i}` });
             }
-            await Category.findByIdAndUpdate(update._id, { order: update.order }, { new: true, session });
+            
+            logger.info(`Елемент ${i} валідний: _id=${update._id}, order=${update.order}`);
         }
+        
+        // Оновлюємо категорії в базі даних
+        logger.info("Оновлюємо категорії в базі даних...");
+        for (const update of categoryUpdates) {
+            await Category.findByIdAndUpdate(update._id, { order: update.order }, { new: true, session });
+            logger.info(`Оновлено категорію ${update._id} з порядком ${update.order}`);
+        }
+        
+        // Отримуємо оновлені категорії
         const allCategories = await Category.find().session(session);
+        logger.info("Отримано оновлені категорії:", allCategories.length);
+        
+        // Відправляємо оновлення через WebSocket
         broadcast("categories", allCategories);
+        
+        // Підтверджуємо транзакцію
         await session.commitTransaction();
+        logger.info("Транзакція підтверджена");
+        
         res.json({ message: "Порядок категорій оновлено", categories: allCategories });
+        logger.info("=== ЗАВЕРШЕНО ОБРОБКУ КАТЕГОРІЙ ===");
+        
     } catch (error) {
         await session.abortTransaction();
         logger.error("Помилка оновлення порядку категорій:", error);
-        res.status(500).json({ error: "Помилка сервера" });
+        res.status(500).json({ error: "Помилка сервера", details: error.message });
     } finally {
         session.endSession();
     }
