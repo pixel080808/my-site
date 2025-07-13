@@ -2365,7 +2365,7 @@ function closeSlideModal() {
     const modal = document.getElementById('modal');
     if (modal) {
         modal.classList.remove('active');
-        modal.style.display = 'none';
+        modal.style.display = ''; // Скидаємо display для слайдів
         modal.innerHTML = '';
         isModalOpen = false;
         console.log('Модальне вікно слайдів закрито');
@@ -2469,7 +2469,10 @@ function closeModal() {
     const modal = document.getElementById('modal');
     if (modal) {
         modal.classList.remove('active');
-        modal.style.display = 'none'; // Додаємо це, щоб правильно закрити модальне вікно
+        // Скидаємо display тільки якщо він був встановлений
+        if (modal.style.display === 'block') {
+            modal.style.display = '';
+        }
         modal.innerHTML = '';
         isModalOpen = false;
         console.log('Модальне вікно закрито');
