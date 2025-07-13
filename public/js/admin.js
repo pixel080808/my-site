@@ -2975,6 +2975,13 @@ async function moveCategory(categoryIndex, direction) {
 
         showNotification('Порядок категорій оновлено', 'success');
         
+        // Оновлюємо локальні дані після успішного оновлення
+        const updatedCategories = await response.json();
+        if (updatedCategories.categories) {
+            categories = updatedCategories.categories;
+            renderCategoriesAdmin();
+        }
+        
     } catch (error) {
         console.error('Помилка зміни порядку категорій:', error);
         showNotification('Помилка зміни порядку категорій: ' + error.message, 'error');
