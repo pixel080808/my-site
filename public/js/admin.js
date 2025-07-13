@@ -2915,24 +2915,24 @@ async function addCategory() {
 async function moveCategory(index, direction) {
     if ((direction === -1 && index <= 0) || (direction === 1 && index >= categories.length - 1)) return;
     try {
-        // Сортуємо по order, щоб індекси відповідали порядку
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
         const category1 = sortedCategories[index];
         const category2 = sortedCategories[index + direction];
 
-        // Міняємо order місцями
         const tempOrder = category1.order;
         category1.order = category2.order;
         category2.order = tempOrder;
 
-        // Перевірка валідності _id
+        // Тільки валідні категорії!
         const isValidId = id => typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
 
         const payload = {
-            categories: sortedCategories.map(cat => ({
-                _id: String(cat._id),
-                order: Number(cat.order)
-            })).filter(cat => isValidId(cat._id))
+            categories: sortedCategories
+                .filter(cat => isValidId(cat._id))
+                .map(cat => ({
+                    _id: String(cat._id),
+                    order: Number(cat.order)
+                }))
         };
 
         if (payload.categories.length !== sortedCategories.length) {
@@ -2954,7 +2954,6 @@ async function moveCategory(index, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-        // Оновлюємо локальні дані одразу
         const updatedCategories = await response.json();
         categories = updatedCategories;
         localStorage.setItem('categories', JSON.stringify(categories));
