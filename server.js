@@ -1673,8 +1673,14 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+        logger.info("Повний req.body:", req.body);
+        logger.info("Тип req.body:", typeof req.body);
+        logger.info("Ключі req.body:", Object.keys(req.body));
+        
         const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для оновлення категорії:", categoryUpdates);
+        logger.info("Тип categoryUpdates:", typeof categoryUpdates);
+        logger.info("categoryUpdates є масивом:", Array.isArray(categoryUpdates));
 
         if (!Array.isArray(categoryUpdates)) {
             logger.error("Отримано не масив для оновлення категорій");
@@ -1682,8 +1688,13 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: "Невірний формат даних - очікується масив" });
         }
 
-        for (const update of categoryUpdates) {
-            logger.info("Обробляємо оновлення:", update);
+        for (let i = 0; i < categoryUpdates.length; i++) {
+            const update = categoryUpdates[i];
+            logger.info(`Обробляємо оновлення ${i}:`, update);
+            logger.info(`Тип update:`, typeof update);
+            logger.info(`Ключі update:`, Object.keys(update));
+            logger.info(`update._id:`, update._id);
+            logger.info(`update.order:`, update.order);
             
             // Перевіряємо чи _id існує і є рядком
             if (!update._id || typeof update._id !== 'string') {
