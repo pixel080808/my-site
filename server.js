@@ -1673,8 +1673,14 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+        logger.info("Повний req.body:", req.body);
+        logger.info("Тип req.body:", typeof req.body);
+        logger.info("Ключі req.body:", Object.keys(req.body));
+        
         const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для оновлення категорії:", categoryUpdates);
+        logger.info("Тип categoryUpdates:", typeof categoryUpdates);
+        logger.info("categoryUpdates є масивом:", Array.isArray(categoryUpdates));
 
         if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
             logger.error("Невірний формат даних для зміни порядку категорій");
@@ -1682,15 +1688,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             return res.status(400).json({ error: "Невірний формат даних" });
         }
 
-        for (let i = 0; i < categoryUpdates.length; i++) {
-            const update = categoryUpdates[i];
-            logger.info(`Обробляємо оновлення ${i}:`, update);
-            logger.info(`Тип update:`, typeof update);
-            logger.info(`update є об'єктом:`, typeof update === 'object' && update !== null);
-            logger.info(`Ключі update:`, Object.keys(update));
-            logger.info(`update._id:`, update._id);
-            logger.info(`update.order:`, update.order);
-            
+        for (const update of categoryUpdates) {
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
