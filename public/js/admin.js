@@ -6089,6 +6089,8 @@ async function uploadBulkPrices() {
             console.log(`Створено мапу з ${productMap.size} товарами для імпорту`);
             console.log('Мапа товарів:', Array.from(productMap.entries()).map(([num, p]) => `${num}: ${p.name}`));
             console.log('Починаємо групування оновлень за товарами...');
+            console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
+            console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
             
             // Групуємо рядки за товарами для правильного оновлення матраців
             const productUpdates = new Map();
@@ -6099,6 +6101,8 @@ async function uploadBulkPrices() {
                     console.warn(`Пропускаємо рядок з недостатньою кількістю частин: ${line}`);
                     continue;
                 }
+                
+                console.log(`Обробка рядка: ${line} (${parts.length} частин)`);
                 
                 const orderNumber = parseInt(parts[0].trim());
                 const product = productMap.get(orderNumber);
@@ -6145,14 +6149,41 @@ async function uploadBulkPrices() {
                 
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[parts.length - 1].trim());
+                    const salePrice = parts.length > 4 ? parseFloat(parts[4].trim()) : null;
+                    
                     if (!isNaN(price) && price >= 0) {
                         update.data.price = price;
                         update.updates.push(`ціна: ${product.price} → ${price}`);
                         console.log(`Підготовлено оновлення ціни товару "${product.name}" з ${product.price} на ${price}`);
                     }
+                    
+                    // Обробка акційної ціни
+                    if (parts.length > 4) {
+                        if (!isNaN(salePrice) && salePrice >= 0) {
+                            // Перевіряємо, щоб акційна ціна була меншою за звичайну
+                            if (salePrice < price) {
+                                update.data.salePrice = salePrice;
+                                update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
+                                console.log(`Підготовлено оновлення акційної ціни товару "${product.name}" на ${salePrice}`);
+                            } else {
+                                console.warn(`Акційна ціна ${salePrice} не може бути більшою або рівною звичайній ціні ${price} для товару "${product.name}"`);
+                            }
+                        } else {
+                            console.warn(`Невірна акційна ціна "${parts[4]}" для товару "${product.name}"`);
+                        }
+                    } else {
+                        // Якщо акційної ціни немає в файлі, видаляємо її
+                        if (product.salePrice !== null) {
+                            update.data.salePrice = null;
+                            update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
+                            console.log(`Підготовлено видалення акційної ціни товару "${product.name}"`);
+                        }
+                    }
                 } else if (product.type === 'mattresses') {
                     const sizePart = parts[parts.length - 2].trim();
                     const price = parseFloat(parts[parts.length - 1].trim());
+                    const salePrice = parts.length > 5 ? parseFloat(parts[5].trim()) : null;
+                    
                     if (sizePart.startsWith('Розмір: ')) {
                         const size = sizePart.replace('Розмір: ', '').trim();
                         const sizeObj = update.data.sizes.find(s => s.name === size);
@@ -6161,6 +6192,31 @@ async function uploadBulkPrices() {
                             sizeObj.price = price;
                             update.updates.push(`розмір "${size}": ${oldPrice} → ${price}`);
                             console.log(`Підготовлено оновлення ціни матрацу "${product.name}" розміру "${size}" з ${oldPrice} на ${price}`);
+                        }
+                    }
+                    
+                    // Обробка акційної ціни для матраців (тільки для першого розміру, щоб не дублювати)
+                    if (parts[parts.length - 1] === parts[4]) { // Якщо це перший розмір матрацу
+                        if (parts.length > 5) {
+                            if (!isNaN(salePrice) && salePrice >= 0) {
+                                // Перевіряємо, щоб акційна ціна була меншою за звичайну
+                                if (salePrice < price) {
+                                    update.data.salePrice = salePrice;
+                                    update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
+                                    console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice}`);
+                                } else {
+                                    console.warn(`Акційна ціна ${salePrice} не може бути більшою або рівною звичайній ціні ${price} для матрацу "${product.name}"`);
+                                }
+                            } else {
+                                console.warn(`Невірна акційна ціна "${parts[5]}" для матрацу "${product.name}"`);
+                            }
+                        } else {
+                            // Якщо акційної ціни немає в файлі, видаляємо її
+                            if (product.salePrice !== null) {
+                                update.data.salePrice = null;
+                                update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
+                                console.log(`Підготовлено видалення акційної ціни матрацу "${product.name}"`);
+                            }
                         }
                     }
                 }
@@ -6190,8 +6246,23 @@ async function uploadBulkPrices() {
 
             console.log(`Завершено імпорт. Успішно оновлено ${updated} товарів з ${lines.length} рядків`);
             console.log(`Загальна статистика: ${productUpdates.size} товарів було оброблено, ${updated} оновлено`);
+            
+            // Підраховуємо кількість оновлень акційних цін
+            let salePriceUpdates = 0;
+            for (const [productId, update] of productUpdates) {
+                if (update.updates.some(u => u.includes('акційна ціна'))) {
+                    salePriceUpdates++;
+                }
+            }
+            
+            if (salePriceUpdates > 0) {
+                console.log(`Оновлено акційних цін: ${salePriceUpdates} товарів`);
+                showNotification(`Оновлено цін для ${updated} товарів (включаючи ${salePriceUpdates} акційних цін)!`);
+            } else {
+                showNotification(`Оновлено цін для ${updated} товарів!`);
+            }
+            
             await loadProducts(productsCurrentPage, productsPerPage);
-            showNotification(`Оновлено цін для ${updated} товарів!`);
             resetInactivityTimer();
         } catch (err) {
             console.error('Помилка обробки файлу цін:', err);
@@ -6204,7 +6275,9 @@ async function uploadBulkPrices() {
     function exportPrices() {
         let counter = 1;
         const activeProducts = products.filter(p => p.active && p.type !== 'group');
+        const productsWithSale = activeProducts.filter(p => p.salePrice !== null);
         console.log(`Експортуємо ціни для ${activeProducts.length} активних товарів`);
+        console.log(`Товарів з акційними цінами: ${productsWithSale.length}`);
         
         if (activeProducts.length === 0) {
             showNotification('Немає активних товарів для експорту!');
@@ -6214,13 +6287,17 @@ async function uploadBulkPrices() {
         const exportData = activeProducts
             .map(p => {
                 if (p.type === 'simple') {
-                    const line = `${counter},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}`;
-                    console.log(`Експорт простого товару #${counter}: ${p.name} - ${p.price || '0'} грн`);
+                    // Додаємо акційну ціну, якщо вона є
+                    const salePrice = p.salePrice ? `,${p.salePrice}` : '';
+                    const line = `${counter},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}${salePrice}`;
+                    console.log(`Експорт простого товару #${counter}: ${p.name} - ${p.price || '0'} грн${p.salePrice ? ` (акція: ${p.salePrice} грн)` : ''}`);
                     counter++;
                     return line;
                 } else if (p.type === 'mattresses') {
-                    const lines = p.sizes.map(s => `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}`);
-                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами`);
+                    // Для матраців також додаємо акційну ціну, якщо вона є
+                    const salePrice = p.salePrice ? `,${p.salePrice}` : '';
+                    const lines = p.sizes.map(s => `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}${salePrice}`);
+                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами${p.salePrice ? ` (акція: ${p.salePrice} грн)` : ''}`);
                     counter++;
                     return lines.join('\n');
                 }
@@ -6229,6 +6306,10 @@ async function uploadBulkPrices() {
             .filter(line => line)
             .join('\n');
         console.log('Експортовані дані:', exportData);
+        console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
+        console.log('Приклад: 1,Вітальня "Марк",Без бренду,13800,12000');
+        console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
+        console.log('Приклад: 2,Матрац "Софія",Матролюкс,Розмір: 90х200,2000,1800');
         const blob = new Blob([exportData], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -6236,7 +6317,12 @@ async function uploadBulkPrices() {
         a.download = 'prices-export.txt';
         a.click();
         URL.revokeObjectURL(url);
-        showNotification('Ціни експортовано!');
+        
+        if (productsWithSale.length > 0) {
+            showNotification(`Ціни експортовано! (${productsWithSale.length} товарів з акційними цінами)`);
+        } else {
+            showNotification('Ціни експортовано!');
+        }
         resetInactivityTimer();
     }
 
