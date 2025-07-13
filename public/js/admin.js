@@ -2922,12 +2922,23 @@ async function moveCategory(categoryIndex, direction) {
         const movedCategory = categories[categoryIndex];
         let targetCategory;
 
-        if (direction === 'up' && categoryIndex > 0) {
-            targetCategory = categories[categoryIndex - 1];
-        } else if (direction === 'down' && categoryIndex < categories.length - 1) {
-            targetCategory = categories[categoryIndex + 1];
+        // Конвертуємо числові напрямки в рядки
+        if (direction === -1 || direction === 'up') {
+            if (categoryIndex > 0) {
+                targetCategory = categories[categoryIndex - 1];
+            } else {
+                console.log('Неможливо перемістити категорію вгору');
+                return;
+            }
+        } else if (direction === 1 || direction === 'down') {
+            if (categoryIndex < categories.length - 1) {
+                targetCategory = categories[categoryIndex + 1];
+            } else {
+                console.log('Неможливо перемістити категорію вниз');
+                return;
+            }
         } else {
-            console.log('Неможливо перемістити категорію в цьому напрямку');
+            console.log('Невірний напрямок:', direction);
             return;
         }
 
