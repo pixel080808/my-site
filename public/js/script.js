@@ -230,7 +230,7 @@ async function saveCartToServer() {
                 }
                 let colorData = null;
                 let sizeData = item.size || null;
-                let price = product.salePrice && new Date(product.saleEnd) > new Date() ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
+                let price = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
 
                 if (product.type === 'mattresses') {
                     if (item.color && !item.size && product.sizes?.some(s => s.name === item.color.name)) {
@@ -942,7 +942,7 @@ async function updateFloatingGroupCart() {
         currentProduct.groupProducts.forEach(id => {
             const product = products.find(p => p._id === id);
             if (product && savedSelection[id] && savedSelection[id] > 0) {
-                const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+                const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
                 let price = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
 
                 if (product.colors?.length > 0 && selectedColors[id] !== undefined) {
@@ -1888,7 +1888,7 @@ function renderFilters() {
     const relevantProducts = isSearchActive ? baseSearchResults : baseFilteredProducts;
     const activeFilters = getActiveFilters();
 
-    const promoProducts = relevantProducts.filter(p => p.salePrice && new Date(p.saleEnd) > new Date());
+    const promoProducts = relevantProducts.filter(p => p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()));
     if (promoProducts.length > 0) {
         filterList.appendChild(createFilterBlock('Товари з акціями', 'promo', ['Акція'], activeFilters));
     }
@@ -1905,7 +1905,7 @@ function renderFilters() {
 
     const priceRanges = ['0-2000', '2000-5000', '5000-10000', '10000+'];
     const priceFiltered = relevantProducts.filter(p => {
-        const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+        const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
         return priceRanges.some(range => {
             if (range.endsWith('+')) {
                 return price >= parseInt(range.replace('+', ''));
@@ -1941,10 +1941,10 @@ function createFilterBlock(title, name, options, activeFilters = {}) {
     options.forEach(opt => {
         let count = 0;
         if (name === 'promo') {
-            count = relevantProducts.filter(p => p.salePrice && new Date(p.saleEnd) > new Date()).length;
+            count = relevantProducts.filter(p => p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())).length;
         } else if (name === 'price') {
             count = relevantProducts.filter(p => {
-                const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+                const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
                 if (opt.endsWith('+')) {
                     return price >= parseInt(opt.replace('+', ''));
                 }
@@ -1990,10 +1990,10 @@ function filterProducts() {
         if (checked.length > 0) {
             hasActiveFilters = true;
             if (name === 'promo') {
-                filtered = filtered.filter(p => p.salePrice && new Date(p.saleEnd) > new Date());
+                filtered = filtered.filter(p => p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()));
             } else if (name === 'price') {
                 filtered = filtered.filter(p => {
-                    const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price;
+                    const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
                     return checked.some(range => {
                         if (range.endsWith('+')) {
                             return price >= parseInt(range.replace('+', ''));
@@ -2034,14 +2034,14 @@ function sortProducts(sortType) {
         filtered.sort((a, b) => b.name.localeCompare(b.name));
     } else if (sortType === 'price-asc') {
         filtered.sort((a, b) => {
-            const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
-            const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+            const priceA = (a.salePrice && (a.saleEnd === null || new Date(a.saleEnd) > new Date()) ? a.salePrice : a.price) || 0;
+            const priceB = (b.salePrice && (b.saleEnd === null || new Date(b.saleEnd) > new Date()) ? b.salePrice : b.price) || 0;
             return priceA - priceB;
         });
     } else if (sortType === 'price-desc') {
         filtered.sort((a, b) => {
-            const priceA = (a.salePrice && new Date(a.saleEnd) > new Date() ? a.salePrice : a.price) || 0;
-            const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
+            const priceA = (a.salePrice && (a.saleEnd === null || new Date(a.saleEnd) > new Date()) ? a.salePrice : a.price) || 0;
+            const priceB = (b.salePrice && (b.saleEnd === null || new Date(b.saleEnd) > new Date()) ? b.salePrice : b.price) || 0;
             return priceB - priceA;
         });
     } else if (sortType === 'popularity') {
@@ -2352,7 +2352,7 @@ async function renderProductDetails() {
         }
 
         const product = currentProduct;
-        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+        const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
         let initialPrice = isOnSale ? product.salePrice : product.price || 0;
 
         const container = document.createElement('div');
@@ -2470,7 +2470,7 @@ async function renderProductDetails() {
                 priceDiv.appendChild(regularSpan);
             }
             rightDiv.appendChild(priceDiv);
-            if (isOnSale && typeof updateSaleTimer === 'function') {
+            if (isOnSale && product.saleEnd && typeof updateSaleTimer === 'function') {
                 const timerDiv = document.createElement('div');
                 timerDiv.className = 'sale-timer';
                 timerDiv.id = `timer-${product._id}`;
@@ -2655,7 +2655,7 @@ async function renderProductDetails() {
 
                 const priceDiv = document.createElement('div');
                 priceDiv.className = 'price';
-                const isOnSaleP = p.salePrice && new Date(p.saleEnd) > new Date();
+                const isOnSaleP = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
                 if (isOnSaleP) {
                     const regularSpan = document.createElement('s');
                     regularSpan.className = 'regular-price';
@@ -2858,7 +2858,7 @@ function updateGroupSelectionWithQuantity(productId) {
             if (quantity > 0) {
                 const p = products.find(p => p._id === id);
                 if (p) {
-                    const isOnSale = p.salePrice && new Date(p.saleEnd) > new Date();
+                    const isOnSale = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
                     let price = isOnSale ? parseFloat(p.salePrice) : parseFloat(p.price || 0);
 
                     // Враховуємо колір
@@ -2952,7 +2952,7 @@ function createProductElement(product) {
 
     const priceDiv = document.createElement('div');
     priceDiv.className = 'price';
-    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
     if (product.type === 'mattresses' && product.sizes?.length > 0) {
         const minPrice = Math.min(...product.sizes.map(s => s.price));
@@ -2963,7 +2963,7 @@ function createProductElement(product) {
     } else if (product.type === 'group' && product.groupProducts?.length > 0) {
         const groupPrices = product.groupProducts.map(id => {
             const p = products.find(p => p._id === id);
-            return p ? (p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price) : Infinity;
+            return p ? (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price) : Infinity;
         });
         const minPrice = Math.min(...groupPrices);
         const regularSpan = document.createElement('span');
@@ -3008,7 +3008,7 @@ function createProductElement(product) {
 
     productElement.appendChild(priceDiv);
 
-    if (isOnSale) {
+    if (isOnSale && product.saleEnd) {
         const timerDiv = document.createElement('div');
         timerDiv.className = 'sale-timer';
         timerDiv.id = `timer-${product._id}`;
@@ -3021,7 +3021,7 @@ function createProductElement(product) {
 
 function updateSaleTimer(productId, saleEnd) {
     const timerElement = document.getElementById(`timer-${productId}`);
-    if (!timerElement || !saleEnd) return;
+    if (!timerElement || !saleEnd) return; // Якщо немає дати закінчення, акція безкінечна
     const product = products.find(p => p._id === productId);
     if (!product) {
         timerElement.textContent = 'Товар недоступний';
@@ -3078,9 +3078,9 @@ function selectColor(productId, index) {
     circles.forEach(c => c.classList.remove('selected'));
     circles[index].classList.add('selected');
     const priceElement = document.getElementById(`price-${productId}`);
-    const basePrice = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
+    const basePrice = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? product.salePrice : product.price || 0;
     const newPrice = basePrice + (product.colors[index].priceChange || 0);
-    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
     while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
     if (isOnSale) {
         const saleSpan = document.createElement('span');
@@ -3107,9 +3107,9 @@ function updateColorPrice(productId) {
     selectedColors[productId] = index;
     saveToStorage('selectedColors', selectedColors);
     const priceElement = document.getElementById(`price-${productId}`);
-    const basePrice = product.salePrice && new Date(product.saleEnd) > new Date() ? product.salePrice : product.price || 0;
+    const basePrice = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? product.salePrice : product.price || 0;
     const newPrice = basePrice + (product.colors[index].priceChange || 0);
-    const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
     while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
     if (isOnSale) {
         const saleSpan = document.createElement('span');
@@ -3155,7 +3155,7 @@ function updateGroupSelection(productId) {
         const id = cb.value;
         const p = products.find(p => p._id === id);
         if (cb.checked && p) {
-            const price = p.salePrice && new Date(p.saleEnd) > new Date() ? p.salePrice : p.price || 0;
+            const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price || 0;
             totalPrice += price;
             selectedIds.push(id);
         }
@@ -3210,7 +3210,7 @@ async function addToCartWithColor(productId) {
             priceChange: parseFloat(product.colors[colorIndex].priceChange || 0),
             photo: product.colors[colorIndex].photo || ''
         };
-        price = product.salePrice && new Date(product.saleEnd) > new Date() ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
+        price = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
         price += parseFloat(colorData.priceChange);
         console.log(`Колір для товару ${product.name}: ${colorData.name}`);
     }
@@ -3322,7 +3322,7 @@ async function addGroupToCart(productId) {
             continue;
         }
 
-        const isOnSale = p.salePrice && new Date(p.saleEnd) > new Date();
+        const isOnSale = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
         let price = isOnSale ? parseFloat(p.salePrice) : parseFloat(p.price || 0);
         let selectedColor = null;
         let selectedSize = null;
@@ -3741,7 +3741,7 @@ async function updateCartPrices() {
         if (!product) return;
 
         let price = product.price || 0;
-        const isOnSale = product.salePrice && new Date(product.saleEnd) > new Date();
+        const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
         if (product.type === 'mattresses' && item.size) {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
@@ -3939,7 +3939,7 @@ async function renderCart() {
 	removeBtn.onclick = () => promptRemoveFromCart(index);
 	itemDiv.appendChild(removeBtn);
 
-        if (product?.salePrice && new Date(product.saleEnd) > new Date()) {
+        if (product?.salePrice && product.saleEnd && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
             const timerDiv = document.createElement('div');
             timerDiv.className = 'sale-timer';
             timerDiv.id = `timer-${item.id}`;

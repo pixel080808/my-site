@@ -1982,9 +1982,7 @@ function renderAdmin(section = activeTab, data = {}) {
             productList.innerHTML = Array.isArray(currentProducts) && currentProducts.length > 0
                 ? currentProducts.map(p => {
                     const priceInfo = p.type === 'simple'
-                        ? (p.salePrice && p.salePrice < p.price
-                            ? `<s>${p.price} грн</s> ${p.salePrice} грн`
-                            : `${p.price || '0'} грн`)
+                        ? `${p.price || '0'} грн`
                         : (p.sizes?.length > 0
                             ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
                             : 'Ціна не вказана');
@@ -4278,8 +4276,8 @@ function openAddProductModal() {
             <input type="text" id="product-material" placeholder="Матеріал"><br/>
             <label for="product-material">Матеріал</label>
             <div id="price-fields"></div>
-            <input type="datetime-local" id="product-sale-end" placeholder="Дата закінчення акції"><br/>
-            <label for="product-sale-end">Дата закінчення акції</label>
+            <input type="datetime-local" id="product-sale-end" placeholder="Дата закінчення акції (необов'язково)"><br/>
+            <label for="product-sale-end">Дата закінчення акції (залиште порожнім для безкінечної акції)</label>
             <select id="product-visible">
                 <option value="true">Показувати на сайті</option>
                 <option value="false">Не показувати</option>
@@ -4401,6 +4399,27 @@ modal.classList.add('active');
             console.warn('Кнопка #save-product-btn не знайдена');
         }
 
+        // Додаємо обробник подій для акційної ціни в режимі додавання
+        const salePriceInput = document.getElementById('product-sale-price');
+        if (salePriceInput) {
+            salePriceInput.addEventListener('input', function() {
+                const salePrice = parseFloat(this.value);
+                const price = parseFloat(document.getElementById('product-price')?.value || 0);
+                
+                if (!isNaN(salePrice) && salePrice > 0) {
+                    // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
+                    if (!newProduct.saleEnd) {
+                        newProduct.saleEnd = null; // null означає безкінечну акцію
+                        console.log('Встановлено безкінечну акцію для нового товару');
+                    }
+                } else if (isNaN(salePrice) || salePrice <= 0) {
+                    // Якщо акційна ціна видаляється, видаляємо і дату закінчення
+                    newProduct.saleEnd = null;
+                    console.log('Видалено акцію для нового товару');
+                }
+            });
+        }
+
         const cancelButton = document.getElementById('cancel-product-btn');
         if (cancelButton) {
             cancelButton.addEventListener('click', closeModal);
@@ -4440,6 +4459,27 @@ function renderPriceFields() {
             <input type="number" id="product-sale-price" value="${newProduct.salePrice || ''}" placeholder="Акційна ціна (грн)" min="0"><br/>
             <label for="product-sale-price">Акційна ціна (грн)</label>
         `;
+        
+        // Додаємо обробник подій для акційної ціни
+        const salePriceInput = document.getElementById('product-sale-price');
+        if (salePriceInput) {
+            salePriceInput.addEventListener('input', function() {
+                const salePrice = parseFloat(this.value);
+                const price = parseFloat(document.getElementById('product-price')?.value || 0);
+                
+                if (!isNaN(salePrice) && salePrice > 0) {
+                    // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
+                    if (!newProduct.saleEnd) {
+                        newProduct.saleEnd = null; // null означає безкінечну акцію
+                        console.log('Встановлено безкінечну акцію для товару');
+                    }
+                } else if (isNaN(salePrice) || salePrice <= 0) {
+                    // Якщо акційна ціна видаляється, видаляємо і дату закінчення
+                    newProduct.saleEnd = null;
+                    console.log('Видалено акцію для товару');
+                }
+            });
+        }
     } else {
         priceFields.innerHTML = '';
     }
@@ -4978,11 +5018,16 @@ async function saveNewProduct() {
         const material = materialInput ? materialInput.value.trim() : '';
         let price = null;
         let salePrice = null;
+        let saleEnd = null;
         if (newProduct.type === 'simple' && priceInput) {
             price = parseFloat(priceInput.value) || null;
             salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
+            
+            // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
+            if (salePrice && salePrice > 0) {
+                saleEnd = saleEndInput && saleEndInput.value ? saleEndInput.value : null;
+            }
         }
-        const saleEnd = saleEndInput ? saleEndInput.value : null;
         const visible = visibleSelect.value === 'true';
         let description = descriptionInput.value || '';
         description = description === '<p><br></p>' ? '' : description;
@@ -5268,8 +5313,8 @@ async function openEditProductModal(productId) {
             <input type="text" id="product-material" value="${product.material || ''}" placeholder="Матеріал"><br/>
             <label for="product-material">Матеріал</label>
             <div id="price-fields"></div>
-            <input type="datetime-local" id="product-sale-end" value="${product.saleEnd || ''}" placeholder="Дата закінчення акції"><br/>
-            <label for="product-sale-end">Дата закінчення акції</label>
+            <input type="datetime-local" id="product-sale-end" value="${product.saleEnd || ''}" placeholder="Дата закінчення акції (необов'язково)"><br/>
+            <label for="product-sale-end">Дата закінчення акції (залиште порожнім для безкінечної акції)</label>
             <select id="product-visible">
                 <option value="true" ${product.visible ? 'selected' : ''}>Показувати на сайті</option>
                 <option value="false" ${!product.visible ? 'selected' : ''}>Не показувати</option>
@@ -5412,6 +5457,27 @@ async function openEditProductModal(productId) {
         console.warn('Кнопка #save-product-btn не знайдена');
     }
 
+    // Додаємо обробник подій для акційної ціни в режимі редагування
+    const salePriceInput = document.getElementById('product-sale-price');
+    if (salePriceInput) {
+        salePriceInput.addEventListener('input', function() {
+            const salePrice = parseFloat(this.value);
+            const price = parseFloat(document.getElementById('product-price')?.value || 0);
+            
+            if (!isNaN(salePrice) && salePrice > 0) {
+                // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
+                if (!newProduct.saleEnd) {
+                    newProduct.saleEnd = null; // null означає безкінечну акцію
+                    console.log('Встановлено безкінечну акцію для товару при редагуванні');
+                }
+            } else if (isNaN(salePrice) || salePrice <= 0) {
+                // Якщо акційна ціна видаляється, видаляємо і дату закінчення
+                newProduct.saleEnd = null;
+                console.log('Видалено акцію для товару при редагуванні');
+            }
+        });
+    }
+
     const cancelButton = document.getElementById('cancel-product-btn');
     if (cancelButton) {
         cancelButton.addEventListener('click', closeModal);
@@ -5456,11 +5522,16 @@ async function saveEditedProduct(productId) {
         const material = document.getElementById('product-material')?.value.trim();
         let price = null;
         let salePrice = null;
+        let saleEnd = null;
         if (newProduct.type === 'simple') {
             price = parseFloat(document.getElementById('product-price')?.value) || null;
             salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
+            
+            // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
+            if (salePrice && salePrice > 0) {
+                saleEnd = document.getElementById('product-sale-end')?.value || null;
+            }
         }
-        const saleEnd = document.getElementById('product-sale-end')?.value || null;
         const visible = document.getElementById('product-visible')?.value === 'true';
         const description = document.getElementById('product-description')?.value || '';
         const widthCm = parseFloat(document.getElementById('product-width-cm')?.value) || null;
@@ -6160,13 +6231,15 @@ async function uploadBulkPrices() {
                     // Обробка акційної ціни
                     if (parts.length > 4) {
                         if (!isNaN(salePrice) && salePrice >= 0) {
-                            // Перевіряємо, щоб акційна ціна була меншою за звичайну
-                            if (salePrice < price) {
+                            // Акційна ціна може бути меншою або рівною звичайній
+                            if (salePrice <= price) {
                                 update.data.salePrice = salePrice;
+                                // Встановлюємо акцію на безкінечний період за замовчуванням
+                                update.data.saleEnd = null;
                                 update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
-                                console.log(`Підготовлено оновлення акційної ціни товару "${product.name}" на ${salePrice}`);
+                                console.log(`Підготовлено оновлення акційної ціни товару "${product.name}" на ${salePrice} (безкінечна акція)`);
                             } else {
-                                console.warn(`Акційна ціна ${salePrice} не може бути більшою або рівною звичайній ціні ${price} для товару "${product.name}"`);
+                                console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для товару "${product.name}"`);
                             }
                         } else {
                             console.warn(`Невірна акційна ціна "${parts[4]}" для товару "${product.name}"`);
@@ -6175,6 +6248,7 @@ async function uploadBulkPrices() {
                         // Якщо акційної ціни немає в файлі, видаляємо її
                         if (product.salePrice !== null) {
                             update.data.salePrice = null;
+                            update.data.saleEnd = null;
                             update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
                             console.log(`Підготовлено видалення акційної ціни товару "${product.name}"`);
                         }
@@ -6199,13 +6273,15 @@ async function uploadBulkPrices() {
                     if (parts[parts.length - 1] === parts[4]) { // Якщо це перший розмір матрацу
                         if (parts.length > 5) {
                             if (!isNaN(salePrice) && salePrice >= 0) {
-                                // Перевіряємо, щоб акційна ціна була меншою за звичайну
-                                if (salePrice < price) {
+                                // Акційна ціна може бути меншою або рівною звичайній
+                                if (salePrice <= price) {
                                     update.data.salePrice = salePrice;
+                                    // Встановлюємо акцію на безкінечний період за замовчуванням
+                                    update.data.saleEnd = null;
                                     update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
-                                    console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice}`);
+                                    console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice} (безкінечна акція)`);
                                 } else {
-                                    console.warn(`Акційна ціна ${salePrice} не може бути більшою або рівною звичайній ціні ${price} для матрацу "${product.name}"`);
+                                    console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для матрацу "${product.name}"`);
                                 }
                             } else {
                                 console.warn(`Невірна акційна ціна "${parts[5]}" для матрацу "${product.name}"`);
@@ -6214,6 +6290,7 @@ async function uploadBulkPrices() {
                             // Якщо акційної ціни немає в файлі, видаляємо її
                             if (product.salePrice !== null) {
                                 update.data.salePrice = null;
+                                update.data.saleEnd = null;
                                 update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
                                 console.log(`Підготовлено видалення акційної ціни матрацу "${product.name}"`);
                             }
