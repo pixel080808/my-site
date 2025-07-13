@@ -1673,27 +1673,8 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        let { categories: categoryUpdates } = req.body;
+        const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
-
-        // Додаткове логування для діагностики
-        console.log("DEBUG categoryUpdates", categoryUpdates, Array.isArray(categoryUpdates));
-
-        // Якщо прилетів не масив, а об'єкт — перетворюємо його в масив значень
-        if (!Array.isArray(categoryUpdates)) {
-            if (categoryUpdates && typeof categoryUpdates === 'object') {
-                categoryUpdates = Object.values(categoryUpdates);
-            } else {
-                logger.error("Невірний формат даних для зміни порядку категорій");
-                await session.abortTransaction();
-                return res.status(400).json({ error: "Невірний формат даних" });
-            }
-        }
-
-        // Фільтруємо тільки ті, що мають валідний _id
-        categoryUpdates = categoryUpdates.filter(
-            update => update._id && mongoose.Types.ObjectId.isValid(update._id)
-        );
 
         if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
             logger.error("Невірний формат даних для зміни порядку категорій");
@@ -1702,19 +1683,20 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
         for (const update of categoryUpdates) {
+            // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }
+            
+            // Перевіряємо чи order є числом
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок для категорії: ${update._id}`);
                 await session.abortTransaction();
                 return res.status(400).json({ error: "Невірний порядок категорії" });
             }
-        }
 
-        for (const update of categoryUpdates) {
             const category = await Category.findById(update._id).session(session);
             if (!category) {
                 logger.error(`Категорію не знайдено: ${update._id}`);
