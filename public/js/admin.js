@@ -2915,13 +2915,23 @@ async function addCategory() {
 async function moveCategory(categoryId, direction) {
     try {
         const categoriesContainer = document.getElementById('categories-container');
+        if (!categoriesContainer) {
+            console.error('Контейнер категорій не знайдено');
+            return;
+        }
+
         const categoryElements = Array.from(categoriesContainer.children);
-        
         const currentIndex = categoryElements.findIndex(el => el.dataset.categoryId === categoryId);
-        if (currentIndex === -1) return;
+        if (currentIndex === -1) {
+            console.error('Категорію не знайдено в DOM');
+            return;
+        }
 
         const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-        if (newIndex < 0 || newIndex >= categoryElements.length) return;
+        if (newIndex < 0 || newIndex >= categoryElements.length) {
+            console.log('Неможливо перемістити категорію в цьому напрямку');
+            return;
+        }
 
         // Переміщуємо елемент в DOM
         const currentElement = categoryElements[currentIndex];
@@ -2959,6 +2969,8 @@ async function moveCategory(categoryId, direction) {
             }))
         };
 
+        console.log('Відправляємо дані для оновлення порядку:', payload);
+
         const response = await fetchWithAuth('/api/categories/order', {
             method: 'PUT',
             headers: {
@@ -2969,17 +2981,23 @@ async function moveCategory(categoryId, direction) {
         });
 
         if (!response.ok) {
-            throw new Error('Помилка зміни порядку категорій');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Помилка зміни порядку категорій');
         }
 
         showNotification('Порядок категорій оновлено', 'success');
         
     } catch (error) {
         console.error('Помилка зміни порядку категорій:', error);
-        showNotification('Помилка зміни порядку категорій', 'error');
+        showNotification('Помилка зміни порядку категорій: ' + error.message, 'error');
         
         // Відновлюємо початковий порядок
-        renderCategories();
+        if (typeof renderCategories === 'function') {
+            renderCategories();
+        } else {
+            // Якщо функція renderCategories не існує, просто перезавантажуємо сторінку
+            location.reload();
+        }
     }
 }
 
