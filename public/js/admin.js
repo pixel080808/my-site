@@ -2953,14 +2953,7 @@ async function moveCategory(categoryIndex, direction) {
         }
 
         // Сортуємо категорії за новим порядком
-        const sortedCategories = categoryElements.map((el, index) => {
-            const category = categories[index];
-            if (category) {
-                category.order = index;
-                return category;
-            }
-            return null;
-        }).filter(Boolean);
+        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
         const payload = {
             categories: sortedCategories.map(cat => ({
@@ -2975,7 +2968,7 @@ async function moveCategory(categoryIndex, direction) {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
             },
             body: JSON.stringify(payload)
         });
