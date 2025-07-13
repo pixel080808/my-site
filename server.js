@@ -1674,18 +1674,28 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
        session.startTransaction();
        try {
            let { categories: categoryUpdates } = req.body;
-           logger.info("Отримано дані для оновлення категорії:", categoryUpdates);
+           logger.info("req.body:", req.body);
+           logger.info("Тип categoryUpdates:", typeof categoryUpdates);
+           logger.info("Array.isArray(categoryUpdates):", Array.isArray(categoryUpdates));
+           logger.info("categoryUpdates:", JSON.stringify(categoryUpdates));
 
            // Перевіряємо, чи categories є масивом
            if (!Array.isArray(categoryUpdates)) {
-               logger.error("categories не є масивом!");
-               await session.abortTransaction();
-               return res.status(400).json({ error: "categories не є масивом" });
+               if (categoryUpdates && typeof categoryUpdates === 'object') {
+                   logger.info("Перетворюємо об'єкт в масив через Object.values");
+                   categoryUpdates = Object.values(categoryUpdates);
+                   logger.info("Після перетворення:", JSON.stringify(categoryUpdates));
+               } else {
+                   logger.error("categories не є масивом!");
+                   await session.abortTransaction();
+                   return res.status(400).json({ error: "categories не є масивом" });
+               }
            }
 
            // Обробляємо кожен елемент масиву
            for (let i = 0; i < categoryUpdates.length; i++) {
                const update = categoryUpdates[i];
+               logger.info(`Обробляємо елемент ${i}:`, JSON.stringify(update));
                
                // Перевіряємо, чи update є об'єктом з необхідними полями
                if (!update || typeof update !== 'object') {
@@ -1707,6 +1717,7 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
                    await session.abortTransaction();
                    return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
                }
+
                // Перевіряємо наявність order
                if (typeof update.order !== 'number' || update.order < 0) {
                    logger.error(`Невірний порядок для категорії: ${update._id}`);
