@@ -1676,7 +1676,10 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         let { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
 
-        // Якщо випадково прилетів об'єкт, а не масив — перетворюємо в масив
+        // Додаткове логування для діагностики
+        console.log("DEBUG categoryUpdates", categoryUpdates, Array.isArray(categoryUpdates));
+
+        // Якщо прилетів не масив, а об'єкт — перетворюємо його в масив значень
         if (!Array.isArray(categoryUpdates)) {
             if (categoryUpdates && typeof categoryUpdates === 'object') {
                 categoryUpdates = Object.values(categoryUpdates);
@@ -1686,6 +1689,11 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 return res.status(400).json({ error: "Невірний формат даних" });
             }
         }
+
+        // Фільтруємо тільки ті, що мають валідний _id
+        categoryUpdates = categoryUpdates.filter(
+            update => update._id && mongoose.Types.ObjectId.isValid(update._id)
+        );
 
         if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
             logger.error("Невірний формат даних для зміни порядку категорій");
