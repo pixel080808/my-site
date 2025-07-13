@@ -1676,15 +1676,13 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         const { categories: categoryUpdates } = req.body;
         logger.info("Отримано дані для зміни порядку категорій:", categoryUpdates);
 
-        if (!Array.isArray(categoryUpdates) || categoryUpdates.length === 0) {
-            logger.error("Невірний формат даних для зміни порядку категорій");
+        if (!Array.isArray(categoryUpdates)) {
+            logger.error("Отримано не масив для оновлення категорій");
             await session.abortTransaction();
-            return res.status(400).json({ error: "Невірний формат даних" });
+            return res.status(400).json({ error: "Невірний формат даних - очікується масив" });
         }
 
         for (const update of categoryUpdates) {
-            logger.info(`Обробляємо категорію: ${update._id} з порядком ${update.order}`);
-            
             // Перевіряємо чи _id є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ID категорії: ${update._id}`);
@@ -1703,24 +1701,21 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             if (!category) {
                 logger.error(`Категорію не знайдено: ${update._id}`);
                 await session.abortTransaction();
-                return res.status(404).json({ error: `Категорію не знайдено: ${update._id}` });
+                return res.status(404).json({ error: "Категорію не знайдено" });
             }
-            
-            logger.info(`Знайдено категорію: ${category.name}, оновлюємо порядок з ${category.order} на ${update.order}`);
+
             category.order = update.order;
             await category.save({ session });
-            logger.info(`Категорію ${category.name} збережено з новим порядком ${category.order}`);
         }
 
-        const updatedCategories = await Category.find().sort({ order: 1 }).session(session);
         await session.commitTransaction();
-        broadcast("categories", updatedCategories);
-        logger.info("Порядок категорій успішно змінено");
-        res.json(updatedCategories);
-    } catch (err) {
+        logger.info("Порядок категорій успішно оновлено");
+        res.json({ message: "Порядок категорій оновлено" });
+
+    } catch (error) {
         await session.abortTransaction();
-        logger.error("Помилка при зміні порядку категорій:", err);
-        res.status(500).json({ error: "Помилка сервера", details: err.message });
+        logger.error("Помилка оновлення порядку категорій:", error);
+        res.status(500).json({ error: "Помилка сервера" });
     } finally {
         session.endSession();
     }

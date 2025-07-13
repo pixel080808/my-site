@@ -2912,16 +2912,45 @@ async function addCategory() {
     }
 }
 
-async function moveCategory(index, direction) {
-    if ((direction === -1 && index <= 0) || (direction === 1 && index >= categories.length - 1)) return;
+async function moveCategory(categoryId, direction) {
     try {
-        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
-        const category1 = sortedCategories[index];
-        const category2 = sortedCategories[index + direction];
+        const categoriesContainer = document.getElementById('categories-container');
+        const categoryElements = Array.from(categoriesContainer.children);
+        
+        const currentIndex = categoryElements.findIndex(el => el.dataset.categoryId === categoryId);
+        if (currentIndex === -1) return;
 
-        const tempOrder = category1.order;
-        category1.order = category2.order;
-        category2.order = tempOrder;
+        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (newIndex < 0 || newIndex >= categoryElements.length) return;
+
+        // Переміщуємо елемент в DOM
+        const currentElement = categoryElements[currentIndex];
+        const targetElement = categoryElements[newIndex];
+        
+        if (direction === 'up') {
+            categoriesContainer.insertBefore(currentElement, targetElement);
+        } else {
+            categoriesContainer.insertBefore(currentElement, targetElement.nextSibling);
+        }
+
+        // Оновлюємо порядок в масиві категорій
+        const movedCategory = categories.find(cat => cat._id === categoryId);
+        const targetCategory = categories.find(cat => cat._id === targetElement.dataset.categoryId);
+        
+        if (movedCategory && targetCategory) {
+            const tempOrder = movedCategory.order;
+            movedCategory.order = targetCategory.order;
+            targetCategory.order = tempOrder;
+        }
+
+        // Сортуємо категорії за новим порядком
+        const sortedCategories = categoryElements.map((el, index) => {
+            const category = categories.find(cat => cat._id === el.dataset.categoryId);
+            if (category) {
+                category.order = index;
+            }
+            return category;
+        }).filter(Boolean);
 
         const payload = {
             categories: sortedCategories.map(cat => ({
@@ -2934,26 +2963,23 @@ async function moveCategory(index, direction) {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || response.statusText);
+            throw new Error('Помилка зміни порядку категорій');
         }
 
-        const updatedCategories = await response.json();
-        categories = updatedCategories;
-        localStorage.setItem('categories', JSON.stringify(categories));
-        broadcast('categories', categories);
-
-        renderCategoriesAdmin();
-        showNotification('Порядок категорій змінено!');
-    } catch (err) {
-        console.error('Помилка зміни порядку категорій:', err);
-        showNotification('Не вдалося змінити порядок: ' + err.message);
+        showNotification('Порядок категорій оновлено', 'success');
+        
+    } catch (error) {
+        console.error('Помилка зміни порядку категорій:', error);
+        showNotification('Помилка зміни порядку категорій', 'error');
+        
+        // Відновлюємо початковий порядок
+        renderCategories();
     }
 }
 
