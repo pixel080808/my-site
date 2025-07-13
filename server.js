@@ -2248,14 +2248,22 @@ app.put("/api/slides/:id", authenticateToken, csrfProtection, async (req, res) =
 
 app.delete("/api/slides/:id", authenticateToken, csrfProtection, async (req, res) => {
   try {
-    const slideId = Number.parseInt(req.params.id)
-    if (isNaN(slideId)) {
-      logger.error(`Невірний формат ID слайду: ${req.params.id}`)
+    const slideId = req.params.id
+    logger.info(`Спроба видалення слайду з ID: ${slideId}`)
+    
+    // Перевіряємо, чи це MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(slideId)) {
+      logger.error(`Невірний формат ID слайду: ${slideId}`)
       return res.status(400).json({ error: "Невірний формат ID слайду" })
     }
 
-    const slide = await Slide.findOneAndDelete({ id: slideId })
-    if (!slide) return res.status(404).json({ error: "Слайд не знайдено" })
+    const slide = await Slide.findByIdAndDelete(slideId)
+    if (!slide) {
+      logger.error(`Слайд з ID ${slideId} не знайдено`)
+      return res.status(404).json({ error: "Слайд не знайдено" })
+    }
+    
+    logger.info(`Слайд з ID ${slideId} успішно видалено`)
 
     if (slide.photo) {
       const publicId = getPublicIdFromUrl(slide.photo)

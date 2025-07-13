@@ -3822,14 +3822,54 @@ function editSlide(order) {
         }
     }
 
-    function deleteSlide(order) {
-        if (confirm('Ви впевнені, що хочете видалити цей слайд?')) {
-            slides = slides.filter(s => s.order !== order);
-            localStorage.setItem('slides', LZString.compressToUTF16(JSON.stringify(slides)));
-            renderAdmin();
+    async function deleteSlide(index) {
+        if (!confirm('Ви впевнені, що хочете видалити цей слайд?')) {
+            return;
+        }
+
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            const slide = slides[index];
+            if (!slide || !slide._id) {
+                showNotification('Слайд не знайдено!');
+                return;
+            }
+
+            console.log('Видаляємо слайд:', slide._id, 'з індексу:', index);
+
+            const response = await fetchWithAuth(`/api/slides/${slide._id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                }
+            });
+
+            console.log('Відповідь сервера на видалення слайду:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Помилка видалення слайду: ${errorData.error || response.statusText}`);
+            }
+
+            // Видаляємо слайд з локального масиву
+            slides.splice(index, 1);
+            
+            // Оновлюємо відображення
+            renderSlidesAdmin();
             showNotification('Слайд видалено!');
-            unsavedChanges = false;
+            
+            // Оновлюємо список слайдів з сервера
+            await loadSlides();
             resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка видалення слайду:', err);
+            showNotification('Не вдалося видалити слайд: ' + err.message);
         }
     }
 
