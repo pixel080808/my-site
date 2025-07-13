@@ -2950,6 +2950,10 @@ async function moveCategory(categoryIndex, direction) {
         // Сортуємо категорії за новим порядком
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
+        console.log('sortedCategories:', sortedCategories);
+        console.log('Тип sortedCategories:', typeof sortedCategories);
+        console.log('Array.isArray(sortedCategories):', Array.isArray(sortedCategories));
+        
         const payload = {
             categories: sortedCategories.map(cat => ({
                 _id: String(cat._id),
@@ -2960,6 +2964,7 @@ async function moveCategory(categoryIndex, direction) {
         console.log('Відправляємо дані для оновлення порядку:', payload);
         console.log('Тип payload.categories:', typeof payload.categories);
         console.log('Довжина payload.categories:', payload.categories.length);
+        console.log('JSON.stringify(payload):', JSON.stringify(payload));
         payload.categories.forEach((cat, index) => {
             console.log(`Категорія ${index}:`, cat);
             console.log(`  _id: ${cat._id} (тип: ${typeof cat._id})`);
