@@ -3423,16 +3423,7 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         categories[categoryIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
         localStorage.setItem('categories', JSON.stringify(categories));
 
-        await fetchWithAuth(`/api/products/subcategory/${encodeURIComponent(subcategory.name)}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
-            },
-            body: JSON.stringify({ category: category.name })
-        });
-
-        renderAdmin('products');
+        // Підкатегорія успішно видалена
         showNotification('Підкатегорію видалено!');
         resetInactivityTimer();
     } catch (err) {
