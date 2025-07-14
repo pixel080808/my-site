@@ -2418,35 +2418,24 @@ async function renderProductDetails() {
         priceDiv.className = 'price product-detail-price';
         priceDiv.id = `price-${product._id}`;
         if (product.type === 'mattresses' && product.sizes?.length > 0) {
+            // Шукаємо мінімальну акційну ціну серед розмірів
+            const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+            const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
             const minPrice = Math.min(...product.sizes.map(s => s.price));
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-            const sizeP = document.createElement('p');
-            sizeP.innerHTML = '<strong>Розміри:</strong> ';
-            const sizeSelect = document.createElement('select');
-            sizeSelect.id = `mattress-size-${product._id}`;
-            sizeSelect.className = 'custom-select';
-            sizeSelect.onchange = typeof updateMattressPrice === 'function' ? () => updateMattressPrice(product._id) : null;
-            product.sizes.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s.name;
-                option.setAttribute('data-price', s.price);
-                option.textContent = `${s.name} - ${s.price} грн`;
-                sizeSelect.appendChild(option);
-            });
-            sizeP.appendChild(sizeSelect);
-            rightDiv.appendChild(priceDiv);
-            rightDiv.appendChild(sizeP);
-
-            if (!selectedMattressSizes[product._id] && product.sizes.length > 0) {
-                selectedMattressSizes[product._id] = product.sizes[0].name;
-                sizeSelect.value = product.sizes[0].name;
-                saveToStorage('selectedMattressSizes', selectedMattressSizes);
-                if (typeof updateMattressPrice === 'function') {
-                    await updateMattressPrice(product._id);
-                }
+            if (minSale !== null && minSale < minPrice) {
+                const regularSpan = document.createElement('s');
+                regularSpan.className = 'regular-price';
+                regularSpan.textContent = `${minPrice} грн`;
+                priceDiv.appendChild(regularSpan);
+                const saleSpan = document.createElement('span');
+                saleSpan.className = 'sale-price';
+                saleSpan.textContent = `${minSale} грн`;
+                priceDiv.appendChild(saleSpan);
+            } else {
+                const regularSpan = document.createElement('span');
+                regularSpan.className = 'regular-price';
+                regularSpan.textContent = `${minPrice} грн`;
+                priceDiv.appendChild(regularSpan);
             }
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
             const groupPriceDiv = document.createElement('div');
@@ -2955,11 +2944,25 @@ function createProductElement(product) {
     const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
     if (product.type === 'mattresses' && product.sizes?.length > 0) {
+        // Шукаємо мінімальну акційну ціну серед розмірів
+        const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+        const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
         const minPrice = Math.min(...product.sizes.map(s => s.price));
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${minPrice} грн`;
-        priceDiv.appendChild(regularSpan);
+        if (minSale !== null && minSale < minPrice) {
+            const regularSpan = document.createElement('s');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.textContent = `${minSale} грн`;
+            priceDiv.appendChild(saleSpan);
+        } else {
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
+        }
     } else if (product.type === 'group' && product.groupProducts?.length > 0) {
         const groupPrices = product.groupProducts.map(id => {
             const p = products.find(p => p._id === id);
@@ -3132,12 +3135,25 @@ function updateMattressPrice(productId) {
     const select = document.getElementById(`mattress-size-${productId}`);
     const priceElement = document.getElementById(`price-${productId}`);
     if (select && priceElement) {
-        const selectedPrice = select.options[select.selectedIndex].getAttribute('data-price');
+        const selectedOption = select.options[select.selectedIndex];
+        const price = selectedOption.getAttribute('data-price');
+        const salePrice = selectedOption.getAttribute('data-sale-price');
         while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${selectedPrice} грн`;
-        priceElement.appendChild(regularSpan);
+        if (salePrice && !isNaN(salePrice) && parseFloat(salePrice) > 0 && parseFloat(salePrice) < parseFloat(price)) {
+            const regularSpan = document.createElement('s');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${price} грн`;
+            priceElement.appendChild(regularSpan);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.textContent = `${salePrice} грн`;
+            priceElement.appendChild(saleSpan);
+        } else {
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${price} грн`;
+            priceElement.appendChild(regularSpan);
+        }
         selectedMattressSizes[productId] = select.value;
         saveToStorage('selectedMattressSizes', selectedMattressSizes);
     }
