@@ -6219,8 +6219,10 @@ async function uploadBulkPrices() {
                 const update = productUpdates.get(product._id);
                 
                 if (product.type === 'simple') {
-                    const price = parseFloat(parts[parts.length - 1].trim());
+                    const price = parseFloat(parts[3].trim());
                     const salePrice = parts.length > 4 ? parseFloat(parts[4].trim()) : null;
+                    
+                    console.log(`Парсинг простий товар "${product.name}": звичайна ціна=${price}, акційна ціна=${salePrice}, частин=${parts.length}`);
                     
                     if (!isNaN(price) && price >= 0) {
                         update.data.price = price;
@@ -6254,9 +6256,11 @@ async function uploadBulkPrices() {
                         }
                     }
                 } else if (product.type === 'mattresses') {
-                    const sizePart = parts[parts.length - 2].trim();
-                    const price = parseFloat(parts[parts.length - 1].trim());
+                    const sizePart = parts[3].trim();
+                    const price = parseFloat(parts[4].trim());
                     const salePrice = parts.length > 5 ? parseFloat(parts[5].trim()) : null;
+                    
+                    console.log(`Парсинг матрац "${product.name}": розмір=${sizePart}, ціна=${price}, акційна ціна=${salePrice}, частин=${parts.length}`);
                     
                     if (sizePart.startsWith('Розмір: ')) {
                         const size = sizePart.replace('Розмір: ', '').trim();
@@ -6270,29 +6274,33 @@ async function uploadBulkPrices() {
                     }
                     
                     // Обробка акційної ціни для матраців (тільки для першого розміру, щоб не дублювати)
-                    if (parts[parts.length - 1] === parts[4]) { // Якщо це перший розмір матрацу
-                        if (parts.length > 5) {
-                            if (!isNaN(salePrice) && salePrice >= 0) {
-                                // Акційна ціна може бути меншою або рівною звичайній
-                                if (salePrice <= price) {
-                                    update.data.salePrice = salePrice;
-                                    // Встановлюємо акцію на безкінечний період за замовчуванням
-                                    update.data.saleEnd = null;
-                                    update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
-                                    console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice} (безкінечна акція)`);
+                    if (sizePart.startsWith('Розмір: ')) {
+                        const size = sizePart.replace('Розмір: ', '').trim();
+                        const sizeObj = update.data.sizes.find(s => s.name === size);
+                        if (sizeObj && sizeObj === update.data.sizes[0]) { // Тільки для першого розміру
+                            if (parts.length > 5) {
+                                if (!isNaN(salePrice) && salePrice >= 0) {
+                                    // Акційна ціна може бути меншою або рівною звичайній
+                                    if (salePrice <= price) {
+                                        update.data.salePrice = salePrice;
+                                        // Встановлюємо акцію на безкінечний період за замовчуванням
+                                        update.data.saleEnd = null;
+                                        update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
+                                        console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice} (безкінечна акція)`);
+                                    } else {
+                                        console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для матрацу "${product.name}"`);
+                                    }
                                 } else {
-                                    console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для матрацу "${product.name}"`);
+                                    console.warn(`Невірна акційна ціна "${parts[5]}" для матрацу "${product.name}"`);
                                 }
                             } else {
-                                console.warn(`Невірна акційна ціна "${parts[5]}" для матрацу "${product.name}"`);
-                            }
-                        } else {
-                            // Якщо акційної ціни немає в файлі, видаляємо її
-                            if (product.salePrice !== null) {
-                                update.data.salePrice = null;
-                                update.data.saleEnd = null;
-                                update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
-                                console.log(`Підготовлено видалення акційної ціни матрацу "${product.name}"`);
+                                // Якщо акційної ціни немає в файлі, видаляємо її
+                                if (product.salePrice !== null) {
+                                    update.data.salePrice = null;
+                                    update.data.saleEnd = null;
+                                    update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
+                                    console.log(`Підготовлено видалення акційної ціни матрацу "${product.name}"`);
+                                }
                             }
                         }
                     }
@@ -6312,6 +6320,7 @@ async function uploadBulkPrices() {
                     if (response.ok) {
                         updated++;
                         console.log(`✅ Успішно оновлено товар "${update.product.name}"`);
+                        console.log(`📊 Дані оновлення:`, update.data);
                     } else {
                         const text = await response.text();
                         console.error(`❌ Помилка оновлення товару "${update.product.name}": ${text}`);
