@@ -2491,6 +2491,8 @@ async function renderProductDetails() {
             sizeSelect.onchange = typeof updateMattressPrice === 'function' ? () => updateMattressPrice(product._id) : null;
             sizeDiv.appendChild(sizeSelect);
             rightDiv.appendChild(sizeDiv);
+            selectedMattressSizes[product._id] = sizeSelect.value;
+            saveToStorage('selectedMattressSizes', selectedMattressSizes);
         }
 
         if (product.type !== 'mattresses' && product.type !== 'group') {
