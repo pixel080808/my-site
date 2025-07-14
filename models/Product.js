@@ -43,7 +43,7 @@ const productSchema = new mongoose.Schema({
     sizes: [{
         name: { type: String, required: true },
         price: { type: Number, required: true, min: 0 },
-        salePrice: { type: Number, min: 0, default: null },
+        salePrice: { type: Number }, // Додаю це поле, якщо його не було
         saleEnd: { type: Date, default: null }
     }],
     colors: [{
