@@ -42,7 +42,9 @@ const productSchema = new mongoose.Schema({
     type: { type: String, required: true, enum: ['simple', 'mattresses', 'group'] },
     sizes: [{
         name: { type: String, required: true },
-        price: { type: Number, required: true, min: 0 }
+        price: { type: Number, required: true, min: 0 },
+        salePrice: { type: Number, min: 0, default: null },
+        saleEnd: { type: Date, default: null }
     }],
     colors: [{
         name: { type: String, required: true },
@@ -143,7 +145,9 @@ const productSchemaValidation = Joi.object({
     sizes: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
-            price: Joi.number().min(0).required()
+            price: Joi.number().min(0).required(),
+            salePrice: Joi.number().min(0).allow(null).optional(),
+            saleEnd: Joi.date().allow(null).optional()
         })
     ).optional(),
     colors: Joi.array().items(
