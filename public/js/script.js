@@ -2467,6 +2467,31 @@ async function renderProductDetails() {
                 await updateSaleTimer(product._id, product.saleEnd);
             }
         }
+        // Додаємо select для вибору розміру матрацу
+        if (product.type === 'mattresses' && product.sizes?.length > 0) {
+            const sizeDiv = document.createElement('div');
+            sizeDiv.className = 'mattress-size-select';
+            const sizeLabel = document.createElement('label');
+            sizeLabel.textContent = 'Розмір:';
+            sizeLabel.setAttribute('for', `mattress-size-${product._id}`);
+            sizeDiv.appendChild(sizeLabel);
+            const sizeSelect = document.createElement('select');
+            sizeSelect.id = `mattress-size-${product._id}`;
+            sizeSelect.className = 'custom-select';
+            product.sizes.forEach(size => {
+                const option = document.createElement('option');
+                option.value = size.name;
+                option.textContent = `${size.name} — ${size.price} грн${size.salePrice && size.salePrice < size.price ? ` (акція: ${size.salePrice} грн)` : ''}`;
+                option.setAttribute('data-price', size.price);
+                if (size.salePrice && size.salePrice < size.price) {
+                    option.setAttribute('data-sale-price', size.salePrice);
+                }
+                sizeSelect.appendChild(option);
+            });
+            sizeSelect.onchange = typeof updateMattressPrice === 'function' ? () => updateMattressPrice(product._id) : null;
+            sizeDiv.appendChild(sizeSelect);
+            rightDiv.appendChild(sizeDiv);
+        }
 
         if (product.type !== 'mattresses' && product.type !== 'group') {
             const qtyDiv = document.createElement('div');

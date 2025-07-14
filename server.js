@@ -1710,7 +1710,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                     logger.error("Об'єкт має нечислові ключі:", keys);
                     await session.abortTransaction();
                     return res.status(400).json({ error: "categories має неправильну структуру" });
-                }
+        }
             } else {
                 logger.error("categories не є об'єктом або масивом");
                 await session.abortTransaction();
@@ -1757,14 +1757,14 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             
             logger.info(`Елемент ${i} валідний: _id=${update._id}, order=${update.order}`);
         }
-        
+
         // Оновлюємо категорії в базі даних
         logger.info("Оновлюємо категорії в базі даних...");
         for (const update of categoryUpdates) {
             await Category.findByIdAndUpdate(update._id, { order: update.order }, { new: true, session });
             logger.info(`Оновлено категорію ${update._id} з порядком ${update.order}`);
         }
-        
+
         // Отримуємо оновлені категорії
         const allCategories = await Category.find().session(session);
         logger.info("Отримано оновлені категорії:", allCategories.length);
@@ -2055,18 +2055,18 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
                 } else {
                     // Якщо це не числові ключі, можливо це об'єкт з іншими властивостями
                     console.log("Об'єкт підкатегорій має нечислові ключі:", keys);
-                    await session.abortTransaction();
+            await session.abortTransaction();
                     return res.status(400).json({ error: "subcategories має неправильну структуру" });
-                }
+        }
             } else {
-                await session.abortTransaction();
+            await session.abortTransaction();
                 return res.status(400).json({ error: "subcategories не є масивом або об'єктом" });
             }
         }
         
         console.log("Фінальний масив підкатегорій:", subcategoryUpdates);
         console.log("Довжина масиву підкатегорій:", subcategoryUpdates.length);
-        
+
         const category = await Category.findById(categoryId).session(session);
         if (!category) {
             await session.abortTransaction();

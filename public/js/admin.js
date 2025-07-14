@@ -3006,7 +3006,7 @@ async function moveCategory(categoryIndex, direction) {
         // Оновлюємо локальні дані після успішного оновлення
         if (result.categories) {
             categories = result.categories;
-            renderCategoriesAdmin();
+        renderCategoriesAdmin();
         }
         
     } catch (error) {
@@ -3437,10 +3437,10 @@ async function deleteSubcategory(categoryId, subcategoryId) {
 async function moveSubcategory(categoryId, subIndex, direction) {
     const category = categories.find(c => c._id === categoryId);
     if (!category) return;
-    const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
     if ((direction === -1 && subIndex <= 0) || (direction === 1 && subIndex >= sortedSubcategories.length - 1)) return;
 
-    const sub1 = sortedSubcategories[subIndex];
+        const sub1 = sortedSubcategories[subIndex];
     const sub2 = sortedSubcategories[subIndex + direction];
 
     const tempOrder = sub1.order;
@@ -4771,11 +4771,18 @@ function renderColorsList() {
 function addMattressSize() {
     const name = document.getElementById('mattress-size-name').value;
     const price = parseFloat(document.getElementById('mattress-size-price').value);
+    const salePriceRaw = document.getElementById('mattress-size-sale-price')?.value;
+    const salePrice = salePriceRaw !== '' ? parseFloat(salePriceRaw) : undefined;
 
     if (name && !isNaN(price) && price >= 0) {
-        newProduct.sizes.push({ name, price });
+        const sizeObj = { name, price };
+        if (!isNaN(salePrice) && salePrice > 0 && salePrice < price) {
+            sizeObj.salePrice = salePrice;
+        }
+        newProduct.sizes.push(sizeObj);
         document.getElementById('mattress-size-name').value = '';
         document.getElementById('mattress-size-price').value = '';
+        if (document.getElementById('mattress-size-sale-price')) document.getElementById('mattress-size-sale-price').value = '';
         renderMattressSizes();
         resetInactivityTimer();
     } else {
@@ -4787,7 +4794,7 @@ function renderMattressSizes() {
     const sizeList = document.getElementById('mattress-size-list');
     sizeList.innerHTML = newProduct.sizes.map((size, index) => `
         <div class="mattress-size">
-            ${size.name}: ${size.price} грн
+            ${size.name}: ${size.price} грн${size.salePrice && size.salePrice < size.price ? ` <span class='sale-price'>(акція: ${size.salePrice} грн)</span>` : ''}
             <button class="edit-btn" onclick="editMattressSize(${index})">Редагувати</button>
             <button class="delete-btn" onclick="deleteMattressSize(${index})">Видалити</button>
         </div>
@@ -4800,6 +4807,7 @@ function editMattressSize(index) {
     sizeList.children[index].innerHTML = `
         <input type="text" id="edit-mattress-size-name-${index}" value="${size.name}" placeholder="Розмір">
         <input type="number" id="edit-mattress-size-price-${index}" value="${size.price}" placeholder="Ціна (грн)" min="0">
+        <input type="number" id="edit-mattress-size-sale-price-${index}" value="${size.salePrice !== undefined ? size.salePrice : ''}" placeholder="Акційна ціна (грн)" min="0">
         <button class="save-btn" onclick="saveMattressSize(${index})">Зберегти</button>
         <button class="cancel-btn" onclick="renderMattressSizes()">Скасувати</button>
     `;
@@ -4809,9 +4817,16 @@ function editMattressSize(index) {
 function saveMattressSize(index) {
     const newName = document.getElementById(`edit-mattress-size-name-${index}`).value;
     const newPrice = parseFloat(document.getElementById(`edit-mattress-size-price-${index}`).value);
+    const newSalePriceRaw = document.getElementById(`edit-mattress-size-sale-price-${index}`)?.value;
+    const newSalePrice = newSalePriceRaw !== '' ? parseFloat(newSalePriceRaw) : undefined;
 
     if (newName && !isNaN(newPrice) && newPrice >= 0) {
         newProduct.sizes[index] = { name: newName, price: newPrice };
+        if (!isNaN(newSalePrice) && newSalePrice > 0 && newSalePrice < newPrice) {
+            newProduct.sizes[index].salePrice = newSalePrice;
+        } else {
+            delete newProduct.sizes[index].salePrice;
+        }
         renderMattressSizes();
         resetInactivityTimer();
     } else {
@@ -5026,7 +5041,7 @@ async function saveNewProduct() {
             // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
             if (salePrice && salePrice > 0) {
                 saleEnd = saleEndInput && saleEndInput.value ? saleEndInput.value : null;
-            }
+        }
         }
         const visible = visibleSelect.value === 'true';
         let description = descriptionInput.value || '';
@@ -5530,7 +5545,7 @@ async function saveEditedProduct(productId) {
             // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
             if (salePrice && salePrice > 0) {
                 saleEnd = document.getElementById('product-sale-end')?.value || null;
-            }
+        }
         }
         const visible = document.getElementById('product-visible')?.value === 'true';
         const description = document.getElementById('product-description')?.value || '';
@@ -6193,21 +6208,21 @@ async function uploadBulkPrices() {
 
                 // Ініціалізуємо оновлення для товару, якщо ще не існує
                 if (!productUpdates.has(product._id)) {
-                    const { _id, createdAt, updatedAt, __v, id: productId, tempNumber, ...cleanedProduct } = product;
-                    
-                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                            const { _id, ...cleanedSize } = size;
-                            return cleanedSize;
-                        });
-                    }
+                const { _id, createdAt, updatedAt, __v, id: productId, tempNumber, ...cleanedProduct } = product;
 
-                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                            const { _id, ...cleanedColor } = color;
-                            return cleanedColor;
-                        });
-                    }
+                if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                    cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                        const { _id, ...cleanedSize } = size;
+                        return cleanedSize;
+                    });
+                }
+
+                if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                    cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                        const { _id, ...cleanedColor } = color;
+                        return cleanedColor;
+                    });
+                }
                     
                     productUpdates.set(product._id, {
                         product: product,
@@ -6217,7 +6232,7 @@ async function uploadBulkPrices() {
                 }
                 
                 const update = productUpdates.get(product._id);
-                
+
                 if (product.type === 'simple') {
                     const price = parseFloat(parts[3].trim());
                     const salePrice = parts.length > 4 ? parseFloat(parts[4].trim()) : null;
@@ -6240,7 +6255,7 @@ async function uploadBulkPrices() {
                                 update.data.saleEnd = null;
                                 update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
                                 console.log(`Підготовлено оновлення акційної ціни товару "${product.name}" на ${salePrice} (безкінечна акція)`);
-                            } else {
+                        } else {
                                 console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для товару "${product.name}"`);
                             }
                         } else {
@@ -6314,17 +6329,17 @@ async function uploadBulkPrices() {
                 if (update.updates.length > 0) {
                     console.log(`Оновлюємо товар "${update.product.name}" з змінами: ${update.updates.join(', ')}`);
                     const response = await fetchWithAuth(`/api/products/${productId}`, {
-                        method: 'PUT',
+                                method: 'PUT',
                         body: JSON.stringify(update.data)
-                    });
-                    if (response.ok) {
-                        updated++;
+                            });
+                            if (response.ok) {
+                                updated++;
                         console.log(`✅ Успішно оновлено товар "${update.product.name}"`);
                         console.log(`📊 Дані оновлення:`, update.data);
-                    } else {
-                        const text = await response.text();
+                            } else {
+                                const text = await response.text();
                         console.error(`❌ Помилка оновлення товару "${update.product.name}": ${text}`);
-                    }
+                            }
                 } else {
                     console.log(`Пропускаємо товар "${update.product.name}" - немає змін для оновлення`);
                 }
@@ -6345,7 +6360,7 @@ async function uploadBulkPrices() {
                 console.log(`Оновлено акційних цін: ${salePriceUpdates} товарів`);
                 showNotification(`Оновлено цін для ${updated} товарів (включаючи ${salePriceUpdates} акційних цін)!`);
             } else {
-                showNotification(`Оновлено цін для ${updated} товарів!`);
+            showNotification(`Оновлено цін для ${updated} товарів!`);
             }
             
             await loadProducts(productsCurrentPage, productsPerPage);
@@ -6407,7 +6422,7 @@ async function uploadBulkPrices() {
         if (productsWithSale.length > 0) {
             showNotification(`Ціни експортовано! (${productsWithSale.length} товарів з акційними цінами)`);
         } else {
-            showNotification('Ціни експортовано!');
+        showNotification('Ціни експортовано!');
         }
         resetInactivityTimer();
     }
