@@ -5037,11 +5037,9 @@ async function saveNewProduct() {
         if (newProduct.type === 'simple' && priceInput) {
             price = parseFloat(priceInput.value) || null;
             salePrice = salePriceInput ? parseFloat(salePriceInput.value) || null : null;
-            
-            // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
             if (salePrice && salePrice > 0) {
                 saleEnd = saleEndInput && saleEndInput.value ? saleEndInput.value : null;
-        }
+            }
         }
         const visible = visibleSelect.value === 'true';
         let description = descriptionInput.value || '';
@@ -5126,7 +5124,13 @@ async function saveNewProduct() {
                 priceChange: color.priceChange || 0,
                 photo: null
             })),
-            sizes: newProduct.sizes,
+            sizes: newProduct.type === 'mattresses'
+                ? newProduct.sizes.map(size => ({
+                    name: size.name,
+                    price: size.price,
+                    ...(size.salePrice !== undefined ? { salePrice: size.salePrice } : {})
+                }))
+                : newProduct.sizes,
             groupProducts: newProduct.groupProducts,
             active: true,
             visible
@@ -5541,11 +5545,9 @@ async function saveEditedProduct(productId) {
         if (newProduct.type === 'simple') {
             price = parseFloat(document.getElementById('product-price')?.value) || null;
             salePrice = parseFloat(document.getElementById('product-sale-price')?.value) || null;
-            
-            // Якщо встановлюється акційна ціна, але дата закінчення не вказана, встановлюємо безкінечну акцію
             if (salePrice && salePrice > 0) {
                 saleEnd = document.getElementById('product-sale-end')?.value || null;
-        }
+            }
         }
         const visible = document.getElementById('product-visible')?.value === 'true';
         const description = document.getElementById('product-description')?.value || '';
@@ -5613,17 +5615,13 @@ async function saveEditedProduct(productId) {
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             const response = await fetchWithAuth(`/api/products?ids=${encodeURIComponent(newProduct.groupProducts.join(','))}`);
             const existingProducts = await response.json();
-            console.log('Відповідь сервера для groupProducts:', existingProducts);
             if (!existingProducts.products || !Array.isArray(existingProducts.products)) {
-                console.error('Некоректна відповідь сервера:', existingProducts);
                 showNotification('Помилка перевірки групових товарів.');
                 return;
             }
-
             const existingIds = existingProducts.products.map(p => p._id);
             const missingIds = newProduct.groupProducts.filter(id => !existingIds.includes(id));
             if (missingIds.length > 0) {
-                console.warn('Деякі продукти в groupProducts не знайдені:', missingIds);
                 validatedGroupProducts = newProduct.groupProducts.filter(id => existingIds.includes(id));
                 showNotification(`Видалено ${missingIds.length} некоректних товарів із групи. Залишилось ${validatedGroupProducts.length} товарів.`);
                 newProduct.groupProducts = validatedGroupProducts;
@@ -5641,12 +5639,8 @@ async function saveEditedProduct(productId) {
         if (newProduct.type === 'mattresses') {
             validatedSizes = newProduct.sizes.filter(size => {
                 const isValid = size.name && typeof size.price === 'number' && size.price >= 0;
-                if (!isValid) {
-                    console.warn('Некоректний розмір видалено:', size);
-                }
                 return isValid;
             });
-
             if (validatedSizes.length === 0) {
                 showNotification('Усі розміри для матрацу некоректні! Додайте коректний розмір.');
                 return;
@@ -5655,9 +5649,6 @@ async function saveEditedProduct(productId) {
 
         const validatedColors = newProduct.colors.filter(color => {
             const isValid = color.name && color.value;
-            if (!isValid) {
-                console.warn('Некоректний колір видалено:', color);
-            }
             return isValid;
         });
 
@@ -5698,9 +5689,9 @@ async function saveEditedProduct(productId) {
             brand: brand || '',
             category,
             subcategory: subcategorySlug,
-            material: material || '',
             salePrice: salePrice || null,
             saleEnd: saleEnd || null,
+            material: material || '',
             description,
             widthCm,
             depthCm,
@@ -5713,10 +5704,13 @@ async function saveEditedProduct(productId) {
                 priceChange: color.priceChange || 0,
                 photo: color.photo || null
             })),
-            sizes: validatedSizes.map(size => ({
-                name: size.name,
-                price: size.price
-            })),
+            sizes: newProduct.type === 'mattresses'
+                ? validatedSizes.map(size => ({
+                    name: size.name,
+                    price: size.price,
+                    ...(size.salePrice !== undefined ? { salePrice: size.salePrice } : {})
+                }))
+                : validatedSizes,
             groupProducts: validatedGroupProducts,
             active: newProduct.active,
             visible
