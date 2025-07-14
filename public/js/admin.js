@@ -5125,11 +5125,21 @@ async function saveNewProduct() {
                 photo: null
             })),
 sizes: newProduct.type === 'mattresses'
-    ? newProduct.sizes.map(size => ({
-        name: size.name,
-        price: size.price,
-        ...(typeof size.salePrice === 'number' && !isNaN(size.salePrice) ? { salePrice: size.salePrice } : {})
-    }))
+    ? newProduct.sizes.map(size => {
+        const obj = {
+            name: size.name,
+            price: size.price
+        };
+        if (
+            typeof size.salePrice === 'number' &&
+            !isNaN(size.salePrice) &&
+            size.salePrice > 0 &&
+            size.salePrice < size.price
+        ) {
+            obj.salePrice = size.salePrice;
+        }
+        return obj;
+    })
     : newProduct.sizes,
             groupProducts: newProduct.groupProducts,
             active: true,
@@ -5705,11 +5715,21 @@ async function saveEditedProduct(productId) {
                 photo: color.photo || null
             })),
 sizes: newProduct.type === 'mattresses'
-    ? validatedSizes.map(size => ({
-        name: size.name,
-        price: size.price,
-        ...(typeof size.salePrice === 'number' && !isNaN(size.salePrice) ? { salePrice: size.salePrice } : {})
-    }))
+    ? validatedSizes.map(size => {
+        const obj = {
+            name: size.name,
+            price: size.price
+        };
+        if (
+            typeof size.salePrice === 'number' &&
+            !isNaN(size.salePrice) &&
+            size.salePrice > 0 &&
+            size.salePrice < size.price
+        ) {
+            obj.salePrice = size.salePrice;
+        }
+        return obj;
+    })
     : validatedSizes,
             groupProducts: validatedGroupProducts,
             active: newProduct.active,
