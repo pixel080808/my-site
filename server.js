@@ -321,12 +321,14 @@ const productSchemaValidation = Joi.object({
       photo: Joi.string().uri().allow('', null).optional()
     })
   ).default([]),
-  sizes: Joi.array().items(
-    Joi.object({
-      name: Joi.string().max(100).required().trim(),
-      price: Joi.number().min(0).required()
-    })
-  ).default([]),
+   sizes: Joi.array().items(
+     Joi.object({
+       name: Joi.string().max(100).required().trim(),
+       price: Joi.number().min(0).required(),
+       salePrice: Joi.number().min(0).allow(null).optional(),
+       saleEnd: Joi.date().allow(null).optional()
+     })
+   ).default([]),
   groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
   active: Joi.boolean().default(true),
   visible: Joi.boolean().default(true),
