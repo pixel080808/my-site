@@ -5130,14 +5130,13 @@ sizes: newProduct.type === 'mattresses'
             name: size.name,
             price: size.price
         };
-        if (
-            typeof size.salePrice === 'number' &&
-            !isNaN(size.salePrice) &&
-            size.salePrice > 0 &&
-            size.salePrice < size.price
-        ) {
-            obj.salePrice = size.salePrice;
-        }
+if (
+    typeof size.salePrice === 'number' &&
+    !isNaN(size.salePrice) &&
+    size.salePrice < size.price
+) {
+    obj.salePrice = size.salePrice;
+}
         return obj;
     })
     : newProduct.sizes,
@@ -5720,14 +5719,13 @@ sizes: newProduct.type === 'mattresses'
             name: size.name,
             price: size.price
         };
-        if (
-            typeof size.salePrice === 'number' &&
-            !isNaN(size.salePrice) &&
-            size.salePrice > 0 &&
-            size.salePrice < size.price
-        ) {
-            obj.salePrice = size.salePrice;
-        }
+if (
+    typeof size.salePrice === 'number' &&
+    !isNaN(size.salePrice) &&
+    size.salePrice < size.price
+) {
+    obj.salePrice = size.salePrice;
+}
         return obj;
     })
     : validatedSizes,
