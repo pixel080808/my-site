@@ -2438,10 +2438,15 @@ async function renderProductDetails() {
                 priceDiv.appendChild(regularSpan);
             }
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            const groupPriceDiv = document.createElement('div');
-            groupPriceDiv.className = 'group-total-price';
-            groupPriceDiv.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">0 грн</span>`;
-            rightDiv.appendChild(groupPriceDiv);
+            const groupPrices = product.groupProducts.map(id => {
+                const p = products.find(p => p._id === id);
+                return p ? (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price) : Infinity;
+            });
+            const minPrice = Math.min(...groupPrices);
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
         } else {
             if (isOnSale) {
                 const regularSpan = document.createElement('s');
@@ -2488,11 +2493,19 @@ async function renderProductDetails() {
                 }
                 sizeSelect.appendChild(option);
             });
-            sizeSelect.onchange = typeof updateMattressPrice === 'function' ? () => updateMattressPrice(product._id) : null;
-            sizeDiv.appendChild(sizeSelect);
-            rightDiv.appendChild(sizeDiv);
-            selectedMattressSizes[product._id] = sizeSelect.value;
-            saveToStorage('selectedMattressSizes', selectedMattressSizes);
+sizeSelect.onchange = function() {
+    if (typeof updateMattressPrice === 'function') updateMattressPrice(product._id);
+    // Оновлюємо вибраний розмір при кожній зміні
+    selectedMattressSizes[product._id] = sizeSelect.value;
+    saveToStorage('selectedMattressSizes', selectedMattressSizes);
+};
+sizeDiv.appendChild(sizeSelect);
+rightDiv.appendChild(sizeDiv);
+// Встановлюємо вибраний розмір за замовчуванням (тільки якщо ще не вибрано)
+if (!selectedMattressSizes[product._id]) {
+    selectedMattressSizes[product._id] = sizeSelect.value;
+    saveToStorage('selectedMattressSizes', selectedMattressSizes);
+}
         }
 
         if (product.type !== 'mattresses' && product.type !== 'group') {
@@ -2567,10 +2580,15 @@ async function renderProductDetails() {
 
         const charDiv = document.createElement('div');
         charDiv.className = 'product-characteristics';
-        charDiv.appendChild(createCharP('Виробник', product.brand || 'Не вказано'));
+        // Виробник
+        if (product.brand && product.brand.trim() !== '' && product.brand !== 'Не вказано') {
+            charDiv.appendChild(createCharP('Виробник', product.brand));
+        }
+        // Матеріал
         if (product.material && product.material.trim() !== '') {
             charDiv.appendChild(createCharP('Матеріал', product.material));
         }
+        // Розміри
         const dimensions = [];
         if (product.widthCm) dimensions.push({ label: 'Ширина', value: product.widthCm });
         if (product.heightCm) dimensions.push({ label: 'Висота', value: product.heightCm });
@@ -3272,7 +3290,16 @@ async function addToCartWithColor(productId) {
             saveToStorage('selectedMattressSizes', selectedMattressSizes);
             return;
         }
-        price = parseFloat(sizeInfo.price || 0);
+        // --- ВИПРАВЛЕННЯ: додаємо акційну ціну, якщо вона є ---
+        if (
+            typeof sizeInfo.salePrice === 'number' &&
+            !isNaN(sizeInfo.salePrice) &&
+            sizeInfo.salePrice < sizeInfo.price
+        ) {
+            price = parseFloat(sizeInfo.salePrice);
+        } else {
+            price = parseFloat(sizeInfo.price || 0);
+        }
         if (isNaN(price) || price <= 0) {
             console.error(`Некоректна ціна для розміру ${size} товару ${product.name}: ${price}`);
             showNotification('Помилка: некоректна ціна для обраного розміру!', 'error');
@@ -3786,11 +3813,20 @@ async function updateCartPrices() {
         let price = product.price || 0;
         const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
-        if (product.type === 'mattresses' && item.size) {
-            const sizeInfo = product.sizes?.find(s => s.name === item.size);
-            if (sizeInfo) {
-                price = sizeInfo.price || price;
-            }
+    if (product.type === 'mattresses' && item.size) {
+    const sizeInfo = product.sizes?.find(s => s.name === item.size);
+    if (sizeInfo) {
+        // Враховуємо акційну ціну розміру, якщо вона є
+        if (
+            typeof sizeInfo.salePrice === 'number' &&
+            !isNaN(sizeInfo.salePrice) &&
+            sizeInfo.salePrice < sizeInfo.price
+        ) {
+            price = sizeInfo.salePrice;
+        } else {
+            price = sizeInfo.price || price;
+        }
+    }
         } else if (item.color && item.color.priceChange) {
             price = (isOnSale ? product.salePrice : product.price) + (item.color.priceChange || 0);
         } else {
