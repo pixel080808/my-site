@@ -1986,6 +1986,16 @@ function renderAdmin(section = activeTab, data = {}) {
                         : (p.sizes?.length > 0
                             ? `від ${Math.min(...p.sizes.map(s => s.price))} грн`
                             : 'Ціна не вказана');
+                    const salePriceInfo = p.type === 'simple'
+                        ? (p.salePrice != null && p.salePrice !== undefined ? `${p.salePrice} грн` : '-')
+                        : (p.sizes?.length > 0
+                            ? (() => {
+                                const salePrices = p.sizes
+                                    .filter(s => s.salePrice != null && s.salePrice !== undefined)
+                                    .map(s => `${s.salePrice} грн`);
+                                return salePrices.length > 0 ? salePrices.join(', ') : '-';
+                            })()
+                            : '-');
                     return `
                         <div class="product-admin-item">
                             <span>#${p.tempNumber}</span>
@@ -1993,7 +2003,7 @@ function renderAdmin(section = activeTab, data = {}) {
                             <span>${p.name}</span>
                             <span>${p.brand || 'Без бренду'}</span>
                             <span>${priceInfo}</span>
-                            <span>${p.salePrice || '-'}</span>
+                            <span>${salePriceInfo}</span>
                             <div class="status-column">
                                 <button onclick="openEditProductModal('${p._id}')">Редагувати</button>
                                 <button onclick="deleteProduct('${p._id}')">Видалити</button>
