@@ -1230,7 +1230,7 @@ async function login() {
     const password = document.getElementById('admin-password')?.value;
 
     if (!username || !password) {
-        showNotification('Введіть ім’я користувача та пароль!');
+        showNotification('Введіть ім'я користувача та пароль!');
         return;
     }
 
@@ -2243,7 +2243,7 @@ function renderSocialsAdmin() {
 
 async function deleteCategory(categoryId) {
     console.log('Спроба видалити категорію з ID:', categoryId);
-    if (!confirm('Ви впевнені, що хочете видалити цю категорію? Усі товари в цій категорії втратять прив’язку до неї.')) {
+    if (!confirm('Ви впевнені, що хочете видалити цю категорію? Усі товари в цій категорії втратять прив'язку до неї.')) {
         return;
     }
 
@@ -2610,7 +2610,7 @@ async function saveAddCategory() {
         const photoFile = document.getElementById('category-photo-file')?.files[0];
 
         if (!name || !slug) {
-            showNotification('Назва та шлях категорії обов’язкові!');
+            showNotification('Назва та шлях категорії обов'язкові!');
             return;
         }
 
@@ -3376,7 +3376,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
-    if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив’язку до неї.')) {
+    if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив'язку до неї.')) {
         return;
     }
 
@@ -5368,7 +5368,7 @@ async function openEditProductModal(productId) {
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
             <h4>Кольори</h4>
-            <input type="text" id="product-color-name organisme
+            <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
             <label for="product-color-name">Назва кольору</label>
             <input type="color" id="product-color-value" value="#000000"><br/>
             <label for="product-color-value">Значення кольору</label>
@@ -5511,6 +5511,12 @@ async function openEditProductModal(productId) {
         cancelButton.addEventListener('click', closeModal);
     } else {
         console.warn('Кнопка #cancel-product-btn не знайдена');
+    }
+
+    // Додаємо обробник для кнопки "Додати колір" у режимі редагування
+    const addColorBtn = document.querySelector('button[onclick="addProductColor()"]');
+    if (addColorBtn) {
+        addColorBtn.onclick = addProductColor;
     }
 
     resetInactivityTimer();
@@ -6701,7 +6707,7 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onerror = (error) => {
         console.error('Помилка WebSocket:', error);
-        showNotification('Помилка WebSocket-з’єднання');
+        showNotification('Помилка WebSocket-з'єднання');
     };
 
     socket.onclose = (event) => {
