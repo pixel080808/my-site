@@ -2695,21 +2695,42 @@ if (!selectedMattressSizes[product._id]) {
 
                 const priceDiv = document.createElement('div');
                 priceDiv.className = 'price';
-                const isOnSaleP = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
-                if (isOnSaleP) {
-                    const regularSpan = document.createElement('s');
-                    regularSpan.className = 'regular-price';
-                    regularSpan.textContent = `${p.price} грн`;
-                    priceDiv.appendChild(regularSpan);
-                    const saleSpan = document.createElement('span');
-                    saleSpan.className = 'sale-price';
-                    saleSpan.textContent = `${p.salePrice} грн`;
-                    priceDiv.appendChild(saleSpan);
+                if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                    const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                    const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                    const minPrice = Math.min(...p.sizes.map(s => s.price));
+                    if (minSale !== null && minSale < minPrice) {
+                        const regularSpan = document.createElement('s');
+                        regularSpan.className = 'regular-price';
+                        regularSpan.textContent = `${minPrice} грн`;
+                        priceDiv.appendChild(regularSpan);
+                        const saleSpan = document.createElement('span');
+                        saleSpan.className = 'sale-price';
+                        saleSpan.textContent = `${minSale} грн`;
+                        priceDiv.appendChild(saleSpan);
+                    } else {
+                        const regularSpan = document.createElement('span');
+                        regularSpan.className = 'regular-price';
+                        regularSpan.textContent = `${minPrice} грн`;
+                        priceDiv.appendChild(regularSpan);
+                    }
                 } else {
-                    const regularSpan = document.createElement('span');
-                    regularSpan.className = 'regular-price';
-                    regularSpan.textContent = `${p.price} грн`;
-                    priceDiv.appendChild(regularSpan);
+                    const isOnSaleP = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
+                    if (isOnSaleP) {
+                        const regularSpan = document.createElement('s');
+                        regularSpan.className = 'regular-price';
+                        regularSpan.textContent = `${p.price} грн`;
+                        priceDiv.appendChild(regularSpan);
+                        const saleSpan = document.createElement('span');
+                        saleSpan.className = 'sale-price';
+                        saleSpan.textContent = `${p.salePrice} грн`;
+                        priceDiv.appendChild(saleSpan);
+                    } else {
+                        const regularSpan = document.createElement('span');
+                        regularSpan.className = 'regular-price';
+                        regularSpan.textContent = `${p.price} грн`;
+                        priceDiv.appendChild(regularSpan);
+                    }
                 }
                 itemDiv.appendChild(priceDiv);
 
