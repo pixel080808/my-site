@@ -6407,10 +6407,12 @@ async function uploadBulkPrices() {
                     counter++;
                     return line;
                 } else if (p.type === 'mattresses') {
-                    // Для матраців також додаємо акційну ціну, якщо вона є
-                    const salePrice = p.salePrice ? `,${p.salePrice}` : '';
-                    const lines = p.sizes.map(s => `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}${salePrice}`);
-                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами${p.salePrice ? ` (акція: ${p.salePrice} грн)` : ''}`);
+                    // Для матраців для кожного розміру експортуємо свою акційну ціну
+                    const lines = p.sizes.map(s => {
+                        const salePrice = s.salePrice ? `,${s.salePrice}` : '';
+                        return `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}${salePrice}`;
+                    });
+                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами`);
                     counter++;
                     return lines.join('\n');
                 }
