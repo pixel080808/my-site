@@ -2446,7 +2446,14 @@ async function renderProductDetails() {
         } else if (product.type === 'group' && product.groupProducts?.length > 0) {
             const groupPrices = product.groupProducts.map(id => {
                 const p = products.find(p => p._id === id);
-                return p ? (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price) : Infinity;
+                if (!p) return Infinity;
+                if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                    const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                    const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                    const minPrice = Math.min(...p.sizes.map(s => s.price));
+                    return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
+                }
+                return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
             });
             const minPrice = Math.min(...groupPrices);
             const regularSpan = document.createElement('span');
