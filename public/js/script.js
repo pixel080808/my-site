@@ -71,13 +71,20 @@ function loadFromStorage(key, defaultValue) {
         if (key === 'products') {
             const validCategories = categories.map(cat => cat.name);
             const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
-            return data.map(product => {
+            const result = data.map(product => {
                 if (product.subcategory && !validSubcategories.includes(product.subcategory)) {
                     console.warn(`Очищаємо невалідну підкатегорію ${product.subcategory} для товару ${product.name}`);
                     return { ...product, subcategory: null };
                 }
                 return product;
             });
+            result.forEach(p => {
+                if (p.type === 'mattresses') {
+                    p.salePrice = null;
+                    p.saleEnd = null;
+                }
+            });
+            return result;
         }
         return data;
     } catch (e) {

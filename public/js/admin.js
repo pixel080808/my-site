@@ -6200,7 +6200,7 @@ async function uploadBulkPrices() {
             });
 
             console.log(`Початок обробки ${lines.length} рядків з файлу`);
-            console.log(`Створено мапу з ${productMap.size} товарами для імпорту`);
+            console.log(`Створено мапу з ${productMap.size} товарів для імпорту`);
             console.log('Мапа товарів:', Array.from(productMap.entries()).map(([num, p]) => `${num}: ${p.name}`));
             console.log('Починаємо групування оновлень за товарами...');
             console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
