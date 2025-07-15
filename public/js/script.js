@@ -2402,10 +2402,12 @@ async function renderProductDetails() {
             thumbImg.className = 'thumbnail';
             thumbImg.alt = `Мініатюра ${index + 1}`;
             thumbImg.loading = 'lazy';
-            thumbImg.onclick = typeof openGalleryiamasGallery === 'function' ? () => {
-                mainImg.src = photo;
-                openGallery(product.slug, index);
-            } : null;
+            // Додаємо відкриття галереї по кліку на мініатюру (тільки на сторінці товару)
+            thumbImg.onclick = () => {
+                if (typeof openGallery === 'function') {
+                    openGallery(product.slug, index);
+                }
+            };
             thumbnailContainer.appendChild(thumbImg);
         });
         leftDiv.appendChild(thumbnailContainer);
@@ -4752,10 +4754,12 @@ function openGallery(productSlug, index = 0) {
             thumbImg.src = photo;
             thumbImg.className = `thumbnail ${i === currentGalleryIndex ? 'active' : ''}`;
             thumbImg.alt = `Мініатюра ${i + 1}`;
+            thumbImg.loading = 'lazy';
+            // Додаємо відкриття галереї по кліку на мініатюру (тільки на сторінці товару)
             thumbImg.onclick = () => {
-                currentGalleryIndex = i;
-                img.src = currentGalleryImages[currentGalleryIndex];
-                updateThumbnails();
+                if (typeof openGallery === 'function') {
+                    openGallery(product.slug, i);
+                }
             };
             thumbnails.appendChild(thumbImg);
         });
