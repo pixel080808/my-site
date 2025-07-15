@@ -47,7 +47,7 @@ let brands = [];
 let isLoadingProducts = false;
 let isUpdatingCategories = false;
 const orderFields = [
-    { name: 'name', label: "Ім'я" },
+    { name: 'name', label: "Ім\'я" },
     { name: 'surname', label: 'Прізвище' },
     { name: 'phone', label: 'Телефон' },
     { name: 'email', label: 'Електронна пошта' },
@@ -793,7 +793,7 @@ async function checkAuth() {
     } catch (e) {
         console.error('Помилка перевірки авторизації:', e);
         showSection('admin-login');
-        showNotification('Не вдалося перевірити авторизацію. Перевірте з’єднання.');
+        showNotification('Не вдалося перевірити авторизацію. Перевірте з\'єднання.');
     }
 }
 
@@ -1230,7 +1230,7 @@ async function login() {
     const password = document.getElementById('admin-password')?.value;
 
     if (!username || !password) {
-        showNotification('Введіть ім'я користувача та пароль!');
+        showNotification('Введіть ім\'я користувача та пароль!');
         return;
     }
 
@@ -2243,7 +2243,7 @@ function renderSocialsAdmin() {
 
 async function deleteCategory(categoryId) {
     console.log('Спроба видалити категорію з ID:', categoryId);
-    if (!confirm('Ви впевнені, що хочете видалити цю категорію? Усі товари в цій категорії втратять прив'язку до неї.')) {
+    if (!confirm('Ви впевнені, що хочете видалити цю категорію? Усі товари в цій категорії втратять прив\'язку до неї.')) {
         return;
     }
 
@@ -2610,7 +2610,7 @@ async function saveAddCategory() {
         const photoFile = document.getElementById('category-photo-file')?.files[0];
 
         if (!name || !slug) {
-            showNotification('Назва та шлях категорії обов'язкові!');
+            showNotification('Назва та шлях категорії обов\'язкові!');
             return;
         }
 
@@ -3376,7 +3376,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
 }
 
 async function deleteSubcategory(categoryId, subcategoryId) {
-    if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив'язку до неї.')) {
+    if (!confirm('Ви впевнені, що хочете видалити цю підкатегорію? Усі товари в цій підкатегорії втратять прив\'язку до неї.')) {
         return;
     }
 
@@ -6707,7 +6707,7 @@ function connectAdminWebSocket(attempt = 1) {
 
     socket.onerror = (error) => {
         console.error('Помилка WebSocket:', error);
-        showNotification('Помилка WebSocket-з'єднання');
+        showNotification('Помилка WebSocket-з\'єднання');
     };
 
     socket.onclose = (event) => {
