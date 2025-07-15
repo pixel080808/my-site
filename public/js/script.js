@@ -1260,7 +1260,11 @@ function renderBreadcrumbs() {
                 const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === segment);
                 if (cat) displayText = cat.name;
                 else {
-                    const subCat = categories.flatMap(c => c.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === segment);
+                    // Пошук підкатегорії спочатку по transliterate, потім по slug
+                    let subCat = categories.flatMap(c => c.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === segment);
+                    if (!subCat) {
+                        subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === segment);
+                    }
                     if (subCat) displayText = subCat.name;
                 }
             }
