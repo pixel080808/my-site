@@ -6304,35 +6304,19 @@ async function uploadBulkPrices() {
                             update.updates.push(`розмір "${size}": ${oldPrice} → ${price}`);
                             console.log(`Підготовлено оновлення ціни матрацу "${product.name}" розміру "${size}" з ${oldPrice} на ${price}`);
                         }
-                    }
-                    
-                    // Обробка акційної ціни для матраців (тільки для першого розміру, щоб не дублювати)
-                    if (sizePart.startsWith('Розмір: ')) {
-                        const size = sizePart.replace('Розмір: ', '').trim();
-                        const sizeObj = update.data.sizes.find(s => s.name === size);
-                        if (sizeObj && sizeObj === update.data.sizes[0]) { // Тільки для першого розміру
-                            if (parts.length > 5) {
-                                if (!isNaN(salePrice) && salePrice >= 0) {
-                                    // Акційна ціна може бути меншою або рівною звичайній
-                                    if (salePrice <= price) {
-                                        update.data.salePrice = salePrice;
-                                        // Встановлюємо акцію на безкінечний період за замовчуванням
-                                        update.data.saleEnd = null;
-                                        update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
-                                        console.log(`Підготовлено оновлення акційної ціни матрацу "${product.name}" на ${salePrice} (безкінечна акція)`);
-                                    } else {
-                                        console.warn(`Акційна ціна ${salePrice} не може бути більшою за звичайну ціну ${price} для матрацу "${product.name}"`);
-                                    }
-                                } else {
-                                    console.warn(`Невірна акційна ціна "${parts[5]}" для матрацу "${product.name}"`);
-                                }
-                            } else {
-                                // Якщо акційної ціни немає в файлі, видаляємо її
-                                if (product.salePrice !== null) {
-                                    update.data.salePrice = null;
-                                    update.data.saleEnd = null;
-                                    update.updates.push(`акційна ціна: ${product.salePrice} → видалена`);
-                                    console.log(`Підготовлено видалення акційної ціни матрацу "${product.name}"`);
+                        // ОНОВЛЕННЯ АКЦІЙНОЇ ЦІНИ ДЛЯ КОЖНОГО РОЗМІРУ
+                        if (sizeObj) {
+                            if (parts.length > 5 && !isNaN(salePrice) && salePrice >= 0 && salePrice <= price) {
+                                const oldSale = sizeObj.salePrice;
+                                sizeObj.salePrice = salePrice;
+                                update.updates.push(`акційна ціна для розміру "${size}": ${oldSale ?? 'відсутня'} → ${salePrice}`);
+                                console.log(`Підготовлено оновлення акційної ціни для розміру "${size}" на ${salePrice}`);
+                            } else if (parts.length <= 5 || isNaN(salePrice) || salePrice === null) {
+                                // Якщо акційної ціни немає або вона некоректна — видалити
+                                if (sizeObj.salePrice !== undefined && sizeObj.salePrice !== null) {
+                                    sizeObj.salePrice = null;
+                                    update.updates.push(`акційна ціна для розміру "${size}": видалена`);
+                                    console.log(`Підготовлено видалення акційної ціни для розміру "${size}"`);
                                 }
                             }
                         }
