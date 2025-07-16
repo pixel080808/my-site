@@ -846,6 +846,9 @@ async function initializeData() {
     updateHeader();
     renderCategories();
     renderCatalogDropdown();
+    if (typeof updateFloatingFavorite === 'function') {
+        updateFloatingFavorite();
+    }
 }
 
 async function updateProducts() {
@@ -1023,16 +1026,23 @@ function showSection(sectionId) {
     if (burgerMenu && floatingCart) {
         const header = document.querySelector('header');
         const headerHeight = header ? header.offsetHeight : 0;
+        const floatingFavorite = document.getElementById('floating-favorite');
         const handleScroll = () => {
             if (window.scrollY > headerHeight) {
                 burgerMenu.classList.add('visible');
                 floatingCart.classList.add('visible');
+                if (floatingFavorite) {
+                    floatingFavorite.classList.add('visible');
+                }
                 if (sectionId === 'product-details' && currentProduct?.type === 'group' && floatingGroupCart) {
                     floatingGroupCart.classList.add('visible');
                 }
             } else {
                 burgerMenu.classList.remove('visible');
                 floatingCart.classList.remove('visible');
+                if (floatingFavorite) {
+                    floatingFavorite.classList.remove('visible');
+                }
                 if (floatingGroupCart) {
                     floatingGroupCart.classList.remove('visible');
                 }
@@ -1075,10 +1085,13 @@ function showSection(sectionId) {
         if (typeof renderCategories === 'function') {
             renderCategories();
         }
-        if (typeof updateCartCount === 'function') {
-            updateCartCount();
-        }
-        newPath = '/';
+            if (typeof updateCartCount === 'function') {
+        updateCartCount();
+    }
+    if (typeof updateFloatingFavorite === 'function') {
+        updateFloatingFavorite();
+    }
+    newPath = '/';
     } else if (sectionId === 'catalog') {
         if (isSearchActive && searchQuery) {
             newPath = `/catalog/search/${transliterate(searchQuery.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'))}`;
@@ -1099,21 +1112,33 @@ function showSection(sectionId) {
         if (currentPage > 1) {
             newPath += `?page=${currentPage}`;
         }
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
+        }
     } else if (sectionId === 'cart') {
         parentGroupProduct = null;
         saveToStorage('parentGroupProduct', null);
         if (typeof renderCart === 'function') {
             renderCart();
         }
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
+        }
         newPath = '/cart';
     } else if (sectionId === 'contacts') {
         if (typeof renderContacts === 'function') {
             renderContacts();
         }
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
+        }
         newPath = '/contacts';
     } else if (sectionId === 'about') {
         if (typeof renderAbout === 'function') {
             renderAbout();
+        }
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
         }
         newPath = '/about';
     } else if (sectionId === 'product-details') {
@@ -1128,6 +1153,9 @@ function showSection(sectionId) {
             renderProductDetails().then(() => {
                 if (currentProduct.type === 'group' && typeof updateFloatingGroupCart === 'function') {
                     updateFloatingGroupCart();
+                }
+                if (typeof updateFloatingFavorite === 'function') {
+                    updateFloatingFavorite();
                 }
             }).catch(error => {
                 console.error('Помилка в renderProductDetails:', error);
@@ -2465,8 +2493,9 @@ async function renderProductDetails() {
             const minPrice = Math.min(...groupPrices);
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
+            regularSpan.textContent = `від ${minPrice} грн`;
             priceDiv.appendChild(regularSpan);
+            rightDiv.appendChild(priceDiv);
         } else {
             if (isOnSale) {
                 const regularSpan = document.createElement('s');
@@ -2500,32 +2529,124 @@ async function renderProductDetails() {
             sizeLabel.textContent = 'Розмір:';
             sizeLabel.setAttribute('for', `mattress-size-${product._id}`);
             sizeDiv.appendChild(sizeLabel);
-            const sizeSelect = document.createElement('select');
-            sizeSelect.id = `mattress-size-${product._id}`;
-            sizeSelect.className = 'custom-select';
-            product.sizes.forEach(size => {
-                const option = document.createElement('option');
-                option.value = size.name;
-                option.textContent = `${size.name} — ${size.price} грн${size.salePrice && size.salePrice < size.price ? ` (акція: ${size.salePrice} грн)` : ''}`;
-                option.setAttribute('data-price', size.price);
+
+            // Кастомний селект
+            const customSelect = document.createElement('div');
+            customSelect.className = 'custom-mattress-select';
+            customSelect.tabIndex = 0;
+            customSelect.style.position = 'relative';
+            customSelect.style.width = '260px'; // ширше
+            customSelect.style.minWidth = '220px';
+
+            const selectedDiv = document.createElement('div');
+            selectedDiv.className = 'selected-option';
+            selectedDiv.style.cursor = 'pointer';
+            selectedDiv.style.padding = '8px 12px';
+            selectedDiv.style.border = '1px solid #bbb';
+            selectedDiv.style.borderRadius = '12px';
+            selectedDiv.style.background = '#fff';
+            selectedDiv.style.minHeight = '38px';
+            selectedDiv.style.display = 'flex';
+            selectedDiv.style.alignItems = 'center';
+            selectedDiv.style.justifyContent = 'space-between';
+            selectedDiv.style.fontSize = '16px';
+            selectedDiv.style.userSelect = 'none';
+            selectedDiv.style.position = 'relative';
+            selectedDiv.style.minWidth = '200px';
+
+            // Додаємо стрілку
+            const arrow = document.createElement('span');
+            arrow.innerHTML = '&#9662;';
+            arrow.style.marginLeft = '12px';
+            arrow.style.fontSize = '18px';
+            arrow.style.color = '#888';
+            arrow.style.pointerEvents = 'none';
+            selectedDiv.appendChild(arrow);
+
+            // Відображення вибраного розміру
+            function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    option.setAttribute('data-sale-price', size.salePrice);
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style=\"color:#888;\">${size.price} грн</s> <span style=\"color:#ef4444;font-weight:bold;\">${size.salePrice} грн</span></span>`;
+                } else {
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style=\"color:#222;\">${size.price} грн</span></span>`;
                 }
-                sizeSelect.appendChild(option);
+            }
+
+            let selectedSize = product.sizes[0];
+            selectedDiv.innerHTML = getOptionHTML(selectedSize);
+            selectedDiv.appendChild(arrow);
+            customSelect.appendChild(selectedDiv);
+
+            // Список опцій
+            const optionsList = document.createElement('ul');
+            optionsList.className = 'custom-options-list';
+            optionsList.style.position = 'absolute';
+            optionsList.style.left = '0';
+            optionsList.style.right = '0';
+            optionsList.style.top = '110%';
+            optionsList.style.zIndex = '1000';
+            optionsList.style.background = '#fff';
+            optionsList.style.border = '1px solid #bbb';
+            optionsList.style.borderRadius = '12px';
+            optionsList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+            optionsList.style.margin = '0';
+            optionsList.style.padding = '4px 0';
+            optionsList.style.display = 'none';
+            optionsList.style.listStyle = 'none';
+            optionsList.style.maxHeight = '220px';
+            optionsList.style.overflowY = 'auto';
+            optionsList.style.minWidth = '220px';
+
+            product.sizes.forEach(size => {
+                const li = document.createElement('li');
+                li.className = 'custom-option';
+                li.innerHTML = getOptionHTML(size);
+                li.style.padding = '8px 12px';
+                li.style.cursor = 'pointer';
+                li.style.fontSize = '16px';
+                li.style.display = 'flex';
+                li.style.alignItems = 'center';
+                li.style.justifyContent = 'space-between';
+                li.style.minWidth = '200px';
+                li.onmouseenter = () => li.style.background = '#f5f5f5';
+                li.onmouseleave = () => li.style.background = '#fff';
+                li.onclick = () => {
+                    selectedSize = size;
+                    selectedDiv.innerHTML = getOptionHTML(size);
+                    selectedDiv.appendChild(arrow);
+                    optionsList.style.display = 'none';
+                    selectedMattressSizes[product._id] = size.name;
+                    saveToStorage('selectedMattressSizes', selectedMattressSizes);
+                    if (typeof updateMattressPrice === 'function') updateMattressPrice(product._id);
+                };
+                optionsList.appendChild(li);
             });
-sizeSelect.onchange = function() {
-    if (typeof updateMattressPrice === 'function') updateMattressPrice(product._id);
-    // Оновлюємо вибраний розмір при кожній зміні
-    selectedMattressSizes[product._id] = sizeSelect.value;
-    saveToStorage('selectedMattressSizes', selectedMattressSizes);
-};
-sizeDiv.appendChild(sizeSelect);
-rightDiv.appendChild(sizeDiv);
-// Встановлюємо вибраний розмір за замовчуванням (тільки якщо ще не вибрано)
-if (!selectedMattressSizes[product._id]) {
-    selectedMattressSizes[product._id] = sizeSelect.value;
-    saveToStorage('selectedMattressSizes', selectedMattressSizes);
-}
+            customSelect.appendChild(optionsList);
+
+            // Відкриття/закриття списку
+            selectedDiv.onclick = function(e) {
+                e.stopPropagation();
+                optionsList.style.display = optionsList.style.display === 'block' ? 'none' : 'block';
+                arrow.style.transform = optionsList.style.display === 'block' ? 'rotate(180deg)' : 'none';
+            };
+            document.addEventListener('click', function() {
+                optionsList.style.display = 'none';
+                arrow.style.transform = 'none';
+            });
+            customSelect.onkeydown = function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    optionsList.style.display = optionsList.style.display === 'block' ? 'none' : 'block';
+                    arrow.style.transform = optionsList.style.display === 'block' ? 'rotate(180deg)' : 'none';
+                }
+            };
+
+            sizeDiv.appendChild(customSelect);
+            rightDiv.appendChild(sizeDiv);
+            // Встановлюємо вибраний розмір за замовчуванням (тільки якщо ще не вибрано)
+            if (!selectedMattressSizes[product._id]) {
+                selectedMattressSizes[product._id] = selectedSize.name;
+                saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            }
         }
 
         if (product.type !== 'mattresses' && product.type !== 'group') {
@@ -2553,11 +2674,45 @@ if (!selectedMattressSizes[product._id]) {
             rightDiv.appendChild(qtyDiv);
         }
 
+        // === Кнопка купити та favorite ===
+        const actionsRow = document.createElement('div');
+        actionsRow.style.display = 'flex';
+        actionsRow.style.alignItems = 'center';
+        actionsRow.style.gap = '12px';
+
         const buyBtn = document.createElement('button');
         buyBtn.className = 'buy-btn';
         buyBtn.textContent = 'Додати в кошик';
         buyBtn.onclick = typeof addToCartWithColor === 'function' ? () => addToCartWithColor(product._id) : null;
-        if (product.type !== 'group') rightDiv.appendChild(buyBtn);
+        if (product.type !== 'group') actionsRow.appendChild(buyBtn);
+
+        // Додаємо іконку серця поруч з кнопкою купити
+        const favoriteIcon = document.createElement('div');
+        favoriteIcon.className = 'favorite-icon';
+        favoriteIcon.style.display = 'inline-block';
+        favoriteIcon.style.marginLeft = '0';
+        favoriteIcon.setAttribute('data-product-id', product._id);
+        favoriteIcon.innerHTML = `
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#4caf50" stroke-width="2" fill="none"/>
+          </svg>
+        `;
+        function updateFavoriteIcon() {
+            if (isFavorite(product._id)) {
+                favoriteIcon.classList.add('active');
+            } else {
+                favoriteIcon.classList.remove('active');
+            }
+        }
+        updateFavoriteIcon();
+        favoriteIcon.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleFavorite(product._id);
+            updateFavoriteIcon();
+        };
+        actionsRow.appendChild(favoriteIcon);
+        rightDiv.appendChild(actionsRow);
 
         if (product.colors?.length >= 1) {
             const hasPhotos = product.colors.some(c => c.photo);
@@ -2826,7 +2981,7 @@ if (!selectedMattressSizes[product._id]) {
         productDetails.appendChild(container);
 
         if (product.type === 'mattresses' && selectedMattressSizes[product._id]) {
-            document.getElementById(`mattress-size-${product._id}`).value = selectedMattressSizes[product._id];
+            // document.getElementById(`mattress-size-${product._id}`).value = selectedMattressSizes[product._id]; // Видалено, бо кастомний селект
             if (typeof updateMattressPrice === 'function') {
                 await updateMattressPrice(product._id);
             }
@@ -2845,6 +3000,9 @@ if (!selectedMattressSizes[product._id]) {
             await renderBreadcrumbs();
         }
 
+        // ОНОВЛЮЄМО СТАН ІКОНКИ ПІСЛЯ РЕНДЕРУ
+        updateFavoriteIconsOnPage();
+
         return Promise.resolve();
     } catch (error) {
         console.error('Помилка в renderProductDetails:', error.message, error.stack);
@@ -2856,547 +3014,17 @@ if (!selectedMattressSizes[product._id]) {
     }
 }
 
-function sanitizeHTML(html) {
-    // Декодуємо HTML-сутності
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = html;
-    const decodedHTML = textarea.value;
-
-    const allowedTags = ['p', 'br', 'strong', 'em', 'ul', 'li', 'img'];
-    const allowedAttributes = {
-        img: ['src', 'alt', 'width', 'height', 'class']
-    };
-    
-    const div = document.createElement('div');
-    div.innerHTML = decodedHTML;
-    
-    function cleanElement(element) {
-        if (element.nodeType !== Node.ELEMENT_NODE) return;
-        
-        const tagName = element.tagName.toLowerCase();
-        if (!allowedTags.includes(tagName)) {
-            element.replaceWith(...element.childNodes);
-            return;
-        }
-        
-        const allowedAttrs = allowedAttributes[tagName] || [];
-        Array.from(element.attributes).forEach(attr => {
-            if (!allowedAttrs.includes(attr.name)) {
-                element.removeAttribute(attr.name);
-            } else if (attr.name === 'src' && tagName === 'img') {
-                const src = attr.value;
-                if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
-                    element.removeAttribute('src');
-                }
-            }
-        });
-        
-        Array.from(element.children).forEach(cleanElement);
-    }
-    
-    Array.from(div.children).forEach(cleanElement);
-    return div; // Повертаємо DOM-елемент замість HTML-рядка
-}
-
-function formatNumber(value) {
-    if (typeof value === 'number') {
-        return value.toLocaleString('uk-UA', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).replace(',', ',');
-    }
-    return value.toString();
-}
-
-function changeGroupQuantity(groupProductId, productId, change) {
-    const qtyInput = document.getElementById(`group-quantity-${groupProductId}-${productId}`);
-    if (qtyInput) {
-        let qty = parseInt(qtyInput.value) + change;
-        if (qty < 0) qty = 0;
-        qtyInput.value = qty;
-        updateGroupSelectionWithQuantity(groupProductId);
-        updateFloatingGroupCart(); // Додаємо виклик для оновлення плаваючої кнопки
-    }
-}
-
-function updateGroupSelectionWithQuantity(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product || product.type !== 'group') {
-        console.warn('Товар не є груповим або не знайдено:', productId);
-        return;
-    }
-
-    let totalPrice = 0;
-    const selectedItems = {};
-
-    product.groupProducts.forEach(id => {
-        const qtyInput = document.getElementById(`group-quantity-${productId}-${id}`);
-        if (qtyInput) {
-            const quantity = parseInt(qtyInput.value) || 0;
-            if (quantity > 0) {
-                const p = products.find(p => p._id === id);
-                if (p) {
-                    const isOnSale = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
-                    let price = isOnSale ? parseFloat(p.salePrice) : parseFloat(p.price || 0);
-
-                    // Враховуємо колір
-                    if (p.colors?.length > 0 && selectedColors[id] !== undefined) {
-                        const colorIndex = parseInt(selectedColors[id]);
-                        if (p.colors[colorIndex]) {
-                            price += parseFloat(p.colors[colorIndex].priceChange || 0);
-                        }
-                    }
-
-                    // Враховуємо розмір для матраців
-                    if (p.type === 'mattresses' && selectedMattressSizes[id]) {
-                        const sizeInfo = p.sizes?.find(s => s.name === selectedMattressSizes[id]);
-                        if (sizeInfo) {
-                            price = parseFloat(sizeInfo.price || price);
-                        }
-                    }
-
-                    totalPrice += price * quantity;
-                    selectedItems[id] = quantity;
-                }
-            }
+function updateFavoriteIconsOnPage() {
+    const favoriteIcons = document.querySelectorAll('.favorite-icon[data-product-id]');
+    const favs = getFavorites();
+    favoriteIcons.forEach(icon => {
+        const productId = icon.getAttribute('data-product-id');
+        if (favs.includes(productId) || favs.includes(Number(productId))) {
+            icon.classList.add('active');
+        } else {
+            icon.classList.remove('active');
         }
     });
-
-    const priceDiv = document.querySelector('.group-total-price');
-    if (priceDiv) {
-        priceDiv.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">${totalPrice} грн</span>`;
-    }
-
-    const floatingPrice = document.querySelector('.floating-group-price');
-    if (floatingPrice) {
-        floatingPrice.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">${totalPrice} грн</span>`;
-    }
-
-    saveToStorage(`groupSelection_${productId}`, selectedItems);
-    updateFloatingGroupCart(); // Додаємо виклик для синхронізації
-}
-
-function createCharP(label, value) {
-    const p = document.createElement('p');
-    const strong = document.createElement('strong');
-    strong.textContent = `${label}: `;
-    p.appendChild(strong);
-
-    if (typeof value === 'string') {
-        const span = document.createElement('span');
-        span.innerHTML = value; // Використовуємо innerHTML для обробки <br>
-        span.style.marginLeft = '10px';
-        span.style.whiteSpace = 'pre-wrap'; // Дозволяє відображати перенос рядків
-        p.appendChild(span);
-    } else {
-        const span = document.createElement('span');
-        span.innerHTML = value;
-        span.style.marginLeft = '10px';
-        span.style.whiteSpace = 'pre-wrap';
-        p.appendChild(span);
-    }
-
-    return p;
-}
-
-function createProductElement(product) {
-    const productElement = document.createElement('div');
-    productElement.className = 'product';
-    productElement.dataset.id = product._id;
-
-    const imgLink = document.createElement('a');
-    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
-    imgLink.onclick = (e) => {
-        e.preventDefault();
-        openProduct(product.slug);
-    };
-    const img = document.createElement('img');
-    img.src = product.photos?.[0] || NO_IMAGE_URL;
-    img.alt = product.name;
-    img.loading = 'lazy';
-    imgLink.appendChild(img);
-    productElement.appendChild(imgLink);
-
-    const h3Link = document.createElement('a');
-    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
-    h3Link.onclick = (e) => {
-        e.preventDefault();
-        openProduct(product.slug);
-    };
-    const h3 = document.createElement('h3');
-    h3.textContent = product.name;
-    h3Link.appendChild(h3);
-    productElement.appendChild(h3Link);
-
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'price';
-    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
-
-    if (product.type === 'mattresses' && product.sizes?.length > 0) {
-        // Шукаємо мінімальну акційну ціну серед розмірів
-        const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-        const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-        const minPrice = Math.min(...product.sizes.map(s => s.price));
-        if (minSale !== null && minSale < minPrice) {
-            const regularSpan = document.createElement('s');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.textContent = `${minSale} грн`;
-            priceDiv.appendChild(saleSpan);
-        } else {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
-            priceDiv.appendChild(regularSpan);
-        }
-    } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-        const groupPrices = product.groupProducts.map(id => {
-            const p = products.find(p => p._id === id);
-            return p ? (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price) : Infinity;
-        });
-        const minPrice = Math.min(...groupPrices);
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${minPrice} грн`;
-        priceDiv.appendChild(regularSpan);
-    } else {
-        if (isOnSale) {
-            const regularSpan = document.createElement('s');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${product.price} грн`;
-            priceDiv.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.textContent = `${product.salePrice} грн`;
-            priceDiv.appendChild(saleSpan);
-        } else {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${product.price} грн`;
-            priceDiv.appendChild(regularSpan);
-        }
-    }
-
-    // Додаємо іконку кошика лише для простих товарів (не матраци і не групові)
-    if (product.type !== 'mattresses' && product.type !== 'group') {
-        const cartIcon = document.createElement('div');
-        cartIcon.className = 'cart-icon';
-        cartIcon.onclick = async (e) => {
-            e.preventDefault();
-            if (product.colors?.length > 1) {
-                openProduct(product.slug);
-                showNotification('Виберіть потрібний колір', 'error');
-                return;
-            }
-            await addToCartWithColor(product._id);
-            cartIcon.classList.add('added');
-            setTimeout(() => cartIcon.classList.remove('added'), 2000);
-        };
-        priceDiv.appendChild(cartIcon);
-    }
-
-    productElement.appendChild(priceDiv);
-
-    if (isOnSale && product.saleEnd) {
-        const timerDiv = document.createElement('div');
-        timerDiv.className = 'sale-timer';
-        timerDiv.id = `timer-${product._id}`;
-        productElement.appendChild(timerDiv);
-        updateSaleTimer(product._id, product.saleEnd);
-    }
-
-    return productElement;
-}
-
-function updateSaleTimer(productId, saleEnd) {
-    const timerElement = document.getElementById(`timer-${productId}`);
-    if (!timerElement || !saleEnd) return; // Якщо немає дати закінчення, акція безкінечна
-    const product = products.find(p => p._id === productId);
-    if (!product) {
-        timerElement.textContent = 'Товар недоступний';
-        clearInterval(activeTimers.get(productId));
-        activeTimers.delete(productId);
-        return;
-    }
-
-    if (activeTimers.has(productId)) {
-        clearInterval(activeTimers.get(productId));
-        activeTimers.delete(productId);
-    }
-
-    const endDate = new Date(saleEnd);
-    const update = () => {
-        const now = new Date();
-        const timeLeft = endDate - now;
-        if (timeLeft <= 0) {
-            timerElement.textContent = 'Акція закінчилася';
-            product.salePrice = null;
-            product.saleEnd = null;
-            if (currentProduct && currentProduct._id === productId) {
-                currentProduct = product;
-                renderProductDetails();
-            }
-            if (document.getElementById('catalog').classList.contains('active')) {
-                renderProducts(isSearchActive ? searchResults : filteredProducts);
-            }
-            updateCartPrices();
-            saveCartToServer();
-            debouncedRenderCart();
-            clearInterval(activeTimers.get(productId));
-            activeTimers.delete(productId);
-            return;
-        }
-        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-        timerElement.textContent = `До кінця акції: ${days}д ${hours}г ${minutes}хв ${seconds}с`;
-    };
-    update();
-    const intervalId = setInterval(update, 1000);
-    timerElement.dataset.intervalId = intervalId;
-    activeTimers.set(productId, intervalId);
-}
-
-function selectColor(productId, index) {
-    const product = products.find(p => p._id === productId);
-    if (!product) return;
-    selectedColors[productId] = index;
-    saveToStorage('selectedColors', selectedColors);
-    const circles = document.querySelectorAll(`#color-options-${productId} .color-circle`);
-    circles.forEach(c => c.classList.remove('selected'));
-    circles[index].classList.add('selected');
-    const priceElement = document.getElementById(`price-${productId}`);
-    const basePrice = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? product.salePrice : product.price || 0;
-    const newPrice = basePrice + (product.colors[index].priceChange || 0);
-    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
-    while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
-    if (isOnSale) {
-        const saleSpan = document.createElement('span');
-        saleSpan.className = 'sale-price';
-        saleSpan.textContent = `${newPrice} грн`;
-        priceElement.appendChild(saleSpan);
-        const regularSpan = document.createElement('s');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${product.price + (product.colors[index].priceChange || 0)} грн`;
-        priceElement.appendChild(regularSpan);
-    } else {
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${newPrice} грн`;
-        priceElement.appendChild(regularSpan);
-    }
-}
-
-function updateColorPrice(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product) return;
-    const select = document.getElementById(`color-select-${productId}`);
-    const index = parseInt(select.value);
-    selectedColors[productId] = index;
-    saveToStorage('selectedColors', selectedColors);
-    const priceElement = document.getElementById(`price-${productId}`);
-    const basePrice = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? product.salePrice : product.price || 0;
-    const newPrice = basePrice + (product.colors[index].priceChange || 0);
-    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
-    while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
-    if (isOnSale) {
-        const saleSpan = document.createElement('span');
-        saleSpan.className = 'sale-price';
-        saleSpan.textContent = `${newPrice} грн`;
-        priceElement.appendChild(saleSpan);
-        const regularSpan = document.createElement('s');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${product.price + (product.colors[index].priceChange || 0)} грн`;
-        priceElement.appendChild(regularSpan);
-    } else {
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.textContent = `${newPrice} грн`;
-        priceElement.appendChild(regularSpan);
-    }
-}
-
-function updateMattressPrice(productId) {
-    const select = document.getElementById(`mattress-size-${productId}`);
-    const priceElement = document.getElementById(`price-${productId}`);
-    if (select && priceElement) {
-        const selectedOption = select.options[select.selectedIndex];
-        const price = selectedOption.getAttribute('data-price');
-        const salePrice = selectedOption.getAttribute('data-sale-price');
-        while (priceElement.firstChild) priceElement.removeChild(priceElement.firstChild);
-        if (salePrice && !isNaN(salePrice) && parseFloat(salePrice) > 0 && parseFloat(salePrice) < parseFloat(price)) {
-            const regularSpan = document.createElement('s');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${price} грн`;
-            priceElement.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.textContent = `${salePrice} грн`;
-            priceElement.appendChild(saleSpan);
-        } else {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${price} грн`;
-            priceElement.appendChild(regularSpan);
-        }
-        selectedMattressSizes[productId] = select.value;
-        saveToStorage('selectedMattressSizes', selectedMattressSizes);
-    }
-}
-
-function updateGroupSelection(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product || product.type !== 'group') return;
-
-    const checkboxes = document.querySelectorAll(`.group-product-item input[type="checkbox"]`);
-    let totalPrice = 0;
-    const selectedIds = [];
-
-    checkboxes.forEach(cb => {
-        const id = cb.value;
-        const p = products.find(p => p._id === id);
-        if (cb.checked && p) {
-            const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price || 0;
-            totalPrice += price;
-            selectedIds.push(id);
-        }
-    });
-
-    const priceDiv = document.querySelector('.group-total-price');
-    if (priceDiv) {
-        priceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
-    } else {
-        const newPriceDiv = document.createElement('div');
-        newPriceDiv.className = 'group-total-price';
-        newPriceDiv.textContent = `Загальна ціна: ${totalPrice} грн`;
-        const groupDiv = document.querySelector('.group-products');
-        if (groupDiv) groupDiv.insertBefore(newPriceDiv, groupDiv.querySelector('.buy-btn'));
-    }
-
-    saveToStorage(`groupSelection_${productId}`, selectedIds);
-}
-
-async function addToCartWithColor(productId) {
-    const product = products.find(p => p._id === productId);
-    if (!product) {
-        console.error('Товар не знайдено за _id:', productId);
-        showNotification('Товар не знайдено!', 'error');
-        return;
-    }
-    if (typeof product.id !== 'number' || isNaN(product.id)) {
-        console.error('Некоректний ID продукту:', product);
-        showNotification('Помилка: товар має некоректний числовий ідентифікатор!', 'error');
-        return;
-    }
-    if (product.colors?.length > 1 && selectedColors[productId] === undefined && product.type !== 'mattresses') {
-        showNotification('Будь ласка, виберіть колір!', 'error');
-        return;
-    }
-
-    let price = parseFloat(product.price || 0);
-    let colorData = null;
-    let sizeData = null;
-
-    if (product.type !== 'mattresses' && product.colors?.length > 0) {
-        const colorIndex = selectedColors[productId] !== undefined ? parseInt(selectedColors[productId]) : 0;
-        if (!product.colors[colorIndex]) {
-            showNotification('Обраний колір більше недоступний!', 'error');
-            delete selectedColors[productId];
-            saveToStorage('selectedColors', selectedColors);
-            return;
-        }
-        colorData = {
-            name: product.colors[colorIndex].name || 'Не вказано',
-            value: product.colors[colorIndex].value || product.colors[colorIndex].name || '',
-            priceChange: parseFloat(product.colors[colorIndex].priceChange || 0),
-            photo: product.colors[colorIndex].photo || ''
-        };
-        price = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date()) ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
-        price += parseFloat(colorData.priceChange);
-        console.log(`Колір для товару ${product.name}: ${colorData.name}`);
-    }
-
-    if (product.type === 'mattresses') {
-        const select = document.getElementById(`mattress-size-${productId}`);
-        if (!select || !selectedMattressSizes[productId]) {
-            showNotification('Будь ласка, виберіть розмір!', 'error');
-            return;
-        }
-        const size = selectedMattressSizes[productId];
-        const sizeInfo = product.sizes?.find(s => s.name === size);
-        if (!sizeInfo) {
-            showNotification('Обраний розмір більше недоступний!', 'error');
-            delete selectedMattressSizes[productId];
-            saveToStorage('selectedMattressSizes', selectedMattressSizes);
-            return;
-        }
-        // --- ВИПРАВЛЕННЯ: додаємо акційну ціну, якщо вона є ---
-        if (
-            typeof sizeInfo.salePrice === 'number' &&
-            !isNaN(sizeInfo.salePrice) &&
-            sizeInfo.salePrice < sizeInfo.price
-        ) {
-            price = parseFloat(sizeInfo.salePrice);
-        } else {
-            price = parseFloat(sizeInfo.price || 0);
-        }
-        if (isNaN(price) || price <= 0) {
-            console.error(`Некоректна ціна для розміру ${size} товару ${product.name}: ${price}`);
-            showNotification('Помилка: некоректна ціна для обраного розміру!', 'error');
-            return;
-        }
-        sizeData = size;
-    }
-
-    const qtyInput = document.getElementById(`quantity-${productId}`);
-    const quantity = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-
-    const normalizedColorName = colorData ? colorData.name.toLowerCase().replace(/\s+/g, '-') : 'no-color';
-    const normalizedSize = sizeData ? sizeData.toLowerCase().replace(/\s+/g, '-') : 'no-size';
-    const cartItemKey = `${product.id}_${normalizedColorName}_${normalizedSize}`;
-
-    const cartItem = {
-        id: product.id,
-        cartItemKey: cartItemKey,
-        name: product.name || 'Без імені',
-        quantity: quantity,
-        price: price,
-        photo: product.photos?.[0] || NO_IMAGE_URL,
-        color: colorData,
-        size: sizeData,
-        brand: product.brand || 'Не вказано'
-    };
-
-    if (!cartItem.id || !cartItem.name || !cartItem.quantity || !cartItem.price || isNaN(cartItem.price)) {
-        console.error('Некоректний елемент кошика:', cartItem);
-        showNotification('Помилка: некоректні дані товару!', 'error');
-        return;
-    }
-
-    const existingItemIndex = cart.findIndex(item => {
-        const itemColorName = item.color ? item.color.name.toLowerCase().replace(/\s+/g, '-') : 'no-color';
-        const itemSize = item.size ? item.size.toLowerCase().replace(/\s+/g, '-') : 'no-size';
-        return `${item.id}_${itemColorName}_${itemSize}` === cartItemKey;
-    });
-
-    if (existingItemIndex > -1) {
-        cart[existingItemIndex].quantity += cartItem.quantity;
-    } else {
-        cart.push(cartItem);
-    }
-
-    saveToStorage('cart', cart);
-    updateCartCount();
-    debouncedRenderCart();
-    showNotification(`${product.name} додано до кошика!`, 'success');
-
-    try {
-        await saveCartToServer();
-    } catch (error) {
-        console.error('Помилка синхронізації кошика з сервером:', error);
-        showNotification('Дані збережено локально, але не вдалося синхронізувати з сервером.', 'warning');
-    }
 }
 
 async function addGroupToCart(productId) {
@@ -3418,7 +3046,6 @@ async function addGroupToCart(productId) {
 
     let cart = loadFromStorage('cart', []);
 
-    // Перевірка валідності вибраних товарів
     const invalidItems = [];
     const cartItemsToAdd = [];
 
@@ -3438,7 +3065,6 @@ async function addGroupToCart(productId) {
         let selectedColor = null;
         let selectedSize = null;
 
-        // Перевірка кольору, якщо товар має кольори
         if (p.colors?.length > 0 && selectedColors[p._id] !== undefined) {
             const colorIndex = parseInt(selectedColors[p._id]);
             if (p.colors[colorIndex]) {
@@ -3456,7 +3082,6 @@ async function addGroupToCart(productId) {
             }
         }
 
-        // Перевірка розміру, якщо товар є матрацом
         if (p.type === 'mattresses' && selectedMattressSizes[p._id]) {
             selectedSize = selectedMattressSizes[p._id];
             const sizeInfo = p.sizes?.find(s => s.name === selectedSize);
@@ -3469,15 +3094,14 @@ async function addGroupToCart(productId) {
             }
         }
 
-        // Формуємо унікальний ключ для кошика
         const normalizedColorName = selectedColor ? selectedColor.name.toLowerCase().replace(/\s+/g, '-') : 'no-color';
         const normalizedSize = selectedSize ? selectedSize.toLowerCase().replace(/\s+/g, '-') : 'no-size';
         const cartItemId = `${p.id}_${normalizedColorName}_${normalizedSize}`;
 
         const cartItem = {
-            id: p.id, // Використовуємо числовий id
+            id: p.id,
             cartItemKey: cartItemId,
-            productId: p._id, // Зберігаємо _id для посилань
+            productId: p._id,
             name: p.name,
             price: parseFloat(price),
             quantity: qty,
@@ -3508,7 +3132,6 @@ async function addGroupToCart(productId) {
         return;
     }
 
-    // Додаємо товари до кошика
     cartItemsToAdd.forEach(cartItem => {
         const existingItemIndex = cart.findIndex(item => item.cartItemKey === cartItem.cartItemKey);
         if (existingItemIndex > -1) {
@@ -3525,10 +3148,8 @@ async function addGroupToCart(productId) {
         debouncedRenderCart();
         showNotification('Вибрані товари додано до кошика!', 'success');
 
-        // Скидаємо вибір групових товарів
         saveToStorage(`groupSelection_${productId}`, {});
         
-        // Скидаємо значення кількості в інтерфейсі
         product.groupProducts.forEach(id => {
             const qtyInput = document.getElementById(`group-quantity-${productId}-${id}`);
             if (qtyInput) {
@@ -3536,7 +3157,6 @@ async function addGroupToCart(productId) {
             }
         });
 
-        // Оновлюємо ціну та плаваючу кнопку
         const priceDiv = document.querySelector('.group-total-price');
         if (priceDiv) {
             priceDiv.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">0 грн</span>`;
@@ -3592,7 +3212,6 @@ async function fetchProductBySlug(slug) {
         }
 
         console.log('Знайдено продукт:', product.name, 'ID:', product._id);
-        // Оновлюємо локальний кеш
         products = products.filter(p => p._id !== product._id);
         products.push(product);
         saveToStorage('products', products);
@@ -3857,7 +3476,6 @@ async function updateCartPrices() {
     if (product.type === 'mattresses' && item.size) {
     const sizeInfo = product.sizes?.find(s => s.name === item.size);
     if (sizeInfo) {
-        // Враховуємо акційну ціну розміру, якщо вона є
         if (
             typeof sizeInfo.salePrice === 'number' &&
             !isNaN(sizeInfo.salePrice) &&
@@ -3991,7 +3609,20 @@ async function renderCart() {
         itemDiv.appendChild(img);
 
         const span = document.createElement('span');
-        span.textContent = `${item.name}${item.color && item.color.name && product?.type !== 'mattresses' ? ` (${item.color.name})` : ''}${item.size ? ` (${item.size})` : ''} - ${item.price * item.quantity} грн`;
+        let displayName = item.name;
+        if (product?.type === 'mattresses') {
+            if (item.size && !item.name.includes(`(${item.size})`)) {
+                displayName = `${item.name} (${item.size})`;
+            }
+        } else {
+            if (item.color && item.color.name) {
+                displayName += ` (${item.color.name})`;
+            }
+            if (item.size) {
+                displayName += ` (${item.size})`;
+            }
+        }
+        span.textContent = `${displayName} - ${item.price * item.quantity} грн`;
         if (!isAvailable) {
             span.textContent += ' (Товар недоступний)';
             span.style.color = 'red';
@@ -5125,6 +4756,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Дані ініціалізовано. Категорії:', categories.length, 'Продукти:', products.length);
         updateHeader();
         updateCartCount();
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
+        }
 
         renderCatalogDropdown();
 
@@ -5207,15 +4841,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             window.addEventListener('scroll', () => {
                 const headerHeight = header.offsetHeight;
+                const floatingFavorite = document.getElementById('floating-favorite');
                 if (window.scrollY > headerHeight) {
                     burgerMenu.classList.add('visible');
                     floatingCart.classList.add('visible');
+                    if (floatingFavorite) {
+                        floatingFavorite.classList.add('visible');
+                    }
                 } else {
                     burgerMenu.classList.remove('visible');
                     burgerMenu.classList.remove('active');
                     burgerContent.classList.remove('active');
                     burgerCatalogDropdown.classList.remove('active');
                     floatingCart.classList.remove('visible');
+                    if (floatingFavorite) {
+                        floatingFavorite.classList.remove('visible');
+                    }
                 }
             });
 
@@ -5814,3 +5455,575 @@ filterStyle.textContent = `
     }
 `;
 document.head.appendChild(filterStyle);
+
+/* Додаю CSS для select, щоб <option> з innerHTML виглядали коректно */
+if (!document.getElementById('mattress-select-style')) {
+    const mattressSelectStyle = document.createElement('style');
+    mattressSelectStyle.id = 'mattress-select-style';
+    mattressSelectStyle.textContent = `
+    select.custom-select option span {
+      color: #d32f2f;
+      font-weight: bold;
+    }
+    `;
+    document.head.appendChild(mattressSelectStyle);
+}
+
+// Додаю функцію для додавання товару в кошик
+function addToCart(cartItem) {
+    let cart = loadFromStorage('cart', []);
+    if (!Array.isArray(cart)) cart = [];
+    // Для товарів з кольорами порівнюємо ключові властивості color
+    const isSameColor = (a, b) => {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        return a.name === b.name && a.value === b.value && Number(a.priceChange) === Number(b.priceChange) && a.photo === b.photo;
+    };
+    const existing = cart.find(item => item.id === cartItem.id && item.size === cartItem.size && isSameColor(item.color, cartItem.color));
+    if (existing) {
+        existing.quantity += cartItem.quantity;
+    } else {
+        cart.push(cartItem);
+    }
+    saveToStorage('cart', cart);
+    if (typeof saveCartToServer === 'function') {
+        saveCartToServer();
+    }
+}
+
+// === ФУНКЦІЇ ДЛЯ ОБРАНОГО === //
+function getFavorites() {
+    return loadFromStorage('favorites', []);
+}
+
+function updateFavoriteCount() {
+    const badge = document.getElementById('favorite-count-badge');
+    if (badge) {
+        const count = getFavorites().length;
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'flex';
+        } else {
+            badge.textContent = '';
+            badge.style.display = 'none';
+        }
+        badge.setAttribute('data-count', count);
+    }
+}
+window.addEventListener('DOMContentLoaded', updateFavoriteCount);
+
+function updateFloatingFavorite() {
+    const favBtn = document.getElementById('floating-favorite');
+    const badge = document.getElementById('floating-favorite-count');
+    if (!favBtn || !badge) return;
+    const count = getFavorites().length;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+    } else {
+        badge.textContent = '';
+        badge.style.display = 'none';
+    }
+    badge.setAttribute('data-count', count);
+
+    // Показуємо кнопку якщо прокручено більше 60px (як floating-cart)
+    if (window.scrollY > 60) {
+        favBtn.classList.add('visible');
+    } else {
+        favBtn.classList.remove('visible');
+    }
+}
+window.addEventListener('scroll', updateFloatingFavorite);
+window.addEventListener('DOMContentLoaded', updateFloatingFavorite);
+
+window.addEventListener('DOMContentLoaded', () => {
+    const floatingFavBtn = document.getElementById('floating-favorite');
+    if (floatingFavBtn) {
+        floatingFavBtn.onclick = (e) => {
+            e.preventDefault();
+            renderFavoriteModal();
+        };
+    }
+});
+
+function isFavorite(productId) {
+    const favs = getFavorites();
+    return favs.includes(productId);
+}
+function addFavorite(productId) {
+    let favs = getFavorites();
+    if (!favs.includes(productId)) {
+        favs.push(productId);
+        saveToStorage('favorites', favs);
+        updateFavoriteCount();
+        if (typeof updateFloatingFavorite === 'function') {
+            updateFloatingFavorite();
+        }
+    }
+}
+
+function removeFavorite(productId) {
+    let favs = getFavorites();
+    favs = favs.filter(id => id !== productId);
+    saveToStorage('favorites', favs);
+    updateFavoriteCount();
+    if (typeof updateFloatingFavorite === 'function') {
+        updateFloatingFavorite();
+    }
+    updateFavoriteIconsOnPage(); // ОНОВЛЮЄМО ВСІ ІКОНКИ
+}
+
+function toggleFavorite(productId) {
+    if (isFavorite(productId)) {
+        removeFavorite(productId);
+        showNotification('Товар видалено з обраного', 'success');
+    } else {
+        addFavorite(productId);
+        showNotification('Товар додано в обране!', 'success');
+    }
+    updateFavoriteCount();
+    if (typeof updateFloatingFavorite === 'function') {
+        updateFloatingFavorite();
+    }
+}
+
+if (!document.getElementById('favorite-style')) {
+    const favoriteStyle = document.createElement('style');
+    favoriteStyle.id = 'favorite-style';
+    favoriteStyle.textContent = `
+    .favorite-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      cursor: pointer;
+      transition: transform 0.15s;
+      opacity: 0.8;
+    }
+    .favorite-icon svg {
+      width: 26px;
+      height: 26px;
+      stroke: #4caf50;
+      fill: none;
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    .favorite-icon.active svg {
+      fill: #4caf50;
+      stroke: #388e3c;
+      opacity: 1;
+    }
+    .favorite-icon:hover svg {
+      filter: drop-shadow(0 0 4px #a5d6a7);
+      opacity: 1;
+    }
+    `;
+    document.head.appendChild(favoriteStyle);
+}
+
+// === МОДАЛЬНЕ ВІКНО ОБРАНОГО === //
+if (!document.getElementById('favorite-modal-style')) {
+    const style = document.createElement('style');
+    style.id = 'favorite-modal-style';
+    style.textContent = `
+    .favorite-modal-bg {
+      position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.25); z-index: 10000; display: flex; align-items: center; justify-content: center;
+    }
+    .favorite-modal {
+      background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      min-width: 320px; max-width: 95vw; min-height: 120px; max-height: 80vh; overflow-y: auto; padding: 28px 24px 18px 24px; position: relative;
+      display: flex; flex-direction: column; align-items: flex-start;
+    }
+    .favorite-modal h2 { font-size: 1.3em; margin: 0 0 18px 0; }
+    .favorite-modal .favorite-list { width: 100%; }
+    .favorite-modal .favorite-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .favorite-modal .favorite-item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
+    .favorite-modal .favorite-item .remove-fav { color: #d32f2f; background: none; border: none; font-size: 22px; cursor: pointer; margin-left: 8px; }
+    .favorite-modal .close-fav-modal { position: absolute; top: 10px; right: 16px; background: none; border: none; font-size: 28px; color: #888; cursor: pointer; }
+    .favorite-modal .favorite-item .fav-title { font-weight: 500; font-size: 1.05em; }
+    .favorite-modal .favorite-item .fav-price { color: #388e3c; font-weight: 500; margin-left: 8px; }
+    .favorite-modal .favorite-item .fav-link { color: #1976d2; text-decoration: underline; cursor: pointer; }
+    `;
+    document.head.appendChild(style);
+}
+
+function renderFavoriteModal() {
+    let modalBg = document.getElementById('favorite-modal-bg');
+    if (modalBg) modalBg.remove();
+    modalBg = document.createElement('div');
+    modalBg.className = 'favorite-modal-bg';
+    modalBg.id = 'favorite-modal-bg';
+    modalBg.onclick = (e) => { if (e.target === modalBg) closeFavoriteModal(); };
+
+    const modal = document.createElement('div');
+    modal.className = 'favorite-modal';
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'close-fav-modal';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = closeFavoriteModal;
+    modal.appendChild(closeBtn);
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Обране';
+    modal.appendChild(h2);
+    const listDiv = document.createElement('div');
+    listDiv.className = 'favorite-list';
+    const favs = getFavorites();
+    if (!favs.length) {
+        const p = document.createElement('p');
+        p.textContent = 'Список обраного порожній.';
+        listDiv.appendChild(p);
+    } else {
+        favs.forEach(id => {
+            const p = products.find(p => p._id === id);
+            if (!p) return;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'favorite-item';
+            const img = document.createElement('img');
+            img.src = p.photos?.[0] || NO_IMAGE_URL;
+            img.alt = p.name;
+            img.onclick = () => { closeFavoriteModal(); openProduct(p.slug); };
+            itemDiv.appendChild(img);
+            const title = document.createElement('span');
+            title.className = 'fav-title';
+            title.textContent = p.name;
+            title.onclick = () => { closeFavoriteModal(); openProduct(p.slug); };
+            title.classList.add('fav-link');
+            itemDiv.appendChild(title);
+            // === Ціна для матраців ===
+            if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                const minPrice = Math.min(...p.sizes.map(s => s.price));
+                if (minSale !== null && minSale < minPrice) {
+                    const regularSpan = document.createElement('s');
+                    regularSpan.className = 'fav-price';
+                    regularSpan.style.color = '#888';
+                    regularSpan.textContent = `${minPrice} грн`;
+                    itemDiv.appendChild(regularSpan);
+                    const saleSpan = document.createElement('span');
+                    saleSpan.className = 'fav-price';
+                    saleSpan.style.color = '#ef4444';
+                    saleSpan.style.fontWeight = 'bold';
+                    saleSpan.style.marginLeft = '8px';
+                    saleSpan.textContent = `${minSale} грн`;
+                    itemDiv.appendChild(saleSpan);
+                } else {
+                    const price = document.createElement('span');
+                    price.className = 'fav-price';
+                    price.textContent = `${minPrice} грн`;
+                    itemDiv.appendChild(price);
+                }
+            } else if (p.type === 'group' && p.groupProducts?.length > 0) {
+                const groupPrices = p.groupProducts.map(id => {
+                    const gp = products.find(pr => pr._id === id);
+                    if (!gp) return Infinity;
+                    if (gp.type === 'mattresses' && gp.sizes?.length > 0) {
+                        const saleSizes = gp.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                        const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                        const minPrice = Math.min(...gp.sizes.map(s => s.price));
+                        return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
+                    }
+                    return (gp.salePrice && (gp.saleEnd === null || new Date(gp.saleEnd) > new Date())) ? gp.salePrice : gp.price;
+                });
+                const minPrice = Math.min(...groupPrices);
+                const price = document.createElement('span');
+                price.className = 'fav-price';
+                price.textContent = `від ${minPrice} грн`;
+                itemDiv.appendChild(price);
+            } else if (typeof p.price !== 'undefined') {
+                const price = document.createElement('span');
+                price.className = 'fav-price';
+                price.textContent = (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? `${p.salePrice} грн` : `${p.price} грн`;
+                itemDiv.appendChild(price);
+            }
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-fav';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = 'Видалити з обраного';
+            removeBtn.onclick = () => { 
+                removeFavorite(p._id); 
+                renderFavoriteModal(); 
+                if (typeof updateFloatingFavorite === 'function') {
+                    updateFloatingFavorite();
+                }
+            };
+            itemDiv.appendChild(removeBtn);
+            listDiv.appendChild(itemDiv);
+        });
+    }
+    modal.appendChild(listDiv);
+    modalBg.appendChild(modal);
+    document.body.appendChild(modalBg);
+    // Після оновлення списку модалки оновлюємо іконки на сторінці
+    updateFavoriteIconsOnPage();
+}
+
+function closeFavoriteModal() {
+    const modalBg = document.getElementById('favorite-modal-bg');
+    if (modalBg) modalBg.remove();
+}
+
+const favHeaderIcon = document.getElementById('favorite-header-icon');
+if (favHeaderIcon) {
+    favHeaderIcon.onclick = (e) => {
+        e.preventDefault();
+        renderFavoriteModal();
+    };
+}
+
+function updateFavoriteIconsOnPage() {
+    const favs = getFavorites();
+    document.querySelectorAll('.favorite-icon[data-product-id]').forEach(icon => {
+        const pid = icon.getAttribute('data-product-id');
+        if (favs.includes(pid) || favs.includes(Number(pid))) {
+            icon.classList.add('active');
+        } else {
+            icon.classList.remove('active');
+        }
+    });
+}
+
+function createCharP(label, value) {
+    const p = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = `${label}: `;
+    p.appendChild(strong);
+
+    if (typeof value === 'string') {
+        const span = document.createElement('span');
+        span.innerHTML = value; // Використовуємо innerHTML для обробки <br>
+        span.style.marginLeft = '10px';
+        span.style.whiteSpace = 'pre-wrap'; // Дозволяє відображати перенос рядків
+        p.appendChild(span);
+    } else {
+        const span = document.createElement('span');
+        span.innerHTML = value;
+        span.style.marginLeft = '10px';
+        span.style.whiteSpace = 'pre-wrap';
+        p.appendChild(span);
+    }
+
+    return p;
+}
+
+function createProductElement(product) {
+    const productElement = document.createElement('div');
+    productElement.className = 'product';
+    productElement.dataset.id = product._id;
+
+    const imgLink = document.createElement('a');
+    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    imgLink.onclick = (e) => {
+        e.preventDefault();
+        openProduct(product.slug);
+    };
+    const img = document.createElement('img');
+    img.src = product.photos?.[0] || NO_IMAGE_URL;
+    img.alt = product.name;
+    img.loading = 'lazy';
+    imgLink.appendChild(img);
+    productElement.appendChild(imgLink);
+
+    const h3Link = document.createElement('a');
+    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    h3Link.onclick = (e) => {
+        e.preventDefault();
+        openProduct(product.slug);
+    };
+    const h3 = document.createElement('h3');
+    h3.textContent = product.name;
+    h3Link.appendChild(h3);
+    productElement.appendChild(h3Link);
+
+    // === Ціна ===
+    const priceDiv = document.createElement('div');
+    priceDiv.className = 'price';
+    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
+
+    if (product.type === 'mattresses' && product.sizes?.length > 0) {
+        const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+        const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+        const minPrice = Math.min(...product.sizes.map(s => s.price));
+        if (minSale !== null && minSale < minPrice) {
+            const regularSpan = document.createElement('s');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.textContent = `${minSale} грн`;
+            priceDiv.appendChild(saleSpan);
+        } else {
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${minPrice} грн`;
+            priceDiv.appendChild(regularSpan);
+        }
+    } else if (product.type === 'group' && product.groupProducts?.length > 0) {
+        const groupPrices = product.groupProducts.map(id => {
+            const p = products.find(p => p._id === id);
+            if (!p) return Infinity;
+            if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                const minPrice = Math.min(...p.sizes.map(s => s.price));
+                return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
+            }
+            return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
+        });
+        const minPrice = Math.min(...groupPrices);
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.textContent = `від ${minPrice} грн`;
+        priceDiv.appendChild(regularSpan);
+    } else {
+        if (isOnSale) {
+            const regularSpan = document.createElement('s');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${product.price} грн`;
+            priceDiv.appendChild(regularSpan);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.textContent = `${product.salePrice} грн`;
+            priceDiv.appendChild(saleSpan);
+        } else {
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.textContent = `${product.price} грн`;
+            priceDiv.appendChild(regularSpan);
+        }
+    }
+
+    // === Блок дій (favorite + cart) ===
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'product-actions';
+    actionsDiv.style.display = 'flex';
+    actionsDiv.style.alignItems = 'center';
+    actionsDiv.style.gap = '10px';
+    actionsDiv.style.marginTop = '0';
+    actionsDiv.style.justifyContent = 'flex-end';
+
+    // Іконка серця (favorite)
+    const favoriteIcon = document.createElement('div');
+    favoriteIcon.className = 'favorite-icon';
+    favoriteIcon.setAttribute('data-product-id', product._id);
+    favoriteIcon.style.margin = '0';
+    favoriteIcon.innerHTML = `
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#4caf50" stroke-width="2" fill="none"/>
+      </svg>
+    `;
+    function updateFavoriteIcon() {
+        if (isFavorite(product._id)) {
+            favoriteIcon.classList.add('active');
+        } else {
+            favoriteIcon.classList.remove('active');
+        }
+    }
+    updateFavoriteIcon();
+    favoriteIcon.onclick = (e) => {
+        e.stopPropagation();
+        toggleFavorite(product._id);
+        updateFavoriteIcon();
+    };
+    actionsDiv.appendChild(favoriteIcon);
+
+    // Іконка кошика (для простих товарів)
+    if (product.type !== 'mattresses' && product.type !== 'group') {
+        const cartIcon = document.createElement('div');
+        cartIcon.className = 'cart-icon';
+        cartIcon.onclick = async (e) => {
+            e.preventDefault();
+            if (product.colors?.length > 1) {
+                openProduct(product.slug);
+                showNotification('Виберіть потрібний колір', 'error');
+                return;
+            }
+            await addToCartWithColor(product._id);
+            cartIcon.classList.add('added');
+            setTimeout(() => cartIcon.classList.remove('added'), 2000);
+        };
+        actionsDiv.appendChild(cartIcon);
+    }
+
+    // === Обгортка для ціни і кнопок ===
+    const rowTop = document.createElement('div');
+    rowTop.className = 'product-row-top';
+    rowTop.style.display = 'flex';
+    rowTop.style.alignItems = 'center';
+    rowTop.style.justifyContent = 'space-between';
+    rowTop.style.gap = '10px';
+    rowTop.appendChild(priceDiv);
+    rowTop.appendChild(actionsDiv);
+    productElement.appendChild(rowTop);
+
+    if (isOnSale && product.saleEnd) {
+        const timerDiv = document.createElement('div');
+        timerDiv.className = 'sale-timer';
+        timerDiv.id = `timer-${product._id}`;
+        productElement.appendChild(timerDiv);
+        updateSaleTimer(product._id, product.saleEnd);
+    }
+
+    return productElement;
+}
+
+async function addToCartWithColor(productId) {
+    const product = products.find(p => p._id === productId || p.id === productId);
+    if (!product) {
+        showNotification('Товар не знайдено!', 'error');
+        return;
+    }
+    let color = null;
+    if (product.colors?.length > 0) {
+        const colorIndex = typeof selectedColors[product._id] !== 'undefined' ? selectedColors[product._id] : 0;
+        color = product.colors[colorIndex] || null;
+    }
+    let size = null;
+    if (product.type === 'mattresses' && product.sizes?.length > 0) {
+        size = selectedMattressSizes[product._id] || product.sizes[0]?.name;
+    }
+    const qtyInput = document.getElementById(`quantity-${product._id}`);
+    let quantity = 1;
+    if (qtyInput && !isNaN(parseInt(qtyInput.value))) {
+        quantity = Math.max(1, parseInt(qtyInput.value));
+    }
+    let price = product.price;
+    if (product.type === 'mattresses' && size) {
+        const sizeInfo = product.sizes.find(s => s.name === size);
+        if (sizeInfo) {
+            price = sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price ? sizeInfo.salePrice : sizeInfo.price;
+        }
+    } else if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
+        price = product.salePrice;
+    }
+    if (color && color.priceChange) {
+        price += parseFloat(color.priceChange);
+    }
+    const cartItem = {
+        id: product.id,
+        name: product.name,
+        quantity,
+        price: parseFloat(price),
+        photo: product.photos?.[0] || NO_IMAGE_URL,
+        color,
+        size
+    };
+    addToCart(cartItem);
+    showNotification('Товар додано в кошик!', 'success');
+    updateCartCount();
+}
+
+function selectColor(productId, colorIndex) {
+    selectedColors[productId] = colorIndex;
+    saveToStorage('selectedColors', selectedColors);
+    // Підсвічування вибраного кольору
+    const colorCircles = document.querySelectorAll(`#color-options-${productId} .color-circle`);
+    colorCircles.forEach((circle, idx) => {
+        if (idx === colorIndex) {
+            circle.classList.add('selected');
+        } else {
+            circle.classList.remove('selected');
+        }
+    });
+}

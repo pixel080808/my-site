@@ -262,6 +262,12 @@
                 <input aria-label="Пошук товарів" id="search" placeholder="Пошук..." type="text"/>
                 <button aria-label="Шукати" class="search-btn" onclick="searchProducts()"></button>
             </div>
+<span id="favorite-header-icon" class="favorite-icon" title="Обране" style="margin-right:18px;vertical-align:middle;cursor:pointer;position:relative;">
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#4caf50" stroke-width="2" fill="none"/>
+  </svg>
+  <span id="favorite-count-badge" style="position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:#4caf50;color:#fff;font-size:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:bold;box-shadow:0 1px 4px #0002;z-index:2;"></span>
+</span>
             <div class="cart" onclick="showSection('cart')">
                 <span class="cart-count">0</span>
             </div>
@@ -348,7 +354,13 @@
         <div id="gallery-thumbnails"></div>
     </div>
 </div>
-    <div class="burger-menu" id="burger-menu">
+<div class="floating-cart" id="floating-cart">
+    <span class="cart-count"></span>
+</div>
+<div class="floating-favorite" id="floating-favorite">
+    <span id="floating-favorite-count"></span>
+</div>
+<div class="burger-menu" id="burger-menu">
         <div class="burger-icon" id="burger-icon">
             <span></span>
             <span></span>
@@ -365,9 +377,6 @@
                 <div class="burger-catalog-dropdown" id="burger-catalog-dropdown"></div>
             </div>
         </div>
-    </div>
-    <div class="floating-cart" id="floating-cart">
-        <span class="cart-count"></span>
     </div>
     <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92b885bfda26c00c',t:'MTc0Mzg1MDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
