@@ -5340,7 +5340,7 @@ async function openEditProductModal(productId) {
             <label for="product-brand">Виробник</label>
             <select id="product-category">
                 <option value="">Без категорії</option>
-                ${categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('')}
+                ${categories.map(c => `<option value="${c.slug}" ${c.slug === product.category ? 'selected' : ''}>${c.name}</option>`).join('')}
             </select><br/>
             <label for="product-category">Категорія</label>
             <select id="product-subcategory">
@@ -5417,30 +5417,32 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-    // Завантажуємо категорії перед оновленням підкатегорій
     await loadCategories();
 
     const categorySelect = document.getElementById('product-category');
     const subcatSelect = document.getElementById('product-subcategory');
     if (categorySelect && subcatSelect) {
-        // Оновлюємо список категорій
+        // Оновлюємо список категорій по slug
         categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
-            categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
-        categorySelect.addEventListener('change', updateSubcategories);
+            categories.map(c => `<option value="${c.slug}" ${c.slug === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
+        categorySelect.value = product.category || '';
+        categorySelect.addEventListener('change', function() {
+            updateSubcategories(categorySelect.value);
+        });
 
-        // Оновлюємо підкатегорії
-        await updateSubcategories();
+        // Оновлюємо підкатегорії для вибраної категорії
+        updateSubcategories(product.category);
 
-        // Встановлюємо підкатегорію
-        if (product.subcategory) {
-            const category = categories.find(c => c.name === product.category);
+        // Встановлюємо підкатегорію по slug
+        if (product.subcategory && product.category) {
+            const category = categories.find(c => c.slug === product.category);
             if (category && category.subcategories.some(sub => sub.slug === product.subcategory)) {
                 subcatSelect.value = product.subcategory;
-                console.log('Встановлено subcategory:', product.subcategory);
             } else {
                 subcatSelect.value = '';
-                console.warn('Підкатегорія не знайдена в опціях:', product.subcategory);
             }
+        } else {
+            subcatSelect.value = '';
         }
     } else {
         console.warn('Елемент #product-category або #product-subcategory не знайдено');
@@ -5491,9 +5493,8 @@ async function openEditProductModal(productId) {
     const saveButton = document.getElementById('save-product-btn');
     if (saveButton) {
         saveButton.addEventListener('click', () => saveEditedProduct(productId));
-    } else {
-        console.warn('Кнопка #save-product-btn не знайдена');
     }
+}
 
     // Додаємо обробник подій для акційної ціни в режимі редагування
     const salePriceInput = document.getElementById('product-sale-price');
