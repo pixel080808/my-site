@@ -70,7 +70,7 @@ function loadFromStorage(key, defaultValue) {
         const data = JSON.parse(decompressed) || defaultValue;
         if (key === 'products') {
             const validCategories = categories.map(cat => cat.name);
-            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.slug));
+            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
             const result = data.map(product => {
                 if (product.subcategory && !validSubcategories.includes(product.subcategory)) {
                     console.warn(`Очищаємо невалідну підкатегорію ${product.subcategory} для товару ${product.name}`);
@@ -2535,7 +2535,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -2606,7 +2606,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span clas
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грнktur  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
         return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
@@ -2936,7 +2936,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -2953,7 +2953,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span clas
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -6092,7 +6092,7 @@ if (product.type === 'mattresses' && product.sizes?.length > 0) {
         oldRow.style.minHeight = '1.2em';
         const regularSpan = document.createElement('span');
         regularSpan.className = 'regular-price';
-        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
         oldRow.appendChild(regularSpan);
         priceDiv.appendChild(oldRow);
         hasOldPrice = true;
@@ -6135,7 +6135,7 @@ if (product.type === 'mattresses' && product.sizes?.length > 0) {
         oldRow.style.minHeight = '1.2em';
         const regularSpan = document.createElement('span');
         regularSpan.className = 'regular-price';
-        regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+        regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
         oldRow.appendChild(regularSpan);
         priceDiv.appendChild(oldRow);
         hasOldPrice = true;
