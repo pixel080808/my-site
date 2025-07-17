@@ -1259,6 +1259,7 @@ function renderBreadcrumbs() {
     breadcrumbsContainer.appendChild(homeSpan);
 
     const pathSegments = window.location.pathname.slice(1).split('/').filter(segment => segment);
+
     if (isSearchActive && document.getElementById('search')?.value) {
         homeSpan.appendChild(document.createTextNode(' > '));
         const searchSpan = document.createElement('span');
@@ -1292,6 +1293,8 @@ function renderBreadcrumbs() {
             link.style.padding = '0 5px';
 
             let displayText = segment;
+
+            // Визначаємо, що показувати
             if (segment === 'contacts') displayText = 'Контакти';
             else if (segment === 'about') displayText = 'Про нас';
             else if (segment === 'cart') displayText = 'Кошик';
@@ -1300,14 +1303,12 @@ function renderBreadcrumbs() {
                 link.style.cursor = 'default';
                 link.onclick = (e) => e.preventDefault();
             } else {
-                const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === segment);
+                // Пошук категорії по slug
+                const cat = categories.find(c => c.slug === segment);
                 if (cat) displayText = cat.name;
                 else {
-                    // Пошук підкатегорії спочатку по transliterate, потім по slug
-                    let subCat = categories.flatMap(c => c.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === segment);
-                    if (!subCat) {
-                        subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === segment);
-                    }
+                    // Пошук підкатегорії по slug
+                    let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === segment);
                     if (subCat) displayText = subCat.name;
                 }
             }
@@ -1315,10 +1316,12 @@ function renderBreadcrumbs() {
             link.textContent = displayText;
             link.dataset.path = currentPath;
 
+            // Додаємо обробник переходу для всіх breadcrumb, крім останнього (поточна сторінка)
             if (index !== pathSegments.length - 1 || !currentProduct) {
                 link.onclick = (e) => {
                     e.preventDefault();
                     const parts = currentPath.slice(1).split('/');
+                    // parts[0] - категорія, parts[1] - підкатегорія (якщо є)
                     if (parts[0] === 'contacts') {
                         showSection('contacts');
                     } else if (parts[0] === 'about') {
@@ -1326,19 +1329,32 @@ function renderBreadcrumbs() {
                     } else if (parts[0] === 'cart') {
                         showSection('cart');
                     } else {
-                        const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
+                        // Категорія
+                        const cat = categories.find(c => c.slug === parts[0]);
                         if (cat) {
-                            currentCategory = cat.name;
-                            currentSubcategory = null;
+                            currentCategory = cat.slug;
                             currentProduct = null;
-                            if (parts.length >= 2) {
-                                const subCat = categories.flatMap(c => c.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === parts[1]);
-                                if (subCat) currentSubcategory = subCat.name;
+                            // Якщо клік по категорії (index === 0), підкатегорія не встановлюється
+                            if (parts.length >= 2 && index > 0) {
+                                // Якщо клік по підкатегорії
+                                const subCat = (cat.subcategories || []).find(sc => sc.slug === parts[1]);
+                                if (subCat) {
+                                    currentSubcategory = subCat.slug;
+                                } else {
+                                    currentSubcategory = null;
+                                }
+                            } else {
+                                // Якщо клік по категорії
+                                currentSubcategory = null;
                             }
                             showSection('catalog');
                         }
                     }
                 };
+            } else {
+                // Останній breadcrumb (поточний товар) — не клікабельний
+                link.onclick = (e) => e.preventDefault();
+                link.style.cursor = 'default';
             }
 
             span.appendChild(link);
@@ -1373,10 +1389,7 @@ function renderBreadcrumbs() {
 
 function renderCategories() {
     const catDiv = document.getElementById('categories');
-    if (!catDiv) {
-        console.warn('Елемент #categories не знайдено в DOM');
-        return;
-    }
+    if (!catDiv) return;
     while (catDiv.firstChild) catDiv.removeChild(catDiv.firstChild);
 
     if (!categories || categories.length === 0) {
@@ -1391,11 +1404,10 @@ function renderCategories() {
         categoryDiv.className = 'category';
 
         const imgLink = document.createElement('a');
-        imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
-        imgLink.style.textDecoration = 'none';
+        imgLink.href = `/${cat.slug}`;
         imgLink.onclick = (e) => {
             e.preventDefault();
-            currentCategory = cat.name;
+            currentCategory = cat.slug;
             currentSubcategory = null;
             currentProduct = null;
             isSearchActive = false;
@@ -1416,11 +1428,10 @@ function renderCategories() {
         categoryDiv.appendChild(imgLink);
 
         const pLink = document.createElement('a');
-        pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
-        pLink.style.textDecoration = 'none';
+        pLink.href = `/${cat.slug}`;
         pLink.onclick = (e) => {
             e.preventDefault();
-            currentCategory = cat.name;
+            currentCategory = cat.slug;
             currentSubcategory = null;
             currentProduct = null;
             isSearchActive = false;
@@ -1441,11 +1452,10 @@ function renderCategories() {
         subcategoriesDiv.className = 'subcategories';
         (cat.subcategories || []).forEach(sub => {
             const subLink = document.createElement('a');
-            subLink.href = `/${transliterate(cat.name.replace('ь', ''))}/${sub.slug}`;
-            subLink.style.textDecoration = 'none';
+            subLink.href = `/${cat.slug}/${sub.slug}`;
             subLink.onclick = (e) => {
                 e.preventDefault();
-                currentCategory = cat.name;
+                currentCategory = cat.slug;
                 currentSubcategory = sub.slug;
                 currentProduct = null;
                 isSearchActive = false;
@@ -1479,7 +1489,7 @@ function renderCatalogDropdown() {
     categories.forEach(cat => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'dropdown-item';
-        itemDiv.dataset.category = cat.name;
+        itemDiv.dataset.category = cat.slug;
 
         const span = document.createElement('span');
         span.textContent = cat.name;
@@ -1520,7 +1530,7 @@ function renderCatalogDropdown() {
             if (!cat.subcategories || cat.subcategories.length === 0) {
                 e.preventDefault();
                 currentProduct = null;
-                currentCategory = cat.name;
+                currentCategory = cat.slug;
                 currentSubcategory = null;
                 isSearchActive = false;
                 searchQuery = '';
@@ -1575,7 +1585,7 @@ function renderCatalogDropdown() {
             p.onclick = (e) => {
                 e.stopPropagation();
                 currentProduct = null;
-                currentCategory = cat.name;
+                currentCategory = cat.slug;
                 currentSubcategory = sub.slug;
                 isSearchActive = false;
                 searchQuery = '';
@@ -1671,27 +1681,27 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             itemDiv.className = 'category-item';
 
             const imgLink = document.createElement('a');
-            imgLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+            imgLink.href = `/${cat.slug}`;
             imgLink.onclick = (e) => {
                 e.preventDefault();
-                currentCategory = cat.name;
+                currentCategory = cat.slug;
                 currentSubcategory = null;
                 currentProduct = null;
                 currentPage = 1;
                 showSection('catalog');
             };
             const img = document.createElement('img');
-            img.src = cat.image || NO_IMAGE_URL;
+            img.src = cat.image || cat.photo || NO_IMAGE_URL;
             img.alt = cat.name;
             img.loading = 'lazy';
             imgLink.appendChild(img);
             itemDiv.appendChild(imgLink);
 
             const pLink = document.createElement('a');
-            pLink.href = `/${transliterate(cat.name.replace('ь', ''))}`;
+            pLink.href = `/${cat.slug}`;
             pLink.onclick = (e) => {
                 e.preventDefault();
-                currentCategory = cat.name;
+                currentCategory = cat.slug;
                 currentSubcategory = null;
                 currentProduct = null;
                 currentPage = 1;
@@ -1706,7 +1716,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
         });
         productsDiv.appendChild(categoryList);
     } else {
-        const selectedCat = categories.find(c => c.name === category);
+        const selectedCat = categories.find(c => c.slug === category);
         if (!selectedCat) {
             const p = document.createElement('p');
             p.textContent = 'Категорія не знайдена';
@@ -1714,11 +1724,20 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             return;
         }
 
-        if (!currentProduct) {
-            const h2 = document.createElement('h2');
-            h2.textContent = category;
-            productsDiv.appendChild(h2);
+        // --- ВИПРАВЛЕНО: Відображаємо назву категорії або підкатегорії ---
+        let headerText = selectedCat.name;
+        let selectedSubCat = null;
+        if (subcategory) {
+            selectedSubCat = selectedCat.subcategories?.find(sub => sub.slug === subcategory);
+            if (selectedSubCat) {
+                headerText = selectedSubCat.name;
+            }
+        }
+        const h2 = document.createElement('h2');
+        h2.textContent = headerText;
+        productsDiv.appendChild(h2);
 
+        if (!currentProduct) {
             const subFilterDiv = document.createElement('div');
             subFilterDiv.id = 'subcategory-filter';
             subFilterDiv.className = 'subcategory-filter';
@@ -1726,7 +1745,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             subButtonsDiv.className = 'subcategory-buttons';
 
             const allBtnLink = document.createElement('a');
-            allBtnLink.href = `/${transliterate(category.replace('ь', ''))}`;
+            allBtnLink.href = `/${selectedCat.slug}`;
             allBtnLink.onclick = (e) => {
                 e.preventDefault();
                 currentSubcategory = null;
@@ -1740,7 +1759,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
 
             (selectedCat.subcategories || []).forEach(sub => {
                 const btnLink = document.createElement('a');
-                btnLink.href = `/${transliterate(category.replace('ь', ''))}/${sub.slug}`;
+                btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
                 btnLink.onclick = (e) => {
                     e.preventDefault();
                     currentSubcategory = sub.slug;
@@ -2479,79 +2498,70 @@ async function renderProductDetails() {
         leftDiv.appendChild(thumbnailContainer);
         topDiv.appendChild(leftDiv);
 
-        const rightDiv = document.createElement('div');
-        rightDiv.className = 'product-detail-right';
+const rightDiv = document.createElement('div');
+rightDiv.className = 'product-detail-right';
 
-        const h2 = document.createElement('h2');
-        h2.textContent = product.name;
-        rightDiv.appendChild(h2);
+const h2 = document.createElement('h2');
+h2.textContent = product.name;
+rightDiv.appendChild(h2);
 
-        const priceDiv = document.createElement('div');
-        priceDiv.className = 'price product-detail-price';
-        priceDiv.id = `price-${product._id}`;
-        if (product.type === 'mattresses' && product.sizes?.length > 0) {
-            // Шукаємо мінімальну акційну ціну серед розмірів
-            const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-            const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-            const minPrice = Math.min(...product.sizes.map(s => s.price));
-            if (minSale !== null && minSale < minPrice) {
-                const regularSpan = document.createElement('s');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(regularSpan);
-                const saleSpan = document.createElement('span');
-                saleSpan.className = 'sale-price';
-                saleSpan.textContent = `${minSale} грн`;
-                priceDiv.appendChild(saleSpan);
-            } else {
-                const regularSpan = document.createElement('span');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${minPrice} грн`;
-                priceDiv.appendChild(regularSpan);
+// Для матраців не відображаємо ціну зверху
+if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
+    const priceDiv = document.createElement('div');
+    priceDiv.className = 'price product-detail-price';
+    priceDiv.id = `price-${product._id}`;
+    if (product.type === 'group' && product.groupProducts?.length > 0) {
+        const groupPrices = product.groupProducts.map(id => {
+            const p = products.find(p => p._id === id);
+            if (!p) return Infinity;
+            if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                const minPrice = Math.min(...p.sizes.map(s => s.price));
+                return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
             }
-        } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-            const groupPrices = product.groupProducts.map(id => {
-                const p = products.find(p => p._id === id);
-                if (!p) return Infinity;
-                if (p.type === 'mattresses' && p.sizes?.length > 0) {
-                    const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-                    const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-                    const minPrice = Math.min(...p.sizes.map(s => s.price));
-                    return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
-                }
-                return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
-            });
-            const minPrice = Math.min(...groupPrices);
+            return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
+        });
+        const minPrice = Math.min(...groupPrices);
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
+        priceDiv.appendChild(regularSpan);
+        const emptySpan = document.createElement('span');
+        emptySpan.style.visibility = 'hidden';
+        emptySpan.textContent = '0 грн';
+        priceDiv.appendChild(emptySpan);
+    } else {
+        if (isOnSale) {
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `від ${minPrice} грн`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
-            rightDiv.appendChild(priceDiv);
+            const saleSpan = document.createElement('span');
+            saleSpan.className = 'sale-price';
+            saleSpan.innerHTML = `<span class='price-value'>${initialPrice}</span> <span class='price-suffix'>грн</span>`;
+            priceDiv.appendChild(saleSpan);
         } else {
-            if (isOnSale) {
-                const regularSpan = document.createElement('s');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${product.price} грн`;
-                priceDiv.appendChild(regularSpan);
-                const saleSpan = document.createElement('span');
-                saleSpan.className = 'sale-price';
-                saleSpan.textContent = `${initialPrice} грн`;
-                priceDiv.appendChild(saleSpan);
-            } else {
-                const regularSpan = document.createElement('span');
-                regularSpan.className = 'regular-price';
-                regularSpan.textContent = `${initialPrice} грн`;
-                priceDiv.appendChild(regularSpan);
-            }
-            rightDiv.appendChild(priceDiv);
-            if (isOnSale && product.saleEnd && typeof updateSaleTimer === 'function') {
-                const timerDiv = document.createElement('div');
-                timerDiv.className = 'sale-timer';
-                timerDiv.id = `timer-${product._id}`;
-                rightDiv.appendChild(timerDiv);
-                await updateSaleTimer(product._id, product.saleEnd);
-            }
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
+            regularSpan.innerHTML = `<span class='price-value'>${initialPrice}</span> <span class='price-suffix'>грн</span>`;
+            priceDiv.appendChild(regularSpan);
+            const emptySpan = document.createElement('span');
+            emptySpan.style.visibility = 'hidden';
+            emptySpan.textContent = '0 грн';
+            priceDiv.appendChild(emptySpan);
         }
+    }
+    rightDiv.appendChild(priceDiv);
+    if (isOnSale && product.saleEnd && typeof updateSaleTimer === 'function') {
+        const timerDiv = document.createElement('div');
+        timerDiv.className = 'sale-timer';
+        timerDiv.id = `timer-${product._id}`;
+        rightDiv.appendChild(timerDiv);
+        await updateSaleTimer(product._id, product.saleEnd);
+    }
+}
+
         // Додаємо select для вибору розміру матрацу
         if (product.type === 'mattresses' && product.sizes?.length > 0) {
             const sizeDiv = document.createElement('div');
@@ -2594,14 +2604,13 @@ async function renderProductDetails() {
             arrow.style.pointerEvents = 'none';
             selectedDiv.appendChild(arrow);
 
-            // Відображення вибраного розміру
-            function getOptionHTML(size) {
-                if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style=\"color:#888;\">${size.price} грн  <span style=\"color:#ef4444;font-weight:bold;\">${size.salePrice} грн</span></span>`;
-                } else {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style=\"color:#222;\">${size.price} грн</span></span>`;
-                }
-            }
+function getOptionHTML(size) {
+    if (size.salePrice && size.salePrice < size.price) {
+        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+    } else {
+        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
+    }
+}
 
             let selectedSize = product.sizes[0];
             selectedDiv.innerHTML = getOptionHTML(selectedSize);
@@ -2654,27 +2663,38 @@ async function renderProductDetails() {
             });
             customSelect.appendChild(optionsList);
 
-            // Відкриття/закриття списку
-            selectedDiv.onclick = function(e) {
-                e.stopPropagation();
-                optionsList.style.display = optionsList.style.display === 'block' ? 'none' : 'block';
-                arrow.style.transform = optionsList.style.display === 'block' ? 'rotate(180deg)' : 'none';
-            };
-            // Створюємо унікальний обробник для цього випадаючого меню
-            const closeDropdownHandler = function(e) {
-                // Перевіряємо, чи клік був поза межами випадаючого меню
-                if (!customSelect.contains(e.target)) {
-                    optionsList.style.display = 'none';
-                    arrow.style.transform = 'none';
-                    // Блокуємо подію, щоб уникнути небажаних переходів
-                    if (e.target.closest('a')) {
-                        e.preventDefault();
-                    }
-                    e.stopPropagation();
-                    return false;
-                }
-            };
-            document.addEventListener('click', closeDropdownHandler);
+// Відкриття/закриття списку
+let wasJustClosed = false;
+selectedDiv.onclick = function(e) {
+    e.stopPropagation();
+    if (optionsList.style.display === 'block') {
+        optionsList.style.display = 'none';
+        arrow.style.transform = 'none';
+    } else {
+        optionsList.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+    }
+};
+// Створюємо унікальний обробник для цього випадаючого меню
+const closeDropdownHandler = function(e) {
+    if (!customSelect.contains(e.target) && optionsList.style.display === 'block') {
+        optionsList.style.display = 'none';
+        arrow.style.transform = 'none';
+        wasJustClosed = true;
+        // Блокуємо подію, щоб уникнути небажаних переходів
+        e.preventDefault();
+        e.stopPropagation();
+        setTimeout(() => { wasJustClosed = false; }, 0);
+        return false;
+    }
+    if (wasJustClosed) {
+        e.preventDefault();
+        e.stopPropagation();
+        wasJustClosed = false;
+        return false;
+    }
+};
+document.addEventListener('click', closeDropdownHandler, true);
             
             // Зберігаємо посилання на обробник для можливого видалення
             customSelect._closeDropdownHandler = closeDropdownHandler;
@@ -2914,35 +2934,35 @@ async function renderProductDetails() {
                     const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
                     const minPrice = Math.min(...p.sizes.map(s => s.price));
                     if (minSale !== null && minSale < minPrice) {
-                        const regularSpan = document.createElement('s');
+                        const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.textContent = `${minPrice} грн`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
-                        saleSpan.textContent = `${minSale} грн`;
+                        saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.textContent = `${minPrice} грн`;
+                        regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                     }
                 } else {
                     const isOnSaleP = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date());
                     if (isOnSaleP) {
-                        const regularSpan = document.createElement('s');
+                        const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.textContent = `${p.price} грн`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
-                        saleSpan.textContent = `${p.salePrice} грн`;
+                        saleSpan.innerHTML = `<span class='price-value'>${p.salePrice}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.textContent = `${p.price} грн`;
+                        regularSpan.innerHTML = `<span class='price-value'>${p.price}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                     }
                 }
@@ -3214,6 +3234,38 @@ async function addGroupToCart(productId) {
 }
 
 async function fetchProductBySlug(slug) {
+    // Перевіряємо, чи slug відповідає категорії
+    const category = categories.find(c => transliterate(c.name.replace('ь', '')) === slug);
+    if (category) {
+        console.log('fetchProductBySlug: slug відповідає категорії:', category.name);
+        currentCategory = category.name;
+        currentSubcategory = null;
+        currentProduct = null;
+        isSearchActive = false;
+        renderCatalog(currentCategory, null);
+        showSection('catalog');
+        return null; // Повертаємо null, щоб позначити, що це не продукт
+    }
+
+    // Перевіряємо, чи slug відповідає підкатегорії
+    const subcategory = categories
+        .flatMap(c => c.subcategories || [])
+        .find(sc => sc.slug === slug || transliterate(sc.name.replace('ь', '')) === slug);
+    if (subcategory) {
+        const parentCategory = categories.find(c => c.subcategories?.includes(subcategory));
+        if (parentCategory) {
+            console.log('fetchProductBySlug: slug відповідає підкатегорії:', subcategory.name);
+            currentCategory = parentCategory.name;
+            currentSubcategory = subcategory.name;
+            currentProduct = null;
+            isSearchActive = false;
+            renderCatalog(currentCategory, currentSubcategory);
+            showSection('catalog');
+            return null; // Повертаємо null, щоб позначити, що це не продукт
+        }
+    }
+
+    // Якщо це не категорія і не підкатегорія, шукаємо продукт
     const cachedProduct = products.find(p => p.slug === slug);
     if (cachedProduct) {
         console.log('Продукт знайдено в локальному кеші:', cachedProduct.name, 'ID:', cachedProduct._id);
@@ -3266,6 +3318,110 @@ async function fetchProductBySlug(slug) {
         showNotification('Не вдалося завантажити товар через помилку сервера!', 'error');
         return null;
     }
+}
+
+function validateAndFixPageState() {
+    console.log('validateAndFixPageState: Перевірка стану сторінки');
+    const path = window.location.pathname.slice(1) || '';
+    const parts = path.split('/').filter(p => p);
+
+    // Якщо шлях порожній, показуємо головну сторінку
+    if (!parts.length) {
+        currentCategory = null;
+        currentSubcategory = null;
+        currentProduct = null;
+        isSearchActive = false;
+        showSection('home');
+        return;
+    }
+
+    // --- Обробка спеціальних сторінок ---
+    if (parts[0] === 'about') {
+        showSection('about');
+        return;
+    }
+    if (parts[0] === 'contacts') {
+        showSection('contacts');
+        return;
+    }
+    if (parts[0] === 'cart') {
+        showSection('cart');
+        return;
+    }
+    if (parts[0] === 'catalog' && parts[1] === 'search') {
+        showSection('catalog');
+        return;
+    }
+
+    // --- Категорія/підкатегорія/товар ---
+    // 1. Категорія по slug
+    const cat = categories.find(c => c.slug === parts[0]);
+    if (cat) {
+        currentCategory = cat.slug;
+        currentSubcategory = null;
+        currentProduct = null;
+        isSearchActive = false;
+
+        // 2. Підкатегорія по slug
+        if (parts.length === 2) {
+            const subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            if (subCat) {
+                currentSubcategory = subCat.slug;
+                renderCatalog(currentCategory, currentSubcategory);
+                showSection('catalog');
+                return;
+            }
+            // Якщо parts[1] не підкатегорія, можливо це товар у цій категорії
+            const product = products.find(p => p.slug === parts[1]);
+            if (product) {
+                currentProduct = product;
+                currentCategory = product.category;
+                currentSubcategory = product.subcategory || null;
+                showSection('product-details');
+                return;
+            }
+        }
+        // 3. Підкатегорія + товар
+        if (parts.length === 3) {
+            const subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            if (subCat) {
+                currentSubcategory = subCat.slug;
+                const product = products.find(p => p.slug === parts[2]);
+                if (product) {
+                    currentProduct = product;
+                    currentCategory = product.category;
+                    currentSubcategory = product.subcategory || null;
+                    showSection('product-details');
+                    return;
+                }
+                // Якщо підкатегорія є, але товару немає — показуємо підкатегорію
+                renderCatalog(currentCategory, currentSubcategory);
+                showSection('catalog');
+                return;
+            }
+        }
+        // Якщо тільки категорія
+        renderCatalog(currentCategory, null);
+        showSection('catalog');
+        return;
+    }
+
+    // --- Якщо не знайдено категорію, шукаємо товар по slug серед усіх продуктів ---
+    if (parts.length >= 1) {
+        const productSlug = parts[parts.length - 1];
+        const product = products.find(p => p.slug === productSlug);
+        if (product) {
+            currentProduct = product;
+            currentCategory = product.category;
+            currentSubcategory = product.subcategory || null;
+            showSection('product-details');
+            return;
+        }
+    }
+
+    // Якщо нічого не знайдено, показуємо головну сторінку
+    showNotification('Сторінку не знайдено!', 'error');
+    showSection('home');
 }
 
 async function fetchProductFromServer(slug) {
@@ -3354,26 +3510,26 @@ async function openProduct(slugOrId) {
         return;
     }
 
-    const categoryExists = categories.some(cat => cat.name === product.category);
-    if (!categoryExists) {
-        console.error('Category does not exist:', product.category);
-        showNotification('Категорія товару більше не існує!', 'error');
-        showSection('home');
-        return;
-    }
+const categoryExists = categories.some(cat => cat.slug === product.category);
+if (!categoryExists) {
+    console.error('Category does not exist:', product.category);
+    showNotification('Категорія товару більше не існує!', 'error');
+    showSection('home');
+    return;
+}
 
-    const subCategoryExists = product.subcategory 
-        ? categories
-            .filter(cat => cat.name === product.category)
-            .flatMap(cat => cat.subcategories || [])
-            .some(sub => sub.slug === product.subcategory)
-        : true;
-    if (!subCategoryExists) {
-        console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
-        product.subcategory = null;
-        currentSubcategory = null;
-        showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
-    }
+const subCategoryExists = product.subcategory 
+    ? categories
+        .filter(cat => cat.slug === product.category)
+        .flatMap(cat => cat.subcategories || [])
+        .some(sub => sub.slug === product.subcategory)
+    : true;
+if (!subCategoryExists) {
+    console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
+    product.subcategory = null;
+    currentSubcategory = null;
+    showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
+}
 
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(product._id));
     if (groupProduct && currentProduct?.type === 'group') {
@@ -4777,165 +4933,10 @@ async function handleNavigation(path, isPopstate = false) {
                 saveToStorage('searchQuery', '');
                 saveToStorage('searchResults', []);
             }
-        } else if (parts[0] === 'catalog') {
-            showSection('home');
-            if (!isPopstate) {
-                const state = {
-                    sectionId: 'home',
-                    path: '/',
-                    stateId: `home_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    currentPage: 1,
-                    currentCategory: null,
-                    currentSubcategory: null,
-                    isSearchActive: false,
-                    searchQuery: '',
-                    activeFilters: {},
-                    currentSort: ''
-                };
-                history.pushState(state, '', '/');
-                console.log('history.pushState виконано для каталогу:', state);
-            }
         } else {
-            const cat = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
-            if (cat) {
-                currentCategory = cat.name;
-                currentSubcategory = null;
-                currentProduct = null;
-                isSearchActive = false;
-
-                if (parts.length >= 2) {
-                    let productSlug = parts[parts.length - 1];
-                    let subCatSlug = parts.length >= 3 ? parts[1] : null;
-
-                    // Спочатку спробуємо знайти продукт за slug
-                    let product = products.find(p => p.slug === productSlug);
-                    if (!product) {
-                        console.log('Продукт не знайдено в локальному кеші, запитуємо з сервера:', productSlug);
-                        product = await fetchProductBySlug(productSlug);
-                    }
-                    
-                    if (product) {
-                        currentProduct = product;
-                        currentCategory = product.category;
-                        currentSubcategory = product.subcategory || null;
-                        console.log('Продукт знайдено:', product.name, 'Відображаємо product-details');
-                        showSection('product-details');
-                        if (!isPopstate) {
-                            const state = {
-                                sectionId: 'product-details',
-                                path: `/${parts[0]}${subCatSlug ? `/${subCatSlug}` : ''}/${productSlug}`,
-                                stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                                currentPage: 1,
-                                currentCategory: currentCategory,
-                                currentSubcategory: currentSubcategory,
-                                isSearchActive: false,
-                                searchQuery: '',
-                                productId: product._id,
-                                activeFilters: {},
-                                currentSort: ''
-                            };
-                            history.pushState(state, '', `/${parts[0]}${subCatSlug ? `/${subCatSlug}` : ''}/${productSlug}`);
-                            console.log('history.pushState виконано:', state);
-                        }
-                        return;
-                    }
-
-                    // Якщо продукт не знайдено, перевіряємо чи це підкатегорія
-                    const subCat = cat.subcategories?.find(sc => sc.slug === subCatSlug);
-                    if (subCat) {
-                        currentSubcategory = subCat.slug;
-                        console.log('DOMContentLoaded: Знайдено підкатегорію:', currentSubcategory);
-                        renderCatalog(currentCategory, currentSubcategory);
-                        showSection('catalog');
-                        const newPath = `/${parts[0]}/${subCatSlug}`;
-                        const state = {
-                            sectionId: 'catalog',
-                            path: newPath,
-                            stateId: `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                            currentPage: 1,
-                            currentCategory: currentCategory,
-                            currentSubcategory: currentSubcategory,
-                            isSearchActive: false,
-                            searchQuery: ''
-                        };
-                        history.replaceState(state, '', newPath);
-                        console.log('DOMContentLoaded: history.replaceState виконано для каталогу:', state);
-                    } else {
-                        // Якщо не знайдено ні продукт, ні підкатегорію
-                        console.error('DOMContentLoaded: Продукт або підкатегорію не знайдено для slug:', productSlug);
-                        showNotification('Товар не знайдено!', 'error');
-                        showSection('home');
-                    }
-                } else {
-                    // Якщо не знайдено категорію, але шлях схожий на товар — пробуємо знайти продукт за slug
-                    let product = products.find(p => p.slug === parts[0]);
-                    if (!product) {
-                        product = await fetchProductBySlug(parts[0]);
-                    }
-                    if (product) {
-                        currentProduct = product;
-                        currentCategory = product.category;
-                        currentSubcategory = product.subcategory || null;
-                        const newPath = `/${product.category ? transliterate(product.category.replace('ь', '')) : ''}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
-                        const state = {
-                            sectionId: 'product-details',
-                            path: newPath,
-                            stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                            currentPage: 1,
-                            currentCategory: currentCategory,
-                            currentSubcategory: currentSubcategory,
-                            isSearchActive: false,
-                            searchQuery: '',
-                            productId: product._id
-                        };
-                        history.replaceState(state, '', newPath);
-                        console.log('DOMContentLoaded: history.replaceState виконано (fallback):', state);
-                        showSection('product-details');
-                    } else {
-                        console.error('DOMContentLoaded: Категорія не знайдена для catSlug:', parts[0]);
-                        showNotification('Категорія не знайдена!', 'error');
-                        showSection('home');
-                    }
-                }
-            } else {
-                // Якщо не знайдено категорію, спробуємо знайти продукт за slug
-                if (parts.length >= 1) {
-                    const productSlug = parts[parts.length - 1];
-                    let product = products.find(p => p.slug === productSlug);
-                    if (!product) {
-                        product = await fetchProductBySlug(productSlug);
-                    }
-                    if (product) {
-                        currentProduct = product;
-                        currentCategory = product.category;
-                        currentSubcategory = product.subcategory || null;
-                        console.log('Продукт знайдено (fallback):', product.name, 'Відображаємо product-details');
-                        showSection('product-details');
-                        if (!isPopstate) {
-                            const state = {
-                                sectionId: 'product-details',
-                                path: `/${product.category ? transliterate(product.category.replace('ь', '')) : ''}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${productSlug}`,
-                                stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                                currentPage: 1,
-                                currentCategory: currentCategory,
-                                currentSubcategory: currentSubcategory,
-                                isSearchActive: false,
-                                searchQuery: '',
-                                productId: product._id,
-                                activeFilters: {},
-                                currentSort: ''
-                            };
-                            history.pushState(state, '', `/${product.category ? transliterate(product.category.replace('ь', '')) : ''}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${productSlug}`);
-                            console.log('history.pushState виконано (fallback):', state);
-                        }
-                        return;
-                    }
-                }
-                
-                console.error('Категорія не знайдена для slug:', parts[0]);
-                showNotification('Сторінку не знайдено!', 'error');
-                showSection('home');
-            }
+            // Викликаємо validateAndFixPageState для обробки шляху
+            validateAndFixPageState();
+            return;
         }
 
         if (!isPopstate) {
@@ -5088,7 +5089,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             });
 
-            // Додаю закриття бургер-меню при кліку поза ним
             document.addEventListener('click', function(e) {
                 const isBurgerIcon = burgerIcon.contains(e.target);
                 const isMenu = burgerMenu.contains(e.target) || burgerContent.contains(e.target);
@@ -5176,7 +5176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <a href="#" onclick="currentCategory='${category.name}'; currentSubcategory=null; showSection('catalog'); return false;">${category.name}</a>
                         <div class="burger-subcategory">
                             ${(category.subcategories || []).map(sub => `
-                                <a href="#" onclick="currentCategory='${category.name}'; currentSubcategory='${sub.slug}'; showSection('catalog'); return false;">${sub.name}</a>
+                                <a href="#" onclick="currentCategory='${category.name}'; currentSubcategory='${sub.name}'; showSection('catalog'); return false;">${sub.name}</a>
                             `).join('')}
                         </div>
                     `;
@@ -5218,173 +5218,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Елементи бургер-меню не знайдено');
         }
 
-        // Обробка початкового шляху
-        const path = window.location.pathname.slice(1) || '';
-        console.log('Обробка початкового шляху:', path);
-        const parts = path.split('/').filter(p => p);
-
-        if (parts[0] === 'catalog' && parts[1] === 'search') {
-            const query = parts[2] ? transliterate(parts[2], true) : loadFromStorage('searchQuery', '');
-            isSearchActive = loadFromStorage('isSearchActive', false);
-            const searchResultIds = loadFromStorage('searchResults', []);
-            searchResults = searchResultIds
-                .map(id => products.find(p => p._id === id))
-                .filter(p => p);
-            baseSearchResults = [...searchResults];
-
-            if (query) {
-                console.log('DOMContentLoaded: Відновлюємо пошук за запитом:', query);
-                searchQuery = query;
-                saveToStorage('searchQuery', query);
-                saveToStorage('isSearchActive', true);
-                if (!searchResults.length) {
-                    await searchProducts(query);
-                } else {
-                    showSection('catalog');
-                }
-                const newPath = `/catalog/search/${transliterate(query.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'))}`;
-                const state = {
-                    sectionId: 'catalog',
-                    path: newPath,
-                    stateId: `search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    currentPage: 1,
-                    currentCategory: null,
-                    currentSubcategory: null,
-                    isSearchActive: true,
-                    searchQuery: query,
-                    searchResults: searchResults.map(p => p._id)
-                };
-                history.replaceState(state, '', newPath);
-                console.log('DOMContentLoaded: history.replaceState виконано для пошуку:', state);
-            } else {
-                console.warn('DOMContentLoaded: Запит пошуку відсутній, показуємо каталог');
-                showSection('catalog');
-            }
-        } else if (parts.length >= 2) {
-            let productSlug = parts[parts.length - 1];
-            let subCatSlug = parts.length >= 3 ? parts[1] : null;
-
-            // Спочатку спробуємо знайти продукт за slug
-            let product = products.find(p => p.slug === productSlug);
-            if (!product) {
-                console.log('Продукт не знайдено в локальному кеші, запитуємо з сервера:', productSlug);
-                product = await fetchProductBySlug(productSlug);
-            }
-            
-            if (product) {
-                currentProduct = product;
-                currentCategory = product.category;
-                currentSubcategory = product.subcategory || null;
-                console.log('Продукт знайдено:', product.name, 'Відображаємо product-details');
-                showSection('product-details');
-                const state = {
-                    sectionId: 'product-details',
-                    path: `/${parts[0]}${subCatSlug ? `/${subCatSlug}` : ''}/${productSlug}`,
-                    stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    currentPage: 1,
-                    currentCategory: currentCategory,
-                    currentSubcategory: currentSubcategory,
-                    isSearchActive: false,
-                    searchQuery: '',
-                    productId: product._id,
-                    activeFilters: {},
-                    currentSort: ''
-                };
-                history.pushState(state, '', `/${parts[0]}${subCatSlug ? `/${subCatSlug}` : ''}/${productSlug}`);
-                console.log('history.pushState виконано:', state);
-                return; // Важливо: повертаємося відразу після знаходження товару
-            }
-
-            // Якщо продукт не знайдено, перевіряємо чи це підкатегорія
-            const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
-            
-            if (category) {
-                const subcategory = category.subcategories?.find(sub => 
-                    sub.slug === subCatSlug
-                );
-
-                if (subcategory) {
-                    currentCategory = category.name;
-                    currentSubcategory = subcategory.slug;
-                    console.log('DOMContentLoaded: Знайдено підкатегорію:', currentSubcategory);
-                    renderCatalog(currentCategory, currentSubcategory);
-                    showSection('catalog');
-                    const newPath = `/${parts[0]}/${subCatSlug}`;
-                    const state = {
-                        sectionId: 'catalog',
-                        path: newPath,
-                        stateId: `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        currentPage: 1,
-                        currentCategory: currentCategory,
-                        currentSubcategory: currentSubcategory,
-                        isSearchActive: false,
-                        searchQuery: ''
-                    };
-                    history.replaceState(state, '', newPath);
-                    console.log('DOMContentLoaded: history.replaceState виконано для каталогу:', state);
-                } else {
-                    // Якщо не знайдено ні продукт, ні підкатегорію
-                    console.error('DOMContentLoaded: Продукт або підкатегорію не знайдено для slug:', productSlug);
-                    showNotification('Товар не знайдено!', 'error');
-                    showSection('home');
-                }
-            } else {
-                // Якщо не знайдено категорію, але шлях схожий на товар — пробуємо знайти продукт за slug
-                let product = products.find(p => p.slug === productSlug);
-                if (!product) {
-                    product = await fetchProductBySlug(productSlug);
-                }
-                if (product) {
-                    currentProduct = product;
-                    currentCategory = product.category;
-                    currentSubcategory = product.subcategory || null;
-                    const newPath = `/${product.category ? transliterate(product.category.replace('ь', '')) : ''}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${productSlug}`;
-                    const state = {
-                        sectionId: 'product-details',
-                        path: newPath,
-                        stateId: `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        currentPage: 1,
-                        currentCategory: currentCategory,
-                        currentSubcategory: currentSubcategory,
-                        isSearchActive: false,
-                        searchQuery: '',
-                        productId: product._id
-                    };
-                    history.replaceState(state, '', newPath);
-                    console.log('DOMContentLoaded: history.replaceState виконано (fallback):', state);
-                    showSection('product-details');
-                } else {
-                    console.error('DOMContentLoaded: Категорія не знайдена для catSlug:', parts[0]);
-                    showNotification('Категорія не знайдена!', 'error');
-                    showSection('home');
-                }
-            }
-        } else {
-            console.log('DOMContentLoaded: Викликаємо handleNavigation для шляху:', path);
-            await handleNavigation(path, false);
-        }
+        // Викликаємо validateAndFixPageState для обробки початкового шляху
+        console.log('DOMContentLoaded: Викликаємо validateAndFixPageState для шляху:', window.location.pathname.slice(1));
+        validateAndFixPageState();
 
         const activeSection = document.querySelector('.section.active');
         if (activeSection) {
             activeSection.style.display = 'block';
             console.log('DOMContentLoaded: Активна секція:', activeSection.id);
-            
-            // Додаткова перевірка для product-details
-            if (activeSection.id === 'product-details' && currentProduct) {
-                console.log('DOMContentLoaded: Переконуємося, що product-details відображається для:', currentProduct.name);
-                if (typeof renderProductDetails === 'function') {
-                    renderProductDetails().then(() => {
-                        if (currentProduct.type === 'group' && typeof updateFloatingGroupCart === 'function') {
-                            updateFloatingGroupCart();
-                        }
-                        if (typeof updateFloatingFavorite === 'function') {
-                            updateFloatingFavorite();
-                        }
-                    }).catch(error => {
-                        console.error('Помилка в renderProductDetails після DOMContentLoaded:', error);
-                    });
-                }
-            }
         } else {
             console.warn('Активна секція не знайдена, показуємо головну');
             showSection('home');
@@ -5536,7 +5377,7 @@ window.addEventListener('popstate', async (event) => {
                         const selectedCat = categories.find(c => c.name === currentCategory);
                         let subcategorySlug = null;
                         if (currentSubcategory && selectedCat) {
-                            const subCat = (selectedCat.subcategories || []).find(sub => sub.slug === currentSubcategory);
+                            const subCat = (selectedCat.subcategories || []).find(sub => sub.name === currentSubcategory);
                             subcategorySlug = subCat ? subCat.slug : null;
                         }
                         allProducts = products.filter(p => 
@@ -5682,11 +5523,11 @@ window.addEventListener('popstate', async (event) => {
                 const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
                 if (category) {
                     const subcategory = category.subcategories?.find(sub => 
-                        sub.slug === subCatSlug
+                        sub.slug === subCatSlug || transliterate(sub.name.replace('ь', '')) === subCatSlug
                     );
                     if (subcategory) {
                         currentCategory = category.name;
-                        currentSubcategory = subcategory.slug;
+                        currentSubcategory = subcategory.name;
                         console.log('popstate: Знайдено підкатегорію:', currentSubcategory);
                         renderCatalog(currentCategory, currentSubcategory);
                         showSection('catalog');
@@ -5708,15 +5549,15 @@ window.addEventListener('popstate', async (event) => {
                 
                 // Якщо не знайдено ні продукт, ні підкатегорію
                 console.error('popstate: Продукт або підкатегорію не знайдено для slug:', productSlug);
-                showNotification('Товар не знайдено!', 'error');
-                showSection('home');
+                        showNotification('Товар не знайдено!', 'error');
+                        showSection('home');
             } else {
                 currentProduct = null;
                 const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0])?.name || null;
                 let subcategory = null;
                 if (parts[1] && category) {
                     const selectedCat = categories.find(c => c.name === category);
-                    subcategory = selectedCat?.subcategories?.find(sub => sub.slug === parts[1])?.slug || null;
+                    subcategory = selectedCat?.subcategories?.find(sub => transliterate(sub.name.replace('ь', '')) === parts[1])?.name || null;
                 }
 
                 currentCategory = category;
@@ -6157,6 +5998,10 @@ function createProductElement(product) {
     // === Ціна ===
     const priceDiv = document.createElement('div');
     priceDiv.className = 'price';
+    priceDiv.style.display = 'flex';
+    priceDiv.style.flexDirection = 'column';
+    priceDiv.style.minHeight = '2.6em'; // 2 рядки
+    priceDiv.style.justifyContent = 'center';
     const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
     if (product.type === 'mattresses' && product.sizes?.length > 0) {
@@ -6164,19 +6009,24 @@ function createProductElement(product) {
         const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
         const minPrice = Math.min(...product.sizes.map(s => s.price));
         if (minSale !== null && minSale < minPrice) {
-            const regularSpan = document.createElement('s');
+            const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
             const saleSpan = document.createElement('span');
             saleSpan.className = 'sale-price';
-            saleSpan.textContent = `${minSale} грн`;
+            saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(saleSpan);
         } else {
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${minPrice} грн`;
+            regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
+            // Додаємо прозорий span для вирівнювання
+            const emptySpan = document.createElement('span');
+            emptySpan.style.visibility = 'hidden';
+            emptySpan.textContent = '0 грн';
+            priceDiv.appendChild(emptySpan);
         }
     } else if (product.type === 'group' && product.groupProducts?.length > 0) {
         const groupPrices = product.groupProducts.map(id => {
@@ -6193,23 +6043,33 @@ function createProductElement(product) {
         const minPrice = Math.min(...groupPrices);
         const regularSpan = document.createElement('span');
         regularSpan.className = 'regular-price';
-        regularSpan.textContent = `від ${minPrice} грн`;
+        regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
         priceDiv.appendChild(regularSpan);
+        // Додаємо прозорий span для вирівнювання
+        const emptySpan = document.createElement('span');
+        emptySpan.style.visibility = 'hidden';
+        emptySpan.textContent = '0 грн';
+        priceDiv.appendChild(emptySpan);
     } else {
         if (isOnSale) {
-            const regularSpan = document.createElement('s');
+            const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${product.price} грн`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
             const saleSpan = document.createElement('span');
             saleSpan.className = 'sale-price';
-            saleSpan.textContent = `${product.salePrice} грн`;
+            saleSpan.innerHTML = `<span class='price-value'>${product.salePrice}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(saleSpan);
         } else {
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.textContent = `${product.price} грн`;
+            regularSpan.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
+            // Додаємо прозорий span для вирівнювання
+            const emptySpan = document.createElement('span');
+            emptySpan.style.visibility = 'hidden';
+            emptySpan.textContent = '0 грн';
+            priceDiv.appendChild(emptySpan);
         }
     }
 

@@ -4968,13 +4968,13 @@ s {
         font-size: 18px;
     }
     .product .price .regular-price {
-        font-size: 20px;
+        font-size: 18px;
     }
     .product .price.on-sale .regular-price {
         font-size: 14px;
     }
     .product .price .sale-price {
-        font-size: 20px;
+        font-size: 18px;
     }
     .product .cart-icon {
         width: 22px;
@@ -5533,10 +5533,10 @@ s {
         font-size: 22px;
     }
     .product .price .regular-price {
-        font-size: 22px;
+        font-size: 18px;
     }
     .product .price .sale-price {
-        font-size: 22px;
+        font-size: 18px;
     }
     .product .cart-icon {
         width: 24px;
@@ -5778,13 +5778,13 @@ s {
         height: 60px;
     }
 .product .price {
-        font-size: 22px;
+        font-size: 20px;
     }
     .product .price .regular-price {
-        font-size: 22px;
+        font-size: 20px;
     }
     .product .price .sale-price {
-        font-size: 22px;
+        font-size: 20px;
     }
     .product .cart-icon {
         width: 24px;
@@ -6998,9 +6998,26 @@ s {
 }
 .product-row-top .price {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.15em;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 2.6em;
+  justify-content: center;
+}
+@media (max-width: 600px) {
+  .product-row-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .product-row-top .price {
+    align-items: flex-start;
+    min-width: 90px;
+    min-height: 2.6em;
+  }
+  .product-row-top .product-actions {
+    align-self: flex-end;
+  }
 }
 .product-row-top .product-actions {
   display: flex;
@@ -7105,4 +7122,31 @@ s {
         background: #2e3b2e;
         color: #4caf50;
     }
+}
+
+.price-suffix {
+  font-size: 0.70em;
+  color: #000;
+  vertical-align: baseline;
+  font-weight: 400;
+}
+.price-value {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: inherit;
+}
+.price s .price-suffix {
+  color: #999;
+  font-size: 0.85em;
+}
+/* Для матраців, якщо треба чорний і більший 'грн' */
+.price-suffix-mattress {
+  font-size: 1em;
+  color: #000;
+  font-weight: 600;
+}
+
+.price s + .price-suffix {
+  color: #999;
+  font-size: 0.65em;
 }
