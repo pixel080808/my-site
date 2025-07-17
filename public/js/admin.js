@@ -4495,7 +4495,7 @@ function renderPriceFields() {
     }
 }
 
-async function updateSubcategories() {
+async function updateSubcategories(categorySlug) {
     const modal = document.getElementById('modal');
     if (!modal || !modal.classList.contains('active')) {
         console.log('Модальне вікно не активне, пропускаємо оновлення підкатегорій');
@@ -4510,11 +4510,14 @@ async function updateSubcategories() {
         return Promise.resolve();
     }
 
-    const categoryName = categorySelect.value;
-    console.log('Оновлення підкатегорій для categoryName:', categoryName);
+    // Використовуємо slug категорії
+    if (!categorySlug) {
+        categorySlug = categorySelect.value;
+    }
+    console.log('Оновлення підкатегорій для categorySlug:', categorySlug);
     subcategorySelect.innerHTML = '<option value="">Без підкатегорії</option>';
 
-    if (!categoryName) {
+    if (!categorySlug) {
         console.log('Категорія не вибрана');
         const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
         if (addSubcategoryBtn) {
@@ -4523,7 +4526,7 @@ async function updateSubcategories() {
         return Promise.resolve();
     }
 
-    const category = categories.find(c => c.name === categoryName);
+    const category = categories.find(c => c.slug === categorySlug);
     console.log('Знайдена категорія:', category);
     if (category && Array.isArray(category.subcategories)) {
         category.subcategories.forEach(sub => {
@@ -4540,7 +4543,6 @@ async function updateSubcategories() {
 
     // Відновлюємо вибір підкатегорії
     if (newProduct.subcategory) {
-        const category = categories.find(c => c.name === categoryName);
         if (category && category.subcategories.some(sub => sub.slug === newProduct.subcategory)) {
             subcategorySelect.value = newProduct.subcategory;
             console.log('Встановлено subcategory:', newProduct.subcategory);
@@ -4555,26 +4557,23 @@ async function updateSubcategories() {
         addSubcategoryBtn.style.display = 'block';
         addSubcategoryBtn.onclick = () => {
             const newSubcategory = prompt('Введіть назву нової підкатегорії:');
-            if (newSubcategory && categoryName) {
-                const category = categories.find(c => c.name === categoryName);
-                if (category) {
-                    const newSub = {
-                        name: newSubcategory,
-                        slug: newSubcategory.toLowerCase().replace(/\s+/g, '-'),
-                        order: category.subcategories.length,
-                        visible: true,
-                        photo: ''
-                    };
-                    saveSubcategory(category._id, newSub)
-                        .then(() => {
-                            updateSubcategories();
-                            showNotification('Підкатегорію додано!');
-                        })
-                        .catch(err => {
-                            console.error('Помилка додавання підкатегорії:', err);
-                            showNotification('Не вдалося додати підкатегорію: ' + err.message);
-                        });
-                }
+            if (newSubcategory && category) {
+                const newSub = {
+                    name: newSubcategory,
+                    slug: newSubcategory.toLowerCase().replace(/\s+/g, '-'),
+                    order: category.subcategories.length,
+                    visible: true,
+                    photo: ''
+                };
+                saveSubcategory(category._id, newSub)
+                    .then(() => {
+                        updateSubcategories(category.slug);
+                        showNotification('Підкатегорію додано!');
+                    })
+                    .catch(err => {
+                        console.error('Помилка додавання підкатегорії:', err);
+                        showNotification('Не вдалося додати підкатегорію: ' + err.message);
+                    });
             }
         };
     } else {
