@@ -5094,7 +5094,7 @@ async function saveNewProduct() {
             return;
         }
 
-        const categoryObj = categories.find(c => c.name === category);
+        const categoryObj = categories.find(c => c.slug === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
             return;
@@ -5565,7 +5565,7 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        const categoryObj = categories.find(c => c.name === category);
+        const categoryObj = categories.find(c => c.slug === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
             return;
