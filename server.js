@@ -864,7 +864,7 @@ app.get("/api/public/products", async (req, res) => {
     products = products.map((product) => {
       if (product.subcategory) {
         const category = categories.find((cat) => cat.name === product.category)
-        if (!category || !category.subcategories?.some((sub) => sub.name === product.subcategory)) {
+        if (!category || !category.subcategories?.some((sub) => sub.slug === product.subcategory)) {
           logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`)
           product.subcategory = null
         }

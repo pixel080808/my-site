@@ -1806,8 +1806,8 @@ h3:hover {
     justify-content: flex-start;
     margin: 0;
     text-align: left;
-    gap: 5px;
-    padding: 10px 20px 10px 10px; /* Додано відступ 20px справа */
+    gap: 0px;
+    padding: 1px 3px 5px 5px; 
 }
 
 .product .price.on-sale .regular-price {
@@ -4286,7 +4286,7 @@ s {
     }
 
     #product-details .product-detail-right .price {
-        font-size: 30px !important;
+        font-size: 0px !important;
     }
 
     #product-details .product-detail-right .price.on-sale s {
@@ -5037,7 +5037,7 @@ s {
     }
 
     #product-details .product-detail-right .price {
-        font-size: 30px !important;
+        font-size: 0px !important;
     }
 
     #product-details .product-detail-right .price.on-sale s {
@@ -5573,7 +5573,7 @@ s {
     }
 
     #product-details .product-detail-right .price {
-        font-size: 32px !important;
+        font-size: 0px !important;
     }
 
     #product-details .product-detail-right .price.on-sale s {
@@ -7149,4 +7149,80 @@ s {
 .price s + .price-suffix {
   color: #999;
   font-size: 0.65em;
+}
+
+.product-row-top .price > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.product-row-top .cart-icon {
+  margin-right: 8px;
+}
+
+.product-row-top .favorite-icon {
+  margin-right: 8px !important;
+}
+
+.product-row-bottom .favorite-icon,
+.product-row-bottom .cart-icon {
+  margin-right: 8px;
+}
+
+.product-row-bottom .favorite-icon:last-child,
+.product-row-bottom .cart-icon:last-child {
+  margin-right: 0;
+}
+
+.product-row-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 0 2px 10px 2px; /* мінімальні відступи зліва і справа */
+  box-sizing: border-box;
+}
+
+.product-row-bottom .price-flex {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  margin-left: 0;
+}
+
+.product-row-bottom > .product-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.product-actions {
+  margin-top: 0 !important;
+  gap: 4px !important;
+}
+
+.product .favorite-icon,
+.product .cart-icon {
+  position: static !important;
+  margin: 0 !important;
+  right: unset !important;
+  bottom: unset !important;
+}
+
+.product .cart-icon {
+  margin-left: 4px !important;
+}
+
+@media (max-width: 600px) {
+  .product-row-bottom {
+    flex-direction: row;
+    padding: 0 1px 8px 1px;
+  }
 }

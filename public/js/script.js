@@ -70,7 +70,7 @@ function loadFromStorage(key, defaultValue) {
         const data = JSON.parse(decompressed) || defaultValue;
         if (key === 'products') {
             const validCategories = categories.map(cat => cat.name);
-            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
+            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.slug));
             const result = data.map(product => {
                 if (product.subcategory && !validSubcategories.includes(product.subcategory)) {
                     console.warn(`Очищаємо невалідну підкатегорію ${product.subcategory} для товару ${product.name}`);
@@ -1733,9 +1733,9 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
                 headerText = selectedSubCat.name;
             }
         }
-        const h2 = document.createElement('h2');
+            const h2 = document.createElement('h2');
         h2.textContent = headerText;
-        productsDiv.appendChild(h2);
+            productsDiv.appendChild(h2);
 
         if (!currentProduct) {
             const subFilterDiv = document.createElement('div');
@@ -2498,69 +2498,69 @@ async function renderProductDetails() {
         leftDiv.appendChild(thumbnailContainer);
         topDiv.appendChild(leftDiv);
 
-const rightDiv = document.createElement('div');
-rightDiv.className = 'product-detail-right';
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'product-detail-right';
 
-const h2 = document.createElement('h2');
-h2.textContent = product.name;
-rightDiv.appendChild(h2);
+        const h2 = document.createElement('h2');
+        h2.textContent = product.name;
+        rightDiv.appendChild(h2);
 
 // Для матраців не відображаємо ціну зверху
 if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'price product-detail-price';
-    priceDiv.id = `price-${product._id}`;
+        const priceDiv = document.createElement('div');
+        priceDiv.className = 'price product-detail-price';
+        priceDiv.id = `price-${product._id}`;
     if (product.type === 'group' && product.groupProducts?.length > 0) {
-        const groupPrices = product.groupProducts.map(id => {
-            const p = products.find(p => p._id === id);
-            if (!p) return Infinity;
-            if (p.type === 'mattresses' && p.sizes?.length > 0) {
-                const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-                const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-                const minPrice = Math.min(...p.sizes.map(s => s.price));
-                return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
-            }
-            return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
-        });
-        const minPrice = Math.min(...groupPrices);
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
+            const groupPrices = product.groupProducts.map(id => {
+                const p = products.find(p => p._id === id);
+                if (!p) return Infinity;
+                if (p.type === 'mattresses' && p.sizes?.length > 0) {
+                    const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+                    const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+                    const minPrice = Math.min(...p.sizes.map(s => s.price));
+                    return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
+                }
+                return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
+            });
+            const minPrice = Math.min(...groupPrices);
+            const regularSpan = document.createElement('span');
+            regularSpan.className = 'regular-price';
         regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
-        priceDiv.appendChild(regularSpan);
+            priceDiv.appendChild(regularSpan);
         const emptySpan = document.createElement('span');
         emptySpan.style.visibility = 'hidden';
         emptySpan.textContent = '0 грн';
         priceDiv.appendChild(emptySpan);
-    } else {
-        if (isOnSale) {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.innerHTML = `<span class='price-value'>${initialPrice}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(saleSpan);
         } else {
+            if (isOnSale) {
             const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
+                regularSpan.className = 'regular-price';
+regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+                priceDiv.appendChild(regularSpan);
+                const saleSpan = document.createElement('span');
+                saleSpan.className = 'sale-price';
+            saleSpan.innerHTML = `<span class='price-value'>${initialPrice}</span> <span class='price-suffix'>грн</span>`;
+                priceDiv.appendChild(saleSpan);
+            } else {
+                const regularSpan = document.createElement('span');
+                regularSpan.className = 'regular-price';
             regularSpan.innerHTML = `<span class='price-value'>${initialPrice}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
+                priceDiv.appendChild(regularSpan);
             const emptySpan = document.createElement('span');
             emptySpan.style.visibility = 'hidden';
             emptySpan.textContent = '0 грн';
             priceDiv.appendChild(emptySpan);
         }
-    }
-    rightDiv.appendChild(priceDiv);
-    if (isOnSale && product.saleEnd && typeof updateSaleTimer === 'function') {
-        const timerDiv = document.createElement('div');
-        timerDiv.className = 'sale-timer';
-        timerDiv.id = `timer-${product._id}`;
-        rightDiv.appendChild(timerDiv);
-        await updateSaleTimer(product._id, product.saleEnd);
-    }
-}
+            }
+            rightDiv.appendChild(priceDiv);
+            if (isOnSale && product.saleEnd && typeof updateSaleTimer === 'function') {
+                const timerDiv = document.createElement('div');
+                timerDiv.className = 'sale-timer';
+                timerDiv.id = `timer-${product._id}`;
+                rightDiv.appendChild(timerDiv);
+                await updateSaleTimer(product._id, product.saleEnd);
+            }
+        }
 
         // Додаємо select для вибору розміру матрацу
         if (product.type === 'mattresses' && product.sizes?.length > 0) {
@@ -2604,13 +2604,13 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             arrow.style.pointerEvents = 'none';
             selectedDiv.appendChild(arrow);
 
-function getOptionHTML(size) {
-    if (size.salePrice && size.salePrice < size.price) {
-        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
-    } else {
+            function getOptionHTML(size) {
+                if (size.salePrice && size.salePrice < size.price) {
+        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грнktur  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                } else {
         return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
-    }
-}
+                }
+            }
 
             let selectedSize = product.sizes[0];
             selectedDiv.innerHTML = getOptionHTML(selectedSize);
@@ -2663,10 +2663,10 @@ function getOptionHTML(size) {
             });
             customSelect.appendChild(optionsList);
 
-// Відкриття/закриття списку
+            // Відкриття/закриття списку
 let wasJustClosed = false;
-selectedDiv.onclick = function(e) {
-    e.stopPropagation();
+            selectedDiv.onclick = function(e) {
+                e.stopPropagation();
     if (optionsList.style.display === 'block') {
         optionsList.style.display = 'none';
         arrow.style.transform = 'none';
@@ -2674,26 +2674,26 @@ selectedDiv.onclick = function(e) {
         optionsList.style.display = 'block';
         arrow.style.transform = 'rotate(180deg)';
     }
-};
-// Створюємо унікальний обробник для цього випадаючого меню
-const closeDropdownHandler = function(e) {
+            };
+            // Створюємо унікальний обробник для цього випадаючого меню
+            const closeDropdownHandler = function(e) {
     if (!customSelect.contains(e.target) && optionsList.style.display === 'block') {
-        optionsList.style.display = 'none';
-        arrow.style.transform = 'none';
+                    optionsList.style.display = 'none';
+                    arrow.style.transform = 'none';
         wasJustClosed = true;
-        // Блокуємо подію, щоб уникнути небажаних переходів
-        e.preventDefault();
+                    // Блокуємо подію, щоб уникнути небажаних переходів
+                        e.preventDefault();
         e.stopPropagation();
         setTimeout(() => { wasJustClosed = false; }, 0);
         return false;
-    }
+                    }
     if (wasJustClosed) {
         e.preventDefault();
-        e.stopPropagation();
+                    e.stopPropagation();
         wasJustClosed = false;
-        return false;
-    }
-};
+                    return false;
+                }
+            };
 document.addEventListener('click', closeDropdownHandler, true);
             
             // Зберігаємо посилання на обробник для можливого видалення
@@ -2936,7 +2936,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -2953,7 +2953,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3511,25 +3511,25 @@ async function openProduct(slugOrId) {
     }
 
 const categoryExists = categories.some(cat => cat.slug === product.category);
-if (!categoryExists) {
-    console.error('Category does not exist:', product.category);
-    showNotification('Категорія товару більше не існує!', 'error');
-    showSection('home');
-    return;
-}
+    if (!categoryExists) {
+        console.error('Category does not exist:', product.category);
+        showNotification('Категорія товару більше не існує!', 'error');
+        showSection('home');
+        return;
+    }
 
-const subCategoryExists = product.subcategory 
-    ? categories
+    const subCategoryExists = product.subcategory 
+        ? categories
         .filter(cat => cat.slug === product.category)
-        .flatMap(cat => cat.subcategories || [])
-        .some(sub => sub.slug === product.subcategory)
-    : true;
-if (!subCategoryExists) {
-    console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
-    product.subcategory = null;
-    currentSubcategory = null;
-    showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
-}
+            .flatMap(cat => cat.subcategories || [])
+            .some(sub => sub.slug === product.subcategory)
+        : true;
+    if (!subCategoryExists) {
+        console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
+        product.subcategory = null;
+        currentSubcategory = null;
+        showNotification('Підкатегорія товару більше не існує, відображаємо без підкатегорії.', 'warning');
+    }
 
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(product._id));
     if (groupProduct && currentProduct?.type === 'group') {
@@ -4936,7 +4936,7 @@ async function handleNavigation(path, isPopstate = false) {
         } else {
             // Викликаємо validateAndFixPageState для обробки шляху
             validateAndFixPageState();
-            return;
+                        return;
         }
 
         if (!isPopstate) {
@@ -5549,8 +5549,8 @@ window.addEventListener('popstate', async (event) => {
                 
                 // Якщо не знайдено ні продукт, ні підкатегорію
                 console.error('popstate: Продукт або підкатегорію не знайдено для slug:', productSlug);
-                        showNotification('Товар не знайдено!', 'error');
-                        showSection('home');
+                showNotification('Товар не знайдено!', 'error');
+                showSection('home');
             } else {
                 currentProduct = null;
                 const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0])?.name || null;
@@ -5971,6 +5971,7 @@ function createProductElement(product) {
     productElement.className = 'product';
     productElement.dataset.id = product._id;
 
+    // --- Зображення ---
     const imgLink = document.createElement('a');
     imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
@@ -5984,6 +5985,7 @@ function createProductElement(product) {
     imgLink.appendChild(img);
     productElement.appendChild(imgLink);
 
+    // --- Назва ---
     const h3Link = document.createElement('a');
     h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
     h3Link.onclick = (e) => {
@@ -5995,85 +5997,7 @@ function createProductElement(product) {
     h3Link.appendChild(h3);
     productElement.appendChild(h3Link);
 
-    // === Ціна ===
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'price';
-    priceDiv.style.display = 'flex';
-    priceDiv.style.flexDirection = 'column';
-    priceDiv.style.minHeight = '2.6em'; // 2 рядки
-    priceDiv.style.justifyContent = 'center';
-    const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
-
-    if (product.type === 'mattresses' && product.sizes?.length > 0) {
-        const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-        const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-        const minPrice = Math.min(...product.sizes.map(s => s.price));
-        if (minSale !== null && minSale < minPrice) {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(saleSpan);
-        } else {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
-            // Додаємо прозорий span для вирівнювання
-            const emptySpan = document.createElement('span');
-            emptySpan.style.visibility = 'hidden';
-            emptySpan.textContent = '0 грн';
-            priceDiv.appendChild(emptySpan);
-        }
-    } else if (product.type === 'group' && product.groupProducts?.length > 0) {
-        const groupPrices = product.groupProducts.map(id => {
-            const p = products.find(p => p._id === id);
-            if (!p) return Infinity;
-            if (p.type === 'mattresses' && p.sizes?.length > 0) {
-                const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
-                const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
-                const minPrice = Math.min(...p.sizes.map(s => s.price));
-                return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
-            }
-            return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
-        });
-        const minPrice = Math.min(...groupPrices);
-        const regularSpan = document.createElement('span');
-        regularSpan.className = 'regular-price';
-        regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
-        priceDiv.appendChild(regularSpan);
-        // Додаємо прозорий span для вирівнювання
-        const emptySpan = document.createElement('span');
-        emptySpan.style.visibility = 'hidden';
-        emptySpan.textContent = '0 грн';
-        priceDiv.appendChild(emptySpan);
-    } else {
-        if (isOnSale) {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
-            const saleSpan = document.createElement('span');
-            saleSpan.className = 'sale-price';
-            saleSpan.innerHTML = `<span class='price-value'>${product.salePrice}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(saleSpan);
-        } else {
-            const regularSpan = document.createElement('span');
-            regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
-            priceDiv.appendChild(regularSpan);
-            // Додаємо прозорий span для вирівнювання
-            const emptySpan = document.createElement('span');
-            emptySpan.style.visibility = 'hidden';
-            emptySpan.textContent = '0 грн';
-            priceDiv.appendChild(emptySpan);
-        }
-    }
-
-    // === Блок дій (favorite + cart) ===
+    // --- Дії (favorite + cart) ---
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'product-actions';
     actionsDiv.style.display = 'flex';
@@ -6108,8 +6032,9 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
     actionsDiv.appendChild(favoriteIcon);
 
     // Іконка кошика (для простих товарів)
+    let cartIcon = null;
     if (product.type !== 'mattresses' && product.type !== 'group') {
-        const cartIcon = document.createElement('div');
+        cartIcon = document.createElement('div');
         cartIcon.className = 'cart-icon';
         cartIcon.onclick = async (e) => {
             e.preventDefault();
@@ -6125,17 +6050,118 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
         actionsDiv.appendChild(cartIcon);
     }
 
-    // === Обгортка для ціни і кнопок ===
-    const rowTop = document.createElement('div');
-    rowTop.className = 'product-row-top';
-    rowTop.style.display = 'flex';
-    rowTop.style.alignItems = 'center';
-    rowTop.style.justifyContent = 'space-between';
-    rowTop.style.gap = '10px';
-    rowTop.appendChild(priceDiv);
-    rowTop.appendChild(actionsDiv);
-    productElement.appendChild(rowTop);
+    // --- Ціна ---
+    const priceDiv = document.createElement('div');
+    priceDiv.className = 'price';
+    priceDiv.style.display = 'flex';
+    priceDiv.style.flexDirection = 'column';
+    priceDiv.style.justifyContent = 'flex-start';
+    priceDiv.style.minHeight = '2.6em';
 
+// --- Нижній рядок: ціна + кнопки ---
+const rowBottom = document.createElement('div');
+rowBottom.className = 'product-row-bottom';
+rowBottom.style.display = 'flex';
+rowBottom.style.alignItems = 'center';
+rowBottom.style.justifyContent = 'flex-start';
+rowBottom.style.gap = '10px';
+rowBottom.style.minWidth = '0';
+
+// Обгортка для ціни (щоб flex працював)
+const priceFlex = document.createElement('div');
+priceFlex.className = 'price-flex';
+priceFlex.style.flex = '1 1 auto';
+priceFlex.style.minWidth = '0';
+priceFlex.style.display = 'flex';
+priceFlex.style.alignItems = 'center';
+
+// --- Верхній рядок: перекреслена ціна (якщо є акція) ---
+let hasOldPrice = false;
+const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
+
+if (product.type === 'mattresses' && product.sizes?.length > 0) {
+    const saleSizes = product.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+    const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+    const minPrice = Math.min(...product.sizes.map(s => s.price));
+    if (minSale !== null && minSale < minPrice) {
+        // Верхній рядок — перекреслена ціна
+        const oldRow = document.createElement('div');
+        oldRow.style.display = 'flex';
+        oldRow.style.alignItems = 'center';
+        oldRow.style.justifyContent = 'flex-start';
+        oldRow.style.minHeight = '1.2em';
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+        oldRow.appendChild(regularSpan);
+        priceDiv.appendChild(oldRow);
+        hasOldPrice = true;
+        // Нижній рядок — акційна ціна
+        const saleSpan = document.createElement('span');
+        saleSpan.className = 'sale-price';
+        saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
+        priceFlex.appendChild(saleSpan);
+    } else {
+        // Один рядок — звичайна ціна
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
+        priceFlex.appendChild(regularSpan);
+    }
+} else if (product.type === 'group' && product.groupProducts?.length > 0) {
+    const groupPrices = product.groupProducts.map(id => {
+        const p = products.find(p => p._id === id);
+        if (!p) return Infinity;
+        if (p.type === 'mattresses' && p.sizes?.length > 0) {
+            const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
+            const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
+            const minPrice = Math.min(...p.sizes.map(s => s.price));
+            return (minSale !== null && minSale < minPrice) ? minSale : minPrice;
+        }
+        return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
+    });
+    const minPrice = Math.min(...groupPrices);
+    const regularSpan = document.createElement('span');
+    regularSpan.className = 'regular-price';
+    regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
+    priceFlex.appendChild(regularSpan);
+} else {
+    if (isOnSale) {
+        // Верхній рядок — перекреслена ціна
+        const oldRow = document.createElement('div');
+        oldRow.style.display = 'flex';
+        oldRow.style.alignItems = 'center';
+        oldRow.style.justifyContent = 'flex-start';
+        oldRow.style.minHeight = '1.2em';
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+        oldRow.appendChild(regularSpan);
+        priceDiv.appendChild(oldRow);
+        hasOldPrice = true;
+        // Нижній рядок — акційна ціна
+        const saleSpan = document.createElement('span');
+        saleSpan.className = 'sale-price';
+        saleSpan.innerHTML = `<span class='price-value'>${product.salePrice}</span> <span class='price-suffix'>грн</span>`;
+        priceFlex.appendChild(saleSpan);
+    } else {
+        // Один рядок — звичайна ціна
+        const regularSpan = document.createElement('span');
+        regularSpan.className = 'regular-price';
+        regularSpan.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
+        priceFlex.appendChild(regularSpan);
+    }
+}
+
+// --- Додаємо priceFlex і actionsDiv у rowBottom ---
+rowBottom.appendChild(priceFlex);
+rowBottom.appendChild(actionsDiv);
+
+// --- Додаємо цінові рядки у картку ---
+priceDiv.appendChild(rowBottom);
+productElement.appendChild(priceDiv);
+
+    // --- Таймер акції ---
     if (isOnSale && product.saleEnd) {
         const timerDiv = document.createElement('div');
         timerDiv.className = 'sale-timer';
