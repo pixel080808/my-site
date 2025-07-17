@@ -4273,10 +4273,10 @@ function openAddProductModal() {
             <label for="product-slug">Шлях товару</label>
             <input type="text" id="product-brand" placeholder="Виробник"><br/>
             <label for="product-brand">Виробник</label>
-            <select id="product-category">
-                <option value="">Без категорії</option>
-                ${categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
-            </select><br/>
+<select id="product-category">
+    <option value="">Без категорії</option>
+    ${categories.map(c => `<option value="${c.slug}">${c.name}</option>`).join('')}
+</select><br/>
             <label for="product-category">Категорія</label>
             <select id="product-subcategory">
                 <option value="">Без підкатегорії</option>
@@ -4353,13 +4353,15 @@ modal.classList.add('active');
     initializeProductEditor();
 
     setTimeout(() => {
-        const categorySelect = document.getElementById('product-category');
-        if (categorySelect) {
-            categorySelect.addEventListener('change', updateSubcategories);
-            updateSubcategories();
-        } else {
-            console.warn('Елемент #product-category не знайдено');
-        }
+const categorySelect = document.getElementById('product-category');
+if (categorySelect) {
+    categorySelect.addEventListener('change', function() {
+        updateSubcategories(categorySelect.value);
+    });
+    updateSubcategories(categorySelect.value);
+} else {
+    console.warn('Елемент #product-category не знайдено');
+}
 
         const photoInput = document.getElementById('product-photo-file');
         if (photoInput) {
