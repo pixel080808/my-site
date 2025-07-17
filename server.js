@@ -1643,10 +1643,6 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
 
     await category.save({ session });
 
-    if (categoryData.name !== oldCategory.name) {
-      await Product.updateMany({ category: oldCategory.name }, { $set: { category: categoryData.name } }, { session });
-    }
-
     const categories = await Category.find().session(session);
 
     const changesApplied = {
