@@ -5496,43 +5496,6 @@ async function openEditProductModal(productId) {
     }
 }
 
-    // Додаємо обробник подій для акційної ціни в режимі редагування
-    const salePriceInput = document.getElementById('product-sale-price');
-    if (salePriceInput) {
-        salePriceInput.addEventListener('input', function() {
-            const salePrice = parseFloat(this.value);
-            const price = parseFloat(document.getElementById('product-price')?.value || 0);
-            
-            if (!isNaN(salePrice) && salePrice > 0) {
-                // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
-                if (!newProduct.saleEnd) {
-                    newProduct.saleEnd = null; // null означає безкінечну акцію
-                    console.log('Встановлено безкінечну акцію для товару при редагуванні');
-                }
-            } else if (isNaN(salePrice) || salePrice <= 0) {
-                // Якщо акційна ціна видаляється, видаляємо і дату закінчення
-                newProduct.saleEnd = null;
-                console.log('Видалено акцію для товару при редагуванні');
-            }
-        });
-    }
-
-    const cancelButton = document.getElementById('cancel-product-btn');
-    if (cancelButton) {
-        cancelButton.addEventListener('click', closeModal);
-    } else {
-        console.warn('Кнопка #cancel-product-btn не знайдена');
-    }
-
-    // Додаємо обробник для кнопки "Додати колір" у режимі редагування
-    const addColorBtn = document.querySelector('button[onclick="addProductColor()"]');
-    if (addColorBtn) {
-        addColorBtn.onclick = addProductColor;
-    }
-
-    resetInactivityTimer();
-}
-
 async function saveEditedProduct(productId) {
     const saveButton = document.querySelector('.modal-actions button:first-child');
     if (saveButton) {
