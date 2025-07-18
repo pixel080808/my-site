@@ -6,7 +6,7 @@ const Counter = require('./Counter');
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
     name: { type: String, required: true, trim: true },
-    category: { type: String, required: true, trim: true },
+    category: { type: String, required: true, trim: true }, // Тепер тут зберігається slug категорії, а не name
     subcategory: { 
         type: String, 
         trim: true,

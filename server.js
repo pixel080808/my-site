@@ -1126,10 +1126,10 @@ if (error) {
       }
     }
 
-    const category = await Category.findOne({ name: productData.category })
+    const category = await Category.findOne({ slug: productData.category })
     if (!category) {
       logger.error("Категорія не знайдено:", productData.category)
-      return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено`, field: "category" })
+      return res.status(400).json({ error: `Категорія з slug "${productData.category}" не знайдено`, field: "category" })
     }
 
     if (productData.subcategory && productData.subcategory.trim()) {
@@ -1302,10 +1302,10 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
       }
     }
 
-    const category = await Category.findOne({ name: productData.category });
+    const category = await Category.findOne({ slug: productData.category });
     if (!category) {
       logger.error("Категорія не знайдено:", productData.category);
-      return res.status(400).json({ error: `Категорія "${productData.category}" не знайдено` });
+      return res.status(400).json({ error: `Категорія з slug "${productData.category}" не знайдено`, field: "category" });
     }
 
     if (productData.subcategory && productData.subcategory.trim()) {
@@ -1313,7 +1313,8 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
       if (!subcategoryExists) {
         logger.error("Підкатегорія не знайдено:", productData.subcategory);
         return res.status(400).json({
-          error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`
+          error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+          field: "subcategory",
         });
       }
     }
@@ -1645,6 +1646,10 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
 
     if (categoryData.name !== oldCategory.name) {
       await Product.updateMany({ category: oldCategory.name }, { $set: { category: categoryData.name } }, { session });
+    }
+
+    if (categoryData.slug !== oldCategory.slug) {
+      await Product.updateMany({ category: oldCategory.slug }, { $set: { category: "" } }, { session });
     }
 
     const categories = await Category.find().session(session);

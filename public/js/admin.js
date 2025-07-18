@@ -2219,7 +2219,7 @@ function renderCategoriesAdmin() {
     if (productCatSelect) {
         const currentValue = productCatSelect.value;
         productCatSelect.innerHTML = '<option value="">Без категорії</option>' +
-            sortedCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            sortedCategories.map(c => `<option value="${c.slug}" ${c.slug === currentValue ? 'selected' : ''}>${c.name}</option>`).join('');
         productCatSelect.value = currentValue || '';
         updateSubcategories();
     }
@@ -4275,7 +4275,7 @@ function openAddProductModal() {
             <label for="product-brand">Виробник</label>
             <select id="product-category">
                 <option value="">Без категорії</option>
-                ${categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                ${categories.map(c => `<option value="${c.slug}" ${c.slug === newProduct.category ? 'selected' : ''}>${c.name}</option>`).join('')}
             </select><br/>
             <label for="product-category">Категорія</label>
             <select id="product-subcategory">
@@ -4510,11 +4510,11 @@ async function updateSubcategories() {
         return Promise.resolve();
     }
 
-    const categoryName = categorySelect.value;
-    console.log('Оновлення підкатегорій для categoryName:', categoryName);
+    const categorySlug = categorySelect.value;
+    console.log('Оновлення підкатегорій для categorySlug:', categorySlug);
     subcategorySelect.innerHTML = '<option value="">Без підкатегорії</option>';
 
-    if (!categoryName) {
+    if (!categorySlug) {
         console.log('Категорія не вибрана');
         const addSubcategoryBtn = document.getElementById('add-subcategory-btn');
         if (addSubcategoryBtn) {
@@ -4523,7 +4523,7 @@ async function updateSubcategories() {
         return Promise.resolve();
     }
 
-    const category = categories.find(c => c.name === categoryName);
+    const category = categories.find(c => c.slug === categorySlug);
     console.log('Знайдена категорія:', category);
     if (category && Array.isArray(category.subcategories)) {
         category.subcategories.forEach(sub => {
@@ -4540,7 +4540,7 @@ async function updateSubcategories() {
 
     // Відновлюємо вибір підкатегорії
     if (newProduct.subcategory) {
-        const category = categories.find(c => c.name === categoryName);
+        const category = categories.find(c => c.slug === categorySlug);
         if (category && category.subcategories.some(sub => sub.slug === newProduct.subcategory)) {
             subcategorySelect.value = newProduct.subcategory;
             console.log('Встановлено subcategory:', newProduct.subcategory);
@@ -4555,8 +4555,8 @@ async function updateSubcategories() {
         addSubcategoryBtn.style.display = 'block';
         addSubcategoryBtn.onclick = () => {
             const newSubcategory = prompt('Введіть назву нової підкатегорії:');
-            if (newSubcategory && categoryName) {
-                const category = categories.find(c => c.name === categoryName);
+            if (newSubcategory && categorySlug) {
+                const category = categories.find(c => c.slug === categorySlug);
                 if (category) {
                     const newSub = {
                         name: newSubcategory,
@@ -5095,7 +5095,7 @@ async function saveNewProduct() {
             return;
         }
 
-        const categoryObj = categories.find(c => c.name === category);
+        const categoryObj = categories.find(c => c.slug === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
             return;
@@ -5340,7 +5340,7 @@ async function openEditProductModal(productId) {
             <label for="product-brand">Виробник</label>
             <select id="product-category">
                 <option value="">Без категорії</option>
-                ${categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('')}
+                ${categories.map(c => `<option value="${c.slug}" ${c.slug === product.category ? 'selected' : ''}>${c.name}</option>`).join('')}
             </select><br/>
             <label for="product-category">Категорія</label>
             <select id="product-subcategory">
@@ -5425,7 +5425,7 @@ async function openEditProductModal(productId) {
     if (categorySelect && subcatSelect) {
         // Оновлюємо список категорій
         categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
-            categories.map(c => `<option value="${c.name}" ${c.name === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
+            categories.map(c => `<option value="${c.slug}" ${c.slug === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
         categorySelect.addEventListener('change', updateSubcategories);
 
         // Оновлюємо підкатегорії
@@ -5433,7 +5433,7 @@ async function openEditProductModal(productId) {
 
         // Встановлюємо підкатегорію
         if (product.subcategory) {
-            const category = categories.find(c => c.name === product.category);
+            const category = categories.find(c => c.slug === product.category);
             if (category && category.subcategories.some(sub => sub.slug === product.subcategory)) {
                 subcatSelect.value = product.subcategory;
                 console.log('Встановлено subcategory:', product.subcategory);
@@ -5602,7 +5602,7 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-        const categoryObj = categories.find(c => c.name === category);
+        const categoryObj = categories.find(c => c.slug === category);
         if (!categoryObj) {
             showNotification('Обрана категорія не існує!');
             return;
