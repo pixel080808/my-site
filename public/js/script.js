@@ -1538,10 +1538,12 @@ function renderCatalogDropdown() {
             if (!itemDiv.classList.contains('active')) span.classList.remove('active');
         });
 
-        span.addEventListener('click', toggleSubDropdown);
-        span.addEventListener('touchend', toggleSubDropdown);
+if (cat.subcategories && cat.subcategories.length > 0) {
+    span.addEventListener('click', toggleSubDropdown);
+    span.addEventListener('touchend', toggleSubDropdown);
+}
 
-span.addEventListener('click', (e) => {
+const goToCategory = (e) => {
     if (!cat.subcategories || cat.subcategories.length === 0) {
         e.preventDefault();
         currentProduct = null;
@@ -1555,15 +1557,15 @@ span.addEventListener('click', (e) => {
         saveToStorage('searchQuery', '');
         saveToStorage('searchResults', []);
         showSection('catalog');
-        // --- Додаємо скидання підсвічування ---
         document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
         document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
         dropdown.classList.remove('active');
         document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-        // Скидання скролу при переході на будь-яку сторінку
         dropdown.scrollTop = 0;
     }
-});
+};
+span.addEventListener('click', goToCategory);
+span.addEventListener('touchend', goToCategory);
 
         itemDiv.appendChild(span);
 
