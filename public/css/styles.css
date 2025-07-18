@@ -3554,7 +3554,7 @@ s {
     }
 
     .cart {
-        padding: 6px;
+        padding: 9px;
         margin-right: 0;
         flex-shrink: 0;
     }
@@ -6961,8 +6961,8 @@ s {
 
 .product .cart-icon {
   position: static;
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 25px;
   padding: 8px;
   border-radius: 50%;
   background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
