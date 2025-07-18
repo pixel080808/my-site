@@ -864,7 +864,7 @@ app.get("/api/public/products", async (req, res) => {
     products = products.map((product) => {
       if (product.subcategory) {
         const category = categories.find((cat) => cat.name === product.category)
-        if (!category || !category.subcategories?.some((sub) => sub.slug === product.subcategory)) {
+        if (!category || !category.subcategories?.some((sub) => sub.name === product.subcategory)) {
           logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`)
           product.subcategory = null
         }
@@ -1642,6 +1642,10 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
     });
 
     await category.save({ session });
+
+    if (categoryData.name !== oldCategory.name) {
+      await Product.updateMany({ category: oldCategory.name }, { $set: { category: categoryData.name } }, { session });
+    }
 
     const categories = await Category.find().session(session);
 
