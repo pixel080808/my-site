@@ -391,9 +391,15 @@ header.scrolled {
 }
 
 .catalog-menu {
-    display: inline-block;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
     position: relative;
     text-align: center;
+    width: max-content;
+    min-width: unset;
+    padding: 0;
+    margin: 0;
 }
 
 #catalog-dropdown,
@@ -772,8 +778,9 @@ h3:hover {
 }
 
 .category:hover {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    transform: translateY(0px);
+    /* transform: translateY(0px); */
+    /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); */
+    /* Прибрано рух та тінь */
 }
 
 .category img {
@@ -787,7 +794,7 @@ h3:hover {
 }
 
 .category img:hover {
-    transform: none;
+    /* transform: none; */
 }
 
 .category p {
@@ -815,6 +822,7 @@ h3:hover {
 }
 .category .subcategories p:hover {
     color: var(--primary-color);
+    /* Прибрано будь-які transform, translate, box-shadow */
 }
 
 #catalog .container {
@@ -3806,8 +3814,9 @@ s {
     }
 
     .category:hover {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        transform: translateY(0px);
+        /* transform: translateY(0px); */
+        /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); */
+        /* Прибрано рух та тінь */
     }
 
     .category img {
@@ -3821,7 +3830,7 @@ s {
     }
 
     .category img:hover {
-        transform: scale(1.00);
+        /* transform: none; */
     }
 
     .category p {
@@ -3850,6 +3859,7 @@ s {
 
     .category .subcategories p:hover {
         color: var(--primary-color);
+        /* Прибрано будь-які transform, translate, box-shadow */
     }
 
     #catalog .container {
@@ -5645,8 +5655,15 @@ s {
 
 @media (min-width: 0px) {
 .catalog-menu {
-        display: inline-block;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
         position: relative;
+        text-align: center;
+        width: max-content;
+        min-width: unset;
+        padding: 0;
+        margin: 0;
     }
 
     #catalog-dropdown,
@@ -7225,4 +7242,156 @@ s {
     flex-direction: row;
     padding: 0 1px 8px 1px;
   }
+}
+
+/* --- СТИЛІ ДЛЯ ВИПАДАЮЧОГО МЕНЮ КАТАЛОГ --- */
+#catalog-dropdown {
+  min-width: 260px;
+  background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
+  box-shadow: 0 8px 32px rgb(202 202 202 / 18%);
+  border-radius: 18px;
+  padding: 12px 0 12px 0;
+  border: 1px solid #e2e8f0;
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  font-size: 16px;
+  transition: box-shadow 0.25s, background 0.25s;
+  z-index: 1001;
+}
+#catalog-dropdown .dropdown-item {
+  padding: 0 10px;
+  border-radius: 12px;
+  margin: 2px 0;
+  transition: background 0.18s, box-shadow 0.18s;
+  cursor: pointer;
+  position: relative;
+}
+#catalog-dropdown .dropdown-item:hover {
+  background: linear-gradient(90deg, #ffffff 60%, #ffffff 100%);
+  box-shadow: 0 2px 8px rgba(60, 80, 120, 0.08);
+}
+#catalog-dropdown .dropdown-item span {
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: 0.01em;
+  padding: 10px 0 10px 0;
+  display: block;
+  border-radius: 8px;
+  transition: color 0.18s;
+}
+#catalog-dropdown .dropdown-item span:hover {
+  color: #2563eb;
+}
+#catalog-dropdown .sub-list {
+  background: none;
+  margin: 0 0 0 10px;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid #e2e8f0;
+  border-radius: 0 0 10px 10px;
+  box-shadow: none;
+  transition: background 0.18s;
+}
+#catalog-dropdown .sub-list p {
+  font-size: 15px;
+  color: #334155;
+  margin: 0;
+  padding: 7px 0 7px 0;
+  border-radius: 6px;
+  transition: background 0.18s, color 0.18s;
+  cursor: pointer;
+}
+#catalog-dropdown .sub-list p:hover {
+  background: #e0e7ef;
+  color: #2563eb;
+}
+@media (max-width: 650px) {
+  #catalog-dropdown {
+    min-width: 230px;
+    font-size: 14px;
+    padding: 8px 0;
+  }
+  #catalog-dropdown .dropdown-item span {
+    font-size: 14px;
+    padding: 7px 0;
+  }
+  #catalog-dropdown .sub-list p {
+    font-size: 13px;
+    padding: 5px 0;
+  }
+}
+
+/* --- Ефект наведення для випадаючого меню Каталог --- */
+#catalog-dropdown .dropdown-item:hover,
+#catalog-dropdown .dropdown-item.active {
+  background: var(--button-background, #f5f5f5);
+  border: 1px solid #00000000;
+  color: inherit;
+  box-shadow: none;
+}
+#catalog-dropdown .dropdown-item span:hover,
+#catalog-dropdown .dropdown-item span.active {
+  color: inherit;
+}
+#catalog-dropdown .sub-list p:hover,
+#catalog-dropdown .sub-list p.active {
+  background: var(--button-background, #d7d7d7);
+  border: 1px solid #643a3a00;
+  color: inherit;
+}
+
+/* Прибрати синій колір шрифту */
+#catalog-dropdown .dropdown-item span:hover,
+#catalog-dropdown .dropdown-item span.active,
+#catalog-dropdown .sub-list p:hover,
+#catalog-dropdown .sub-list p.active {
+  color: inherit !important;
+}
+
+#catalog-dropdown, #catalog-dropdown .dropdown-item, #catalog-dropdown .dropdown-item span, #catalog-dropdown .sub-list p, #catalog-dropdown .sub-dropdown, #catalog-dropdown .dropdown-item:hover, #catalog-dropdown .sub-list p:hover, #catalog-dropdown .dropdown-item.active, #catalog-dropdown .sub-list p.active {
+  transition: background 0.18s, color 0.18s, border 0.18s !important;
+  transform: none !important;
+  scale: none !important;
+}
+
+#catalog-dropdown .dropdown-item,
+#catalog-dropdown .dropdown-item span,
+#catalog-dropdown .sub-list p {
+  padding: 8px 8px !important;
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+#catalog-dropdown .dropdown-item:hover,
+#catalog-dropdown .dropdown-item.active {
+  background: var(--button-background, #f5f5f5);
+  border: 1px solid #00000000 !important;
+  color: inherit;
+  box-shadow: none;
+}
+#catalog-dropdown .sub-list p:hover,
+#catalog-dropdown .sub-list p.active {
+  background: var(--button-background, #d7d7d7);
+  border: 1px solid #643a3a00 !important;
+  color: inherit;
+}
+
+#catalog-dropdown.active {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+}
+
+#catalog-dropdown {
+    max-height: 60vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #bdbdbd #f5f5f5;
+}
+
+#catalog-dropdown::-webkit-scrollbar {
+    width: 8px;
+    background: #f5f5f5;
+}
+#catalog-dropdown::-webkit-scrollbar-thumb {
+    background: #bdbdbd;
+    border-radius: 6px;
 }

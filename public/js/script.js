@@ -1217,6 +1217,12 @@ function showSection(sectionId) {
     activeTimers.clear();
 
     document.dispatchEvent(new Event('sectionChange'));
+
+    // Скидання скролу випадаючого меню Каталог
+    const catalogDropdown = document.getElementById('catalog-dropdown');
+    if (catalogDropdown) {
+        catalogDropdown.scrollTop = 0;
+    }
 }
 
 function updateMetaTags(product) {
@@ -1517,32 +1523,47 @@ function renderCatalogDropdown() {
             const isActive = subList.classList.contains('active');
 
             document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+            document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
+            document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
 
             if (!isActive && subList) {
                 subList.classList.add('active');
+                currentItem.classList.add('active');
+                span.classList.add('active');
             }
         };
+
+        span.addEventListener('mouseenter', () => span.classList.add('active'));
+        span.addEventListener('mouseleave', () => {
+            if (!itemDiv.classList.contains('active')) span.classList.remove('active');
+        });
 
         span.addEventListener('click', toggleSubDropdown);
         span.addEventListener('touchend', toggleSubDropdown);
 
-        span.addEventListener('click', (e) => {
-            if (!cat.subcategories || cat.subcategories.length === 0) {
-                e.preventDefault();
-                currentProduct = null;
-                currentCategory = cat.slug;
-                currentSubcategory = null;
-                isSearchActive = false;
-                searchQuery = '';
-                searchResults = [];
-                baseSearchResults = [];
-                saveToStorage('isSearchActive', false);
-                saveToStorage('searchQuery', '');
-                saveToStorage('searchResults', []);
-                showSection('catalog');
-                dropdown.classList.remove('active');
-            }
-        });
+span.addEventListener('click', (e) => {
+    if (!cat.subcategories || cat.subcategories.length === 0) {
+        e.preventDefault();
+        currentProduct = null;
+        currentCategory = cat.slug;
+        currentSubcategory = null;
+        isSearchActive = false;
+        searchQuery = '';
+        searchResults = [];
+        baseSearchResults = [];
+        saveToStorage('isSearchActive', false);
+        saveToStorage('searchQuery', '');
+        saveToStorage('searchResults', []);
+        showSection('catalog');
+        // --- Додаємо скидання підсвічування ---
+        document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
+        document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
+        dropdown.classList.remove('active');
+        document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+        // Скидання скролу при переході на будь-яку сторінку
+        dropdown.scrollTop = 0;
+    }
+});
 
         itemDiv.appendChild(span);
 
@@ -1582,22 +1603,27 @@ function renderCatalogDropdown() {
                 }
             };
             p.onmouseout = (e) => { e.target.style.backgroundColor = ''; };
-            p.onclick = (e) => {
-                e.stopPropagation();
-                currentProduct = null;
-                currentCategory = cat.slug;
-                currentSubcategory = sub.slug;
-                isSearchActive = false;
-                searchQuery = '';
-                searchResults = [];
-                baseSearchResults = [];
-                saveToStorage('isSearchActive', false);
-                saveToStorage('searchQuery', '');
-                saveToStorage('searchResults', []);
-                showSection('catalog');
-                dropdown.classList.remove('active');
-                document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-            };
+p.onclick = (e) => {
+    e.stopPropagation();
+    currentProduct = null;
+    currentCategory = cat.slug;
+    currentSubcategory = sub.slug;
+    isSearchActive = false;
+    searchQuery = '';
+    searchResults = [];
+    baseSearchResults = [];
+    saveToStorage('isSearchActive', false);
+    saveToStorage('searchQuery', '');
+    saveToStorage('searchResults', []);
+    showSection('catalog');
+    // --- Додаємо скидання підсвічування ---
+    document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
+    document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
+    dropdown.classList.remove('active');
+    document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+    // Скидання скролу при переході на будь-яку сторінку
+    dropdown.scrollTop = 0;
+};
             subList.appendChild(p);
         });
 
@@ -1618,6 +1644,8 @@ function renderCatalogDropdown() {
                 e.preventDefault();
             }
             e.stopPropagation();
+            // Скидання скролу при закритті меню
+            dropdown.scrollTop = 0;
             return false;
         }
     });
@@ -1625,6 +1653,20 @@ function renderCatalogDropdown() {
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation();
     });
+
+    // Додаємо обробник для відкриття меню Каталог
+    const catalogToggle = document.getElementById('catalog-toggle');
+    const catalogDropdown = document.getElementById('catalog-dropdown');
+    if (catalogToggle && catalogDropdown) {
+        catalogToggle.addEventListener('click', function(e) {
+            // Відкриваємо меню
+            setTimeout(() => {
+                if (catalogDropdown.classList.contains('active')) {
+                    catalogDropdown.scrollTop = 0;
+                }
+            }, 0);
+        });
+    }
 }
 
 function renderCatalog(category = null, subcategory = null, product = null, searchResultsParam = null) {
@@ -1900,8 +1942,7 @@ function createSortMenu() {
         { text: 'Назва (А-Я)', value: 'name-asc' },
         { text: 'Назва (Я-А)', value: 'name-desc' },
         { text: 'Ціна (зростання)', value: 'price-asc' },
-        { text: 'Ціна (спадання)', value: 'price-desc' },
-        { text: 'Популярність', value: 'popularity' }
+        { text: 'Ціна (спадання)', value: 'price-desc' }
     ];
     sortOptions.forEach(opt => {
         const btn = document.createElement('button');
@@ -2133,8 +2174,6 @@ function sortProducts(sortType) {
             const priceB = (b.salePrice && (b.saleEnd === null || new Date(b.saleEnd) > new Date()) ? b.salePrice : b.price) || 0;
             return priceB - priceA;
         });
-    } else if (sortType === 'popularity') {
-        filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     }
 
     filteredProducts = filtered;
@@ -2183,8 +2222,6 @@ function renderProducts(filtered) {
                 const priceB = (b.salePrice && new Date(b.saleEnd) > new Date() ? b.salePrice : b.price) || 0;
                 return priceB - priceA;
             });
-        } else if (currentSort === 'popularity') {
-            activeProducts.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
         }
     }
 
@@ -2535,7 +2572,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -2606,9 +2643,9 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}  <span class='p
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
-        return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
             }
 
@@ -2936,7 +2973,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}  <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -2953,7 +2990,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}  <span class='p
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
