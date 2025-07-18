@@ -255,7 +255,7 @@ header.scrolled {
 
 .cart {
     position: relative;
-    padding: 8px;
+    padding: 9px;
     display: inline-flex;
     align-items: center;
     background: var(--card-bg);
@@ -340,12 +340,12 @@ header.scrolled {
 }
 
 .favorite-icon:hover svg path {
-    fill: #4caf50;
+    fill: #1cc289;
 }
 
 .favorite-icon.active svg path {
-  fill: #4caf50;
-  stroke: #4caf50;
+  fill: #1cc289;
+  stroke: #28c88f;
   transition: fill 0.2s, stroke 0.2s;
 }
 .favorite-icon svg path {
@@ -4056,6 +4056,7 @@ s {
         right: 10px;
         z-index: 1002;
         padding: 8px;
+        margin-right: 0;
         display: inline-flex;
         align-items: center;
         background: var(--card-bg);
@@ -4064,6 +4065,7 @@ s {
         cursor: pointer;
         transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
         opacity: 0;
+        vertical-align: middle;
     }
 
     .floating-favorite.visible {
@@ -4076,19 +4078,28 @@ s {
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
-    .floating-favorite::before {
-        content: "";
-        display: inline-block;
-        width: 24px;
-        height: 24px;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%234caf50" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat center;
-        background-size: contain;
-        transition: background var(--transition-speed) ease;
+    .floating-favorite svg {
+        width: 26px;
+        height: 26px;
+        transition: all var(--transition-speed) ease;
     }
 
-    .floating-favorite:hover::before {
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234caf50" stroke="%234caf50" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat center;
-        background-size: contain;
+    .floating-favorite:hover svg {
+        transform: scale(1.1);
+    }
+
+    .floating-favorite:hover svg path {
+        fill: #1cc289;
+    }
+
+    .floating-favorite.active svg path {
+        fill: #1cc289;
+        stroke: #28c88f;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .floating-favorite svg path {
+        transition: fill 0.2s, stroke 0.2s;
     }
 
     .floating-favorite #floating-favorite-count {
@@ -4652,19 +4663,28 @@ s {
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
-    .floating-favorite::before {
-        content: "";
-        display: inline-block;
-        width: 24px;
-        height: 24px;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%234caf50" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>') no-repeat center;
-        background-size: contain;
-        transition: background var(--transition-speed) ease;
+    .floating-favorite svg {
+        width: 26px;
+        height: 26px;
+        transition: all var(--transition-speed) ease;
     }
 
-    .floating-favorite:hover::before {
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234caf50" stroke="%23388e3c" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>') no-repeat center;
-        background-size: contain;
+    .floating-favorite:hover svg {
+        transform: scale(1.1);
+    }
+
+    .floating-favorite:hover svg path {
+        fill: #1cc289;
+    }
+
+    .floating-favorite.active svg path {
+        fill: #1cc289;
+        stroke: #28c88f;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .floating-favorite svg path {
+        transition: fill 0.2s, stroke 0.2s;
     }
 
     .floating-favorite #floating-favorite-count {
@@ -5465,18 +5485,28 @@ s {
     background: var(--border-color);
     box-shadow: 0 4px 12px var(--shadow-color);
 }
-.floating-favorite::before {
-    content: "";
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%234caf50" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>') no-repeat center;
-    background-size: contain;
-    transition: background var(--transition-speed) ease;
+.floating-favorite svg {
+    width: 26px;
+    height: 26px;
+    transition: all var(--transition-speed) ease;
 }
-.floating-favorite:hover::before {
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234caf50" stroke="%23388e3c" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>') no-repeat center;
-    background-size: contain;
+
+.floating-favorite:hover svg {
+    transform: scale(1.1);
+}
+
+.floating-favorite:hover svg path {
+    fill: #1cc289;
+}
+
+.floating-favorite.active svg path {
+    fill: #1cc289;
+    stroke: #28c88f;
+    transition: fill 0.2s, stroke 0.2s;
+}
+
+.floating-favorite svg path {
+    transition: fill 0.2s, stroke 0.2s;
 }
 .floating-favorite #floating-favorite-count {
     position: absolute;
@@ -5942,7 +5972,7 @@ s {
     .nav a:hover,
     .nav a:focus {
         background: var(--button-background);
-        color: var(--primary-color);
+        color: #ffffff;
     }
 
 #catalog-dropdown,
@@ -5962,6 +5992,24 @@ s {
     .dropdown-item:hover span {
         color: var(--primary-color);
     }
+
+  #catalog-dropdown {
+    background: #23272f !important;
+    color: #f1f1f1 !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.7);
+    border: 1px solid #333;
+    backdrop-filter: blur(8px);
+  }
+  #catalog-dropdown .dropdown-item,
+  #catalog-dropdown .sub-list {
+    background: transparent !important;
+    color: inherit !important;
+  }
+  #catalog-dropdown .dropdown-item span.active,
+  #catalog-dropdown .sub-list .active {
+    background: #2d3640 !important;
+    color: #fff !important;
+  }
 
     .sub-dropdown {
         background: var(--card-bg);
@@ -6152,6 +6200,32 @@ s {
     .floating-cart span {
         background: var(--accent-color);
         color: #1A202C;
+    }
+
+    .floating-favorite {
+        background: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .floating-favorite:hover {
+        background: var(--border-color);
+        box-shadow: 0 4px 12px var(--shadow-color);
+    }
+
+    .floating-favorite svg path {
+        fill: none;
+        stroke: #4caf50;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .floating-favorite:hover svg path {
+        fill: #1cc289;
+        stroke: #1cc289;
+    }
+
+    .floating-favorite.active svg path {
+        fill: #1cc289;
+        stroke: #28c88f;
     }
 
 .burger-icon {
@@ -6931,8 +7005,8 @@ s {
     }
 
     .favorite-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 26px;
+        height: 26px;
     }
 }
 
@@ -6967,8 +7041,8 @@ s {
 }
 
 .product .favorite-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
 }
 
 .product .favorite-icon:hover {
@@ -7068,12 +7142,12 @@ s {
   cursor: pointer !important;
 }
 .product-detail-right .favorite-icon svg {
-  width: 24px !important;
-  height: 24px !important;
+  width: 26px !important;
+  height: 26px !important;
   display: block !important;
 }
 .product-detail-right .favorite-icon.active {
-  background: #e6f9ec !important;
+  background: #f2f2f2 !important;
 }
 .product-detail-right .favorite-icon:hover {
   background: #f2f2f2 !important;
@@ -7394,4 +7468,198 @@ s {
 #catalog-dropdown::-webkit-scrollbar-thumb {
     background: #bdbdbd;
     border-radius: 6px;
+}
+
+/* --- Випадаюче меню Каталог у темній темі --- */
+@media (prefers-color-scheme: dark) {
+  #catalog-dropdown {
+    background: rgba(35, 39, 47, 0.98) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.7);
+    border: 1px solid #333;
+    backdrop-filter: blur(8px);
+  }
+  #catalog-dropdown .dropdown-item,
+  #catalog-dropdown .sub-list,
+  #catalog-dropdown .dropdown-item span,
+  #catalog-dropdown .sub-list p {
+    color: #fff !important;
+    background: transparent !important;
+    transition: background 0.2s, color 0.2s;
+  }
+  #catalog-dropdown .dropdown-item span:hover,
+  #catalog-dropdown .sub-list p:hover {
+    background: #3a4250 !important;
+    color: #fff !important;
+  }
+  #catalog-dropdown .dropdown-item span.active,
+  #catalog-dropdown .sub-list .active {
+    background: var(--button-background); !important;
+    color: #fff !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .price-value {
+    color: #f4f5f6 !important;
+  }
+  .price-suffix {
+    color: #f4f5f6 !important;
+  }
+  s.price-value {
+    color: #f4f5f6 !important; /* Перекреслена ціна — сіра */
+  }
+}
+
+/* Базові стилі для випадаючого меню матраців (світла тема) */
+.custom-mattress-select {
+  position: relative;
+  width: 260px;
+  min-width: 220px;
+}
+
+.custom-mattress-select .selected-option {
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  background: #fff;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  user-select: none;
+  position: relative;
+  min-width: 200px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.custom-mattress-select .selected-option:hover {
+  border-color: #999;
+  background-color: #f8f9fa;
+}
+
+.custom-options-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 110%;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin: 0;
+  padding: 4px 0;
+  display: none;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 220px;
+}
+
+.custom-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 200px;
+  transition: background-color 0.2s;
+}
+
+.custom-option:hover {
+  background: #f5f5f5;
+}
+
+/* Адаптивні стилі для випадаючого меню матраців */
+@media (max-width: 650px) {
+  .custom-mattress-select {
+    width: 100%;
+    max-width: 280px;
+    min-width: 200px;
+  }
+  
+  .custom-mattress-select .selected-option {
+    font-size: 14px;
+    padding: 6px 10px;
+    min-height: 36px;
+  }
+  
+  .custom-options-list {
+    font-size: 14px;
+    max-height: 180px;
+  }
+  
+  .custom-option {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+}
+
+/* Темна тема для випадаючого меню матраців */
+@media (prefers-color-scheme: dark) {
+  .custom-mattress-select {
+    background: #23272f !important;
+    color: #fff !important;
+    border: 1px solid #444 !important;
+  }
+  .custom-mattress-select .selected-option {
+    background: #2d3748 !important;
+    color: #fff !important;
+    border: 1px solid #666 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .custom-mattress-select .selected-option:hover {
+    background: #3a4250 !important;
+    border-color: #777 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .custom-options-list {
+    background: #23272f !important;
+    color: #fff !important;
+    border: 1px solid #444 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+  }
+  .custom-option {
+    background: transparent !important;
+    color: #fff !important;
+    transition: background 0.2s, color 0.2s;
+  }
+  .custom-option:hover, .custom-option:focus {
+    background: #3a4250 !important;
+    color: #fff !important;
+  }
+  /* Стилі для цін у темній темі */
+  .custom-option s {
+    color: #a0a0a0 !important;
+  }
+  .custom-option span {
+    color: #fff !important;
+  }
+  .custom-option span[style*="color:#000000"] {
+    color: #fff !important;
+  }
+  .custom-option span[style*="color:#222"] {
+    color: #e2e8f0 !important;
+  }
+  /* Стилі для стрілки */
+  .custom-mattress-select .selected-option span[style*="color:#888"] {
+    color: #a0a0a0 !important;
+  }
+  /* Стилі для цін у кнопці випадаючого меню в темній темі */
+  .custom-mattress-select .selected-option span {
+    color: #fff !important;
+  }
+  .custom-mattress-select .selected-option span[style*="color:#000000"] {
+    color: #fff !important;
+  }
+  .custom-mattress-select .selected-option span[style*="color:#222"] {
+    color: #e2e8f0 !important;
+  }
+  .custom-mattress-select .selected-option s {
+    color: #a0a0a0 !important;
+  }
 }

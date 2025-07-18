@@ -2798,7 +2798,7 @@ document.addEventListener('click', closeDropdownHandler, true);
         favoriteIcon.setAttribute('data-product-id', product._id);
         favoriteIcon.innerHTML = `
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#4caf50" stroke-width="2" fill="none"/>
+            <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#10b981" stroke-width="2" fill="none"/>
           </svg>
         `;
         function updateFavoriteIcon() {
@@ -5802,12 +5802,12 @@ if (!document.getElementById('favorite-style')) {
     .favorite-icon svg {
       width: 26px;
       height: 26px;
-      stroke: #4caf50;
+      stroke: #10b981;
       fill: none;
       transition: fill 0.2s, stroke 0.2s;
     }
     .favorite-icon.active svg {
-      fill: #4caf50;
+      fill: #10b981;
       stroke: #388e3c;
       opacity: 1;
     }
@@ -5837,7 +5837,7 @@ if (!document.getElementById('favorite-modal-style')) {
     .favorite-modal .favorite-list { width: 100%; }
     .favorite-modal .favorite-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .favorite-modal .favorite-item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
-    .favorite-modal .favorite-item .remove-fav { color: #d32f2f; background: none; border: none; font-size: 22px; cursor: pointer; margin-left: 8px; }
+    .favorite-modal .favorite-item .remove-fav { color: #d32f2f; background: none; border: none; font-size: 28px; cursor: pointer; margin-left: 8px; }
     .favorite-modal .close-fav-modal { position: absolute; top: 10px; right: 16px; background: none; border: none; font-size: 28px; color: #888; cursor: pointer; }
     .favorite-modal .favorite-item .fav-title { font-weight: 500; font-size: 1.05em; }
     .favorite-modal .favorite-item .fav-price { color: #388e3c; font-weight: 500; margin-left: 8px; }
@@ -6085,7 +6085,7 @@ function createProductElement(product) {
     favoriteIcon.setAttribute('data-product-id', product._id);
     favoriteIcon.innerHTML = `
       <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#4caf50" stroke-width="2" fill="none"/>
+        <path d="M13 23s-7.5-5.7-9.7-9.1C1.1 11.1 1 8.2 3.1 6.3c2.1-1.9 5.2-1.2 6.7 1C11 8.2 11.9 9.2 13 10.3c1.1-1.1 2-2.1 3.2-3C17.7 5.1 20.8 4.4 22.9 6.3c2.1 1.9 2 4.8-.2 7.6C20.5 17.3 13 23 13 23z" stroke="#10b981" stroke-width="2" fill="none"/>
       </svg>
     `;
     function updateFavoriteIcon() {
