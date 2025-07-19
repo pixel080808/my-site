@@ -2641,7 +2641,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             customSelect.tabIndex = 0;
             customSelect.style.position = 'relative';
             customSelect.style.width = '260px'; // ширше
-            customSelect.style.minWidth = '220px';
+            customSelect.style.minWidth = '297px';
 
             const selectedDiv = document.createElement('div');
             selectedDiv.className = 'selected-option';
@@ -2657,7 +2657,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             selectedDiv.style.fontSize = '16px';
             selectedDiv.style.userSelect = 'none';
             selectedDiv.style.position = 'relative';
-            selectedDiv.style.minWidth = '200px';
+            selectedDiv.style.minWidth = '277px';
 
             // Додаємо стрілку
             const arrow = document.createElement('span');
@@ -2966,28 +2966,59 @@ document.addEventListener('click', closeDropdownHandler, true);
                     const dimensionsDiv = document.createElement('div');
                     dimensionsDiv.className = 'dimensions';
 
-                    const valuesSpan = document.createElement('span');
-                    valuesSpan.className = 'dimension-values';
-                    for (let i = 0; i < dimensions.length; i++) {
-                        const formattedValue = Number.isInteger(dimensions[i]) ? dimensions[i] : dimensions[i].toFixed(1).replace('.', ',');
-                        valuesSpan.appendChild(document.createTextNode(`${formattedValue} см`));
-                        if (i < dimensions.length - 1) {
-                            valuesSpan.appendChild(document.createTextNode(' × '));
-                        }
-                    }
-                    dimensionsDiv.appendChild(valuesSpan);
-
-                    const labelsDiv = document.createElement('div');
-                    labelsDiv.className = 'dimension-labels';
                     const labels = ['Шир.', 'Вис.', 'Гл.', 'Дов.'];
-                    dimensions.forEach((_, i) => {
+
+                    // Створюємо контейнер для всіх пар позначення-значення
+                    const dimensionsContainer = document.createElement('div');
+                    dimensionsContainer.style.display = 'flex';
+                    dimensionsContainer.style.justifyContent = 'center';
+                    dimensionsContainer.style.alignItems = 'center';
+                    dimensionsContainer.style.gap = '6px';
+                    dimensionsContainer.className = 'dimensions-container';
+
+                    for (let i = 0; i < dimensions.length; i++) {
+                        // Створюємо контейнер для кожної пари позначення-значення
+                        const pairContainer = document.createElement('div');
+                        pairContainer.style.display = 'flex';
+                        pairContainer.style.flexDirection = 'column';
+                        pairContainer.style.alignItems = 'center';
+                        pairContainer.style.minWidth = '50px';
+                        pairContainer.className = 'dimension-pair';
+
+                        // Додаємо позначення
                         const labelSpan = document.createElement('span');
                         labelSpan.className = 'dimension-label';
                         labelSpan.textContent = labels[i];
-                        labelsDiv.appendChild(labelSpan);
-                    });
-                    dimensionsDiv.appendChild(labelsDiv);
+                        labelSpan.style.textAlign = 'center';
+                        labelSpan.style.fontSize = '12px';
+                        labelSpan.style.color = '#666';
+                        labelSpan.style.marginBottom = '2px';
+                        pairContainer.appendChild(labelSpan);
+                        
+                        // Додаємо значення
+                        const valueSpan = document.createElement('span');
+                        valueSpan.className = 'dimension-value';
+                        const formattedValue = Number.isInteger(dimensions[i]) ? dimensions[i] : dimensions[i].toFixed(1).replace('.', ',');
+                        valueSpan.textContent = `${formattedValue} см`;
+                        valueSpan.style.textAlign = 'center';
+                        valueSpan.style.fontSize = '14px';
+                        pairContainer.appendChild(valueSpan);
 
+                        dimensionsContainer.appendChild(pairContainer);
+                        
+                        // Додаємо роздільник між парами (крім останньої)
+                        if (i < dimensions.length - 1) {
+                            const separator = document.createElement('span');
+                            separator.textContent = '×';
+                            separator.style.color = '#666';
+                            separator.style.fontSize = '14px';
+                            separator.style.margin = '0 1px';
+                            separator.className = 'dimension-separator';
+                            dimensionsContainer.appendChild(separator);
+                        }
+                    }
+
+                    dimensionsDiv.appendChild(dimensionsContainer);
                     itemDiv.appendChild(dimensionsDiv);
                 }
 
@@ -3007,6 +3038,11 @@ document.addEventListener('click', closeDropdownHandler, true);
                         saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
+                        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
+                        const emptySpan = document.createElement('span');
+                        emptySpan.style.visibility = 'hidden';
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
                         regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
@@ -3024,6 +3060,11 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                         saleSpan.innerHTML = `<span class='price-value'>${p.salePrice}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
+                        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
+                        const emptySpan = document.createElement('span');
+                        emptySpan.style.visibility = 'hidden';
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+                        priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
                         regularSpan.innerHTML = `<span class='price-value'>${p.price}</span> <span class='price-suffix'>грн</span>`;
@@ -6167,13 +6208,13 @@ function createProductElement(product) {
             saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
             priceFlex.appendChild(saleSpan);
         } else {
-            // Додаємо прозорий рядок для вирівнювання
+            // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
             const emptyRow = document.createElement('div');
             emptyRow.style.minHeight = '1.2em';
             emptyRow.style.visibility = 'hidden';
             emptyRow.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(emptyRow);
-            // Один рядок — звичайна ціна
+            // Один рядок — звичайна ціна (тепер на тому ж рівні, що й акційна ціна)
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
             regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
@@ -6192,7 +6233,7 @@ function createProductElement(product) {
             return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
         });
         const minPrice = Math.min(...groupPrices);
-        // Додаємо прозорий рядок для вирівнювання
+        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
         const emptyRow = document.createElement('div');
         emptyRow.style.minHeight = '1.2em';
         emptyRow.style.visibility = 'hidden';
@@ -6222,13 +6263,13 @@ function createProductElement(product) {
             saleSpan.innerHTML = `<span class='price-value'>${product.salePrice}</span> <span class='price-suffix'>грн</span>`;
             priceFlex.appendChild(saleSpan);
         } else {
-            // Додаємо прозорий рядок для вирівнювання
+            // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
             const emptyRow = document.createElement('div');
             emptyRow.style.minHeight = '1.2em';
             emptyRow.style.visibility = 'hidden';
             emptyRow.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(emptyRow);
-            // Один рядок — звичайна ціна
+            // Один рядок — звичайна ціна (тепер на тому ж рівні, що й акційна ціна)
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
             regularSpan.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
