@@ -3203,20 +3203,83 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     }
 
     let products = JSON.parse(await fs.promises.readFile(req.file.path, "utf8"))
-    products = products.map((product) => {
-      const { id, _id, __v, ...cleanedProduct } = product
+    
+    // Створюємо мапу для зберігання зв'язків originalId -> новий _id
+    const idMapping = new Map()
+    
+    // Перший прохід: обробляємо всі товари і створюємо мапу ID
+    const processedProducts = products.map((product, index) => {
+      const { id, _id, __v, originalId, ...cleanedProduct } = product
+      
+      // Зберігаємо зв'язок originalId -> тимчасовий індекс
+      if (originalId) {
+        idMapping.set(originalId, `temp_${index}`)
+      }
+      
       return cleanedProduct
     })
 
-    for (const product of products) {
+    // Валідація всіх товарів
+    for (const product of processedProducts) {
       const { error } = productSchemaValidation.validate(product, { abortEarly: false })
       if (error) {
         logger.error("Помилка валідації продукту при імпорті:", error.details)
         return res.status(400).json({ error: "Помилка валідації продуктів", details: error.details })
       }
     }
+
+    // Видаляємо всі існуючі товари
     await Product.deleteMany({})
-    await Product.insertMany(products)
+    
+    // Вставляємо нові товари
+    const insertedProducts = await Product.insertMany(processedProducts)
+    
+    // Оновлюємо мапу ID з реальними _id
+    insertedProducts.forEach((product, index) => {
+      const originalId = products[index].originalId
+      if (originalId) {
+        idMapping.set(originalId, product._id.toString())
+      }
+    })
+    
+    // Другий прохід: оновлюємо groupProducts з правильними ID
+    const updatePromises = []
+    
+    for (let i = 0; i < insertedProducts.length; i++) {
+      const product = insertedProducts[i]
+      const originalProduct = products[i]
+      
+      if (product.type === 'group' && originalProduct.groupProducts && Array.isArray(originalProduct.groupProducts)) {
+        const updatedGroupProducts = originalProduct.groupProducts.map(item => {
+          // Якщо це об'єкт з originalId, використовуємо мапу
+          if (typeof item === 'object' && item !== null && item.originalId) {
+            return idMapping.get(item.originalId) || item.originalId
+          }
+          // Якщо це рядок (ID), спробуємо знайти в мапі
+          else if (typeof item === 'string') {
+            return idMapping.get(item) || item
+          }
+          // Якщо це об'єкт без originalId, спробуємо знайти _id
+          else if (typeof item === 'object' && item !== null && item._id) {
+            return idMapping.get(item._id) || item._id
+          }
+          // Якщо це щось інше, конвертуємо в рядок
+          else {
+            return item.toString()
+          }
+        })
+        
+        // Оновлюємо товар з правильними groupProducts
+        updatePromises.push(
+          Product.findByIdAndUpdate(product._id, { groupProducts: updatedGroupProducts })
+        )
+      }
+    }
+    
+    // Виконуємо всі оновлення
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises)
+    }
 
     try {
       await fs.promises.unlink(req.file.path)
