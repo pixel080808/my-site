@@ -1198,14 +1198,14 @@ h3:hover {
 @media (max-width: 480px) {
     .dimension-separator {
         margin: 0 !important;
-        font-size: clamp(10px, 3vw, 14px);
+        font-size: clamp(8px, 4vw, 14px);
     }
     
     .dimensions-container {
         flex-wrap: nowrap;
         justify-content: space-between;
         gap: 0px;
-        padding: 0;
+        padding: 1px;
         margin: 0;
         width: 100%;
     }
@@ -1221,11 +1221,11 @@ h3:hover {
     }
     
     .dimension-label {
-        font-size: clamp(10px, 2.5vw, 14px);
+        font-size: clamp(8px, 3.5vw, 14px);
     }
     
     .dimension-value {
-        font-size: clamp(11px, 3vw, 14px);
+        font-size: clamp(9px, 4vw, 14px);
     }
 }
 
@@ -7286,14 +7286,14 @@ s {
     @media (max-width: 480px) {
         .group-product-item .group-product-info .dimension-separator {
             margin: 0 !important;
-            font-size: clamp(10px, 3vw, 14px);
+            font-size: clamp(8px, 4vw, 14px);
         }
         
         .group-product-item .group-product-info .dimensions-container {
             flex-wrap: nowrap;
             justify-content: space-between;
             gap: 0px;
-            padding: 0;
+            padding: 1px;
             margin: 0;
             width: 100%;
         }
@@ -7309,11 +7309,11 @@ s {
         }
         
         .group-product-item .group-product-info .dimensions .dimension-label {
-            font-size: clamp(10px, 2.5vw, 14px);
+            font-size: clamp(8px, 3.5vw, 14px);
         }
         
         .group-product-item .group-product-info .dimensions .dimension-value {
-            font-size: clamp(11px, 3vw, 14px);
+            font-size: clamp(9px, 4vw, 14px);
         }
     }
     
