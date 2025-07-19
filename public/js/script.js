@@ -3017,8 +3017,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                         
                         // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 10px, максимум 12px, залежить від ширини вікна
-                            const fontSize = Math.max(10, Math.min(12, window.innerWidth * 0.025));
+                            // Адаптивний розмір шрифту: мінімум 10px, максимум 14px, залежить від ширини вікна
+                            const fontSize = Math.max(10, Math.min(14, window.innerWidth * 0.025));
                             labelSpan.style.fontSize = fontSize + 'px';
                         }
                         
@@ -3034,8 +3034,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                         
                         // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 11px, максимум 12px, залежить від ширини вікна
-                            const fontSize = Math.max(11, Math.min(12, window.innerWidth * 0.03));
+                            // Адаптивний розмір шрифту: мінімум 11px, максимум 14px, залежить від ширини вікна
+                            const fontSize = Math.max(11, Math.min(14, window.innerWidth * 0.03));
                             valueSpan.style.fontSize = fontSize + 'px';
                         }
                         
@@ -3052,8 +3052,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                             // Прибираємо відступи навколо роздільника на екранах до 480px
                         if (window.innerWidth <= 480) {
                             separator.style.margin = '0';
-                            // Адаптивний розмір шрифту: мінімум 10px, максимум 12px, залежить від ширини вікна
-                            const fontSize = Math.max(10, Math.min(12, window.innerWidth * 0.03));
+                            // Адаптивний розмір шрифту: мінімум 10px, максимум 14px, залежить від ширини вікна
+                            const fontSize = Math.max(10, Math.min(14, window.innerWidth * 0.03));
                             separator.style.fontSize = fontSize + 'px';
                         } else {
                             separator.style.margin = '0 1px';
