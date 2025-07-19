@@ -7685,3 +7685,39 @@ s {
     pointer-events: auto;
     opacity: 1;
 }
+
+/* Кольорові кружечки для вибору кольору товару */
+.color-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-block;
+    margin: 0 6px 0 0;
+    border: 2px solid #eee;
+    vertical-align: middle;
+    background-position: center !important;
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    cursor: pointer;
+    position: relative;
+}
+.color-circle.selected {
+    border: 2px solid #333;
+}
+.color-circle span {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    color: #222;
+    background: #fff;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-top: 2px;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    pointer-events: none;
+}
