@@ -4102,8 +4102,22 @@ async function importProductsBackup() {
                         });
                     }
 
+                    // Виправлена обробка groupProducts
                     if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
+                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(item => {
+                            // Якщо це об'єкт, беремо його _id
+                            if (typeof item === 'object' && item !== null && item._id) {
+                                return item._id.toString();
+                            }
+                            // Якщо це рядок, залишаємо як є
+                            else if (typeof item === 'string') {
+                                return item;
+                            }
+                            // Якщо це щось інше, конвертуємо в рядок
+                            else {
+                                return item.toString();
+                            }
+                        });
                     }
 
                     return cleanedProduct;
