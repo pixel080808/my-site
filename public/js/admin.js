@@ -3898,17 +3898,60 @@ function exportSiteBackup() {
     resetInactivityTimer();
 }
 
-    function exportProductsBackup() {
-        const blob = new Blob([JSON.stringify(products)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'products-backup.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Бекап товарів експортовано!');
-        resetInactivityTimer();
-    }
+function exportProductsBackup() {
+    // Створюємо копію товарів для експорту
+    const productsForExport = products.map(product => {
+        const productCopy = { ...product };
+        
+        // Якщо це груповий товар, замінюємо ID на повну інформацію про товари
+        if (productCopy.type === 'group' && productCopy.groupProducts && Array.isArray(productCopy.groupProducts)) {
+            const fullGroupProducts = [];
+            
+            for (const groupProductId of productCopy.groupProducts) {
+                // Знаходимо повну інформацію про товар в групі
+                const groupProduct = products.find(p => p._id === groupProductId || p.id === groupProductId);
+                if (groupProduct) {
+                    // Створюємо копію товару без системних полів
+                    const { _id, createdAt, updatedAt, __v, ...cleanedGroupProduct } = groupProduct;
+                    
+                    // Очищаємо вкладені об'єкти
+                    if (cleanedGroupProduct.sizes && Array.isArray(cleanedGroupProduct.sizes)) {
+                        cleanedGroupProduct.sizes = cleanedGroupProduct.sizes.map(size => {
+                            const { _id, ...cleanedSize } = size;
+                            return cleanedSize;
+                        });
+                    }
+                    
+                    if (cleanedGroupProduct.colors && Array.isArray(cleanedGroupProduct.colors)) {
+                        cleanedGroupProduct.colors = cleanedGroupProduct.colors.map(color => {
+                            const { _id, ...cleanedColor } = color;
+                            return cleanedColor;
+                        });
+                    }
+                    
+                    // Додаємо оригінальний ID як посилання
+                    cleanedGroupProduct.originalId = _id;
+                    fullGroupProducts.push(cleanedGroupProduct);
+                }
+            }
+            
+            // Замінюємо масив ID на масив повних об'єктів товарів
+            productCopy.groupProducts = fullGroupProducts;
+        }
+        
+        return productCopy;
+    });
+
+    const blob = new Blob([JSON.stringify(productsForExport)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'products-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Бекап товарів експортовано!');
+    resetInactivityTimer();
+}
 
     function exportOrdersBackup() {
         const blob = new Blob([JSON.stringify(orders)], { type: 'application/json' });
@@ -4042,33 +4085,93 @@ async function importProductsBackup() {
                     return;
                 }
 
-                const cleanedProductsData = productsData.map(product => {
-                    const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
+                // Спочатку створюємо мапу для зберігання нових ID товарів
+                const idMapping = new Map();
+                const processedProducts = [];
 
-                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                            const { _id, ...cleanedSize } = size;
-                            return cleanedSize;
+                // Обробляємо всі товари, крім групових
+                for (const product of productsData) {
+                    if (product.type !== 'group') {
+                        const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
+
+                        if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                            cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                                const { _id, ...cleanedSize } = size;
+                                return cleanedSize;
+                            });
+                        }
+
+                        if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                            cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                                const { _id, ...cleanedColor } = color;
+                                return cleanedColor;
+                            });
+                        }
+
+                        // Зберігаємо оригінальний ID для мапінгу
+                        const originalId = _id || id;
+                        processedProducts.push({
+                            ...cleanedProduct,
+                            originalId: originalId
                         });
                     }
+                }
 
-                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                            const { _id, ...cleanedColor } = color;
-                            return cleanedColor;
+                // Тепер обробляємо групові товари
+                for (const product of productsData) {
+                    if (product.type === 'group') {
+                        const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
+
+                        if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                            cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                                const { _id, ...cleanedSize } = size;
+                                return cleanedSize;
+                            });
+                        }
+
+                        if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                            cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                                const { _id, ...cleanedColor } = color;
+                                return cleanedColor;
+                            });
+                        }
+
+                        // Обробляємо товари в групі
+                        if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
+                            const groupProductIds = [];
+                            
+                            for (const groupProduct of cleanedProduct.groupProducts) {
+                                if (typeof groupProduct === 'object' && groupProduct.originalId) {
+                                    // Це повний об'єкт товару з експорту
+                                    const { originalId, ...cleanedGroupProduct } = groupProduct;
+                                    
+                                    // Додаємо товар до списку для імпорту
+                                    processedProducts.push({
+                                        ...cleanedGroupProduct,
+                                        originalId: originalId
+                                    });
+                                    
+                                    // Додаємо ID до списку (буде оновлено після імпорту)
+                                    groupProductIds.push(originalId);
+                                } else {
+                                    // Це просто ID (старий формат)
+                                    groupProductIds.push(groupProduct.toString());
+                                }
+                            }
+                            
+                            cleanedProduct.groupProducts = groupProductIds;
+                        }
+
+                        processedProducts.push({
+                            ...cleanedProduct,
+                            originalId: _id || id
                         });
                     }
-
-                    if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
-                    }
-
-                    return cleanedProduct;
-                });
+                }
 
                 // Створюємо FormData і додаємо файл
                 const formData = new FormData();
-                const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(processedProducts)], { type: 'application/json' });
                 formData.append('file', blob, 'products-backup.json');
 
                 const response = await fetchWithAuth('/api/import/products', {
@@ -4096,7 +4199,7 @@ async function importProductsBackup() {
                 }
 
                 const result = await response.json();
-                products = cleanedProductsData;
+                products = processedProducts;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
                 await loadProducts(productsCurrentPage, productsPerPage);
                 renderAdmin();
