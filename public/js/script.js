@@ -3009,9 +3009,11 @@ document.addEventListener('click', closeDropdownHandler, true);
                         labelSpan.style.color = '#666';
                         labelSpan.style.marginBottom = '2px';
                         
-                        // Зменшуємо шрифт на екранах до 480px
+                        // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            labelSpan.style.fontSize = '8px';
+                            // Адаптивний розмір шрифту: мінімум 7px, максимум 10px, залежить від ширини вікна
+                            const fontSize = Math.max(7, Math.min(10, window.innerWidth * 0.02));
+                            labelSpan.style.fontSize = fontSize + 'px';
                         }
                         
                         pairContainer.appendChild(labelSpan);
@@ -3024,9 +3026,11 @@ document.addEventListener('click', closeDropdownHandler, true);
                         valueSpan.style.textAlign = 'center';
                         valueSpan.style.fontSize = '14px';
                         
-                        // Зменшуємо шрифт на екранах до 480px
+                        // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            valueSpan.style.fontSize = '10px';
+                            // Адаптивний розмір шрифту: мінімум 9px, максимум 12px, залежить від ширини вікна
+                            const fontSize = Math.max(9, Math.min(12, window.innerWidth * 0.025));
+                            valueSpan.style.fontSize = fontSize + 'px';
                         }
                         
                         pairContainer.appendChild(valueSpan);
@@ -3042,7 +3046,9 @@ document.addEventListener('click', closeDropdownHandler, true);
                             // Прибираємо відступи навколо роздільника на екранах до 480px
                         if (window.innerWidth <= 480) {
                             separator.style.margin = '0';
-                            separator.style.fontSize = '10px';
+                            // Адаптивний розмір шрифту: мінімум 8px, максимум 12px, залежить від ширини вікна
+                            const fontSize = Math.max(8, Math.min(12, window.innerWidth * 0.025));
+                            separator.style.fontSize = fontSize + 'px';
                         } else {
                             separator.style.margin = '0 1px';
                         }

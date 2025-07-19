@@ -1198,7 +1198,7 @@ h3:hover {
 @media (max-width: 480px) {
     .dimension-separator {
         margin: 0 !important;
-        font-size: 10px;
+        font-size: clamp(8px, 2.5vw, 12px);
     }
     
     .dimensions-container {
@@ -1216,11 +1216,11 @@ h3:hover {
     }
     
     .dimension-label {
-        font-size: 8px;
+        font-size: clamp(7px, 2vw, 10px);
     }
     
     .dimension-value {
-        font-size: 10px;
+        font-size: clamp(9px, 2.5vw, 12px);
     }
 }
 
@@ -7281,7 +7281,7 @@ s {
     @media (max-width: 480px) {
         .group-product-item .group-product-info .dimension-separator {
             margin: 0 !important;
-            font-size: 10px;
+            font-size: clamp(8px, 2.5vw, 12px);
         }
         
         .group-product-item .group-product-info .dimensions-container {
@@ -7299,11 +7299,11 @@ s {
         }
         
         .group-product-item .group-product-info .dimensions .dimension-label {
-            font-size: 8px;
+            font-size: clamp(7px, 2vw, 10px);
         }
         
         .group-product-item .group-product-info .dimensions .dimension-value {
-            font-size: 10px;
+            font-size: clamp(9px, 2.5vw, 12px);
         }
     }
     
