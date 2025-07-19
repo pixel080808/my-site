@@ -7693,7 +7693,7 @@ s {
     border-radius: 50%;
     display: inline-block;
     margin: 10px;
-    border: 2px solid #eee;
+    border: 3px solid #eee;
     vertical-align: middle;
     background-position: center !important;
     background-size: cover !important;
@@ -7703,8 +7703,9 @@ s {
     position: relative;
 }
 .color-circle.selected {
-    border: 2px solid #333;
-}
+    border-color: #10b981;
+    box-shadow: 0 0 8px rgb(16 185 129 / 0%);
+
 .color-circle span {
     display: block;
     position: absolute;
