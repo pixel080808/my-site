@@ -2701,8 +2701,8 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
         const expectedPrice = size.price
         if (item.price !== expectedPrice) {
-          logger.warn(
-            `Невідповідність ціни для продукту ${item.id}, розмір ${item.size}: отримано ${item.price}, очікувалося ${expectedPrice}`,
+          logger.debug(
+            `Виправлено ціну для продукту ${item.id}, розмір ${item.size}: з ${item.price} на ${expectedPrice}`,
           )
           item.price = expectedPrice
         }
@@ -2716,8 +2716,8 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
         const expectedPrice = product.price + (color.priceChange || 0)
         if (item.price !== expectedPrice) {
-          logger.warn(
-            `Невідповідність ціни для продукту ${item.id}, колір ${item.color.name}: отримано ${item.price}, очікувалося ${expectedPrice}`,
+          logger.debug(
+            `Виправлено ціну для продукту ${item.id}, колір ${item.color.name}: з ${item.price} на ${expectedPrice}`,
           )
           item.price = expectedPrice
         }
@@ -2728,8 +2728,8 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
       } else {
         if (item.price !== product.price) {
-          logger.warn(
-            `Невідповідність ціни для продукту ${item.id}: отримано ${item.price}, очікувалося ${product.price}`,
+          logger.debug(
+            `Виправлено ціну для продукту ${item.id}: з ${item.price} на ${product.price}`,
           )
           item.price = product.price
         }
