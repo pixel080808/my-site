@@ -2647,13 +2647,47 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
     }
 
     for (const item of cartItems) {
-      const product = await Product.findOne({ 
-        $or: [
-          { id: item.id },
-          { _id: item.id }
-        ]
-      }).session(session)
+      let product;
+      
+      logger.info(`Шукаємо продукт з ID: ${item.id}, тип: ${typeof item.id}`);
+      
+      // Спробуємо знайти продукт за _id (MongoDB ObjectId)
+      if (mongoose.Types.ObjectId.isValid(item.id)) {
+        logger.info(`Спроба пошуку за _id: ${item.id}`);
+        product = await Product.findOne({ _id: item.id }).session(session);
+        if (product) {
+          logger.info(`Продукт знайдено за _id: ${product.name}`);
+        }
+      }
+      
+      // Якщо не знайдено за _id, спробуємо за числовим id
       if (!product) {
+        const numericId = parseInt(item.id);
+        if (!isNaN(numericId)) {
+          logger.info(`Спроба пошуку за числовим id: ${numericId}`);
+          product = await Product.findOne({ id: numericId }).session(session);
+          if (product) {
+            logger.info(`Продукт знайдено за числовим id: ${product.name}`);
+          }
+        }
+      }
+      
+      // Якщо все ще не знайдено, спробуємо пошук за рядковим id (можливо це slug або інший ідентифікатор)
+      if (!product) {
+        logger.info(`Спроба пошуку за рядковим id: ${item.id}`);
+        product = await Product.findOne({ 
+          $or: [
+            { slug: item.id },
+            { name: item.id }
+          ]
+        }).session(session);
+        if (product) {
+          logger.info(`Продукт знайдено за рядковим id: ${product.name}`);
+        }
+      }
+      
+      if (!product) {
+        logger.error(`Продукт з id ${item.id} не знайдено ні за _id, ні за числовим id, ні за рядковим id`);
         await session.abortTransaction()
         session.endSession()
         return res.status(400).json({ error: `Продукт з id ${item.id} не знайдено` })

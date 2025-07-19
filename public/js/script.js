@@ -279,6 +279,16 @@ async function saveCartToServer() {
             .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0 && !isNaN(item.price));
 
         console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
+        console.log('Детальна інформація про товари в кошику:');
+        filteredCartItems.forEach((item, index) => {
+            console.log(`Товар ${index + 1}:`, {
+                id: item.id,
+                idType: typeof item.id,
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            });
+        });
 
         if (!BASE_URL) {
             console.error('BASE_URL не визначено');
@@ -6241,6 +6251,14 @@ async function addToCartWithColor(productId) {
         showNotification('Товар не знайдено!', 'error');
         return;
     }
+    
+    console.log('Додаємо товар в кошик:', {
+        productId,
+        productName: product.name,
+        product_id: product._id,
+        productId: product.id,
+        finalId: product._id || product.id
+    });
     let color = null;
     if (product.colors?.length > 0) {
         const colorIndex = typeof selectedColors[product._id] !== 'undefined' ? selectedColors[product._id] : 0;
