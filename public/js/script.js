@@ -153,27 +153,27 @@ async function loadCartFromServer() {
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
             cart = data.map(item => {
-                const product = products.find(p => p.id === item.id);
+                const product = products.find(p => p._id === item.id || p.id === item.id);
                 if (product?.type === 'mattresses') {
-                    return {
-                        id: Number(item.id),
-                        name: item.name || '',
-                        quantity: item.quantity || 1,
-                        price: item.price || 0,
-                        photo: item.photo || '',
-                        color: null,
-                        size: item.size || null
-                    };
-                }
-                return {
-                    id: Number(item.id),
+                                    return {
+                    id: product._id || item.id,
                     name: item.name || '',
                     quantity: item.quantity || 1,
                     price: item.price || 0,
                     photo: item.photo || '',
-                    color: item.color || null,
+                    color: null,
                     size: item.size || null
                 };
+            }
+            return {
+                id: product._id || item.id,
+                name: item.name || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                photo: item.photo || '',
+                color: item.color || null,
+                size: item.size || null
+            };
             });
         } else {
             cart = loadFromStorage('cart', []);
@@ -184,7 +184,7 @@ async function loadCartFromServer() {
         }
 
         cart = cart.filter(item => {
-            const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            const isValid = item && (typeof item.id === 'string' || typeof item.id === 'number') && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
             if (!isValid) {
                 console.warn('Елемент кошика видалено через некоректні дані:', item);
             }
@@ -197,7 +197,7 @@ async function loadCartFromServer() {
         console.error('Помилка завантаження кошика:', e);
         cart = loadFromStorage('cart', []);
         cart = cart.filter(item => {
-            const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
+            const isValid = item && (typeof item.id === 'string' || typeof item.id === 'number') && item.name && typeof item.quantity === 'number' && typeof item.price === 'number';
             if (!isValid) {
                 console.warn('Елемент кошика видалено через некоректні дані:', item);
             }
@@ -226,11 +226,11 @@ async function saveCartToServer() {
 
         const filteredCartItems = cartItems
             .map(item => {
-                if (typeof item.id !== 'number' || isNaN(item.id)) {
+                if (typeof item.id !== 'string' && typeof item.id !== 'number') {
                     console.warn('Некоректний ID в елементі кошика:', item);
                     return null;
                 }
-                const product = products.find(p => p.id === item.id);
+                const product = products.find(p => p._id === item.id || p.id === item.id);
                 if (!product) {
                     console.warn('Товар не знайдено для ID:', item.id);
                     return null;
@@ -266,7 +266,7 @@ async function saveCartToServer() {
                 }
 
                 const cartItem = {
-                    id: Number(item.id),
+                    id: product._id || item.id,
                     name: item.name || '',
                     quantity: Number(item.quantity) || 1,
                     price: parseFloat(price) || 0,
@@ -353,7 +353,7 @@ async function saveCartToServer() {
 
                 cart = filteredCartItems.map(item => ({
                     ...item,
-                    id: Number(item.id),
+                    id: item.id,
                     quantity: Number(item.quantity),
                     price: parseFloat(item.price),
                     size: item.size
@@ -3721,7 +3721,7 @@ function restoreSearchState() {
 
 async function updateCartPrices() {
     cart.forEach(item => {
-        const product = products.find(p => p.id === item.id);
+        const product = products.find(p => p._id === item.id || p.id === item.id);
         if (!product) return;
 
         let price = product.price || 0;
@@ -3771,7 +3771,7 @@ async function renderCart() {
 
     const initialCartLength = cart.length;
     cart = cart.filter(item => {
-        const product = products.find(p => p.id === item.id);
+        const product = products.find(p => p._id === item.id || p.id === item.id);
         if (!product) {
             console.warn(`Товар з id ${item.id} і key ${item.cartItemKey} недоступний і буде видалений з кошика:`, item);
             return false;
@@ -3834,7 +3834,7 @@ async function renderCart() {
             }
         });
 
-        const product = products.find(p => p.id === item.id);
+        const product = products.find(p => p._id === item.id || p.id === item.id);
         let isAvailable = true;
         if (product && product.type === 'mattresses' && item.size) {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
@@ -4178,12 +4178,12 @@ async function submitOrder() {
 
     const unavailableItems = [];
     cart.forEach(item => {
-        if (!item.id || typeof item.id !== 'number' || !item.name || typeof item.quantity !== 'number' || typeof item.price !== 'number' || isNaN(item.price)) {
+        if (!item.id || (typeof item.id !== 'string' && typeof item.id !== 'number') || !item.name || typeof item.quantity !== 'number' || typeof item.price !== 'number' || isNaN(item.price)) {
             console.warn(`Некоректний елемент кошика: ${JSON.stringify(item)}`);
             unavailableItems.push(item);
             return;
         }
-        const product = products.find(p => p.id === item.id);
+        const product = products.find(p => p._id === item.id || p.id === item.id);
         if (!product) {
             console.warn(`Товар з id ${item.id} не знайдено в products`);
             unavailableItems.push(item);
@@ -4223,7 +4223,7 @@ async function submitOrder() {
         total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         customer,
         items: cart.map(item => {
-            const product = products.find(p => p.id === item.id);
+            const product = products.find(p => p._id === item.id || p.id === item.id);
             let colorData = null;
             if (item.color && item.color.name) {
                 colorData = {
