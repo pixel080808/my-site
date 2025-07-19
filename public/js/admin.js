@@ -4066,13 +4066,19 @@ async function importProductsBackup() {
                     return cleanedProduct;
                 });
 
+                // Створюємо FormData і додаємо файл
+                const formData = new FormData();
+                const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
+                formData.append('file', blob, 'products-backup.json');
+
                 const response = await fetchWithAuth('/api/import/products', {
                     method: 'POST',
-                    body: JSON.stringify(cleanedProductsData),
-                    headers: { 'Content-Type': 'application/json' }
+                    body: formData
                 });
+                
                 if (!response.ok) {
-                    throw new Error(await response.text());
+                    const errorData = await response.text();
+                    throw new Error(`Помилка імпорту товарів: ${errorData}`);
                 }
 
                 products = cleanedProductsData;
@@ -4083,12 +4089,13 @@ async function importProductsBackup() {
                 unsavedChanges = false;
                 resetInactivityTimer();
             } catch (err) {
-                alert('Помилка імпорту: ' + err.message);
+                console.error('Помилка імпорту товарів:', err);
+                showNotification('Помилка імпорту товарів: ' + err.message);
             }
         };
         reader.readAsText(file);
     } else {
-        alert('Виберіть файл для імпорту!');
+        showNotification('Виберіть файл для імпорту!');
     }
 }
 
