@@ -7684,8 +7684,8 @@ s {
 
 /* Кольорові кружечки для вибору кольору товару */
 .color-circle {
-    width: 80px;
-    height: 80px;
+    width: 85px;
+    height: 85px;
     border-radius: 50%;
     display: inline-block;
     margin: 10px;
@@ -7699,7 +7699,7 @@ s {
     position: relative;
 }
 .color-circle.selected {
-    border-color: #10b981;
+    border-color: #42826d;
     box-shadow: 0 0 8px rgb(16 185 129 / 0%);
 
 .color-circle span {
