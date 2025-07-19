@@ -3214,10 +3214,10 @@ async function addGroupToCart(productId) {
 
         const normalizedColorName = selectedColor ? selectedColor.name.toLowerCase().replace(/\s+/g, '-') : 'no-color';
         const normalizedSize = selectedSize ? selectedSize.toLowerCase().replace(/\s+/g, '-') : 'no-size';
-        const cartItemId = `${p.id}_${normalizedColorName}_${normalizedSize}`;
+        const cartItemId = `${p._id || p.id}_${normalizedColorName}_${normalizedSize}`;
 
         const cartItem = {
-            id: p.id,
+            id: p._id || p.id,
             cartItemKey: cartItemId,
             productId: p._id,
             name: p.name,
@@ -6268,7 +6268,7 @@ async function addToCartWithColor(productId) {
         price += parseFloat(color.priceChange);
     }
     const cartItem = {
-        id: product.id,
+        id: product._id || product.id,
         name: product.name,
         quantity,
         price: parseFloat(price),

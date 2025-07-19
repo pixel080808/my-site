@@ -3286,6 +3286,10 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
       await Promise.all(updatePromises)
     }
 
+    // Очищаємо всі кошики, оскільки ID товарів змінилися
+    await Cart.deleteMany({})
+    logger.info("Всі кошики очищено після імпорту товарів")
+
     try {
       await fs.promises.unlink(req.file.path)
       logger.info(`Тимчасовий файл видалено: ${req.file.path}`)
