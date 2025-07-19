@@ -4043,7 +4043,7 @@ async function importProductsBackup() {
                 }
 
                 const cleanedProductsData = productsData.map(product => {
-                    const { _id, createdAt, updatedAt, __v, ...cleanedProduct } = product;
+                    const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
 
                     if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
                         cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
@@ -4077,10 +4077,25 @@ async function importProductsBackup() {
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.text();
-                    throw new Error(`Помилка імпорту товарів: ${errorData}`);
+                    const errorText = await response.text();
+                    let errorMessage = 'Помилка імпорту товарів';
+                    
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        if (errorData.error) {
+                            errorMessage = errorData.error;
+                            if (errorData.details) {
+                                errorMessage += ': ' + JSON.stringify(errorData.details);
+                            }
+                        }
+                    } catch (parseError) {
+                        errorMessage = errorText;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
 
+                const result = await response.json();
                 products = cleanedProductsData;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
                 await loadProducts(productsCurrentPage, productsPerPage);
