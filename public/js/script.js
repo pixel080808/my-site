@@ -1036,7 +1036,16 @@ function showSection(sectionId) {
         const headerHeight = header ? header.offsetHeight : 0;
         const floatingFavorite = document.getElementById('floating-favorite');
         const handleScroll = () => {
-            if (window.scrollY > headerHeight) {
+            // Перевіряємо, чи видно постійні кнопки (хедер)
+            const header = document.querySelector('header');
+            const headerBottom = header ? header.offsetTop + header.offsetHeight : 0;
+            const isHeaderVisible = window.scrollY < headerBottom;
+            
+            // Не показуємо плаваючі кнопки на головній сторінці
+            const isHomePage = sectionId === 'home';
+            
+            // Спрощена логіка: показуємо плаваючі кнопки при прокручуванні більше 100px
+            if (window.scrollY > 100 && !isHomePage) {
                 burgerMenu.classList.add('visible');
                 floatingCart.classList.add('visible');
                 if (floatingFavorite) {
@@ -1045,6 +1054,7 @@ function showSection(sectionId) {
                 if (sectionId === 'product-details' && currentProduct?.type === 'group' && floatingGroupCart) {
                     floatingGroupCart.classList.add('visible');
                 }
+
             } else {
                 burgerMenu.classList.remove('visible');
                 floatingCart.classList.remove('visible');
@@ -1056,6 +1066,7 @@ function showSection(sectionId) {
                 }
                 burgerMenu.classList.remove('active');
                 burgerContent.classList.remove('active');
+
             }
         };
 
@@ -1064,6 +1075,9 @@ function showSection(sectionId) {
         }
         window.scrollHandler = handleScroll;
         window.addEventListener('scroll', handleScroll);
+        
+        // Викликаємо обробник одразу для перевірки поточного стану
+        handleScroll();
     }
 
     if (burgerMenu && burgerContent) {
@@ -5724,15 +5738,7 @@ function updateFloatingFavorite() {
         badge.style.display = 'none';
     }
     badge.setAttribute('data-count', count);
-
-    // Показуємо кнопку якщо прокручено більше 60px (як floating-cart)
-    if (window.scrollY > 60) {
-        favBtn.classList.add('visible');
-    } else {
-        favBtn.classList.remove('visible');
-    }
 }
-window.addEventListener('scroll', updateFloatingFavorite);
 window.addEventListener('DOMContentLoaded', updateFloatingFavorite);
 
 window.addEventListener('DOMContentLoaded', () => {

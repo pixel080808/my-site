@@ -3983,13 +3983,13 @@ s {
         background: var(--secondary-color);
     }
 
-.floating-cart {
+    .floating-cart {
         position: fixed;
         top: 10px;
         right: 10px;
         z-index: 1002;
         padding: 8px;
-        display: inline-flex;
+        display: none;
         align-items: center;
         background: var(--card-bg);
         border-radius: 50px;
@@ -3997,11 +3997,13 @@ s {
         cursor: pointer;
         transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
         opacity: 0;
+        pointer-events: none;
     }
 
     .floating-cart.visible {
         opacity: 1;
-        display: inline-flex;
+        display: flex;
+        pointer-events: auto;
     }
 
     .floating-cart:hover {
@@ -4047,7 +4049,8 @@ s {
     }
 
     #catalog.active ~ .floating-cart {
-        display: flex;
+    display: none;
+    pointer-events: none;
     }
 
     .floating-favorite {
@@ -4057,7 +4060,7 @@ s {
         z-index: 1002;
         padding: 8px;
         margin-right: 0;
-        display: inline-flex;
+        display: none;
         align-items: center;
         background: var(--card-bg);
         border-radius: 50px;
@@ -4066,11 +4069,13 @@ s {
         transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
         opacity: 0;
         vertical-align: middle;
+        pointer-events: none;
     }
 
     .floating-favorite.visible {
         opacity: 1;
         display: inline-flex;
+        pointer-events: auto;
     }
 
     .floating-favorite:hover {
@@ -4576,7 +4581,7 @@ s {
         right: 10px;
         z-index: 1002;
         padding: 8px;
-        display: inline-flex;
+        display: none;
         align-items: center;
         background: var(--card-bg);
         border-radius: 18px;
@@ -4584,11 +4589,13 @@ s {
         cursor: pointer;
         transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
         opacity: 0;
+        pointer-events: none;
     }
 
     .floating-cart.visible {
         opacity: 1;
-        display: inline-flex;
+        display: flex;
+        pointer-events: auto;
     }
 
     .floating-cart:hover {
@@ -5401,7 +5408,8 @@ s {
         right: 10px;
         z-index: 1002;
         padding: 8px;
-        display: inline-flex;
+    display: none;
+    pointer-events: none;
         align-items: center;
         background: var(--card-bg);
         border-radius: 18px;
@@ -5413,7 +5421,8 @@ s {
 
     .floating-cart.visible {
         opacity: 1;
-        display: inline-flex;
+        display: flex;
+        pointer-events: auto;
     }
 
     .floating-cart:hover {
@@ -7662,4 +7671,17 @@ s {
   .custom-mattress-select .selected-option s {
     color: #a0a0a0 !important;
   }
+}
+
+.floating-favorite {
+    /* ...інші стилі... */
+    display: none;
+    pointer-events: none;
+    /* ...інші стилі... */
+}
+
+.floating-favorite.visible {
+    display: flex;
+    pointer-events: auto;
+    opacity: 1;
 }
