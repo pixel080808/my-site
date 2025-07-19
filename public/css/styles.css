@@ -2863,10 +2863,6 @@ s {
     transition: border var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
-.color-circle:hover {
-    border-color: var(--primary-color);
-}
-
 .color-circle.selected {
     border-color: var(--secondary-color);
     box-shadow: 0 0 8px rgb(59 130 246);
