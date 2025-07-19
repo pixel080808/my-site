@@ -4085,7 +4085,11 @@ async function importProductsBackup() {
                     return;
                 }
 
-                const cleanedProductsData = productsData.map(product => {
+                // Спочатку створюємо мапу для зберігання зв'язків originalId -> новий _id
+                const idMapping = new Map();
+                
+                // Перший прохід: обробляємо всі товари і створюємо мапу ID
+                const processedProducts = productsData.map(product => {
                     const { _id, createdAt, updatedAt, __v, tempNumber, id, originalId, ...cleanedProduct } = product;
 
                     if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
@@ -4102,16 +4106,29 @@ async function importProductsBackup() {
                         });
                     }
 
-                    // Виправлена обробка groupProducts
-                    if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(item => {
-                            // Якщо це об'єкт, беремо його _id
-                            if (typeof item === 'object' && item !== null && item._id) {
-                                return item._id.toString();
+                    // Зберігаємо зв'язок originalId -> тимчасовий індекс
+                    if (originalId) {
+                        idMapping.set(originalId, `temp_${processedProducts.length}`);
+                    }
+
+                    return cleanedProduct;
+                });
+
+                // Другий прохід: обробляємо groupProducts
+                const finalProducts = processedProducts.map((product, index) => {
+                    if (product.groupProducts && Array.isArray(product.groupProducts)) {
+                        product.groupProducts = product.groupProducts.map(item => {
+                            // Якщо це об'єкт з originalId, використовуємо його
+                            if (typeof item === 'object' && item !== null && item.originalId) {
+                                return item.originalId;
                             }
-                            // Якщо це рядок, залишаємо як є
+                            // Якщо це рядок (ID), залишаємо як є
                             else if (typeof item === 'string') {
                                 return item;
+                            }
+                            // Якщо це об'єкт без originalId, спробуємо знайти _id
+                            else if (typeof item === 'object' && item !== null && item._id) {
+                                return item._id;
                             }
                             // Якщо це щось інше, конвертуємо в рядок
                             else {
@@ -4119,13 +4136,12 @@ async function importProductsBackup() {
                             }
                         });
                     }
-
-                    return cleanedProduct;
+                    return product;
                 });
 
                 // Створюємо FormData і додаємо файл
                 const formData = new FormData();
-                const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(finalProducts)], { type: 'application/json' });
                 formData.append('file', blob, 'products-backup.json');
 
                 const response = await fetchWithAuth('/api/import/products', {
@@ -4153,7 +4169,7 @@ async function importProductsBackup() {
                 }
 
                 const result = await response.json();
-                products = cleanedProductsData;
+                products = finalProducts;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
                 await loadProducts(productsCurrentPage, productsPerPage);
                 renderAdmin();
