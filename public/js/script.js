@@ -2975,6 +2975,14 @@ document.addEventListener('click', closeDropdownHandler, true);
                     dimensionsContainer.style.alignItems = 'center';
                     dimensionsContainer.style.gap = '6px';
                     dimensionsContainer.className = 'dimensions-container';
+                    
+                    // Прибираємо відступи на екранах до 480px
+                    if (window.innerWidth <= 480) {
+                        dimensionsContainer.style.gap = '0px';
+                        dimensionsContainer.style.flexWrap = 'nowrap';
+                        dimensionsContainer.style.padding = '0';
+                        dimensionsContainer.style.margin = '0';
+                    }
 
                     for (let i = 0; i < dimensions.length; i++) {
                         // Створюємо контейнер для кожної пари позначення-значення
@@ -2984,6 +2992,13 @@ document.addEventListener('click', closeDropdownHandler, true);
                         pairContainer.style.alignItems = 'center';
                         pairContainer.style.minWidth = '50px';
                         pairContainer.className = 'dimension-pair';
+                        
+                        // Налаштовуємо для екранів до 480px
+                        if (window.innerWidth <= 480) {
+                            pairContainer.style.minWidth = 'auto';
+                            pairContainer.style.margin = '0';
+                            pairContainer.style.gap = '1px';
+                        }
 
                         // Додаємо позначення
                         const labelSpan = document.createElement('span');
@@ -2993,6 +3008,12 @@ document.addEventListener('click', closeDropdownHandler, true);
                         labelSpan.style.fontSize = '12px';
                         labelSpan.style.color = '#666';
                         labelSpan.style.marginBottom = '2px';
+                        
+                        // Зменшуємо шрифт на екранах до 480px
+                        if (window.innerWidth <= 480) {
+                            labelSpan.style.fontSize = '8px';
+                        }
+                        
                         pairContainer.appendChild(labelSpan);
                         
                         // Додаємо значення
@@ -3002,6 +3023,12 @@ document.addEventListener('click', closeDropdownHandler, true);
                         valueSpan.textContent = `${formattedValue} см`;
                         valueSpan.style.textAlign = 'center';
                         valueSpan.style.fontSize = '14px';
+                        
+                        // Зменшуємо шрифт на екранах до 480px
+                        if (window.innerWidth <= 480) {
+                            valueSpan.style.fontSize = '10px';
+                        }
+                        
                         pairContainer.appendChild(valueSpan);
 
                         dimensionsContainer.appendChild(pairContainer);
@@ -3012,7 +3039,13 @@ document.addEventListener('click', closeDropdownHandler, true);
                             separator.textContent = '×';
                             separator.style.color = '#666';
                             separator.style.fontSize = '14px';
+                            // Прибираємо відступи навколо роздільника на екранах до 480px
+                        if (window.innerWidth <= 480) {
+                            separator.style.margin = '0';
+                            separator.style.fontSize = '10px';
+                        } else {
                             separator.style.margin = '0 1px';
+                        }
                             separator.className = 'dimension-separator';
                             dimensionsContainer.appendChild(separator);
                         }
