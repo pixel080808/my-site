@@ -4085,93 +4085,33 @@ async function importProductsBackup() {
                     return;
                 }
 
-                // Спочатку створюємо мапу для зберігання нових ID товарів
-                const idMapping = new Map();
-                const processedProducts = [];
+                const cleanedProductsData = productsData.map(product => {
+                    const { _id, createdAt, updatedAt, __v, tempNumber, id, originalId, ...cleanedProduct } = product;
 
-                // Обробляємо всі товари, крім групових
-                for (const product of productsData) {
-                    if (product.type !== 'group') {
-                        const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
-
-                        if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                            cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                                const { _id, ...cleanedSize } = size;
-                                return cleanedSize;
-                            });
-                        }
-
-                        if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                            cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                                const { _id, ...cleanedColor } = color;
-                                return cleanedColor;
-                            });
-                        }
-
-                        // Зберігаємо оригінальний ID для мапінгу
-                        const originalId = _id || id;
-                        processedProducts.push({
-                            ...cleanedProduct,
-                            originalId: originalId
+                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                            const { _id, ...cleanedSize } = size;
+                            return cleanedSize;
                         });
                     }
-                }
 
-                // Тепер обробляємо групові товари
-                for (const product of productsData) {
-                    if (product.type === 'group') {
-                        const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
-
-                        if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
-                            cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
-                                const { _id, ...cleanedSize } = size;
-                                return cleanedSize;
-                            });
-                        }
-
-                        if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                            cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                                const { _id, ...cleanedColor } = color;
-                                return cleanedColor;
-                            });
-                        }
-
-                        // Обробляємо товари в групі
-                        if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
-                            const groupProductIds = [];
-                            
-                            for (const groupProduct of cleanedProduct.groupProducts) {
-                                if (typeof groupProduct === 'object' && groupProduct.originalId) {
-                                    // Це повний об'єкт товару з експорту
-                                    const { originalId, ...cleanedGroupProduct } = groupProduct;
-                                    
-                                    // Додаємо товар до списку для імпорту
-                                    processedProducts.push({
-                                        ...cleanedGroupProduct,
-                                        originalId: originalId
-                                    });
-                                    
-                                    // Додаємо ID до списку (буде оновлено після імпорту)
-                                    groupProductIds.push(originalId);
-                                } else {
-                                    // Це просто ID (старий формат)
-                                    groupProductIds.push(groupProduct.toString());
-                                }
-                            }
-                            
-                            cleanedProduct.groupProducts = groupProductIds;
-                        }
-
-                        processedProducts.push({
-                            ...cleanedProduct,
-                            originalId: _id || id
+                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                            const { _id, ...cleanedColor } = color;
+                            return cleanedColor;
                         });
                     }
-                }
+
+                    if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
+                        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(id => id.toString());
+                    }
+
+                    return cleanedProduct;
+                });
 
                 // Створюємо FormData і додаємо файл
                 const formData = new FormData();
-                const blob = new Blob([JSON.stringify(processedProducts)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
                 formData.append('file', blob, 'products-backup.json');
 
                 const response = await fetchWithAuth('/api/import/products', {
@@ -4199,7 +4139,7 @@ async function importProductsBackup() {
                 }
 
                 const result = await response.json();
-                products = processedProducts;
+                products = cleanedProductsData;
                 localStorage.setItem('products', LZString.compressToUTF16(JSON.stringify(products)));
                 await loadProducts(productsCurrentPage, productsPerPage);
                 renderAdmin();
