@@ -2597,7 +2597,7 @@ app.get("/api/cart", async (req, res) => {
 
 const cartSchemaValidation = Joi.array().items(
   Joi.object({
-    id: Joi.number().required(),
+    id: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
     name: Joi.string().required(),
     quantity: Joi.number().min(1).required(),
     price: Joi.number().min(0).required(),
@@ -2647,7 +2647,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
     }
 
     for (const item of cartItems) {
-      const product = await Product.findOne({ id: item.id }).session(session)
+      const product = await Product.findOne({ 
+        $or: [
+          { id: item.id },
+          { _id: item.id }
+        ]
+      }).session(session)
       if (!product) {
         await session.abortTransaction()
         session.endSession()

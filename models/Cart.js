@@ -16,7 +16,7 @@ const cartSchema = new mongoose.Schema({
     },
     items: [
         {
-            id: { type: Number, required: true },
+            id: { type: mongoose.Schema.Types.Mixed, required: true },
             name: { type: String, required: true },
             quantity: { type: Number, required: true, min: 1 },
             price: { type: Number, required: true, min: 0 },
@@ -65,7 +65,7 @@ const Cart = mongoose.model('Cart', cartSchema);
 
 const cartSchemaValidation = Joi.array().items(
     Joi.object({
-        id: Joi.number().required(),
+        id: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
         name: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
