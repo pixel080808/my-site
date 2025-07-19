@@ -6254,19 +6254,23 @@ async function addToCartWithColor(productId) {
         return;
     }
     
-    // Логування для діагностики (можна видалити після виправлення)
-    // console.log('Додаємо товар в кошик:', {
-    //     productId,
-    //     productName: product.name,
-    //     product_id: product._id,
-    //     productId: product.id,
-    //     finalId: product._id || product.id
-    // });
-    let color = null;
-    if (product.colors?.length > 0) {
-        const colorIndex = typeof selectedColors[product._id] !== 'undefined' ? selectedColors[product._id] : 0;
-        color = product.colors[colorIndex] || null;
+let color = null;
+if (product.colors?.length > 0) {
+    if (product.colors.length === 1) {
+        // Якщо лише 1 колір — вибираємо його автоматично
+        color = product.colors[0];
+        selectedColors[product._id] = 0;
+        saveToStorage('selectedColors', selectedColors);
+    } else {
+        // Якщо кольорів 2 або більше — перевіряємо, чи вибрано колір
+        const colorIndex = typeof selectedColors[product._id] !== 'undefined' ? selectedColors[product._id] : null;
+        if (colorIndex === null || typeof product.colors[colorIndex] === 'undefined') {
+            showNotification('Виберіть потрібний колір', 'warning');
+            return;
+        }
+        color = product.colors[colorIndex];
     }
+}
     let size = null;
     if (product.type === 'mattresses' && product.sizes?.length > 0) {
         size = selectedMattressSizes[product._id] || product.sizes[0]?.name;
