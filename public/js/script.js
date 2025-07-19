@@ -4256,6 +4256,7 @@ async function submitOrder() {
             const orderItem = {
                 id: item.id, // Залишаємо ID як є (рядок або число)
                 name: itemName,
+                brand: product?.brand || '', // Додаємо бренд
                 quantity: Number(item.quantity),
                 price: Number(item.price),
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),

@@ -47,6 +47,7 @@ const orderSchema = new mongoose.Schema({
     items: [{
         id: { type: mongoose.Schema.Types.Mixed, required: true }, // Приймаємо як числа, так і рядки
         name: { type: String, required: true },
+        brand: { type: String, default: '' }, // Додаємо поле для бренду
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true, min: 0 },
         photo: {
@@ -134,6 +135,7 @@ const orderSchemaValidation = Joi.object({
         Joi.object({
             id: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
             name: Joi.string().required(),
+            brand: Joi.string().allow('').optional(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
             photo: Joi.string().uri().allow('').optional(),

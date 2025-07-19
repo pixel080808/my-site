@@ -6554,11 +6554,21 @@ function viewOrder(index) {
                 ${
                     order.items && Array.isArray(order.items) && order.items.length > 0
                         ? order.items.map(item => {
-                              const product = products.find(p => p.id === item.id);
-                              const colorInfo = item.color && typeof item.color === 'object' && item.color.name ? `, Колір: ${item.color.name}` : '';
-                              return product
-                                  ? `<p>${product.name}${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`
-                                  : `<p>Товар #${item.id} (видалений)${colorInfo} - ${item.quantity} шт. - ${item.price} грн</p>`;
+                              // Формуємо інформацію про колір або розмір
+                              let additionalInfo = '';
+                              if (item.color && typeof item.color === 'object' && item.color.name) {
+                                  additionalInfo = `, Колір: ${item.color.name}`;
+                              } else if (item.size) {
+                                  additionalInfo = `, Розмір: ${item.size}`;
+                              }
+                              
+                              // Формуємо назву товару з брендом
+                              let productName = item.name || 'Невідомий товар';
+                              if (item.brand) {
+                                  productName = `${item.name} (${item.brand})`;
+                              }
+                              
+                              return `<p>${productName}${additionalInfo} - ${item.quantity} шт. - ${item.price} грн</p>`;
                           }).join('')
                         : '<p>Товари відсутні.</p>'
                 }
