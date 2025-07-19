@@ -2982,6 +2982,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                         dimensionsContainer.style.flexWrap = 'nowrap';
                         dimensionsContainer.style.padding = '0';
                         dimensionsContainer.style.margin = '0';
+                        dimensionsContainer.style.justifyContent = 'space-between';
+                        dimensionsContainer.style.width = '100%';
                     }
 
                     for (let i = 0; i < dimensions.length; i++) {
@@ -2998,6 +3000,10 @@ document.addEventListener('click', closeDropdownHandler, true);
                             pairContainer.style.minWidth = 'auto';
                             pairContainer.style.margin = '0';
                             pairContainer.style.gap = '1px';
+                            pairContainer.style.flex = '1';
+                            pairContainer.style.display = 'flex';
+                            pairContainer.style.flexDirection = 'column';
+                            pairContainer.style.alignItems = 'center';
                         }
 
                         // Додаємо позначення
@@ -3011,8 +3017,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                         
                         // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 7px, максимум 10px, залежить від ширини вікна
-                            const fontSize = Math.max(7, Math.min(10, window.innerWidth * 0.02));
+                            // Адаптивний розмір шрифту: мінімум 10px, максимум 12px, залежить від ширини вікна
+                            const fontSize = Math.max(10, Math.min(12, window.innerWidth * 0.025));
                             labelSpan.style.fontSize = fontSize + 'px';
                         }
                         
@@ -3028,8 +3034,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                         
                         // Адаптивний розмір шрифту на екранах до 480px
                         if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 9px, максимум 12px, залежить від ширини вікна
-                            const fontSize = Math.max(9, Math.min(12, window.innerWidth * 0.025));
+                            // Адаптивний розмір шрифту: мінімум 11px, максимум 12px, залежить від ширини вікна
+                            const fontSize = Math.max(11, Math.min(12, window.innerWidth * 0.03));
                             valueSpan.style.fontSize = fontSize + 'px';
                         }
                         
@@ -3046,8 +3052,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                             // Прибираємо відступи навколо роздільника на екранах до 480px
                         if (window.innerWidth <= 480) {
                             separator.style.margin = '0';
-                            // Адаптивний розмір шрифту: мінімум 8px, максимум 12px, залежить від ширини вікна
-                            const fontSize = Math.max(8, Math.min(12, window.innerWidth * 0.025));
+                            // Адаптивний розмір шрифту: мінімум 10px, максимум 12px, залежить від ширини вікна
+                            const fontSize = Math.max(10, Math.min(12, window.innerWidth * 0.03));
                             separator.style.fontSize = fontSize + 'px';
                         } else {
                             separator.style.margin = '0 1px';

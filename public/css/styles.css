@@ -1198,29 +1198,34 @@ h3:hover {
 @media (max-width: 480px) {
     .dimension-separator {
         margin: 0 !important;
-        font-size: clamp(8px, 2.5vw, 12px);
+        font-size: clamp(10px, 3vw, 12px);
     }
     
     .dimensions-container {
         flex-wrap: nowrap;
-        justify-content: center;
+        justify-content: space-between;
         gap: 0px;
         padding: 0;
         margin: 0;
+        width: 100%;
     }
     
     .dimension-pair {
         min-width: auto;
         margin: 0;
         gap: 1px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
     
     .dimension-label {
-        font-size: clamp(7px, 2vw, 10px);
+        font-size: clamp(10px, 2.5vw, 12px);
     }
     
     .dimension-value {
-        font-size: clamp(9px, 2.5vw, 12px);
+        font-size: clamp(11px, 3vw, 12px);
     }
 }
 
@@ -7281,29 +7286,34 @@ s {
     @media (max-width: 480px) {
         .group-product-item .group-product-info .dimension-separator {
             margin: 0 !important;
-            font-size: clamp(8px, 2.5vw, 12px);
+            font-size: clamp(10px, 3vw, 12px);
         }
         
         .group-product-item .group-product-info .dimensions-container {
             flex-wrap: nowrap;
-            justify-content: center;
+            justify-content: space-between;
             gap: 0px;
             padding: 0;
             margin: 0;
+            width: 100%;
         }
         
         .group-product-item .group-product-info .dimension-pair {
             min-width: auto;
             margin: 0;
             gap: 1px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .group-product-item .group-product-info .dimensions .dimension-label {
-            font-size: clamp(7px, 2vw, 10px);
+            font-size: clamp(10px, 2.5vw, 12px);
         }
         
         .group-product-item .group-product-info .dimensions .dimension-value {
-            font-size: clamp(9px, 2.5vw, 12px);
+            font-size: clamp(11px, 3vw, 12px);
         }
     }
     
