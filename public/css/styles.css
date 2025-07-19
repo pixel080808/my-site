@@ -7688,11 +7688,11 @@ s {
 
 /* Кольорові кружечки для вибору кольору товару */
 .color-circle {
-    width: 36px;
-    height: 36px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     display: inline-block;
-    margin: 0 6px 0 0;
+    margin: 10px;
     border: 2px solid #eee;
     vertical-align: middle;
     background-position: center !important;
