@@ -1203,9 +1203,9 @@ h3:hover {
     
     .dimensions-container {
         flex-wrap: nowrap;
-        justify-content: space-between;
+        justify-content: center;
         gap: 0px;
-        padding: 1px;
+        padding: 0 2px 0 0;
         margin: 0;
         width: 100%;
     }
@@ -1214,7 +1214,7 @@ h3:hover {
         min-width: auto;
         margin: 0;
         gap: 1px;
-        flex: 1;
+        flex: 0 1 auto;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -7291,9 +7291,9 @@ s {
         
         .group-product-item .group-product-info .dimensions-container {
             flex-wrap: nowrap;
-            justify-content: space-between;
+            justify-content: center;
             gap: 0px;
-            padding: 1px;
+            padding: 0 2px 0 0;
             margin: 0;
             width: 100%;
         }
@@ -7302,7 +7302,7 @@ s {
             min-width: auto;
             margin: 0;
             gap: 1px;
-            flex: 1;
+            flex: 0 1 auto;
             display: flex;
             flex-direction: column;
             align-items: center;

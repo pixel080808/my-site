@@ -2980,9 +2980,9 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (window.innerWidth <= 480) {
                         dimensionsContainer.style.gap = '0px';
                         dimensionsContainer.style.flexWrap = 'nowrap';
-                        dimensionsContainer.style.padding = '1px';
+                        dimensionsContainer.style.padding = '0 2px 0 0';
                         dimensionsContainer.style.margin = '0';
-                        dimensionsContainer.style.justifyContent = 'space-between';
+                        dimensionsContainer.style.justifyContent = 'center';
                         dimensionsContainer.style.width = '100%';
                     }
 
@@ -3000,7 +3000,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                             pairContainer.style.minWidth = 'auto';
                             pairContainer.style.margin = '0';
                             pairContainer.style.gap = '1px';
-                            pairContainer.style.flex = '1';
+                            pairContainer.style.flex = '0 1 auto';
                             pairContainer.style.display = 'flex';
                             pairContainer.style.flexDirection = 'column';
                             pairContainer.style.alignItems = 'center';
