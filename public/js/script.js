@@ -279,16 +279,17 @@ async function saveCartToServer() {
             .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0 && !isNaN(item.price));
 
         console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
-        console.log('Детальна інформація про товари в кошику:');
-        filteredCartItems.forEach((item, index) => {
-            console.log(`Товар ${index + 1}:`, {
-                id: item.id,
-                idType: typeof item.id,
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price
-            });
-        });
+        // Логування для діагностики (можна видалити після виправлення)
+        // console.log('Детальна інформація про товари в кошику:');
+        // filteredCartItems.forEach((item, index) => {
+        //     console.log(`Товар ${index + 1}:`, {
+        //         id: item.id,
+        //         idType: typeof item.id,
+        //         name: item.name,
+        //         quantity: item.quantity,
+        //         price: item.price
+        //     });
+        // });
 
         if (!BASE_URL) {
             console.error('BASE_URL не визначено');
@@ -4253,7 +4254,7 @@ async function submitOrder() {
             }
             const itemName = product?.type === 'mattresses' && item.size ? `${item.name} (${item.size})` : item.name;
             const orderItem = {
-                id: Number(item.id),
+                id: item.id, // Залишаємо ID як є (рядок або число)
                 name: itemName,
                 quantity: Number(item.quantity),
                 price: Number(item.price),
@@ -4266,7 +4267,7 @@ async function submitOrder() {
     };
 
     orderData.items = orderData.items.filter(item => {
-        const isValid = item && typeof item.id === 'number' && item.name && typeof item.quantity === 'number' && typeof item.price === 'number' && !isNaN(item.price);
+        const isValid = item && (typeof item.id === 'number' || typeof item.id === 'string') && item.name && typeof item.quantity === 'number' && typeof item.price === 'number' && !isNaN(item.price);
         if (!isValid) {
             console.warn('Елемент замовлення видалено через некоректні дані:', item);
         }
@@ -6252,13 +6253,14 @@ async function addToCartWithColor(productId) {
         return;
     }
     
-    console.log('Додаємо товар в кошик:', {
-        productId,
-        productName: product.name,
-        product_id: product._id,
-        productId: product.id,
-        finalId: product._id || product.id
-    });
+    // Логування для діагностики (можна видалити після виправлення)
+    // console.log('Додаємо товар в кошик:', {
+    //     productId,
+    //     productName: product.name,
+    //     product_id: product._id,
+    //     productId: product.id,
+    //     finalId: product._id || product.id
+    // });
     let color = null;
     if (product.colors?.length > 0) {
         const colorIndex = typeof selectedColors[product._id] !== 'undefined' ? selectedColors[product._id] : 0;

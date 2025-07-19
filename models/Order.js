@@ -45,7 +45,7 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     items: [{
-        id: { type: Number, required: true },
+        id: { type: mongoose.Schema.Types.Mixed, required: true }, // Приймаємо як числа, так і рядки
         name: { type: String, required: true },
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true, min: 0 },
@@ -132,7 +132,7 @@ const orderSchemaValidation = Joi.object({
     }).required(),
     items: Joi.array().items(
         Joi.object({
-            id: Joi.number().required(),
+            id: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
             name: Joi.string().required(),
             quantity: Joi.number().min(1).required(),
             price: Joi.number().min(0).required(),
