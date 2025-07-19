@@ -3216,6 +3216,28 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
         idMapping.set(originalId, `temp_${index}`)
       }
       
+      // Обробляємо groupProducts перед валідацією
+      if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
+        cleanedProduct.groupProducts = cleanedProduct.groupProducts.map(item => {
+          // Якщо це об'єкт з originalId, використовуємо тимчасовий індекс
+          if (typeof item === 'object' && item !== null && item.originalId) {
+            return `temp_${index}_${item.originalId}`
+          }
+          // Якщо це рядок (ID), залишаємо як є
+          else if (typeof item === 'string') {
+            return item
+          }
+          // Якщо це об'єкт без originalId, спробуємо знайти _id
+          else if (typeof item === 'object' && item !== null && item._id) {
+            return item._id
+          }
+          // Якщо це щось інше, конвертуємо в рядок
+          else {
+            return item.toString()
+          }
+        })
+      }
+      
       return cleanedProduct
     })
 
@@ -3267,7 +3289,7 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
           else {
             return item.toString()
           }
-        })
+        }).filter(id => id && id !== 'undefined') // Фільтруємо невалідні ID
         
         // Оновлюємо товар з правильними groupProducts
         updatePromises.push(
