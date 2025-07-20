@@ -2978,21 +2978,21 @@ document.addEventListener('click', closeDropdownHandler, true);
                     
                     // Адаптивні відступи залежно від розміру екрану
                     if (window.innerWidth <= 480) {
-                        colorOptionsDiv.style.gap = '4px';
+                        colorOptionsDiv.style.gap = '11px';
                         colorOptionsDiv.style.padding = '0 1px';
                     } else if (window.innerWidth <= 768) {
-                        colorOptionsDiv.style.gap = '6px';
+                        colorOptionsDiv.style.gap = '13px';
                         colorOptionsDiv.style.padding = '0 2px';
                     } else {
-                        colorOptionsDiv.style.gap = '8px';
+                        colorOptionsDiv.style.gap = '15px';
                         colorOptionsDiv.style.padding = '0 3px';
                     }
                     
                     p.colors.forEach((color, colorIndex) => {
                         const colorCircle = document.createElement('div');
                         colorCircle.className = 'color-circle group-color-circle';
-                        colorCircle.style.width = '40px';
-                        colorCircle.style.height = '40px';
+                        colorCircle.style.width = '50px';
+                        colorCircle.style.height = '50px';
                         colorCircle.style.borderRadius = '50%';
                         colorCircle.style.border = '2px solid #ddd';
                         colorCircle.style.cursor = 'pointer';
