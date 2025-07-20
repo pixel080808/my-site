@@ -2851,17 +2851,33 @@ document.addEventListener('click', closeDropdownHandler, true);
                 rightDiv.appendChild(colorP);
                 const colorDiv = document.createElement('div');
                 colorDiv.id = `color-options-${product._id}`;
-                product.colors.forEach((c, i) => {
-                    const circle = document.createElement('div');
-                    circle.className = 'color-circle';
-                    circle.style.background = c.photo ? `url(${c.photo})` : c.value;
-                    circle.setAttribute('data-index', i);
-                    circle.onclick = typeof selectColor === 'function' ? () => selectColor(product._id, i) : null;
-                    const span = document.createElement('span');
-                    span.textContent = c.name;
-                    circle.appendChild(span);
-                    colorDiv.appendChild(circle);
-                });
+product.colors.forEach((c, i) => {
+    const circle = document.createElement('div');
+    circle.className = 'color-circle';
+    circle.style.background = c.photo ? `url(${c.photo})` : c.value;
+    circle.setAttribute('data-index', i);
+
+    const span = document.createElement('span');
+    span.textContent = c.name;
+
+    // Додаємо клас expanded лише для вибраного кольору
+    if (selectedColors[product._id] === i) {
+        span.classList.add('expanded');
+    }
+
+    circle.onclick = () => {
+        // Знімаємо expanded з усіх span
+        const allSpans = colorDiv.querySelectorAll('span');
+        allSpans.forEach(s => s.classList.remove('expanded'));
+        // Додаємо expanded лише для поточного
+        span.classList.add('expanded');
+        // Викликаємо вибір кольору (якщо потрібно)
+        if (typeof selectColor === 'function') selectColor(product._id, i);
+    };
+
+    circle.appendChild(span);
+    colorDiv.appendChild(circle);
+});
                 rightDiv.appendChild(colorDiv);
             } else {
                 const colorP = document.createElement('p');

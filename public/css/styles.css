@@ -1350,11 +1350,9 @@ h3:hover {
 
 @media (max-width: 280px) {
     .dimensions-container {
-        flex-direction: row;
-        align-items: center;
-        gap: 1px;
         flex-wrap: wrap;
         justify-content: center;
+        gap: 1px;
     }
     
     .dimension-pair {
@@ -3125,16 +3123,19 @@ s {
 }
 
 .color-circle {
-    width: 80px;
-    height: 80px;
+    width: 85px;
+    height: 85px;
     border-radius: 50%;
     display: inline-block;
-    margin: 2px;
-    position: relative;
+    margin: 5px 3px 5px 0;
+    border: 3px solid #eee;
+    vertical-align: middle;
+    background-position: center !important;
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     cursor: pointer;
-    background-size: cover;
-    background-position: center;
-    transition: border var(--transition-speed) ease, transform var(--transition-speed) ease;
+    position: relative;
 }
 
 .color-circle.selected {
@@ -3143,31 +3144,115 @@ s {
 }
 
 .color-circle span {
+    width: 110px;
+    max-width: 120px;
+    min-width: 0;
+    height: 2.8em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
+    text-align: center;
+    font-size: 14px;
     position: absolute;
     bottom: -25px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 14px;
-    white-space: nowrap;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    pointer-events: none;
+    padding: 1px 2px;
+    z-index: 1;
+    transition: box-shadow 0.2s, height 0.2s, background 0.2s, position 0.2s, margin 0.2s;
+}
+
+.color-circle span.expanded {
+    white-space: normal;
+    overflow: visible;
+    max-height: none;
+    min-height: min-content;
+    padding: 8px 6px;
+    background: #fff;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: static;
+    margin: 8px auto 0 auto;
+    width: auto;
+    max-width: 180px;
+    transition: max-height 0.3s;
+}
+
+.color-circle.selected span,
+.color-circle .color-name-expanded {
+    position: absolute;
+    top: 90%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0px;
+    display: block;
+    z-index: 10;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 10px 0px;
+    min-width: 100px;
+    max-width: 160px;
+    white-space: normal;
+    pointer-events: auto;
+    border-radius: 12px;
     text-align: center;
 }
 
-/* Адаптивні відступи для кольорів в основному товарі */
+.color-circle span {
+    transition: box-shadow 0.2s, height 0.2s, background 0.2s, position 0.2s, margin 0.2s;
+}
+
+.color-circle span {
+    transition: box-shadow 0.2s, height 0.2s, background 0.2s, position 0.2s, margin 0.2s;
+}
+
 @media (max-width: 768px) {
-    .color-options {
-        gap: 2px;
-    }
-    .color-circle {
-        margin: 3px 2px 3px 0;
+    .color-circle span {
+        width: 80px;
+        max-width: 90px;
+        font-size: 12px;
     }
 }
 
 @media (max-width: 480px) {
-    .color-options {
-        gap: 1px;
+    .color-circle span {
+        width: 60px;
+        max-width: 70px;
+        font-size: 10px;
     }
-    .color-circle {
-        margin: 2px 1px 2px 0;
+}
+
+@media (max-width: 768px) {
+    .color-circle span {
+        width: 80px;
+        max-width: 90px;
+        font-size: 12px;
+    }
+    .group-color-circle span {
+        width: 28px;
+        max-width: 32px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .color-circle span {
+        width: 60px;
+        max-width: 70px;
+        font-size: 10px;
+    }
+    .group-color-circle span {
+        width: 20px;
+        max-width: 24px;
+        font-size: 9px;
     }
 }
 
@@ -4211,27 +4296,6 @@ s {
         width: calc(100% - 30px);
         max-width: 220px;
         margin: 0;
-    }
-
-    .filter-scroll {
-        max-height: calc(100vh - 129px); /* Висота мінус кнопка, відступи та padding-top */
-        overflow-y: auto;
-    }
-
-    .filters {
-        padding-top: 10px;
-    }
-
-    .breadcrumbs {
-        z-index: 98;
-    }
-
-    .filters .back-btn {
-        display: block;
-        width: 100%;
-        max-width: 220px;
-        padding: 10px 20px;
-        margin: 0px 0;
         border: 1px solid var(--border-color);
         border-radius: 20px;
         font-size: 14px;
@@ -5819,71 +5883,71 @@ s {
     }
 
 .floating-favorite {
-    position: fixed;
-    top: 60px;
-    right: 10px;
-    z-index: 1002;
-    padding: 8px;
-    display: inline-flex;
-    align-items: center;
-    background: var(--card-bg);
-    border-radius: 50px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
-    opacity: 0;
-}
+        position: fixed;
+        top: 60px;
+        right: 10px;
+        z-index: 1002;
+        padding: 8px;
+        display: inline-flex;
+        align-items: center;
+        background: var(--card-bg);
+        border-radius: 50px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, opacity 0.5s ease;
+        opacity: 0;
+    }
 .floating-favorite.visible {
-    opacity: 1;
-    display: inline-flex;
-}
+        opacity: 1;
+        display: inline-flex;
+    }
 .floating-favorite:hover {
-    background: var(--border-color);
-    box-shadow: 0 4px 12px var(--shadow-color);
-}
+        background: var(--border-color);
+        box-shadow: 0 4px 12px var(--shadow-color);
+    }
 .floating-favorite svg {
-    width: 26px;
-    height: 26px;
-    transition: all var(--transition-speed) ease;
-}
+        width: 26px;
+        height: 26px;
+        transition: all var(--transition-speed) ease;
+    }
 
-.floating-favorite:hover svg {
-    transform: scale(1.1);
-}
+    .floating-favorite:hover svg {
+        transform: scale(1.1);
+    }
 
-.floating-favorite:hover svg path {
-    fill: #1cc289;
-}
+    .floating-favorite:hover svg path {
+        fill: #1cc289;
+    }
 
-.floating-favorite.active svg path {
-    fill: #1cc289;
-    stroke: #28c88f;
-    transition: fill 0.2s, stroke 0.2s;
-}
+    .floating-favorite.active svg path {
+        fill: #1cc289;
+        stroke: #28c88f;
+        transition: fill 0.2s, stroke 0.2s;
+    }
 
-.floating-favorite svg path {
-    transition: fill 0.2s, stroke 0.2s;
-}
+    .floating-favorite svg path {
+        transition: fill 0.2s, stroke 0.2s;
+    }
 .floating-favorite #floating-favorite-count {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--accent-color);
-    color: white;
-    width: 16px;
-    height: 16px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: none;
-}
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--accent-color);
+        color: white;
+        width: 16px;
+        height: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: none;
+    }
 .floating-favorite #floating-favorite-count:empty {
-    display: none;
-}
+        display: none;
+    }
 
     .catalog-controls {
         gap: 15px;
@@ -8362,23 +8426,60 @@ s {
 }
 
 .color-circle span {
-    display: block;
     position: absolute;
+    bottom: -30px;
     left: 50%;
-    top: 100%;
     transform: translateX(-50%);
-    font-size: 13px;
-    color: #222;
+    font-size: 14px;
+    width: 80px; /* або 90% ширини кружечка, якщо кружечок менший */
+    max-width: 90px;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 2px;
     background: #fff;
-    padding: 1px 6px;
     border-radius: 8px;
-    margin-top: 2px;
-    white-space: nowrap;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     pointer-events: none;
 }
 
-/* Стилі для кольорів групових товарів */
+/* Для маленьких кружечків (групові товари) */
+.group-color-circle span {
+    width: 35px;
+    max-width: 40px;
+    font-size: 11px;
+    padding: 1px 1px;
+}
+
+@media (max-width: 768px) {
+    .color-circle span {
+        width: 60px;
+        max-width: 70px;
+        font-size: 12px;
+    }
+    .group-color-circle span {
+        width: 28px;
+        max-width: 32px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .color-circle span {
+        width: 48px;
+        max-width: 54px;
+        font-size: 10px;
+    }
+    .group-color-circle span {
+        width: 20px;
+        max-width: 24px;
+        font-size: 9px;
+    }
+}
+
 .group-product-colors {
     margin-top: 5px;
     margin-bottom: 5px;
@@ -8427,7 +8528,7 @@ s {
 }
 
 .group-color-circle:hover {
-    transform: scale(1.1);
+    transform: scale(1.0);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -8468,4 +8569,14 @@ s {
     margin-bottom: 10px;
     opacity: 0;
     pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .color-circle span,
+  .color-circle span.expanded {
+    background: #23272f !important;
+    color: #e6e6e6 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.32) !important;
+    border: 1px solid #444 !important;
+  }
 }
