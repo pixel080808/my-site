@@ -993,9 +993,10 @@ h3:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
+    word-wrap: normal;
+    overflow-wrap: normal;
+    hyphens: none;
+    word-break: keep-all;
     flex-shrink: 0;
 }
 
@@ -1161,6 +1162,25 @@ h3:hover {
     color: #666;
     margin-bottom: 2px;
     text-align: center;
+}
+
+/* Адаптивні стилі для назв товарів в групових товарах */
+@media (max-width: 768px) {
+    .group-products .group-product-item h3 {
+        word-wrap: normal;
+        overflow-wrap: normal;
+        hyphens: none;
+        word-break: keep-all;
+    }
+}
+
+@media (max-width: 480px) {
+    .group-products .group-product-item h3 {
+        word-wrap: normal;
+        overflow-wrap: normal;
+        hyphens: none;
+        word-break: keep-all;
+    }
 }
 
 .dimensions .dimension-value {
@@ -8375,6 +8395,7 @@ s {
     gap: 8px;
     flex-wrap: wrap;
     padding: 0 3px;
+    justify-content: center;
 }
 
 /* Адаптивні відступи для різних екранів */
@@ -8382,6 +8403,7 @@ s {
     .group-product-colors .color-options {
         gap: 6px;
         padding: 0 2px;
+        justify-content: center;
     }
 }
 
@@ -8389,6 +8411,7 @@ s {
     .group-product-colors .color-options {
         gap: 4px;
         padding: 0 1px;
+        justify-content: center;
     }
 }
 
