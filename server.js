@@ -413,6 +413,10 @@ const cartIdSchema = Joi.string()
   })
 
 const slideSchemaValidation = Joi.object({
+  _id: Joi.string()
+    .pattern(/^[0-9a-fA-F]{24}$/)
+    .optional(),
+  id: Joi.number().optional(),
   photo: Joi.string().uri().allow("").optional(),
   name: Joi.string().allow(""),
   link: Joi.string().uri().allow("").optional(),
@@ -420,6 +424,9 @@ const slideSchemaValidation = Joi.object({
   text: Joi.string().allow(""),
   linkText: Joi.string().allow(""),
   order: Joi.number().min(0).default(0),
+  __v: Joi.number().optional(),
+  createdAt: Joi.date().optional(),
+  updatedAt: Joi.date().optional(),
 })
 
 const authenticateToken = (req, res, next) => {
@@ -1430,6 +1437,9 @@ app.patch("/api/products/:id/toggle-active", authenticateToken, csrfProtection, 
 })
 
 const categorySchemaValidation = Joi.object({
+  _id: Joi.string()
+    .pattern(/^[0-9a-fA-F]{24}$/)
+    .optional(),
   name: Joi.string().trim().min(1).max(255).required().messages({
     "string.empty": "Назва категорії є обов'язковою",
     "string.min": "Назва категорії повинна містити хоча б 1 символ",
@@ -1469,6 +1479,9 @@ const categorySchemaValidation = Joi.object({
       }),
     )
     .default([]),
+  __v: Joi.number().optional(),
+  createdAt: Joi.date().optional(),
+  updatedAt: Joi.date().optional(),
 });
 
 const subcategorySchemaValidation = Joi.object({
@@ -1490,6 +1503,9 @@ const subcategorySchemaValidation = Joi.object({
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
+  __v: Joi.number().optional(),
+  createdAt: Joi.date().optional(),
+  updatedAt: Joi.date().optional(),
 });
 
 app.get("/api/categories", async (req, res) => {

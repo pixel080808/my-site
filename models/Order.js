@@ -111,6 +111,9 @@ orderSchema.pre('save', async function(next) {
 orderSchema.index({ date: -1 });
 
 const orderSchemaValidation = Joi.object({
+    _id: Joi.string()
+        .pattern(/^[0-9a-fA-F]{24}$/)
+        .optional(),
     id: Joi.number().optional(),
     cartId: Joi.string()
         .pattern(/^cart-[a-z0-9]{9}$/)
@@ -152,7 +155,10 @@ const orderSchemaValidation = Joi.object({
     total: Joi.number().min(0).required(),
     status: Joi.string()
         .valid('Нове замовлення', 'В обробці', 'Відправлено', 'Доставлено', 'Скасовано')
-        .default('Нове замовлення')
+        .default('Нове замовлення'),
+    __v: Joi.number().optional(),
+    createdAt: Joi.date().optional(),
+    updatedAt: Joi.date().optional()
 });
 
 module.exports = { Order: mongoose.model('Order', orderSchema), orderSchemaValidation };
