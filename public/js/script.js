@@ -2977,10 +2977,10 @@ document.addEventListener('click', closeDropdownHandler, true);
                     
                     // Адаптивні відступи залежно від розміру екрану
                     if (window.innerWidth <= 480) {
-                        colorOptionsDiv.style.gap = '4px';
+                        colorOptionsDiv.style.gap = '10px';
                         colorOptionsDiv.style.padding = '0 1px';
                     } else if (window.innerWidth <= 768) {
-                        colorOptionsDiv.style.gap = '6px';
+                        colorOptionsDiv.style.gap = '12px';
                         colorOptionsDiv.style.padding = '0 2px';
                     } else {
                         colorOptionsDiv.style.gap = '14px';
