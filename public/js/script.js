@@ -2973,9 +2973,19 @@ document.addEventListener('click', closeDropdownHandler, true);
                     const colorOptionsDiv = document.createElement('div');
                     colorOptionsDiv.className = 'color-options';
                     colorOptionsDiv.style.display = 'flex';
-                    colorOptionsDiv.style.gap = '2px';
                     colorOptionsDiv.style.flexWrap = 'wrap';
-                    colorOptionsDiv.style.padding = '0 5px';
+                    
+                    // Адаптивні відступи залежно від розміру екрану
+                    if (window.innerWidth <= 480) {
+                        colorOptionsDiv.style.gap = '4px';
+                        colorOptionsDiv.style.padding = '0 1px';
+                    } else if (window.innerWidth <= 768) {
+                        colorOptionsDiv.style.gap = '6px';
+                        colorOptionsDiv.style.padding = '0 2px';
+                    } else {
+                        colorOptionsDiv.style.gap = '14px';
+                        colorOptionsDiv.style.padding = '0 3px';
+                    }
                     
                     p.colors.forEach((color, colorIndex) => {
                         const colorCircle = document.createElement('div');

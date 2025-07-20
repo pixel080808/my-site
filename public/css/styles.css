@@ -8353,19 +8353,35 @@ s {
 
 .group-product-colors .color-options {
     display: flex;
-    gap: 2px;
+    gap: 8px;
     flex-wrap: wrap;
-    padding: 0 5px;
+    padding: 0 3px;
+}
+
+/* Адаптивні відступи для різних екранів */
+@media (max-width: 768px) {
+    .group-product-colors .color-options {
+        gap: 6px;
+        padding: 0 2px;
+    }
+}
+
+@media (max-width: 480px) {
+    .group-product-colors .color-options {
+        gap: 4px;
+        padding: 0 1px;
+    }
 }
 
 .group-color-circle {
-    width: 24px;
-    height: 24px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     border: 2px solid #ddd;
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
+    margin: 0;
 }
 
 .group-color-circle:hover {
