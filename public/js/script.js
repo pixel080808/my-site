@@ -2641,7 +2641,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             customSelect.tabIndex = 0;
             customSelect.style.position = 'relative';
             customSelect.style.width = '260px'; // ширше
-            customSelect.style.minWidth = '297px';
+            customSelect.style.minWidth = '305px';
 
             const selectedDiv = document.createElement('div');
             selectedDiv.className = 'selected-option';
@@ -2657,7 +2657,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             selectedDiv.style.fontSize = '16px';
             selectedDiv.style.userSelect = 'none';
             selectedDiv.style.position = 'relative';
-            selectedDiv.style.minWidth = '277px';
+            selectedDiv.style.minWidth = '285px';
 
             // Додаємо стрілку
             const arrow = document.createElement('span');
@@ -2670,7 +2670,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
