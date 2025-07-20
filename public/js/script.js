@@ -2990,8 +2990,8 @@ document.addEventListener('click', closeDropdownHandler, true);
                     p.colors.forEach((color, colorIndex) => {
                         const colorCircle = document.createElement('div');
                         colorCircle.className = 'color-circle group-color-circle';
-                        colorCircle.style.width = '35px';
-                        colorCircle.style.height = '35px';
+                        colorCircle.style.width = '40px';
+                        colorCircle.style.height = '40px';
                         colorCircle.style.borderRadius = '50%';
                         colorCircle.style.border = '2px solid #ddd';
                         colorCircle.style.cursor = 'pointer';
