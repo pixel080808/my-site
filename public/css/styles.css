@@ -3082,9 +3082,9 @@ s {
 .color-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 3px;
     margin: 0;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     align-self: flex-start;
     margin-left: 0;
@@ -3097,7 +3097,7 @@ s {
     align-items: flex-start;
     cursor: pointer;
     transition: transform var(--transition-speed) ease;
-    padding-left: 10px;
+    padding-left: 0;
 }
 
 .color-option:hover {
@@ -3109,7 +3109,7 @@ s {
     height: 80px;
     border-radius: 50%;
     display: inline-block;
-    margin: 10px;
+    margin: 2px;
     position: relative;
     cursor: pointer;
     background-size: cover;
@@ -3130,6 +3130,25 @@ s {
     font-size: 14px;
     white-space: nowrap;
     text-align: center;
+}
+
+/* Адаптивні відступи для кольорів в основному товарі */
+@media (max-width: 768px) {
+    .color-options {
+        gap: 2px;
+    }
+    .color-circle {
+        margin: 3px 2px 3px 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .color-options {
+        gap: 1px;
+    }
+    .color-circle {
+        margin: 2px 1px 2px 0;
+    }
 }
 
 .color-label {
@@ -8306,7 +8325,7 @@ s {
     height: 85px;
     border-radius: 50%;
     display: inline-block;
-    margin: 15px;
+    margin: 5px 14px 28px 0;
     margin-top: 1px;
     border: 3px solid #eee;
     vertical-align: middle;
