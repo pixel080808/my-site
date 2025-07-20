@@ -1133,14 +1133,18 @@ if (error) {
     }
 
     if (productData.subcategory && productData.subcategory.trim()) {
-      const categoryWithSub = await Category.findOne({
-        name: productData.category,
-        "subcategories.slug": productData.subcategory,
-      })
-      if (!categoryWithSub) {
+      const subcategory = category.subcategories.find(sub => sub.slug === productData.subcategory);
+      if (!subcategory) {
         logger.error("Підкатегорія не знайдено:", productData.subcategory)
         return res.status(400).json({
           error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+          field: "subcategory",
+        })
+      }
+      if (subcategory.visible === false) {
+        logger.error("Підкатегорія прихована:", productData.subcategory)
+        return res.status(400).json({
+          error: `Підкатегорія "${productData.subcategory}" прихована і не може бути використана для створення товару`,
           field: "subcategory",
         })
       }
@@ -1309,11 +1313,18 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
     }
 
     if (productData.subcategory && productData.subcategory.trim()) {
-      const subcategoryExists = category.subcategories.some(sub => sub.slug === productData.subcategory);
-      if (!subcategoryExists) {
+      const subcategory = category.subcategories.find(sub => sub.slug === productData.subcategory);
+      if (!subcategory) {
         logger.error("Підкатегорія не знайдено:", productData.subcategory);
         return res.status(400).json({
           error: `Підкатегорія "${productData.subcategory}" не знайдено в категорії "${productData.category}"`,
+          field: "subcategory",
+        });
+      }
+      if (subcategory.visible === false) {
+        logger.error("Підкатегорія прихована:", productData.subcategory);
+        return res.status(400).json({
+          error: `Підкатегорія "${productData.subcategory}" прихована і не може бути використана для редагування товару`,
           field: "subcategory",
         });
       }
