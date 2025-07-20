@@ -2957,6 +2957,67 @@ document.addEventListener('click', closeDropdownHandler, true);
                 h3Link.appendChild(h3);
                 itemDiv.appendChild(h3Link);
 
+                // Додаємо вибір кольору відразу під назвою товару
+                if (p.colors?.length > 0) {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'group-product-colors';
+                    colorDiv.style.marginTop = '5px';
+                    colorDiv.style.marginBottom = '5px';
+                    
+                    const colorLabel = document.createElement('p');
+                    colorLabel.innerHTML = '<strong>Колір:</strong>';
+                    colorLabel.style.marginBottom = '4px';
+                    colorLabel.style.fontSize = '14px';
+                    colorDiv.appendChild(colorLabel);
+                    
+                    const colorOptionsDiv = document.createElement('div');
+                    colorOptionsDiv.className = 'color-options';
+                    colorOptionsDiv.style.display = 'flex';
+                    colorOptionsDiv.style.gap = '2px';
+                    colorOptionsDiv.style.flexWrap = 'wrap';
+                    colorOptionsDiv.style.padding = '0 5px';
+                    
+                    p.colors.forEach((color, colorIndex) => {
+                        const colorCircle = document.createElement('div');
+                        colorCircle.className = 'color-circle group-color-circle';
+                        colorCircle.style.width = '35px';
+                        colorCircle.style.height = '35px';
+                        colorCircle.style.borderRadius = '50%';
+                        colorCircle.style.border = '2px solid #ddd';
+                        colorCircle.style.cursor = 'pointer';
+                        colorCircle.style.position = 'relative';
+                        colorCircle.style.background = color.photo ? `url(${color.photo}) center/cover` : color.value;
+                        colorCircle.setAttribute('data-product-id', p._id);
+                        colorCircle.setAttribute('data-color-index', colorIndex);
+                        
+                        // Перевіряємо, чи цей колір вже вибраний
+                        const currentSelectedColor = selectedColors[p._id];
+                        if (currentSelectedColor === colorIndex) {
+                            colorCircle.classList.add('selected');
+                            colorCircle.style.border = '2px solid #60A5FA';
+                        }
+                        
+                        colorCircle.onclick = () => selectGroupProductColor(p._id, colorIndex);
+                        
+                        // Додаємо назву кольору при наведенні
+                        colorCircle.title = color.name;
+                        
+                        colorOptionsDiv.appendChild(colorCircle);
+                    });
+                    
+                    colorDiv.appendChild(colorOptionsDiv);
+                    itemDiv.appendChild(colorDiv);
+                } else {
+                    // Додаємо прозорий плейсхолдер для товарів без кольорів
+                    const colorPlaceholder = document.createElement('div');
+                    colorPlaceholder.className = 'group-product-colors-placeholder';
+                    colorPlaceholder.style.height = '30px';
+                    colorPlaceholder.style.marginTop = '5px';
+                    colorPlaceholder.style.marginBottom = '5px';
+                    colorPlaceholder.style.opacity = '0';
+                    itemDiv.appendChild(colorPlaceholder);
+                }
+
                 const dimensions = [];
                 if (p.widthCm) dimensions.push(p.widthCm);
                 if (p.heightCm) dimensions.push(p.heightCm);
@@ -3065,6 +3126,14 @@ document.addEventListener('click', closeDropdownHandler, true);
 
                     dimensionsDiv.appendChild(dimensionsContainer);
                     itemDiv.appendChild(dimensionsDiv);
+                } else {
+                    // Додаємо прозорий плейсхолдер для товарів без розмірів
+                    const dimensionsPlaceholder = document.createElement('div');
+                    dimensionsPlaceholder.className = 'dimensions';
+                    dimensionsPlaceholder.style.visibility = 'hidden';
+                    dimensionsPlaceholder.style.minHeight = '60px';
+                    dimensionsPlaceholder.style.margin = '0 0 15px 0';
+                    itemDiv.appendChild(dimensionsPlaceholder);
                 }
 
                 const priceDiv = document.createElement('div');
@@ -3259,6 +3328,29 @@ async function addGroupToCart(productId) {
         return;
     }
 
+    // Перевіряємо, чи вибрані кольори для товарів з кольорами
+    const productsNeedingColors = [];
+    for (const [id, quantity] of Object.entries(selectedItems)) {
+        const qty = parseInt(quantity);
+        if (qty <= 0) continue;
+
+        const p = products.find(p => p._id === id);
+        if (!p) continue;
+
+        // Якщо у товару є кольори і їх більше одного
+        if (p.colors?.length > 1) {
+            const selectedColorIndex = selectedColors[p._id];
+            if (selectedColorIndex === undefined || selectedColorIndex === null) {
+                productsNeedingColors.push(p.name);
+            }
+        }
+    }
+
+    if (productsNeedingColors.length > 0) {
+        showNotification(`Виберіть колір для товарів: ${productsNeedingColors.join(', ')}`, 'warning');
+        return;
+    }
+
     let cart = loadFromStorage('cart', []);
 
     const invalidItems = [];
@@ -3280,8 +3372,24 @@ async function addGroupToCart(productId) {
         let selectedColor = null;
         let selectedSize = null;
 
-        if (p.colors?.length > 0 && selectedColors[p._id] !== undefined) {
-            const colorIndex = parseInt(selectedColors[p._id]);
+        if (p.colors?.length > 0) {
+            let colorIndex;
+            
+            // Якщо у товару тільки один колір - вибираємо його автоматично
+            if (p.colors.length === 1) {
+                colorIndex = 0;
+                selectedColors[p._id] = 0;
+                saveToStorage('selectedColors', selectedColors);
+            } else {
+                // Якщо кольорів більше - використовуємо вибраний
+                colorIndex = selectedColors[p._id];
+                if (colorIndex === undefined || colorIndex === null) {
+                    console.warn(`Колір не вибраний для товару ${p.name}`);
+                    invalidItems.push(p.name);
+                    continue;
+                }
+            }
+            
             if (p.colors[colorIndex]) {
                 selectedColor = {
                     name: p.colors[colorIndex].name || 'Не вказано',
@@ -3291,7 +3399,7 @@ async function addGroupToCart(productId) {
                 };
                 price += selectedColor.priceChange;
             } else {
-                console.warn(`Колір ${selectedColors[p._id]} недоступний для товару ${p.name}`);
+                console.warn(`Колір ${colorIndex} недоступний для товару ${p.name}`);
                 invalidItems.push(p.name);
                 continue;
             }
@@ -6404,6 +6512,28 @@ function selectColor(productId, colorIndex) {
             circle.classList.remove('selected');
         }
     });
+}
+
+function selectGroupProductColor(productId, colorIndex) {
+    selectedColors[productId] = colorIndex;
+    saveToStorage('selectedColors', selectedColors);
+    
+    // Підсвічування вибраного кольору в групових товарах
+    const colorCircles = document.querySelectorAll(`.group-color-circle[data-product-id="${productId}"]`);
+    colorCircles.forEach((circle, idx) => {
+        if (parseInt(circle.getAttribute('data-color-index')) === colorIndex) {
+            circle.classList.add('selected');
+            circle.style.border = '2px solid #60A5FA';
+        } else {
+            circle.classList.remove('selected');
+            circle.style.border = '2px solid #ddd';
+        }
+    });
+    
+    // Оновлюємо ціну в плаваючому кошику
+    if (currentProduct && currentProduct.type === 'group') {
+        updateFloatingGroupCart();
+    }
 }
 
 // ... existing code ...
