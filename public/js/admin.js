@@ -5124,16 +5124,88 @@ function renderGroupProductModal() {
 function renderGroupProducts() {
     const groupList = document.getElementById('group-product-list');
     if (groupList) {
-        groupList.innerHTML = newProduct.groupProducts.map((pid, index) => {
-            const p = products.find(pr => pr._id === pid);
-            return p ? `
-                <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                    ${p.name}
-                    <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
-                </div>
-            ` : '';
-        }).join('');
+        groupList.innerHTML = `
+            <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
+            ${newProduct.groupProducts.map((pid, index) => {
+                const p = products.find(pr => pr._id === pid);
+                return p ? `
+                    <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
+                        <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${p.price ? p.price + ' грн' : ''}</span>
+                        <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
+                    </div>
+                ` : '';
+            }).join('')}
+        `;
     }
+}
+
+function openGroupProductsModal() {
+    // Створюємо модальне вікно
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'group-products-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <h3>Додати товари до групи</h3>
+            <input type="text" id="group-products-search" placeholder="Пошук по назві або бренду..." style="width:100%;margin-bottom:10px;">
+            <div id="group-products-list-modal"></div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="cancel-btn" onclick="closeGroupProductsModal()">Закрити</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    renderGroupProductsListModal();
+    document.getElementById('group-products-search').addEventListener('input', renderGroupProductsListModal);
+}
+
+function closeGroupProductsModal() {
+    const modal = document.getElementById('group-products-modal');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+}
+
+function renderGroupProductsListModal() {
+    const list = document.getElementById('group-products-list-modal');
+    if (!list) return;
+    const search = document.getElementById('group-products-search').value.trim().toLowerCase();
+    let filtered = products.filter(p => p.type === 'simple');
+    if (search) {
+        filtered = filtered.filter(p =>
+            (p.name && p.name.toLowerCase().includes(search)) ||
+            (p.brand && p.brand.toLowerCase().includes(search))
+        );
+    }
+    list.innerHTML = filtered.length ? filtered.map(p => {
+        const isAdded = newProduct.groupProducts.includes(p._id);
+        return `
+            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0;">
+                <div>
+                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${p.price ? p.price + ' грн' : ''}</span>
+                </div>
+                <button type="button" class="${isAdded ? 'added-btn' : 'add-btn'}" style="min-width:90px;${isAdded ? 'background:#4caf50;color:#fff;' : ''}" onclick="${isAdded ? `removeGroupProductModal('${p._id}')` : `addGroupProductModal('${p._id}')`}">${isAdded ? 'Додано' : 'Додати'}</button>
+            </div>
+        `;
+    }).join('') : '<div style="padding:10px;color:#888;">Нічого не знайдено</div>';
+}
+
+function addGroupProductModal(productId) {
+    if (!newProduct.groupProducts.includes(productId)) {
+        newProduct.groupProducts.push(productId);
+        renderGroupProductsListModal();
+        renderGroupProducts();
+        resetInactivityTimer();
+    }
+}
+
+function removeGroupProductModal(productId) {
+    newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
+    renderGroupProductsListModal();
+    renderGroupProducts();
+    resetInactivityTimer();
 }
 
     function dragGroupProduct(event, index) {
