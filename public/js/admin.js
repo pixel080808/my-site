@@ -4831,11 +4831,68 @@ function renderColorsList() {
                 <span style="background-color: ${color.value};"></span>
                 ${color.name} (Зміна ціни: ${color.priceChange} грн)
                 ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px;">` : ''}
-                <button class="edit-btn" onclick="editColor(${index})">Редагувати</button>
+                <button class="edit-btn" onclick="openEditColorModal(${index})">Редагувати</button>
                 <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
             </div>
         `;
     }).join('');
+}
+
+function openEditColorModal(index) {
+    const color = newProduct.colors[index];
+    const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'edit-color-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>Редагування кольору</h3>
+            <label for="edit-color-name-modal">Назва кольору</label>
+            <textarea id="edit-color-name-modal" style="width: 100%; min-height: 40px;">${color.name}</textarea>
+            <label for="edit-color-value-modal">Колір</label>
+            <input type="color" id="edit-color-value-modal" value="${color.value}" style="width: 100%; height: 40px;">
+            <label for="edit-color-price-change-modal">Зміна ціни (грн)</label>
+            <input type="number" id="edit-color-price-change-modal" value="${color.priceChange || 0}" placeholder="Зміна ціни (грн)" step="0.01" style="width: 100%;">
+            <label for="edit-color-photo-url-modal">URL фото (необов'язково)</label>
+            <input type="text" id="edit-color-photo-url-modal" value="${typeof color.photo === 'string' ? color.photo : ''}" placeholder="URL фото (необов'язково)" style="width: 100%;">
+            <label for="edit-color-photo-file-modal">Завантажте фото кольору</label>
+            <input type="file" id="edit-color-photo-file-modal" accept="image/jpeg,image/png,image/gif,image/webp" style="width: 100%;"><br/>
+            ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору" style="max-width: 80px; margin: 10px 0;">` : ''}
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="save-btn" onclick="saveColorModal(${index})">Зберегти</button>
+                <button class="cancel-btn" onclick="cancelEditColorModal()">Скасувати</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+}
+
+function saveColorModal(index) {
+    const newName = document.getElementById('edit-color-name-modal').value;
+    const newValue = document.getElementById('edit-color-value-modal').value;
+    const newPriceChange = parseFloat(document.getElementById('edit-color-price-change-modal').value) || 0;
+    const newPhotoUrl = document.getElementById('edit-color-photo-url-modal').value;
+    const newPhotoFileInput = document.getElementById('edit-color-photo-file-modal');
+    const newPhotoFile = newPhotoFileInput && newPhotoFileInput.files[0] ? newPhotoFileInput.files[0] : null;
+    let newPhoto = newPhotoFile ? newPhotoFile : (newPhotoUrl ? newPhotoUrl : '');
+    if (newName && newValue) {
+        newProduct.colors[index] = { name: newName, value: newValue, priceChange: newPriceChange, photo: newPhoto };
+        cancelEditColorModal();
+        renderColorsList();
+        resetInactivityTimer();
+    } else {
+        alert('Введіть назву та виберіть колір!');
+    }
+}
+
+function cancelEditColorModal() {
+    const modal = document.getElementById('edit-color-modal');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+    resetInactivityTimer();
 }
 
 function dragColor(event, index) {
@@ -4859,50 +4916,11 @@ function dropColor(event, targetIndex) {
     document.querySelectorAll('.color-item').forEach(item => item.classList.remove('dragging'));
 }
 
-function editColor(index) {
-    const color = newProduct.colors[index];
-    const colorList = document.getElementById('product-color-list');
-    const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
-    colorList.children[index].innerHTML = `
-        <input type="text" id="edit-color-name-${index}" value="${color.name}" placeholder="Назва кольору">
-        <input type="color" id="edit-color-value-${index}" value="${color.value}">
-        <input type="number" id="edit-color-price-change-${index}" value="${color.priceChange || 0}" placeholder="Зміна ціни (грн)" step="0.01">
-        <input type="text" id="edit-color-photo-url-${index}" value="${typeof color.photo === 'string' ? color.photo : ''}" placeholder="URL фото (необов'язково)">
-        <input type="file" id="edit-color-photo-file-${index}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-        ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору" style="max-width: 30px;">` : ''}
-        <button class="save-btn" onclick="saveColor(${index})">Зберегти</button>
-        <button class="cancel-btn" onclick="cancelEditColor()">Скасувати</button>
-    `;
-    resetInactivityTimer();
-}
-
-function saveColor(index) {
-    const newName = document.getElementById(`edit-color-name-${index}`).value;
-    const newValue = document.getElementById(`edit-color-value-${index}`).value;
-    const newPriceChange = parseFloat(document.getElementById(`edit-color-price-change-${index}`).value) || 0;
-    const newPhotoUrl = document.getElementById(`edit-color-photo-url-${index}`).value;
-    const newPhotoFileInput = document.getElementById(`edit-color-photo-file-${index}`);
-    const newPhotoFile = newPhotoFileInput && newPhotoFileInput.files[0] ? newPhotoFileInput.files[0] : null;
-    let newPhoto = newPhotoFile ? newPhotoFile : (newPhotoUrl ? newPhotoUrl : '');
-    if (newName && newValue) {
-        newProduct.colors[index] = { name: newName, value: newValue, priceChange: newPriceChange, photo: newPhoto };
-        renderColorsList();
-        resetInactivityTimer();
-    } else {
-        alert('Введіть назву та виберіть колір!');
-    }
-}
-
-function cancelEditColor() {
+function deleteProductColor(index) {
+    newProduct.colors.splice(index, 1);
     renderColorsList();
     resetInactivityTimer();
 }
-
-    function deleteProductColor(index) {
-        newProduct.colors.splice(index, 1);
-        renderColorsList();
-        resetInactivityTimer();
-    }
 
 function addMattressSize() {
     const name = document.getElementById('mattress-size-name').value;
