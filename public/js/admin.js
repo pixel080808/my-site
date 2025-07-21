@@ -1846,7 +1846,8 @@ async function updateAbout() {
             return;
         }
 
-        settings.about = document.getElementById('about-edit').value;
+        // Зберігаємо саме HTML з редактора, а не textarea
+        settings.about = aboutEditor ? aboutEditor.root.innerHTML : document.getElementById('about-edit').value;
 
         console.log('Надсилаємо "Про нас":', settings.about);
 
