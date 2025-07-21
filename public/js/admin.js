@@ -4394,6 +4394,8 @@ function openAddProductModal() {
                 <label for="mattress-size-name">Розмір</label>
                 <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br/>
                 <label for="mattress-size-price">Ціна (грн)</label>
+                <input type="number" id="mattress-size-sale-price" placeholder="Акційна ціна (грн)" min="0"><br/>
+                <label for="mattress-size-sale-price">Акційна ціна (грн)</label>
                 <button onclick="addMattressSize()">Додати розмір</button>
                 <div id="mattress-size-list"></div>
             </div>
@@ -5463,6 +5465,8 @@ async function openEditProductModal(productId) {
                 <label for="mattress-size-name">Розмір</label>
                 <input type="number" id="mattress-size-price" placeholder="Ціна (грн)" min="0"><br/>
                 <label for="mattress-size-price">Ціна (грн)</label>
+                <input type="number" id="mattress-size-sale-price" placeholder="Акційна ціна (грн)" min="0"><br/>
+                <label for="mattress-size-sale-price">Акційна ціна (грн)</label>
                 <button onclick="addMattressSize()">Додати розмір</button>
                 <div id="mattress-size-list"></div>
             </div>
