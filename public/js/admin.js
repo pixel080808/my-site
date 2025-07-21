@@ -4868,12 +4868,33 @@ function addMattressSize() {
 function renderMattressSizes() {
     const sizeList = document.getElementById('mattress-size-list');
     sizeList.innerHTML = newProduct.sizes.map((size, index) => `
-        <div class="mattress-size">
+        <div class="mattress-size draggable" draggable="true" ondragstart="dragMattressSize(event, ${index})" ondragover="allowDropMattressSize(event)" ondrop="dropMattressSize(event, ${index})">
             ${size.name}: ${size.price} грн${size.salePrice && size.salePrice < size.price ? ` <span class='sale-price'>(акція: ${size.salePrice} грн)</span>` : ''}
             <button class="edit-btn" onclick="editMattressSize(${index})">Редагувати</button>
             <button class="delete-btn" onclick="deleteMattressSize(${index})">Видалити</button>
         </div>
     `).join('');
+}
+
+function dragMattressSize(event, index) {
+    event.dataTransfer.setData('text/plain', index);
+    event.target.classList.add('dragging');
+}
+
+function allowDropMattressSize(event) {
+    event.preventDefault();
+}
+
+function dropMattressSize(event, targetIndex) {
+    event.preventDefault();
+    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
+    if (sourceIndex !== targetIndex) {
+        const [movedSize] = newProduct.sizes.splice(sourceIndex, 1);
+        newProduct.sizes.splice(targetIndex, 0, movedSize);
+        renderMattressSizes();
+        resetInactivityTimer();
+    }
+    document.querySelectorAll('.mattress-size').forEach(item => item.classList.remove('dragging'));
 }
 
 function editMattressSize(index) {
