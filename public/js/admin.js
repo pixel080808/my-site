@@ -270,7 +270,9 @@ async function loadSettings() {
         if (aboutEditor) {
             if (settings.about) {
                 try {
-                    aboutEditor.root.innerHTML = settings.about;
+                    // ВАЖЛИВО: використовуємо clipboard.convert для коректного відновлення форматування та картинок
+                    const delta = aboutEditor.clipboard.convert(settings.about);
+                    aboutEditor.setContents(delta, 'silent');
                     console.log('Встановлено вміст "Про нас":', settings.about);
                 } catch (e) {
                     console.error('Помилка при встановленні вмісту "Про нас":', e);
@@ -969,7 +971,9 @@ function initializeEditors() {
 
         if (settings.about) {
             try {
-                aboutEditor.root.innerHTML = settings.about;
+                // ВАЖЛИВО: використовуємо clipboard.convert для коректного відновлення форматування та картинок
+                const delta = aboutEditor.clipboard.convert(settings.about);
+                aboutEditor.setContents(delta, 'silent');
                 console.log('Встановлено вміст "Про нас":', settings.about);
             } catch (e) {
                 console.error('Помилка при встановленні вмісту "Про нас":', e);
@@ -979,7 +983,8 @@ function initializeEditors() {
             console.log('settings.about порожній, редактор очищено.');
             aboutEditor.setText('', 'silent');
         }
-        document.getElementById('about-edit').value = settings.about || '';
+        const aboutEdit = document.getElementById('about-edit');
+        if (aboutEdit) aboutEdit.value = settings.about || '';
 
         aboutEditor.root.addEventListener('click', (e) => {
             const target = e.target;
