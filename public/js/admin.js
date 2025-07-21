@@ -47,7 +47,7 @@ let brands = [];
 let isLoadingProducts = false;
 let isUpdatingCategories = false;
 const orderFields = [
-    { name: 'name', label: "Ім\'я" },
+    { name: 'name', label: "Ім'я" },
     { name: 'surname', label: 'Прізвище' },
     { name: 'phone', label: 'Телефон' },
     { name: 'email', label: 'Електронна пошта' },
@@ -1000,6 +1000,51 @@ function initializeEditors() {
         });
 
         setDefaultVideoSizes(aboutEditor, 'about-edit');
+
+        // Додаємо обробник для вставки зображень у aboutEditor (як у productEditor)
+        const aboutToolbar = aboutEditor.getModule('toolbar');
+        aboutToolbar.addHandler('image', async () => {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp');
+            input.click();
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (file) {
+                    const validation = validateFile(file);
+                    if (!validation.valid) {
+                        showNotification(validation.error);
+                        return;
+                    }
+                    try {
+                        const tokenRefreshed = await refreshToken();
+                        if (!tokenRefreshed) {
+                            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                            showSection('admin-login');
+                            return;
+                        }
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const response = await fetchWithAuth('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (!response.ok) {
+                            throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
+                        }
+                        const data = await response.json();
+                        if (data.url) {
+                            const range = aboutEditor.getSelection() || { index: 0 };
+                            aboutEditor.insertEmbed(range.index, 'image', data.url);
+                            setDefaultVideoSizes(aboutEditor, 'about-edit');
+                        }
+                    } catch (err) {
+                        console.error('Помилка завантаження зображення:', err);
+                        showNotification('Не вдалося завантажити зображення: ' + err.message);
+                    }
+                }
+            };
+        });
     } catch (e) {
         console.error('Помилка ініціалізації Quill-редактора:', e);
         showNotification('Не вдалося ініціалізувати редактор: ' + e.message);
