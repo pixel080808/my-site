@@ -4411,6 +4411,7 @@ function openAddProductModal() {
 modal.classList.add('active');
     updateProductType();
     initializeProductEditor();
+    renderGroupProducts();
 
     setTimeout(() => {
         const categorySelect = document.getElementById('product-category');
