@@ -4827,14 +4827,75 @@ function renderColorsList() {
     colorList.innerHTML = newProduct.colors.map((color, index) => {
         const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
         return `
-            <div class="color-item" style="border: 1px solid #ddd; padding: 5px; margin: 5px 0;">
+            <div class="color-item draggable" draggable="true" ondragstart="dragColor(event, ${index})" ondragover="allowDropColor(event)" ondrop="dropColor(event, ${index})" style="border: 1px solid #ddd; padding: 5px; margin: 5px 0;">
                 <span style="background-color: ${color.value};"></span>
                 ${color.name} (Зміна ціни: ${color.priceChange} грн)
                 ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px;">` : ''}
+                <button class="edit-btn" onclick="editColor(${index})">Редагувати</button>
                 <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
             </div>
         `;
     }).join('');
+}
+
+function dragColor(event, index) {
+    event.dataTransfer.setData('text/plain', index);
+    event.target.classList.add('dragging');
+}
+
+function allowDropColor(event) {
+    event.preventDefault();
+}
+
+function dropColor(event, targetIndex) {
+    event.preventDefault();
+    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
+    if (sourceIndex !== targetIndex) {
+        const [movedColor] = newProduct.colors.splice(sourceIndex, 1);
+        newProduct.colors.splice(targetIndex, 0, movedColor);
+        renderColorsList();
+        resetInactivityTimer();
+    }
+    document.querySelectorAll('.color-item').forEach(item => item.classList.remove('dragging'));
+}
+
+function editColor(index) {
+    const color = newProduct.colors[index];
+    const colorList = document.getElementById('product-color-list');
+    const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
+    colorList.children[index].innerHTML = `
+        <input type="text" id="edit-color-name-${index}" value="${color.name}" placeholder="Назва кольору">
+        <input type="color" id="edit-color-value-${index}" value="${color.value}">
+        <input type="number" id="edit-color-price-change-${index}" value="${color.priceChange || 0}" placeholder="Зміна ціни (грн)" step="0.01">
+        <input type="text" id="edit-color-photo-url-${index}" value="${typeof color.photo === 'string' ? color.photo : ''}" placeholder="URL фото (необов'язково)">
+        <input type="file" id="edit-color-photo-file-${index}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+        ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору" style="max-width: 30px;">` : ''}
+        <button class="save-btn" onclick="saveColor(${index})">Зберегти</button>
+        <button class="cancel-btn" onclick="cancelEditColor()">Скасувати</button>
+    `;
+    resetInactivityTimer();
+}
+
+function saveColor(index) {
+    const newName = document.getElementById(`edit-color-name-${index}`).value;
+    const newValue = document.getElementById(`edit-color-value-${index}`).value;
+    const newPriceChange = parseFloat(document.getElementById(`edit-color-price-change-${index}`).value) || 0;
+    const newPhotoUrl = document.getElementById(`edit-color-photo-url-${index}`).value;
+    const newPhotoFileInput = document.getElementById(`edit-color-photo-file-${index}`);
+    const newPhotoFile = newPhotoFileInput && newPhotoFileInput.files[0] ? newPhotoFileInput.files[0] : null;
+    let newPhoto = newPhotoFile ? newPhotoFile : (newPhotoUrl ? newPhotoUrl : '');
+    if (newName && newValue) {
+        newProduct.colors[index] = { name: newName, value: newValue, priceChange: newPriceChange, photo: newPhoto };
+        renderColorsList();
+        resetInactivityTimer();
+    } else {
+        alert('Введіть назву та виберіть колір!');
+    }
+}
+
+function cancelEditColor() {
+    renderColorsList();
+    resetInactivityTimer();
 }
 
     function deleteProductColor(index) {
