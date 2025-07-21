@@ -4400,11 +4400,6 @@ function openAddProductModal() {
                 <div id="mattress-size-list"></div>
             </div>
             <div id="group-products" class="type-specific">
-                <h4>Групові товари</h4>
-                <div class="group-product-search">
-                    <input type="text" id="group-product-search" placeholder="Пошук товарів" oninput="searchGroupProducts()">
-                    <div id="group-product-results"></div>
-                </div>
                 <div id="group-product-list"></div>
             </div>
             <div class="modal-actions">
@@ -5643,11 +5638,6 @@ async function openEditProductModal(productId) {
                 <div id="mattress-size-list"></div>
             </div>
             <div id="group-products" class="type-specific">
-                <h4>Групові товари</h4>
-                <div class="group-product-search">
-                    <input type="text" id="group-product-search" placeholder="Пошук товарів" oninput="searchGroupProducts()">
-                    <div id="group-product-results"></div>
-                </div>
                 <div id="group-product-list"></div>
             </div>
             <div class="modal-actions">
