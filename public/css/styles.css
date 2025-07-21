@@ -3197,7 +3197,7 @@ s {
     z-index: 10;
     background: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 10px 0px;
+    padding: 5px 0px;
     min-width: 100px;
     max-width: 160px;
     white-space: normal;
@@ -8444,7 +8444,8 @@ s {
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     pointer-events: none;
-    height: 45px;
+    height: 25px;
+    width: 70px;
 }
 
 /* Для маленьких кружечків (групові товари) */
@@ -8459,7 +8460,7 @@ s {
     .color-circle span {
         width: 60px;
         max-width: 70px;
-        font-size: 12px;
+        font-size: 14px;
     }
     .group-color-circle span {
         width: 28px;
@@ -8579,6 +8580,7 @@ s {
     color: #e6e6e6 !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.32) !important;
     border: 1px solid #444 !important;
-    height: 45px;
+    height: 25px;
+    width: 70px;
   }
 }
