@@ -3583,3 +3583,51 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     res.status(500).json({ error: 'Не вдалося відправити email' });
   }
 });
+
+const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
+function loadAdminCredentials() {
+  try {
+    if (fs.existsSync(CREDENTIALS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+      ADMIN_USERNAME = data.username;
+      ADMIN_PASSWORD_HASH = data.passwordHash;
+      logger.info('Адмін-логін/пароль завантажено з credentials.json');
+    }
+  } catch (e) {
+    logger.error('Не вдалося завантажити credentials.json:', e);
+  }
+}
+function saveAdminCredentials(username, passwordHash) {
+  try {
+    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ username, passwordHash }, null, 2));
+    logger.info('Адмін-логін/пароль збережено у credentials.json');
+  } catch (e) {
+    logger.error('Не вдалося зберегти credentials.json:', e);
+  }
+}
+loadAdminCredentials();
+
+app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => {
+  const { oldUsername, oldPassword, newUsername, newPassword } = req.body;
+  if (!oldUsername || !oldPassword || !newUsername || !newPassword) {
+    return res.status(400).json({ error: 'Всі поля обовʼязкові' });
+  }
+  // Перевірка старих даних
+  let valid = false;
+  if (oldUsername === ADMIN_USERNAME) {
+    if (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(oldPassword, TEMP_ADMIN_PASSWORD)) {
+      valid = true;
+    } else if (bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
+      valid = true;
+    }
+  }
+  if (!valid) {
+    return res.status(401).json({ error: 'Старий логін або пароль невірний' });
+  }
+  // Оновлення
+  ADMIN_USERNAME = newUsername;
+  ADMIN_PASSWORD_HASH = bcrypt.hashSync(newPassword, 10);
+  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH);
+  TEMP_ADMIN_PASSWORD = null;
+  res.json({ success: true });
+});

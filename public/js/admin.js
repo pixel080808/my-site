@@ -1440,11 +1440,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeForgotModal = document.getElementById('close-forgot-modal');
     const sendForgotBtn = document.getElementById('send-forgot-btn');
     const forgotMsg = document.getElementById('forgot-password-message');
+    const forgotEmail = document.getElementById('forgot-email');
 
     if (forgotBtn && forgotModal && closeForgotModal && sendForgotBtn) {
         forgotBtn.onclick = function() {
             forgotModal.classList.add('active');
             forgotMsg.textContent = '';
+            if (forgotEmail) forgotEmail.value = '';
         };
         closeForgotModal.onclick = function() {
             forgotModal.classList.remove('active');
@@ -1457,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch('/api/auth/forgot-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: document.getElementById('forgot-email').value })
+                    body: JSON.stringify({ email: forgotEmail.value })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -1469,6 +1471,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 forgotMsg.textContent = 'Помилка з\'єднання з сервером';
             }
             sendForgotBtn.disabled = false;
+        };
+    }
+
+    const changeBtn = document.getElementById('change-credentials-btn');
+    const changeModal = document.getElementById('change-credentials-modal');
+    const closeChangeModal = document.getElementById('close-credentials-modal');
+    const changeForm = document.getElementById('change-credentials-form');
+    const changeMsg = document.getElementById('change-credentials-message');
+
+    if (changeBtn && changeModal && closeChangeModal && changeForm) {
+        changeBtn.onclick = function() {
+            changeModal.classList.add('active');
+            changeMsg.textContent = '';
+            changeForm.reset();
+        };
+        closeChangeModal.onclick = function() {
+            changeModal.classList.remove('active');
+            changeMsg.textContent = '';
+        };
+        changeForm.onsubmit = async function(e) {
+            e.preventDefault();
+            changeMsg.textContent = 'Збереження...';
+            const oldUsername = document.getElementById('old-username').value.trim();
+            const oldPassword = document.getElementById('old-password').value;
+            const newUsername = document.getElementById('new-username').value.trim();
+            const newPassword = document.getElementById('new-password').value;
+            try {
+                const res = await fetch('/api/auth/change-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') },
+                    body: JSON.stringify({ oldUsername, oldPassword, newUsername, newPassword })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    changeMsg.textContent = 'Логін та пароль успішно змінено! Будь ласка, увійдіть знову.';
+                    setTimeout(() => {
+                        localStorage.removeItem('adminToken');
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    changeMsg.textContent = data.error || 'Помилка зміни логіну/паролю';
+                }
+            } catch (e) {
+                changeMsg.textContent = 'Помилка з\'єднання з сервером';
+            }
         };
     }
 });
