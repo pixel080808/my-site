@@ -47,7 +47,7 @@ let brands = [];
 let isLoadingProducts = false;
 let isUpdatingCategories = false;
 const orderFields = [
-    { name: 'name', label: "Ім'я" },
+    { name: 'name', label: "Ім\'я" },
     { name: 'surname', label: 'Прізвище' },
     { name: 'phone', label: 'Телефон' },
     { name: 'email', label: 'Електронна пошта' },
@@ -270,8 +270,7 @@ async function loadSettings() {
         if (aboutEditor) {
             if (settings.about) {
                 try {
-                    const delta = aboutEditor.clipboard.convert(settings.about);
-                    aboutEditor.setContents(delta, 'silent');
+                    aboutEditor.root.innerHTML = settings.about;
                     console.log('Встановлено вміст "Про нас":', settings.about);
                 } catch (e) {
                     console.error('Помилка при встановленні вмісту "Про нас":', e);
@@ -894,12 +893,148 @@ function initializeEditors() {
         console.warn('Елемент #about-editor не знайдено, пропускаємо ініціалізацію.');
         return;
     }
+
     if (aboutEditor) {
         console.log('Редактор "Про нас" уже ініціалізований, пропускаємо.');
         return;
     }
+
+    const aboutToolbarOptions = [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'script': 'sub' }, { 'script': 'super' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'direction': 'rtl' }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'font': [] }],
+        [{ 'align': [] }],
+        ['clean'],
+        ['image', 'video'],
+        [{ 'undo': 'undo' }, { 'redo': 'redo' }]
+    ];
+
     try {
+        Quill.register('modules/undo', function(quill) {
+            return { undo: () => quill.history.undo() };
+        }, true);
+        Quill.register('modules/redo', function(quill) {
+            return { redo: () => quill.history.redo() };
+        }, true);
+
         aboutEditor = new Quill('#about-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: {
+                    container: aboutToolbarOptions,
+                    handlers: {
+                        undo: function() { this.quill.history.undo(); },
+                        redo: function() { this.quill.history.redo(); }
+                    }
+                },
+                history: {
+                    delay: 1000,
+                    maxStack: 500,
+                    userOnly: true
+                }
+            }
+        });
+
+        aboutEditor.on('text-change', () => {
+            const content = aboutEditor.root.innerHTML;
+            document.getElementById('about-edit').value = content;
+            console.log('Вміст редактора змінено:', content);
+            unsavedChanges = true;
+            resetInactivityTimer();
+
+            const undoButton = document.querySelector('.ql-undo');
+            const redoButton = document.querySelector('.ql-redo');
+            if (undoButton && redoButton) {
+                aboutEditor.history.stack.undo.length > 0
+                    ? undoButton.removeAttribute('disabled')
+                    : undoButton.setAttribute('disabled', 'true');
+                aboutEditor.history.stack.redo.length > 0
+                    ? redoButton.removeAttribute('disabled')
+                    : redoButton.setAttribute('disabled', 'true');
+            }
+        });
+
+        const observer = new MutationObserver(() => {
+            console.log('DOM змінено в редакторі');
+            resetInactivityTimer();
+        });
+        observer.observe(aboutEditorElement, { childList: true, subtree: true });
+
+        if (settings.about) {
+            try {
+                aboutEditor.root.innerHTML = settings.about;
+                console.log('Встановлено вміст "Про нас":', settings.about);
+            } catch (e) {
+                console.error('Помилка при встановленні вмісту "Про нас":', e);
+                aboutEditor.setText(settings.about || '', 'silent');
+            }
+        } else {
+            console.log('settings.about порожній, редактор очищено.');
+            aboutEditor.setText('', 'silent');
+        }
+        document.getElementById('about-edit').value = settings.about || '';
+
+        aboutEditor.root.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
+                openResizeModal(target);
+            }
+        });
+
+        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+            if (node.tagName === 'IMG' || node.tagName === 'IFRAME') {
+                const src = node.getAttribute('src');
+                if (src) {
+                    const insert = node.tagName === 'IMG' ? { image: src } : { video: src };
+                    return { ops: [{ insert }] };
+                }
+            }
+            return delta;
+        });
+
+        setDefaultVideoSizes(aboutEditor, 'about-edit');
+    } catch (e) {
+        console.error('Помилка ініціалізації Quill-редактора:', e);
+        showNotification('Не вдалося ініціалізувати редактор: ' + e.message);
+    }
+}
+
+function addToolbarEventListeners() {
+    const toolbar = document.querySelector('#about-editor').previousElementSibling;
+    if (toolbar && toolbar.classList.contains('ql-toolbar')) {
+        const undoButton = toolbar.querySelector('.ql-undo');
+        const redoButton = toolbar.querySelector('.ql-redo');
+        if (undoButton) {
+            undoButton.addEventListener('click', () => {
+                aboutEditor.history.undo();
+            });
+        }
+        if (redoButton) {
+            redoButton.addEventListener('click', () => {
+                aboutEditor.history.redo();
+            });
+        }
+    } else {
+        console.error('Панель інструментів для aboutEditor не знайдена');
+    }
+}
+
+function initializeProductEditor(description = '', descriptionDelta = null) {
+    const editorElement = document.getElementById('product-description-editor');
+    if (!editorElement) {
+        console.warn('Елемент #product-description-editor не знайдено, пропускаємо ініціалізацію.');
+        return;
+    }
+
+    try {
+        productEditor = new Quill('#product-description-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
@@ -923,20 +1058,23 @@ function initializeEditors() {
                 }
             }
         });
-        // Відновлення контенту
-        if (settings.about) {
+
+        if (descriptionDelta) {
+            productEditor.setContents(descriptionDelta, 'silent');
+        } else if (description) {
             try {
-                const delta = aboutEditor.clipboard.convert(settings.about);
-                aboutEditor.setContents(delta, 'silent');
+                const delta = productEditor.clipboard.convert(description);
+                productEditor.setContents(delta, 'silent');
             } catch (e) {
-                aboutEditor.setContents([{ insert: settings.about }], 'silent');
+                console.error('Помилка при встановленні вмісту редактора товару:', e);
+                productEditor.setContents([{ insert: description }], 'silent');
             }
         } else {
-            aboutEditor.setContents([], 'silent');
+            productEditor.setContents([], 'silent');
         }
-        document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
-        // Обробник вставки зображень
-        const toolbar = aboutEditor.getModule('toolbar');
+        document.getElementById('product-description').value = productEditor.root.innerHTML;
+
+        const toolbar = productEditor.getModule('toolbar');
         toolbar.addHandler('image', async () => {
             const input = document.createElement('input');
             input.setAttribute('type', 'file');
@@ -950,6 +1088,7 @@ function initializeEditors() {
                         showNotification(validation.error);
                         return;
                     }
+
                     try {
                         const tokenRefreshed = await refreshToken();
                         if (!tokenRefreshed) {
@@ -957,34 +1096,40 @@ function initializeEditors() {
                             showSection('admin-login');
                             return;
                         }
+
+                        const token = localStorage.getItem('adminToken');
                         const formData = new FormData();
                         formData.append('file', file);
                         const response = await fetchWithAuth('/api/upload', {
                             method: 'POST',
                             body: formData
                         });
+
                         if (!response.ok) {
                             throw new Error(`Помилка завантаження зображення: ${response.statusText}`);
                         }
+
                         const data = await response.json();
                         if (data.url) {
-                            const range = aboutEditor.getSelection() || { index: 0 };
-                            aboutEditor.insertEmbed(range.index, 'image', data.url);
-                            setDefaultVideoSizes(aboutEditor, 'about-edit');
+                            const range = productEditor.getSelection() || { index: 0 };
+                            productEditor.insertEmbed(range.index, 'image', data.url);
+                            setDefaultVideoSizes(productEditor, 'product-description');
                         }
                     } catch (err) {
+                        console.error('Помилка завантаження зображення:', err);
                         showNotification('Не вдалося завантажити зображення: ' + err.message);
                     }
                 }
             };
         });
-        // Обробник вставки відео
+
         toolbar.addHandler('video', () => {
             let url = prompt('Введіть URL відео (наприклад, https://www.youtube.com/watch?v=VIDEO_ID):');
             if (url) {
                 const watchRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=([^\s&]+)/;
                 const embedRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/([^\s]+)/;
                 const shortRegex = /^(https?:\/\/)?youtu\.be\/([^\s]+)/;
+
                 let videoId = null;
                 if (watchRegex.test(url)) {
                     const match = url.match(watchRegex);
@@ -1002,30 +1147,35 @@ function initializeEditors() {
                     showNotification('Введіть коректний URL для YouTube відео');
                     return;
                 }
-                const range = aboutEditor.getSelection() || { index: 0 };
-                aboutEditor.insertEmbed(range.index, 'video', url);
-                setDefaultVideoSizes(aboutEditor, 'about-edit');
+
+                const range = productEditor.getSelection() || { index: 0 };
+                productEditor.insertEmbed(range.index, 'video', url);
+                setDefaultVideoSizes(productEditor, 'product-description');
             }
         });
-        aboutEditor.on('text-change', () => {
-            document.getElementById('about-edit').value = aboutEditor.root.innerHTML;
+
+        productEditor.on('text-change', () => {
+            document.getElementById('product-description').value = productEditor.root.innerHTML;
             unsavedChanges = true;
         });
-        aboutEditor.on('selection-change', (range) => {
+
+        productEditor.on('selection-change', (range) => {
             if (range && range.length > 0) {
-                const [embed] = aboutEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
+                const [embed] = productEditor.getContents(range.index, range.length).ops.filter(op => op.insert && (op.insert.image || op.insert.video));
                 selectedMedia = embed ? { type: embed.insert.image ? 'image' : 'video', url: embed.insert.image || embed.insert.video } : null;
             } else {
                 selectedMedia = null;
             }
         });
-        aboutEditor.root.addEventListener('click', (e) => {
+
+        productEditor.root.addEventListener('click', (e) => {
             const target = e.target;
             if (target.tagName === 'IMG' || target.tagName === 'IFRAME') {
                 openResizeModal(target);
             }
         });
-        aboutEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+
+        productEditor.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
             if (node.tagName === 'IMG') {
                 const src = node.getAttribute('src');
                 if (src) {
@@ -1034,9 +1184,11 @@ function initializeEditors() {
             }
             return delta;
         });
-        setDefaultVideoSizes(aboutEditor, 'about-edit');
+
+        resetInactivityTimer();
     } catch (e) {
-        showNotification('Не вдалося ініціалізувати редактор: ' + e.message);
+        console.error('Помилка ініціалізації редактора продуктів:', e);
+        showNotification('Не вдалося ініціалізувати редактор продуктів: ' + e.message);
     }
 }
 
