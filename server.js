@@ -195,15 +195,9 @@ if (!process.env.JWT_SECRET) {
   process.exit(1)
 }
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
-
-if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-  logger.error("ADMIN_USERNAME або ADMIN_PASSWORD не визначено у змінних середовища")
-  process.exit(1)
-}
-
-const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10)
+let ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'nata1989';
+let ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 
 const publicPath = path.join(__dirname, "public")
 if (!fs.existsSync(publicPath)) {
