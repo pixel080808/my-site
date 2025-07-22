@@ -1434,6 +1434,43 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn('Елемент #search-button не знайдено');
     }
+
+    const forgotBtn = document.getElementById('forgot-password-btn');
+    const forgotModal = document.getElementById('forgot-password-modal');
+    const closeForgotModal = document.getElementById('close-forgot-modal');
+    const sendForgotBtn = document.getElementById('send-forgot-btn');
+    const forgotMsg = document.getElementById('forgot-password-message');
+
+    if (forgotBtn && forgotModal && closeForgotModal && sendForgotBtn) {
+        forgotBtn.onclick = function() {
+            forgotModal.classList.add('active');
+            forgotMsg.textContent = '';
+        };
+        closeForgotModal.onclick = function() {
+            forgotModal.classList.remove('active');
+            forgotMsg.textContent = '';
+        };
+        sendForgotBtn.onclick = async function() {
+            sendForgotBtn.disabled = true;
+            forgotMsg.textContent = 'Відправка...';
+            try {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: document.getElementById('forgot-email').value })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    forgotMsg.textContent = 'Новий пароль надіслано на email!';
+                } else {
+                    forgotMsg.textContent = data.error || 'Помилка відновлення паролю';
+                }
+            } catch (e) {
+                forgotMsg.textContent = 'Помилка з\'єднання з сервером';
+            }
+            sendForgotBtn.disabled = false;
+        };
+    }
 });
 
 async function refreshToken(attempt = 1) {

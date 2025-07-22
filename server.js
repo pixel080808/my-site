@@ -18,6 +18,7 @@ const WebSocket = require("ws");
 const rateLimit = require("express-rate-limit");
 const csurf = require("csurf");
 const winston = require("winston");
+const nodemailer = require('nodemailer');
 
 const { Product } = require("./models/Product");
 const { Order, orderSchemaValidation } = require("./models/Order");
@@ -3436,7 +3437,17 @@ app.post("/api/auth/login", loginLimiter, csrfProtection, (req, res, next) => {
   if (!username || !password) {
     return res.status(400).json({ error: "Логін і пароль обов'язкові", message: "Логін і пароль обов'язкові" })
   }
-  if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
+  let valid = false;
+  if (username === ADMIN_USERNAME) {
+    if (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(password, TEMP_ADMIN_PASSWORD)) {
+      valid = true;
+      // Після входу через тимчасовий пароль - скидаємо його
+      TEMP_ADMIN_PASSWORD = null;
+    } else if (bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
+      valid = true;
+    }
+  }
+  if (valid) {
     const token = jwt.sign({ userId: username, username: ADMIN_USERNAME, role: "admin" }, process.env.JWT_SECRET, {
       expiresIn: "30m",
     })
@@ -3536,5 +3547,39 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
     res.status(500).json({ error: "Помилка сервера", details: err.message });
   } finally {
     session.endSession();
+  }
+});
+
+let ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pixel080808@gmail.com';
+let TEMP_ADMIN_PASSWORD = null;
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email || email !== ADMIN_EMAIL) {
+    return res.status(400).json({ error: 'Email не співпадає з email адміністратора' });
+  }
+  // Генеруємо новий тимчасовий пароль
+  const newPassword = Math.random().toString(36).slice(-10);
+  TEMP_ADMIN_PASSWORD = bcrypt.hashSync(newPassword, 10);
+  // Відправляємо email
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER || 'pixel080808@gmail.com',
+        pass: process.env.SMTP_PASS || 'your_app_password_here',
+      },
+    });
+    await transporter.sendMail({
+      from: process.env.SMTP_USER || 'pixel080808@gmail.com',
+      to: ADMIN_EMAIL,
+      subject: 'Відновлення паролю адміністратора',
+      text: `Ваш новий пароль для входу в адмінку: ${newPassword}`,
+    });
+    logger.info(`Відправлено новий пароль на ${ADMIN_EMAIL}`);
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('Помилка відправки email для відновлення паролю:', e);
+    res.status(500).json({ error: 'Не вдалося відправити email' });
   }
 });

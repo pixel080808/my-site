@@ -1350,6 +1350,7 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
             <input id="admin-password" placeholder="Пароль" type="password"/><br/>
             <label for="admin-password">Введіть пароль</label>
             <button id="login-btn">Увійти</button>
+            <button id="forgot-password-btn" type="button" style="margin-left:10px; background:#f1c40f; color:#333;">Забули пароль?</button>
         </div>
         <div class="section" id="admin-panel">
             <h2>Адмін-панель</h2>
@@ -1594,6 +1595,16 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
         </div>
     </div>
     <div class="modal" id="modal"></div>
+    <div class="modal" id="forgot-password-modal">
+      <div class="modal-content">
+        <h3>Відновлення паролю</h3>
+        <p>Введіть email адміністратора для відновлення паролю:</p>
+        <input id="forgot-email" type="email" placeholder="Email" value="pixel080808@gmail.com" readonly style="margin-bottom:10px;"/>
+        <button id="send-forgot-btn">Відправити новий пароль</button>
+        <button id="close-forgot-modal" style="margin-left:10px; background:#e74c3c;">Скасувати</button>
+        <div id="forgot-password-message" style="margin-top:10px;"></div>
+      </div>
+    </div>
     <div class="resize-modal" id="resize-modal">
         <div class="resize-modal-content">
             <h4>Змінити розміри</h4>
