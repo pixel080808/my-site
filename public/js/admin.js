@@ -877,11 +877,12 @@ function saveMediaSize() {
 function setDefaultVideoSizes(editor, editorId) {
     const iframes = editor.root.querySelectorAll('iframe');
     iframes.forEach(iframe => {
-        if (!iframe.style.width && !iframe.style.height) {
-            iframe.style.width = '50%';
-            iframe.style.height = '300px';
-            iframe.style.maxWidth = '100%';
-        }
+        // Встановлюємо горизонтальний формат за замовчуванням
+        iframe.style.width = '100%';
+        iframe.style.maxWidth = '600px';
+        iframe.style.height = '350px';
+        iframe.style.display = 'block';
+        iframe.style.margin = '16px auto';
     });
     document.getElementById(editorId).value = editor.root.innerHTML;
     unsavedChanges = true;
