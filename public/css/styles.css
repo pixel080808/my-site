@@ -322,6 +322,7 @@ header.scrolled {
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
+    left: 10px;
 }
 
 .favorite-icon:hover {
