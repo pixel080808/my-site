@@ -6411,6 +6411,14 @@ s {
         color: var(--primary-color);
     }
 
+.dimension-value {
+    font-size: 14px;
+    color: #bababa;
+    white-space: nowrap;
+    text-align: center;
+    flex: 1;
+}
+
   #catalog-dropdown {
     background: #23272f !important;
     color: #f1f1f1 !important;

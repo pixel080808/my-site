@@ -2599,7 +2599,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -2670,7 +2670,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span clas
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грнktur  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
@@ -3084,7 +3084,12 @@ product.colors.forEach((c, i) => {
                         labelSpan.textContent = labels[i];
                         labelSpan.style.textAlign = 'center';
                         labelSpan.style.fontSize = '12px';
-                        labelSpan.style.color = '#666';
+                        // Додаємо підтримку темної теми
+                        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                            labelSpan.style.color = '#ffffff';
+                        } else {
+                            labelSpan.style.color = '#000000';
+                        }
                         labelSpan.style.marginBottom = '2px';
                         
                         // Адаптивний розмір шрифту на екранах до 480px
@@ -3156,7 +3161,7 @@ product.colors.forEach((c, i) => {
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3166,7 +3171,7 @@ product.colors.forEach((c, i) => {
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3178,7 +3183,7 @@ product.colors.forEach((c, i) => {
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3188,7 +3193,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='pri
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -6065,6 +6070,40 @@ if (!document.getElementById('favorite-modal-style')) {
     .favorite-modal .favorite-item .fav-title { font-weight: 500; font-size: 1.05em; }
     .favorite-modal .favorite-item .fav-price { color: #388e3c; font-weight: 500; margin-left: 8px; }
     .favorite-modal .favorite-item .fav-link { color: #1976d2; text-decoration: underline; cursor: pointer; }
+
+    @media (prefers-color-scheme: dark) {
+      .favorite-modal-bg {
+        background: rgba(10, 14, 24, 0.75);
+      }
+      .favorite-modal {
+        background: #232833;
+        color: #f1f1f1;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+        border: 1px solid #333a4d;
+      }
+      .favorite-modal h2 {
+        color: #f1f1f1;
+      }
+      .favorite-modal .favorite-item .fav-title,
+      .favorite-modal .favorite-item .fav-link {
+        color: #4ecdc4;
+      }
+      .favorite-modal .favorite-item .fav-link:hover {
+        color: #63e6be;
+      }
+      .favorite-modal .favorite-item .fav-price {
+        color: #34d399;
+      }
+      .favorite-modal .favorite-item .remove-fav {
+        color: #ff4d4f;
+      }
+      .favorite-modal .close-fav-modal {
+        color: #f1f1f1;
+      }
+      .favorite-modal .close-fav-modal:hover {
+        color: #ff4d4f;
+      }
+    }
     `;
     document.head.appendChild(style);
 }
@@ -6362,7 +6401,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -6417,7 +6456,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
