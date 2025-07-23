@@ -3545,7 +3545,7 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
 });
 
 let ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pixel080808@gmail.com';
-let TEMP_ADMIN_PASSWORD = null;
+let TEMP_ADMIN_PASSWORD = null; // залишаємо для сумісності, але тепер зберігаємо у файлі
 
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
@@ -3555,6 +3555,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   // Генеруємо новий тимчасовий пароль
   const newPassword = Math.random().toString(36).slice(-10);
   TEMP_ADMIN_PASSWORD = bcrypt.hashSync(newPassword, 10);
+  // Зберігаємо tempPasswordHash у credentials.json
+  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, TEMP_ADMIN_PASSWORD);
   // Відправляємо email
   try {
     const transporter = nodemailer.createTransport({
@@ -3585,15 +3587,22 @@ function loadAdminCredentials() {
       const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
       ADMIN_USERNAME = data.username;
       ADMIN_PASSWORD_HASH = data.passwordHash;
+      if (data.tempPasswordHash) {
+        TEMP_ADMIN_PASSWORD = data.tempPasswordHash;
+      } else {
+        TEMP_ADMIN_PASSWORD = null;
+      }
       logger.info('Адмін-логін/пароль завантажено з credentials.json');
     }
   } catch (e) {
     logger.error('Не вдалося завантажити credentials.json:', e);
   }
 }
-function saveAdminCredentials(username, passwordHash) {
+function saveAdminCredentials(username, passwordHash, tempPasswordHash) {
   try {
-    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ username, passwordHash }, null, 2));
+    const data = { username, passwordHash };
+    if (tempPasswordHash) data.tempPasswordHash = tempPasswordHash;
+    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
     logger.info('Адмін-логін/пароль збережено у credentials.json');
   } catch (e) {
     logger.error('Не вдалося зберегти credentials.json:', e);
@@ -3621,7 +3630,8 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   // Оновлення
   ADMIN_USERNAME = newUsername;
   ADMIN_PASSWORD_HASH = bcrypt.hashSync(newPassword, 10);
-  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH);
   TEMP_ADMIN_PASSWORD = null;
+  // Видаляємо tempPasswordHash з credentials.json
+  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, null);
   res.json({ success: true });
 });
