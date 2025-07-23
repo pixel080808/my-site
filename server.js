@@ -3587,11 +3587,6 @@ function loadAdminCredentials() {
       const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
       ADMIN_USERNAME = data.username;
       ADMIN_PASSWORD_HASH = data.passwordHash;
-      if (data.tempPasswordHash) {
-        TEMP_ADMIN_PASSWORD = data.tempPasswordHash;
-      } else {
-        TEMP_ADMIN_PASSWORD = null;
-      }
       logger.info('Адмін-логін/пароль завантажено з credentials.json');
     }
   } catch (e) {
@@ -3608,6 +3603,17 @@ function saveAdminCredentials(username, passwordHash, tempPasswordHash) {
     logger.error('Не вдалося зберегти credentials.json:', e);
   }
 }
+function getTempPasswordHash() {
+  try {
+    if (fs.existsSync(CREDENTIALS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+      return data.tempPasswordHash || null;
+    }
+  } catch (e) {
+    logger.error('Не вдалося зчитати tempPasswordHash:', e);
+  }
+  return null;
+}
 loadAdminCredentials();
 
 app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => {
@@ -3617,8 +3623,9 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   }
   // Перевірка старих даних
   let valid = false;
+  const tempPasswordHash = getTempPasswordHash();
   if (oldUsername === ADMIN_USERNAME) {
-    if (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(oldPassword, TEMP_ADMIN_PASSWORD)) {
+    if (tempPasswordHash && bcrypt.compareSync(oldPassword, tempPasswordHash)) {
       valid = true;
     } else if (bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
       valid = true;
@@ -3630,7 +3637,6 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   // Оновлення
   ADMIN_USERNAME = newUsername;
   ADMIN_PASSWORD_HASH = bcrypt.hashSync(newPassword, 10);
-  TEMP_ADMIN_PASSWORD = null;
   // Видаляємо tempPasswordHash з credentials.json
   saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, null);
   res.json({ success: true });
