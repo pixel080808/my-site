@@ -6095,7 +6095,7 @@ if (!document.getElementById('favorite-modal-style')) {
     .favorite-modal h2 { font-size: 1.3em; margin: 0 0 18px 0; }
     .favorite-modal .favorite-list { width: 100%; }
     .favorite-modal .favorite-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .favorite-modal .favorite-item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
+    .favorite-modal .favorite-item img { width: 74px; height: 64px; object-fit: cover; border-radius: 8px; }
     .favorite-modal .favorite-item .remove-fav { color: #d32f2f; background: none; border: none; font-size: 28px; cursor: pointer; margin-left: 8px; }
     .favorite-modal .close-fav-modal { position: absolute; top: 10px; right: 16px; background: none; border: none; font-size: 28px; color: #888; cursor: pointer; }
     .favorite-modal .favorite-item .fav-title { font-weight: 500; font-size: 1.05em; }
