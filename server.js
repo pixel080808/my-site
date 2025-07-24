@@ -2053,7 +2053,10 @@ app.post("/api/categories/:id/subcategories", authenticateToken, csrfProtection,
       slug: subcategoryData.slug,
       photo: subcategoryData.photo || "",
       visible: subcategoryData.visible !== undefined ? subcategoryData.visible : true,
-      order: subcategoryData.order || category.subcategories.length
+      order: subcategoryData.order || category.subcategories.length,
+      metaTitle: subcategoryData.metaTitle || "",
+      metaDescription: subcategoryData.metaDescription || "",
+      metaKeywords: subcategoryData.metaKeywords || ""
     });
 
     await category.save();
@@ -2131,6 +2134,9 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
                 return res.status(404).json({ error: `Підкатегорію не знайдено: ${update._id}` });
             }
             subcategory.order = update.order;
+            subcategory.metaTitle = update.metaTitle || "";
+            subcategory.metaDescription = update.metaDescription || "";
+            subcategory.metaKeywords = update.metaKeywords || "";
         }
         category.updatedAt = new Date();
         await category.save({ session });
@@ -3546,6 +3552,9 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
     subcategory.photo = subcategoryData.photo || ""; // Дозволяємо порожнє значення
     subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : true;
     subcategory.order = typeof subcategoryData.order === "number" ? subcategoryData.order : subcategory.order;
+    subcategory.metaTitle = subcategoryData.metaTitle || "";
+    subcategory.metaDescription = subcategoryData.metaDescription || "";
+    subcategory.metaKeywords = subcategoryData.metaKeywords || "";
 
     category.updatedAt = new Date();
     await category.save({ session });
