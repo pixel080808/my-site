@@ -340,31 +340,31 @@ const productSchemaValidation = Joi.object({
 }).unknown(false);
 
 const settingsSchemaValidation = Joi.object({
-  name: Joi.string().allow(""),
-  baseUrl: Joi.string().uri().allow(""),
-  logo: Joi.string().uri().allow(""),
-  logoWidth: Joi.number().min(0).default(150),
-  favicon: Joi.string().uri().allow(""),
+  name: Joi.string().allow("").optional(),
+  baseUrl: Joi.string().uri().allow("").optional(),
+  logo: Joi.string().uri().allow("").optional(),
+  logoWidth: Joi.number().min(0).default(150).optional(),
+  favicon: Joi.string().uri().allow("").optional(),
   contacts: Joi.object({
-    phones: Joi.string().allow(""),
-    addresses: Joi.string().allow(""),
-    schedule: Joi.string().allow(""),
-  }).default({ phones: "", addresses: "", schedule: "" }),
+    phones: Joi.string().allow("").optional(),
+    addresses: Joi.string().allow("").optional(),
+    schedule: Joi.string().allow("").optional(),
+  }).default({ phones: "", addresses: "", schedule: "" }).optional(),
   socials: Joi.array()
     .items(
       Joi.object({
-        name: Joi.string().allow(""),
+        name: Joi.string().allow("").optional(),
         url: Joi.string().uri().required(),
-        icon: Joi.string().allow(""),
+        icon: Joi.string().allow("").optional(),
       }),
     )
-    .default([]),
-  showSocials: Joi.boolean().default(true),
-  about: Joi.string().allow(""),
-  categoryWidth: Joi.number().min(0).default(0),
-  categoryHeight: Joi.number().min(0).default(0),
-  productWidth: Joi.number().min(0).default(0),
-  productHeight: Joi.number().min(0).default(0),
+    .default([]).optional(),
+  showSocials: Joi.boolean().default(true).optional(),
+  about: Joi.string().allow("").optional(),
+  categoryWidth: Joi.number().min(0).default(0).optional(),
+  categoryHeight: Joi.number().min(0).default(0).optional(),
+  productWidth: Joi.number().min(0).default(0).optional(),
+  productHeight: Joi.number().min(0).default(0).optional(),
   filters: Joi.array()
     .items(
       Joi.object({
@@ -374,7 +374,7 @@ const settingsSchemaValidation = Joi.object({
         options: Joi.array().items(Joi.string().min(1)).default([]),
       }),
     )
-    .default([]),
+    .default([]).optional(),
   orderFields: Joi.array()
     .items(
       Joi.object({
@@ -384,16 +384,19 @@ const settingsSchemaValidation = Joi.object({
         options: Joi.array().items(Joi.string().min(1)).default([]),
       }),
     )
-    .default([]),
-  slideWidth: Joi.number().min(0).default(0),
-  slideHeight: Joi.number().min(0).default(0),
-  slideInterval: Joi.number().min(0).default(3000),
-  showSlides: Joi.boolean().default(true),
+    .default([]).optional(),
+  slideWidth: Joi.number().min(0).default(0).optional(),
+  slideHeight: Joi.number().min(0).default(0).optional(),
+  slideInterval: Joi.number().min(0).default(3000).optional(),
+  showSlides: Joi.boolean().default(true).optional(),
+  metaTitle: Joi.string().allow('').optional(),
+  metaDescription: Joi.string().allow('').optional(),
+  metaKeywords: Joi.string().allow('').optional(),
   _id: Joi.any().optional(),
   __v: Joi.any().optional(),
   createdAt: Joi.any().optional(),
   updatedAt: Joi.any().optional(),
-}).unknown(false)
+}).unknown(false);
 
 const materialSchemaValidation = Joi.object({
   name: Joi.string().trim().min(1).max(100).required(),
