@@ -293,7 +293,7 @@ const productSchemaValidation = Joi.object({
   slug: Joi.string().min(1).max(255).required().trim(),
   brand: Joi.string().max(100).allow('').optional().trim(),
   category: Joi.string().max(100).required().trim(),
-  subcategory: Joi.string().max(255).allow('', null).optional().trim(), // Дозволяємо null або порожній рядок
+  subcategory: Joi.string().max(255).allow('', null).optional().trim(),
   material: Joi.string().max(100).allow('').optional().trim(),
   price: Joi.number()
     .min(0)
@@ -333,7 +333,10 @@ const productSchemaValidation = Joi.object({
       value: Joi.string().required()
     })
   ).default([]),
-  popularity: Joi.number().min(0).default(0)
+  popularity: Joi.number().min(0).default(0),
+  metaTitle: Joi.string().allow('').optional(),
+  metaDescription: Joi.string().allow('').optional(),
+  metaKeywords: Joi.string().allow('').optional(),
 }).unknown(false);
 
 const settingsSchemaValidation = Joi.object({
