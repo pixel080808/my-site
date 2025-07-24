@@ -1232,7 +1232,7 @@ function showSection(sectionId) {
     saveToStorage('currentSubcategory', currentSubcategory);
     saveToStorage('lastCatalogState', state);
     if (typeof updateMetaTags === 'function') {
-        updateMetaTags(sectionId === 'product-details' ? currentProduct : null);
+        updateMetaTags(sectionId === 'product-details' ? currentProduct : null, currentCategory, currentSubcategory);
     }
     if (typeof renderBreadcrumbs === 'function') {
         renderBreadcrumbs();
@@ -1250,16 +1250,47 @@ function showSection(sectionId) {
     }
 }
 
-function updateMetaTags(product) {
-    document.title = product ? `${product.name} | ${settings.name}` : settings.name;
+function updateMetaTags(product = null, category = null, subcategory = null) {
+    let title = settings.metaTitle || settings.name || 'Меблевий магазин';
+    let description = settings.metaDescription || 'Меблевий магазин - широкий вибір меблів для дому.';
+    let keywords = settings.metaKeywords || 'меблі, меблевий магазин, вітальні, спальні, кухні, матраци, купити меблі';
+    let ogImage = settings.logo || '';
+
+    if (category) {
+        title = category.metaTitle || category.name || title;
+        description = category.metaDescription || description;
+        keywords = category.metaKeywords || keywords;
+        ogImage = category.photo || ogImage;
+    }
+    if (subcategory) {
+        title = subcategory.metaTitle || subcategory.name || title;
+        description = subcategory.metaDescription || description;
+        keywords = subcategory.metaKeywords || keywords;
+        ogImage = subcategory.photo || ogImage;
+    }
+    if (product) {
+        title = product.metaTitle || product.name || title;
+        description = product.metaDescription || product.description || description;
+        keywords = product.metaKeywords || keywords;
+        ogImage = (product.photos && product.photos[0]) || ogImage;
+    }
+    document.title = title;
     const descTag = document.querySelector('meta[name="description"]');
-    if (descTag) descTag.content = product ? (product.description || settings.name) : 'Меблевий магазин - широкий вибір меблів для дому.';
+    if (descTag) descTag.content = description;
+    const keywordsTag = document.querySelector('meta[name="keywords"]');
+    if (keywordsTag) keywordsTag.content = keywords;
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.content = document.title;
+    if (ogTitle) ogTitle.content = title;
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.content = descTag.content;
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    if (ogImage && product?.photos?.[0]) ogImage.content = product.photos[0];
+    if (ogDesc) ogDesc.content = description;
+    const ogImageTag = document.querySelector('meta[property="og:image"]');
+    if (ogImageTag && ogImage) ogImageTag.content = ogImage;
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.content = title;
+    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twitterDesc) twitterDesc.content = description;
+    const twitterImage = document.querySelector('meta[name="twitter:image"]');
+    if (twitterImage && ogImage) twitterImage.content = ogImage;
 }
 
 function renderBreadcrumbs() {
@@ -2599,7 +2630,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -2670,7 +2701,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грнktur  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
@@ -3161,7 +3192,7 @@ product.colors.forEach((c, i) => {
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3171,7 +3202,7 @@ product.colors.forEach((c, i) => {
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3183,7 +3214,7 @@ product.colors.forEach((c, i) => {
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3193,7 +3224,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -6401,7 +6432,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -6456,7 +6487,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;

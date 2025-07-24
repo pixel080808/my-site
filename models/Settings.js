@@ -73,7 +73,10 @@ const settingsSchema = new mongoose.Schema({
     slideWidth: { type: Number, default: 0 },
     slideHeight: { type: Number, default: 0 },
     slideInterval: { type: Number, default: 3000 },
-    showSlides: { type: Boolean, default: true }
+    showSlides: { type: Boolean, default: true },
+    metaTitle: { type: String, default: '', trim: true },
+    metaDescription: { type: String, default: '', trim: true },
+    metaKeywords: { type: String, default: '', trim: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

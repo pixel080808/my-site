@@ -29,6 +29,9 @@ let settings = {
     slideWidth: '',
     slideHeight: '',
     slideInterval: '',
+    metaTitle: '',
+    metaDescription: '',
+    metaKeywords: ''
 };
 let orderNumberCache = new Map();
 let totalOrders = 0;
@@ -262,7 +265,10 @@ async function loadSettings() {
             showSlides: serverSettings.showSlides !== undefined ? serverSettings.showSlides : settings.showSlides,
             slideWidth: serverSettings.slideWidth || settings.slideWidth,
             slideHeight: serverSettings.slideHeight || settings.slideHeight,
-            slideInterval: serverSettings.slideInterval || settings.slideInterval
+            slideInterval: serverSettings.slideInterval || settings.slideInterval,
+            metaTitle: serverSettings.metaTitle || settings.metaTitle,
+            metaDescription: serverSettings.metaDescription || settings.metaDescription,
+            metaKeywords: serverSettings.metaKeywords || settings.metaKeywords
         };
 
         console.log('Оновлені settings:', settings);
@@ -1718,7 +1724,10 @@ async function updateStoreInfo() {
             baseUrl: baseUrl || settings.baseUrl,
             logo: finalLogoUrl || settings.logo,
             logoWidth: logoWidth,
-            favicon: finalFaviconUrl || settings.favicon
+            favicon: finalFaviconUrl || settings.favicon,
+            metaTitle: document.getElementById('meta-title').value || settings.metaTitle,
+            metaDescription: document.getElementById('meta-description').value || settings.metaDescription,
+            metaKeywords: document.getElementById('meta-keywords').value || settings.metaKeywords
         };
 
         console.log('Надсилаємо налаштування:', updatedSettings);
@@ -2427,6 +2436,15 @@ function renderSettingsAdmin() {
 
     const slideToggle = document.getElementById('slide-toggle');
     if (slideToggle) slideToggle.checked = settings.showSlides;
+
+    const metaTitle = document.getElementById('meta-title');
+    if (metaTitle) metaTitle.value = settings.metaTitle || '';
+
+    const metaDescription = document.getElementById('meta-description');
+    if (metaDescription) metaDescription.value = settings.metaDescription || '';
+
+    const metaKeywords = document.getElementById('meta-keywords');
+    if (metaKeywords) metaKeywords.value = settings.metaKeywords || '';
 }
 
 function openNewSlideModal() {
@@ -2630,6 +2648,12 @@ function openEditCategoryModal(categoryId) {
                     <option value="false" ${!category.visible ? 'selected' : ''}>Приховати</option>
                 </select><br/>
                 <label for="category-visible">Видимість</label>
+                <input id="category-meta-title" placeholder="Meta Title" type="text" value="${sanitize(category.metaTitle) || ''}" /><br/>
+                <label for="category-meta-title">Meta Title</label>
+                <input id="category-meta-description" placeholder="Meta Description" type="text" value="${sanitize(category.metaDescription) || ''}" /><br/>
+                <label for="category-meta-description">Meta Description</label>
+                <input id="category-meta-keywords" placeholder="Meta Keywords" type="text" value="${sanitize(category.metaKeywords) || ''}" /><br/>
+                <label for="category-meta-keywords">Meta Keywords</label>
                 <div class="modal-actions">
                     <button type="submit">Зберегти</button>
                     <button type="button" onclick="closeModal()">Скасувати</button>
@@ -2669,6 +2693,12 @@ function openAddCategoryModal() {
                 <option value="false">Приховати</option>
             </select><br/>
             <label for="category-visible">Видимість</label>
+            <input id="category-meta-title" placeholder="Meta Title" type="text" /><br/>
+            <label for="category-meta-title">Meta Title</label>
+            <input id="category-meta-description" placeholder="Meta Description" type="text" /><br/>
+            <label for="category-meta-description">Meta Description</label>
+            <input id="category-meta-keywords" placeholder="Meta Keywords" type="text" /><br/>
+            <label for="category-meta-keywords">Meta Keywords</label>
             <div class="modal-actions">
                 <button onclick="addCategory()">Зберегти</button>
                 <button onclick="closeModal()">Скасувати</button>
@@ -2703,6 +2733,9 @@ async function saveAddCategory() {
         const slug = document.getElementById('category-slug')?.value.trim();
         const photoUrl = document.getElementById('category-photo-url')?.value.trim();
         const photoFile = document.getElementById('category-photo-file')?.files[0];
+        const metaTitle = document.getElementById('category-meta-title')?.value.trim();
+        const metaDescription = document.getElementById('category-meta-description')?.value.trim();
+        const metaKeywords = document.getElementById('category-meta-keywords')?.value.trim();
 
         if (!name || !slug) {
             showNotification('Назва та шлях категорії обов\'язкові!');
@@ -2716,7 +2749,7 @@ async function saveAddCategory() {
             return;
         }
 
-        let category = { name, slug, photo: photoUrl || null, subcategories: [] };
+        let category = { name, slug, photo: photoUrl || null, subcategories: [], metaTitle, metaDescription, metaKeywords };
 
         if (photoFile) {
             const validation = validateFile(photoFile);
@@ -2777,8 +2810,11 @@ async function updateCategoryData(categoryId) {
         const fileInput = modal.querySelector('#category-photo-file');
         const photoUrlInput = modal.querySelector('#category-photo-url');
         const visibleSelect = modal.querySelector('#category-visible');
+        const metaTitleInput = modal.querySelector('#category-meta-title');
+        const metaDescriptionInput = modal.querySelector('#category-meta-description');
+        const metaKeywordsInput = modal.querySelector('#category-meta-keywords');
 
-        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect) {
+        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect || !metaTitleInput || !metaDescriptionInput || !metaKeywordsInput) {
             showNotification('Не вдалося знайти всі необхідні поля форми.');
             return;
         }
@@ -2788,6 +2824,9 @@ async function updateCategoryData(categoryId) {
         const visible = visibleSelect.value === 'true';
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
+        const metaTitle = metaTitleInput.value.trim();
+        const metaDescription = metaDescriptionInput.value.trim();
+        const metaKeywords = metaKeywordsInput.value.trim();
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
@@ -2833,7 +2872,10 @@ async function updateCategoryData(categoryId) {
             photo: photo, // Дозволяємо порожнє значення
             visible,
             order: category ? category.order : 0,
-            subcategories: category ? category.subcategories : []
+            subcategories: category ? category.subcategories : [],
+            metaTitle,
+            metaDescription,
+            metaKeywords
         };
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}`, {
@@ -2908,15 +2950,21 @@ async function addCategory() {
         const fileInput = document.getElementById('category-photo-file');
         const photoUrlInput = document.getElementById('category-photo-url');
         const visibleSelect = document.getElementById('category-visible');
+        const metaTitleInput = document.getElementById('category-meta-title');
+        const metaDescriptionInput = document.getElementById('category-meta-description');
+        const metaKeywordsInput = document.getElementById('category-meta-keywords');
 
-        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect) {
+        if (!nameInput || !slugInput || !fileInput || !photoUrlInput || !visibleSelect || !metaTitleInput || !metaDescriptionInput || !metaKeywordsInput) {
             showNotification('Не вдалося знайти всі необхідні поля форми.');
             console.error('Елементи форми не знайдено:', {
                 nameInput: !!nameInput,
                 slugInput: !!slugInput,
                 fileInput: !!fileInput,
                 photoUrlInput: !!photoUrlInput,
-                visibleSelect: !!visibleSelect
+                visibleSelect: !!visibleSelect,
+                metaTitleInput: !!metaTitleInput,
+                metaDescriptionInput: !!metaDescriptionInput,
+                metaKeywordsInput: !!metaKeywordsInput
             });
             return;
         }
@@ -2926,6 +2974,9 @@ async function addCategory() {
         const visible = visibleSelect.value === 'true';
         const file = fileInput.files[0];
         const photoUrl = photoUrlInput.value.trim();
+        const metaTitle = metaTitleInput.value.trim();
+        const metaDescription = metaDescriptionInput.value.trim();
+        const metaKeywords = metaKeywordsInput.value.trim();
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях категорії!');
@@ -2984,7 +3035,10 @@ async function addCategory() {
             photo,
             visible,
             subcategories: [],
-            order: categories.length
+            order: categories.length,
+            metaTitle,
+            metaDescription,
+            metaKeywords
         };
 
         console.log('Дані для сервера:', category);
@@ -3016,6 +3070,9 @@ async function addCategory() {
         photoUrlInput.value = '';
         fileInput.value = '';
         visibleSelect.value = 'true';
+        metaTitleInput.value = '';
+        metaDescriptionInput.value = '';
+        metaKeywordsInput.value = '';
     } catch (err) {
         console.error('Помилка при додаванні категорії:', err);
         showNotification('Не вдалося додати категорію: ' + err.message);
@@ -3147,6 +3204,12 @@ function openAddSubcategoryModal() {
                 <option value="false">Приховати</option>
             </select><br/>
             <label for="subcategory-visible">Видимість</label>
+            <input id="subcategory-meta-title" placeholder="Meta Title" type="text" /><br/>
+            <label for="subcategory-meta-title">Meta Title</label>
+            <input id="subcategory-meta-description" placeholder="Meta Description" type="text" /><br/>
+            <label for="subcategory-meta-description">Meta Description</label>
+            <input id="subcategory-meta-keywords" placeholder="Meta Keywords" type="text" /><br/>
+            <label for="subcategory-meta-keywords">Meta Keywords</label>
             <div class="modal-actions">
                 <button onclick="addSubcategory()">Зберегти</button>
                 <button onclick="closeModal()">Скасувати</button>
