@@ -195,9 +195,8 @@ if (!process.env.JWT_SECRET) {
   process.exit(1)
 }
 
-let ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'nata1989';
-let ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
+let ADMIN_USERNAME = 'admin';
+let ADMIN_PASSWORD_HASH = '';
 
 const publicPath = path.join(__dirname, "public")
 if (!fs.existsSync(publicPath)) {
