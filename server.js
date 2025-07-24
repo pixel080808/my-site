@@ -1671,6 +1671,9 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
       order: categoryData.order ?? category.order,
       subcategories: categoryData.subcategories,
       updatedAt: new Date(),
+      metaTitle: categoryData.metaTitle || "",
+      metaDescription: categoryData.metaDescription || "",
+      metaKeywords: categoryData.metaKeywords || ""
     });
 
     await category.save({ session });
