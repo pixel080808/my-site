@@ -2436,6 +2436,11 @@ app.put("/api/settings", authenticateToken, csrfProtection, async (req, res) => 
 
     const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData
 
+    // Додаю дефолтні значення для SEO-полів, якщо вони не передані
+    cleanedSettingsData.metaTitle = typeof cleanedSettingsData.metaTitle === 'string' ? cleanedSettingsData.metaTitle : '';
+    cleanedSettingsData.metaDescription = typeof cleanedSettingsData.metaDescription === 'string' ? cleanedSettingsData.metaDescription : '';
+    cleanedSettingsData.metaKeywords = typeof cleanedSettingsData.metaKeywords === 'string' ? cleanedSettingsData.metaKeywords : '';
+
     const { error } = settingsSchemaValidation.validate(cleanedSettingsData, { abortEarly: false })
     if (error) {
       logger.error("Помилка валідації налаштувань:", error.details)
@@ -2465,56 +2470,16 @@ app.put("/api/settings", authenticateToken, csrfProtection, async (req, res) => 
 
     let settings = await Settings.findOne()
     if (!settings) {
-      settings = new Settings({
-        name: "",
-        baseUrl: "",
-        logo: "",
-        logoWidth: 150,
-        favicon: "",
-        contacts: { phones: "", addresses: "", schedule: "" },
-        socials: [],
-        showSocials: true,
-        about: "",
-        categoryWidth: 0,
-        categoryHeight: 0,
-        productWidth: 0,
-        productHeight: 0,
-        filters: [],
-        orderFields: [],
-        slideWidth: 0,
-        slideHeight: 0,
-        slideInterval: 3000,
-        showSlides: true,
-      })
+      settings = new Settings(cleanedSettingsData)
+    } else {
+      Object.assign(settings, cleanedSettingsData)
     }
-
-    const updatedData = {
-      ...settings.toObject(),
-      ...cleanedSettingsData,
-      contacts: {
-        ...settings.contacts,
-        ...(cleanedSettingsData.contacts || {}),
-      },
-      socials: cleanedSettingsData.socials || settings.socials,
-      filters: cleanedSettingsData.filters || settings.filters,
-      orderFields: cleanedSettingsData.orderFields || settings.orderFields,
-      showSlides: cleanedSettingsData.showSlides !== undefined ? cleanedSettingsData.showSlides : settings.showSlides,
-      slideInterval:
-        cleanedSettingsData.slideInterval !== undefined ? cleanedSettingsData.slideInterval : settings.slideInterval,
-    }
-
-    Object.assign(settings, updatedData)
     await settings.save()
-
-    const settingsToSend = settings.toObject()
-    delete settingsToSend._id
-    delete settingsToSend.__v
-
-    broadcast("settings", settingsToSend)
-    res.json(settingsToSend)
+    broadcast("settings", settings)
+    res.json(settings)
   } catch (err) {
     logger.error("Помилка при оновленні налаштувань:", err)
-    res.status(500).json({ error: "Помилка сервера", details: err.message })
+    res.status(400).json({ error: "Невірні дані", details: err.message })
   }
 })
 
