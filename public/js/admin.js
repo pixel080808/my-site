@@ -3175,6 +3175,9 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const photoUrlInput = modal.querySelector('#subcategory-photo-url');
         const photoFileInput = modal.querySelector('#subcategory-photo-file');
         const visibleSelect = modal.querySelector('#subcategory-visible');
+        const metaTitleInput = modal.querySelector('#subcategory-meta-title');
+        const metaDescriptionInput = modal.querySelector('#subcategory-meta-description');
+        const metaKeywordsInput = modal.querySelector('#subcategory-meta-keywords');
 
         if (!nameInput || !slugInput || !visibleSelect) {
             showNotification('Елементи форми для редагування підкатегорії не знайдено.');
@@ -3185,6 +3188,9 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const slug = slugInput.value?.trim() || name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
         const visible = visibleSelect.value === 'true';
         let photo = photoUrlInput?.value?.trim() || '';
+        const metaTitle = metaTitleInput?.value?.trim() || '';
+        const metaDescription = metaDescriptionInput?.value?.trim() || '';
+        const metaKeywords = metaKeywordsInput?.value?.trim() || '';
 
         if (!name || name.length < 1) {
             showNotification('Назва підкатегорії є обов\'язковою та повинна містити хоча б 1 символ!');
@@ -3249,7 +3255,10 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             slug,
             photo: photo, // Дозволяємо порожнє значення
             visible,
-            order: typeof subcategory.order === "number" ? subcategory.order : 0
+            order: typeof subcategory.order === "number" ? subcategory.order : 0,
+            metaTitle,
+            metaDescription,
+            metaKeywords
         };
 
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
@@ -3305,6 +3314,9 @@ async function addSubcategory() {
         const photoUrlInput = document.getElementById('subcategory-photo-url');
         const photoFileInput = document.getElementById('subcategory-photo-file');
         const visibleSelect = document.getElementById('subcategory-visible');
+        const metaTitleInput = document.getElementById('subcategory-meta-title');
+        const metaDescriptionInput = document.getElementById('subcategory-meta-description');
+        const metaKeywordsInput = document.getElementById('subcategory-meta-keywords');
 
         if (!categorySelect || !nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
             console.error('Елементи форми відсутні:', {
@@ -3324,8 +3336,11 @@ async function addSubcategory() {
         const slug = slugInput.value.trim();
         const visible = visibleSelect.value === 'true';
         const photoUrl = photoUrlInput.value.trim();
+        const metaTitle = metaTitleInput.value.trim();
+        const metaDescription = metaDescriptionInput.value.trim();
+        const metaKeywords = metaKeywordsInput.value.trim();
 
-        console.log('Дані підкатегорії:', { categoryId, name, slug, visible, photoUrl });
+        console.log('Дані підкатегорії:', { categoryId, name, slug, visible, photoUrl, metaTitle, metaDescription, metaKeywords });
 
         if (!categoryId || !name || !slug) {
             showNotification('Виберіть категорію, введіть назву та шлях підкатегорії!');
@@ -3380,7 +3395,7 @@ async function addSubcategory() {
             photo = photoUrl;
         }
 
-        const newSubcategory = { name, slug, photo, visible };
+        const newSubcategory = { name, slug, photo, visible, metaTitle, metaDescription, metaKeywords };
         console.log('Дані нової підкатегорії:', newSubcategory);
 
         const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
@@ -3449,6 +3464,12 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
                     <option value="false" ${!subcategory.visible ? 'selected' : ''}>Приховати</option>
                 </select><br/>
                 <label for="subcategory-visible">Видимість</label>
+                <input id="subcategory-meta-title" placeholder="Meta Title" type="text" value="${sanitize(subcategory.metaTitle) || ''}" /><br/>
+                <label for="subcategory-meta-title">Meta Title</label>
+                <input id="subcategory-meta-description" placeholder="Meta Description" type="text" value="${sanitize(subcategory.metaDescription) || ''}" /><br/>
+                <label for="subcategory-meta-description">Meta Description</label>
+                <input id="subcategory-meta-keywords" placeholder="Meta Keywords" type="text" value="${sanitize(subcategory.metaKeywords) || ''}" /><br/>
+                <label for="subcategory-meta-keywords">Meta Keywords</label>
                 <div class="modal-actions">
                     <button type="submit">Зберегти</button>
                     <button type="button" onclick="closeModal()">Скасувати</button>

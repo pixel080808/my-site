@@ -66,7 +66,10 @@ const productSchema = new mongoose.Schema({
     depthCm: { type: Number, min: 0 },
     heightCm: { type: Number, min: 0 },
     lengthCm: { type: Number, min: 0 },
-    popularity: { type: Number, min: 0, default: 0 }
+    popularity: { type: Number, min: 0, default: 0 },
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    metaKeywords: { type: String, trim: true },
 }, { timestamps: true });
 
 productSchema.pre('save', async function(next) {
@@ -166,7 +169,10 @@ const productSchemaValidation = Joi.object({
     depthCm: Joi.number().min(0).optional(),
     heightCm: Joi.number().min(0).optional(),
     lengthCm: Joi.number().min(0).optional(),
-    popularity: Joi.number().min(0).default(0)
+    popularity: Joi.number().min(0).default(0),
+    metaTitle: Joi.string().trim().optional(),
+    metaDescription: Joi.string().trim().optional(),
+    metaKeywords: Joi.string().trim().optional(),
 });
 
 module.exports = { Product, productSchemaValidation };

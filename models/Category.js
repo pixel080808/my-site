@@ -16,6 +16,9 @@ const categorySchema = new mongoose.Schema({
     },
     photo: { type: String, default: '' },
     visible: { type: Boolean, default: true },
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    metaKeywords: { type: String, trim: true },
     subcategories: [{
         name: {
             type: String,
@@ -31,7 +34,10 @@ const categorySchema = new mongoose.Schema({
         },
         photo: { type: String, default: '' },
         order: { type: Number, required: true, default: 0 },
-        visible: { type: Boolean, default: true }
+        visible: { type: Boolean, default: true },
+        metaTitle: { type: String, trim: true },
+        metaDescription: { type: String, trim: true },
+        metaKeywords: { type: String, trim: true }
     }],
     order: {
         type: Number,

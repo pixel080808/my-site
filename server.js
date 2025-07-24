@@ -1450,6 +1450,9 @@ const categorySchemaValidation = Joi.object({
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
+  metaTitle: Joi.string().trim().optional(),
+  metaDescription: Joi.string().trim().optional(),
+  metaKeywords: Joi.string().trim().optional(),
   subcategories: Joi.array()
     .items(
       Joi.object({
@@ -1471,6 +1474,9 @@ const categorySchemaValidation = Joi.object({
         photo: Joi.string().uri().allow("").optional(),
         visible: Joi.boolean().default(true),
         order: Joi.number().integer().min(0).default(0),
+        metaTitle: Joi.string().trim().optional(),
+        metaDescription: Joi.string().trim().optional(),
+        metaKeywords: Joi.string().trim().optional(),
       }),
     )
     .default([]),
@@ -1498,6 +1504,9 @@ const subcategorySchemaValidation = Joi.object({
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
+  metaTitle: Joi.string().trim().optional(),
+  metaDescription: Joi.string().trim().optional(),
+  metaKeywords: Joi.string().trim().optional(),
   __v: Joi.number().optional(),
   createdAt: Joi.date().optional(),
   updatedAt: Joi.date().optional(),
@@ -3133,7 +3142,7 @@ app.get("/api/backup/orders", authenticateToken, async (req, res) => {
   }
 })
 
-app.get("/api/sitemap", authenticateToken, async (req, res) => {
+app.get("/sitemap.xml", async (req, res) => {
   try {
     const products = await Product.find({ visible: true, active: true })
     const categories = await Category.find()
@@ -3146,6 +3155,16 @@ app.get("/api/sitemap", authenticateToken, async (req, res) => {
                 <loc>${baseUrl}</loc>
                 <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
                 <priority>1.0</priority>
+            </url>
+            <url>
+                <loc>${baseUrl}/#contacts</loc>
+                <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+                <priority>0.5</priority>
+            </url>
+            <url>
+                <loc>${baseUrl}/#about</loc>
+                <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+                <priority>0.5</priority>
             </url>`
 
     categories.forEach((cat) => {
@@ -3155,14 +3174,16 @@ app.get("/api/sitemap", authenticateToken, async (req, res) => {
                 <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
                 <priority>0.8</priority>
             </url>`
-      cat.subcategories.forEach((subcat) => {
-        sitemap += `
+      if (cat.subcategories && Array.isArray(cat.subcategories)) {
+        cat.subcategories.forEach((subcat) => {
+          sitemap += `
                 <url>
                     <loc>${baseUrl}/category/${cat.slug}/${subcat.slug}</loc>
                     <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
                     <priority>0.7</priority>
                 </url>`
-      })
+        })
+      }
     })
 
     products.forEach((product) => {
@@ -3177,7 +3198,6 @@ app.get("/api/sitemap", authenticateToken, async (req, res) => {
     sitemap += `</urlset>`
 
     res.set("Content-Type", "application/xml")
-    res.set("Content-Disposition", 'attachment; filename="sitemap.xml"')
     res.send(sitemap)
   } catch (err) {
     logger.error("Помилка при створенні sitemap:", err)
