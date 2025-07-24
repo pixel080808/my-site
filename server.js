@@ -3435,8 +3435,9 @@ app.post("/api/auth/login", loginLimiter, csrfProtection, (req, res, next) => {
   if (username === ADMIN_USERNAME) {
     if (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(password, TEMP_ADMIN_PASSWORD)) {
       valid = true;
-      // Після входу через тимчасовий пароль - скидаємо його
+      // Після входу через тимчасовий пароль - скидаємо його і видаляємо tempPasswordHash з credentials.json
       TEMP_ADMIN_PASSWORD = null;
+      saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, null); // <-- ОНОВЛЕНО
     } else if (bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
       valid = true;
     }
