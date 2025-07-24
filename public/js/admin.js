@@ -1719,15 +1719,22 @@ async function updateStoreInfo() {
             finalFaviconUrl = data.url;
         }
 
+        const metaTitleInput = document.getElementById('site-meta-title');
+        const metaDescriptionInput = document.getElementById('site-meta-description');
+        const metaKeywordsInput = document.getElementById('site-meta-keywords');
+        const metaTitle = metaTitleInput ? metaTitleInput.value.trim() : '';
+        const metaDescription = metaDescriptionInput ? metaDescriptionInput.value.trim() : '';
+        const metaKeywords = metaKeywordsInput ? metaKeywordsInput.value.trim() : '';
+
         const updatedSettings = {
             name: name || settings.name,
             baseUrl: baseUrl || settings.baseUrl,
             logo: finalLogoUrl || settings.logo,
             logoWidth: logoWidth,
             favicon: finalFaviconUrl || settings.favicon,
-            metaTitle: document.getElementById('meta-title').value || settings.metaTitle,
-            metaDescription: document.getElementById('meta-description').value || settings.metaDescription,
-            metaKeywords: document.getElementById('meta-keywords').value || settings.metaKeywords
+            metaTitle: metaTitle || settings.metaTitle,
+            metaDescription: metaDescription || settings.metaDescription,
+            metaKeywords: metaKeywords || settings.metaKeywords
         };
 
         console.log('Надсилаємо налаштування:', updatedSettings);
@@ -2445,6 +2452,13 @@ function renderSettingsAdmin() {
 
     const metaKeywords = document.getElementById('meta-keywords');
     if (metaKeywords) metaKeywords.value = settings.metaKeywords || '';
+
+    const metaTitleInputR = document.getElementById('site-meta-title');
+    if (metaTitleInputR) metaTitleInputR.value = settings.metaTitle || '';
+    const metaDescriptionInputR = document.getElementById('site-meta-description');
+    if (metaDescriptionInputR) metaDescriptionInputR.value = settings.metaDescription || '';
+    const metaKeywordsInputR = document.getElementById('site-meta-keywords');
+    if (metaKeywordsInputR) metaKeywordsInputR.value = settings.metaKeywords || '';
 }
 
 function openNewSlideModal() {
@@ -4571,6 +4585,12 @@ function openAddProductModal() {
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
             </div>
+            <input type="text" id="product-meta-title" placeholder="Meta Title (SEO заголовок)"><br/>
+            <label for="product-meta-title">Meta Title (SEO заголовок)</label>
+            <input type="text" id="product-meta-description" placeholder="Meta Description (SEO опис)"><br/>
+            <label for="product-meta-description">Meta Description (SEO опис)</label>
+            <input type="text" id="product-meta-keywords" placeholder="Meta Keywords (через кому)"><br/>
+            <label for="product-meta-keywords">Meta Keywords (через кому)</label>
             <div class="modal-actions">
                 <button id="save-product-btn">Зберегти</button>
                 <button id="cancel-product-btn">Скасувати</button>
@@ -5431,6 +5451,9 @@ async function saveNewProduct() {
         const depthCmInput = document.getElementById('product-depth-cm');
         const heightCmInput = document.getElementById('product-height-cm');
         const lengthCmInput = document.getElementById('product-length-cm');
+        const metaTitleInput = document.getElementById('product-meta-title');
+        const metaDescriptionInput = document.getElementById('product-meta-description');
+        const metaKeywordsInput = document.getElementById('product-meta-keywords');
 
         if (!nameInput || !slugInput || !categoryInput || !subcategoryInput || !visibleSelect || !descriptionInput) {
             showNotification('Елементи форми для товару не знайдено');
@@ -5460,6 +5483,9 @@ async function saveNewProduct() {
         const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
+        const metaTitle = metaTitleInput ? metaTitleInput.value.trim() : '';
+        const metaDescription = metaDescriptionInput ? metaDescriptionInput.value.trim() : '';
+        const metaKeywords = metaKeywordsInput ? metaKeywordsInput.value.trim() : '';
 
         if (!name || !slug || !category) {
             showNotification('Введіть назву, шлях товару та категорію!');
@@ -5558,7 +5584,10 @@ if (
     : newProduct.sizes,
             groupProducts: newProduct.groupProducts,
             active: true,
-            visible
+            visible,
+            metaTitle,
+            metaDescription,
+            metaKeywords
         };
 
         const mediaUrls = [];
@@ -5810,6 +5839,12 @@ async function openEditProductModal(productId) {
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
             </div>
+            <input type="text" id="product-meta-title" value="${product.metaTitle || ''}" placeholder="Meta Title (SEO заголовок)"><br/>
+            <label for="product-meta-title">Meta Title (SEO заголовок)</label>
+            <input type="text" id="product-meta-description" value="${product.metaDescription || ''}" placeholder="Meta Description (SEO опис)"><br/>
+            <label for="product-meta-description">Meta Description (SEO опис)</label>
+            <input type="text" id="product-meta-keywords" value="${product.metaKeywords || ''}" placeholder="Meta Keywords (через кому)"><br/>
+            <label for="product-meta-keywords">Meta Keywords (через кому)</label>
             <div class="modal-actions">
                 <button id="save-product-btn">Зберегти</button>
                 <button id="cancel-product-btn">Скасувати</button>
@@ -5983,6 +6018,12 @@ async function saveEditedProduct(productId) {
         const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
         const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
         const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+        const metaTitleInput = document.getElementById('product-meta-title');
+        const metaDescriptionInput = document.getElementById('product-meta-description');
+        const metaKeywordsInput = document.getElementById('product-meta-keywords');
+        const metaTitle = metaTitleInput ? metaTitleInput.value.trim() : '';
+        const metaDescription = metaDescriptionInput ? metaDescriptionInput.value.trim() : '';
+        const metaKeywords = metaKeywordsInput ? metaKeywordsInput.value.trim() : '';
 
         if (!name || !slug) {
             showNotification('Введіть назву та шлях товару!');
@@ -6154,7 +6195,10 @@ if (
     : validatedSizes,
             groupProducts: validatedGroupProducts,
             active: newProduct.active,
-            visible
+            visible,
+            metaTitle,
+            metaDescription,
+            metaKeywords
         };
 
         if (newProduct.type === 'simple') {
