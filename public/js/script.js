@@ -6089,7 +6089,7 @@ if (!document.getElementById('favorite-modal-style')) {
     }
     .favorite-modal {
       background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      min-width: 320px; max-width: 95vw; min-height: 120px; max-height: 80vh; overflow-y: auto; padding: 28px 24px 18px 24px; position: relative;
+      min-width: 320px; max-width: 95vw; min-height: 120px; max-height: 80vh; overflow-y: auto; padding: 28px 16px 18px 16px; position: relative;
       display: flex; flex-direction: column; align-items: flex-start;
     }
     .favorite-modal h2 { font-size: 1.3em; margin: 0 0 18px 0; }
