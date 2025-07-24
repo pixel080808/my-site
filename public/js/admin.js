@@ -3256,7 +3256,7 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
         const metaDescriptionInput = modal.querySelector('#subcategory-meta-description');
         const metaKeywordsInput = modal.querySelector('#subcategory-meta-keywords');
 
-        if (!nameInput || !slugInput || !visibleSelect) {
+        if (!nameInput || !slugInput || !visibleSelect || !metaTitleInput || !metaDescriptionInput || !metaKeywordsInput) {
             showNotification('Елементи форми для редагування підкатегорії не знайдено.');
             return;
         }
@@ -3395,15 +3395,7 @@ async function addSubcategory() {
         const metaDescriptionInput = document.getElementById('subcategory-meta-description');
         const metaKeywordsInput = document.getElementById('subcategory-meta-keywords');
 
-        if (!categorySelect || !nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect) {
-            console.error('Елементи форми відсутні:', {
-                categorySelect: !!categorySelect,
-                nameInput: !!nameInput,
-                slugInput: !!slugInput,
-                photoUrlInput: !!photoUrlInput,
-                photoFileInput: !!photoFileInput,
-                visibleSelect: !!visibleSelect
-            });
+        if (!categorySelect || !nameInput || !slugInput || !photoUrlInput || !photoFileInput || !visibleSelect || !metaTitleInput || !metaDescriptionInput || !metaKeywordsInput) {
             showNotification('Елементи форми для підкатегорії не знайдено.');
             return;
         }
@@ -3417,8 +3409,6 @@ async function addSubcategory() {
         const metaDescription = metaDescriptionInput.value.trim();
         const metaKeywords = metaKeywordsInput.value.trim();
 
-        console.log('Дані підкатегорії:', { categoryId, name, slug, visible, photoUrl, metaTitle, metaDescription, metaKeywords });
-
         if (!categoryId || !name || !slug) {
             showNotification('Виберіть категорію, введіть назву та шлях підкатегорії!');
             return;
@@ -3426,11 +3416,6 @@ async function addSubcategory() {
 
         if (!/^[a-z0-9-]+$/.test(slug)) {
             showNotification('Шлях підкатегорії може містити лише малі літери, цифри та дефіси!');
-            return;
-        }
-
-        if (photoUrl && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/.test(photoUrl)) {
-            showNotification('URL фотографії має бути валідним (jpg, jpeg, png, gif, webp)!');
             return;
         }
 
@@ -3473,8 +3458,6 @@ async function addSubcategory() {
         }
 
         const newSubcategory = { name, slug, photo, visible, metaTitle, metaDescription, metaKeywords };
-        console.log('Дані нової підкатегорії:', newSubcategory);
-
         const response = await fetchWithAuth(`/api/categories/${category._id}/subcategories`, {
             method: 'POST',
             headers: {
@@ -3492,12 +3475,14 @@ async function addSubcategory() {
         const updatedCategory = await response.json();
         const index = categories.findIndex(c => c._id === category._id);
         categories[index] = updatedCategory;
+        localStorage.setItem('categories', JSON.stringify(categories));
+        broadcast('categories', categories);
         closeModal();
         renderCategoriesAdmin();
         showNotification('Підкатегорію додано!');
         resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка при додаванні підкатегорії:', err);
+        console.error('Помилка збереження підкатегорії:', err);
         showNotification('Не вдалося додати підкатегорію: ' + err.message);
     }
 }
