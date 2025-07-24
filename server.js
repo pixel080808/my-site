@@ -3588,6 +3588,7 @@ function loadAdminCredentials() {
       const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
       ADMIN_USERNAME = data.username;
       ADMIN_PASSWORD_HASH = data.passwordHash;
+      TEMP_ADMIN_PASSWORD = data.tempPasswordHash || null; // <--- Додаємо цю строку
       logger.info('Адмін-логін/пароль завантажено з credentials.json');
     }
   } catch (e) {
@@ -3626,9 +3627,10 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   let valid = false;
   const tempPasswordHash = getTempPasswordHash();
   if (oldUsername === ADMIN_USERNAME) {
-    if (tempPasswordHash && bcrypt.compareSync(oldPassword, tempPasswordHash)) {
-      valid = true;
-    } else if (bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
+    // Додаємо перевірку: якщо TEMP_ADMIN_PASSWORD вже null, але tempPasswordHash ще є у файлі, дозволяємо зміну
+    if ((tempPasswordHash && bcrypt.compareSync(oldPassword, tempPasswordHash)) ||
+        (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(oldPassword, TEMP_ADMIN_PASSWORD)) ||
+        bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
       valid = true;
     }
   }
