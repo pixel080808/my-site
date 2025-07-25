@@ -1350,12 +1350,10 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
             <input id="admin-password" placeholder="Пароль" type="password"/><br/>
             <label for="admin-password">Введіть пароль</label>
             <button id="login-btn">Увійти</button>
-            <button id="forgot-password-btn" type="button" style="margin-left:10px; background:#f1c40f; color:#333;">Забули пароль?</button>
         </div>
         <div class="section" id="admin-panel">
             <h2>Адмін-панель</h2>
             <button onclick="logout()" style="position: absolute; top: 20px; right: 20px;">Вийти</button>
-            <button id="change-credentials-btn" style="position: absolute; top: 20px; right: 120px; background:#8e44ad; color:#fff;">Змінити логін/пароль</button>
             <div class="admin-tabs">
                 <button class="tab-btn active" onclick="showAdminTab('site-editing')">Редагування сайту</button>
                 <button class="tab-btn" onclick="showAdminTab('products')">Товари</button>
@@ -1614,35 +1612,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
         </div>
     </div>
     <div class="modal" id="modal"></div>
-    <div class="modal" id="forgot-password-modal">
-      <div class="modal-content">
-        <h3>Відновлення паролю</h3>
-        <p>Введіть email адміністратора для відновлення паролю:</p>
-        <input id="forgot-email" type="email" placeholder="Email" autocomplete="username" style="margin-bottom:10px;"/>
-        <button id="send-forgot-btn">Відправити новий пароль</button>
-        <button id="close-forgot-modal" style="margin-left:10px; background:#e74c3c;">Скасувати</button>
-        <div id="forgot-password-message" style="margin-top:10px;"></div>
-      </div>
-    </div>
-    <div class="modal" id="change-credentials-modal">
-      <div class="modal-content">
-        <h3>Зміна логіну та паролю</h3>
-        <form id="change-credentials-form" autocomplete="off">
-          <label for="old-username">Старий логін</label>
-          <input id="old-username" type="text" autocomplete="username" required/><br/>
-          <label for="old-password">Старий пароль</label>
-          <input id="old-password" type="password" autocomplete="current-password" required/><br/>
-          <hr/>
-          <label for="new-username">Новий логін</label>
-          <input id="new-username" type="text" autocomplete="username" required/><br/>
-          <label for="new-password">Новий пароль</label>
-          <input id="new-password" type="password" autocomplete="new-password" required/><br/>
-          <button id="save-credentials-btn" type="submit">Зберегти</button>
-          <button id="close-credentials-modal" type="button" style="margin-left:10px; background:#e74c3c;">Скасувати</button>
-          <div id="change-credentials-message" style="margin-top:10px;"></div>
-        </form>
-      </div>
-    </div>
     <div class="resize-modal" id="resize-modal">
         <div class="resize-modal-content">
             <h4>Змінити розміри</h4>
