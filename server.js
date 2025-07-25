@@ -195,8 +195,9 @@ if (!process.env.JWT_SECRET) {
   process.exit(1)
 }
 
-let ADMIN_USERNAME = 'admin';
-let ADMIN_PASSWORD_HASH = '';
+// --- Простий варіант: логін і пароль у коді ---
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD_HASH = '$2a$12$iNXyrBLxGyJkG8ts2t9NRuwztve6a1Y/ZRNELSGVEAOg8WcivwRE6';
 
 const publicPath = path.join(__dirname, "public")
 if (!fs.existsSync(publicPath)) {
@@ -3431,22 +3432,17 @@ app.post("/api/auth/login", loginLimiter, csrfProtection, (req, res, next) => {
     return res.status(400).json({ error: "Логін і пароль обов'язкові", message: "Логін і пароль обов'язкові" })
   }
   let valid = false;
-  if (username === ADMIN_USERNAME) {
-    if (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(password, TEMP_ADMIN_PASSWORD)) {
-      valid = true;
-      // НЕ скидаємо TEMP_ADMIN_PASSWORD і не видаляємо tempPasswordHash
-    } else if (bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-      valid = true;
-    }
+  if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
+    valid = true;
   }
   if (valid) {
     const token = jwt.sign({ userId: username, username: ADMIN_USERNAME, role: "admin" }, process.env.JWT_SECRET, {
       expiresIn: "30m",
-    })
-    res.json({ token })
+    });
+    res.json({ token });
   } else {
-    logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`)
-    res.status(401).json({ error: "Невірні дані для входу", message: "Невірні дані для входу" })
+    logger.warn(`Невдала спроба входу: username=${username}, IP=${req.ip}`);
+    res.status(401).json({ error: "Невірні дані для входу", message: "Невірні дані для входу" });
   }
 })
 
@@ -3545,124 +3541,12 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
   }
 });
 
-let ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pixel080808@gmail.com';
-let TEMP_ADMIN_PASSWORD = null; // залишаємо для сумісності, але тепер зберігаємо у файлі
-
-app.post('/api/auth/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email || email !== ADMIN_EMAIL) {
-    return res.status(400).json({ error: 'Email не співпадає з email адміністратора' });
+// --- Генератор bcrypt-хешу (тільки для себе, не підключайте на продакшн!) ---
+app.post('/api/auth/generate-password-hash', (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword) {
+    return res.status(400).json({ error: 'Новий пароль обовʼязковий' });
   }
-  // Генеруємо новий тимчасовий пароль
-  const newPassword = Math.random().toString(36).slice(-10);
-  TEMP_ADMIN_PASSWORD = bcrypt.hashSync(newPassword, 10);
-  // Зберігаємо tempPasswordHash у credentials.json
-  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, TEMP_ADMIN_PASSWORD);
-  // Відправляємо email
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER || 'pixel080808@gmail.com',
-        pass: process.env.SMTP_PASS || 'your_app_password_here',
-      },
-    });
-    await transporter.sendMail({
-      from: process.env.SMTP_USER || 'pixel080808@gmail.com',
-      to: ADMIN_EMAIL,
-      subject: 'Відновлення паролю адміністратора',
-      text: `Ваш новий пароль для входу в адмінку: ${newPassword}`,
-    });
-    logger.info(`Відправлено новий пароль на ${ADMIN_EMAIL}`);
-    res.json({ success: true });
-  } catch (e) {
-    logger.error('Помилка відправки email для відновлення паролю:', e);
-    res.status(500).json({ error: 'Не вдалося відправити email' });
-  }
-});
-
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
-function loadAdminCredentials() {
-  try {
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
-      ADMIN_USERNAME = data.username;
-      ADMIN_PASSWORD_HASH = data.passwordHash;
-      TEMP_ADMIN_PASSWORD = data.tempPasswordHash || null; // <--- Додаємо цю строку
-      logger.info('Адмін-логін/пароль завантажено з credentials.json');
-    }
-  } catch (e) {
-    logger.error('Не вдалося завантажити credentials.json:', e);
-  }
-}
-function saveAdminCredentials(username, passwordHash, tempPasswordHash) {
-  try {
-    const data = { username, passwordHash };
-    if (tempPasswordHash) data.tempPasswordHash = tempPasswordHash;
-    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
-    logger.info('Адмін-логін/пароль збережено у credentials.json');
-  } catch (e) {
-    logger.error('Не вдалося зберегти credentials.json:', e);
-  }
-}
-function getTempPasswordHash() {
-  try {
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
-      return data.tempPasswordHash || null;
-    }
-  } catch (e) {
-    logger.error('Не вдалося зчитати tempPasswordHash:', e);
-  }
-  return null;
-}
-loadAdminCredentials();
-// --- Виправлення: автоматично видаляти tempPasswordHash при старті, якщо він існує ---
-(function ensureNoTempPasswordHash() {
-  try {
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
-      if (data.tempPasswordHash) {
-        delete data.tempPasswordHash;
-        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
-        TEMP_ADMIN_PASSWORD = null;
-        logger.info('tempPasswordHash було видалено з credentials.json при старті сервера');
-      }
-    }
-  } catch (e) {
-    logger.error('Не вдалося видалити tempPasswordHash при старті:', e);
-  }
-})();
-
-app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => {
-  const { oldUsername, oldPassword, newUsername, newPassword } = req.body;
-  if (!oldUsername || !oldPassword || !newUsername || !newPassword) {
-    return res.status(400).json({ error: 'Всі поля обовʼязкові' });
-  }
-  // Перевірка старих даних
-  let valid = false;
-  const tempPasswordHash = getTempPasswordHash();
-  if (oldUsername === ADMIN_USERNAME) {
-    if ((tempPasswordHash && bcrypt.compareSync(oldPassword, tempPasswordHash)) ||
-        (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(oldPassword, TEMP_ADMIN_PASSWORD)) ||
-        bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
-      valid = true;
-    }
-  }
-  if (!valid) {
-    return res.status(401).json({ error: 'Старий логін або пароль невірний' });
-  }
-  // Оновлення
-  ADMIN_USERNAME = newUsername;
-  ADMIN_PASSWORD_HASH = bcrypt.hashSync(newPassword, 10);
-  // --- Виправлення: гарантуємо видалення tempPasswordHash ---
-  try {
-    const data = { username: ADMIN_USERNAME, passwordHash: ADMIN_PASSWORD_HASH };
-    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
-    TEMP_ADMIN_PASSWORD = null;
-    logger.info('tempPasswordHash гарантовано видалено при зміні пароля');
-  } catch (e) {
-    logger.error('Не вдалося видалити tempPasswordHash при зміні пароля:', e);
-  }
-  res.json({ success: true });
+  const hash = bcrypt.hashSync(newPassword, 12);
+  res.json({ hash });
 });
