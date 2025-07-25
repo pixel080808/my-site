@@ -18,7 +18,6 @@ const WebSocket = require("ws");
 const rateLimit = require("express-rate-limit");
 const csurf = require("csurf");
 const winston = require("winston");
-const nodemailer = require('nodemailer');
 
 const { Product } = require("./models/Product");
 const { Order, orderSchemaValidation } = require("./models/Order");
