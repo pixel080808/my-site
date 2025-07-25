@@ -1455,9 +1455,9 @@ const categorySchemaValidation = Joi.object({
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
-  metaTitle: Joi.string().trim().optional(),
-  metaDescription: Joi.string().trim().optional(),
-  metaKeywords: Joi.string().trim().optional(),
+  metaTitle: Joi.string().allow('').trim().optional(),
+  metaDescription: Joi.string().allow('').trim().optional(),
+  metaKeywords: Joi.string().allow('').trim().optional(),
   subcategories: Joi.array()
     .items(
       Joi.object({
@@ -1479,9 +1479,9 @@ const categorySchemaValidation = Joi.object({
         photo: Joi.string().uri().allow("").optional(),
         visible: Joi.boolean().default(true),
         order: Joi.number().integer().min(0).default(0),
-        metaTitle: Joi.string().trim().optional(),
-        metaDescription: Joi.string().trim().optional(),
-        metaKeywords: Joi.string().trim().optional(),
+        metaTitle: Joi.string().allow('').trim().optional(),
+        metaDescription: Joi.string().allow('').trim().optional(),
+        metaKeywords: Joi.string().allow('').trim().optional(),
       }),
     )
     .default([]),
@@ -1509,9 +1509,9 @@ const subcategorySchemaValidation = Joi.object({
   photo: Joi.string().uri().allow("").optional(),
   visible: Joi.boolean().default(true),
   order: Joi.number().integer().min(0).default(0),
-  metaTitle: Joi.string().trim().optional(),
-  metaDescription: Joi.string().trim().optional(),
-  metaKeywords: Joi.string().trim().optional(),
+  metaTitle: Joi.string().allow('').trim().optional(),
+  metaDescription: Joi.string().allow('').trim().optional(),
+  metaKeywords: Joi.string().allow('').trim().optional(),
   __v: Joi.number().optional(),
   createdAt: Joi.date().optional(),
   updatedAt: Joi.date().optional(),
