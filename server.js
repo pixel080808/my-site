@@ -3617,6 +3617,22 @@ function getTempPasswordHash() {
   return null;
 }
 loadAdminCredentials();
+// --- Виправлення: автоматично видаляти tempPasswordHash при старті, якщо він існує ---
+(function ensureNoTempPasswordHash() {
+  try {
+    if (fs.existsSync(CREDENTIALS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+      if (data.tempPasswordHash) {
+        delete data.tempPasswordHash;
+        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
+        TEMP_ADMIN_PASSWORD = null;
+        logger.info('tempPasswordHash було видалено з credentials.json при старті сервера');
+      }
+    }
+  } catch (e) {
+    logger.error('Не вдалося видалити tempPasswordHash при старті:', e);
+  }
+})();
 
 app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => {
   const { oldUsername, oldPassword, newUsername, newPassword } = req.body;
@@ -3627,7 +3643,6 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   let valid = false;
   const tempPasswordHash = getTempPasswordHash();
   if (oldUsername === ADMIN_USERNAME) {
-    // Додаємо перевірку: якщо TEMP_ADMIN_PASSWORD вже null, але tempPasswordHash ще є у файлі, дозволяємо зміну
     if ((tempPasswordHash && bcrypt.compareSync(oldPassword, tempPasswordHash)) ||
         (TEMP_ADMIN_PASSWORD && bcrypt.compareSync(oldPassword, TEMP_ADMIN_PASSWORD)) ||
         bcrypt.compareSync(oldPassword, ADMIN_PASSWORD_HASH)) {
@@ -3640,7 +3655,14 @@ app.post('/api/auth/change-credentials', authenticateToken, async (req, res) => 
   // Оновлення
   ADMIN_USERNAME = newUsername;
   ADMIN_PASSWORD_HASH = bcrypt.hashSync(newPassword, 10);
-  // Видаляємо tempPasswordHash з credentials.json
-  saveAdminCredentials(ADMIN_USERNAME, ADMIN_PASSWORD_HASH, null);
+  // --- Виправлення: гарантуємо видалення tempPasswordHash ---
+  try {
+    const data = { username: ADMIN_USERNAME, passwordHash: ADMIN_PASSWORD_HASH };
+    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
+    TEMP_ADMIN_PASSWORD = null;
+    logger.info('tempPasswordHash гарантовано видалено при зміні пароля');
+  } catch (e) {
+    logger.error('Не вдалося видалити tempPasswordHash при зміні пароля:', e);
+  }
   res.json({ success: true });
 });
