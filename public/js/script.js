@@ -2630,7 +2630,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -2701,7 +2701,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span clas
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грнktur  <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
                 }
@@ -3192,7 +3192,7 @@ product.colors.forEach((c, i) => {
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3202,7 +3202,7 @@ product.colors.forEach((c, i) => {
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3214,7 +3214,7 @@ product.colors.forEach((c, i) => {
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3224,7 +3224,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='pri
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -6432,7 +6432,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -6487,7 +6487,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
