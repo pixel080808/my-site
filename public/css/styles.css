@@ -941,7 +941,7 @@ h3:hover {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-    padding: 0 0 80px 0;
+    padding: 0 0 30px 0;
     box-sizing: border-box;
 }
 
@@ -975,7 +975,7 @@ h3:hover {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     transition: transform var(--transition-speed) ease;
     flex-shrink: 0;
 }
@@ -4194,9 +4194,8 @@ s {
     }
 
     .category:hover {
-        /* transform: translateY(0px); */
-        /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); */
-        /* Прибрано рух та тінь */
+        transform: translateY(0px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 
     .category img {
