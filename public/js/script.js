@@ -2838,7 +2838,7 @@ document.addEventListener('click', closeDropdownHandler, true);
         const actionsRow = document.createElement('div');
         actionsRow.style.display = 'flex';
         actionsRow.style.alignItems = 'center';
-        actionsRow.style.gap = '12px';
+        actionsRow.style.gap = '1px';
 
         const buyBtn = document.createElement('button');
         buyBtn.className = 'buy-btn';

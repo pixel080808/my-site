@@ -779,9 +779,8 @@ h3:hover {
 }
 
 .category:hover {
-    /* transform: translateY(0px); */
-    /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); */
-    /* Прибрано рух та тінь */
+transform: translateY(0px);
+box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .category img {
@@ -1422,7 +1421,7 @@ h3:hover {
     margin-top: 0;
     margin-bottom: 15px;
     padding-left: 0;
-    padding: 6px 15px;
+    padding: 1px 15px;
 }
 
 .product-grid {
@@ -2321,7 +2320,7 @@ s {
     max-width: 800px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 1px;
     padding: 0;
 }
 
@@ -2375,7 +2374,7 @@ s {
 
 .product-detail-right {
     flex: 1;
-    padding: 20px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -3331,7 +3330,7 @@ s {
 }
 
 .gallery-modal-content:hover {
-    transform: scale(1.02); /* Легкий ефект наведення */
+    transform: scale(1.00); /* Легкий ефект наведення */
 }
 
 .gallery-image-container {
@@ -3434,7 +3433,7 @@ s {
     background: rgba(0, 0, 0, 0.6);
     color: white;
     font-size: 22px;
-    line-height: 40px;
+    line-height: 30px;
     text-align: center;
     cursor: pointer;
     border-radius: 50%;
@@ -4017,7 +4016,7 @@ s {
         width: 30px;
         height: 30px;
         font-size: 18px;
-        line-height: 30px;
+        line-height: 20px;
     }
 
     .gallery-prev {
@@ -4658,9 +4657,9 @@ s {
     }
 
     .product-detail-right {
-        padding: 15px;
+        padding: 10px;
         width: 100%;
-        gap: 20px;
+        gap: 10px;
     }
 
     #product-details .product-detail-right h2 {
@@ -4672,7 +4671,7 @@ s {
     }
 
     #product-details .product-detail-right .price {
-        font-size: 24px !important;
+        font-size: 1px !important;
         width: 100%;
         align-self: flex-start;
         margin-left: 0;
@@ -4917,7 +4916,7 @@ s {
         width: 35px;
         height: 35px;
         font-size: 20px;
-        line-height: 35px;
+        line-height: 25px;
     }
 
     .gallery-prev {
@@ -5436,9 +5435,9 @@ s {
     }
 
     .product-detail-right {
-        padding: 20px;
+        padding: 10px;
         width: 100%;
-        gap: 20px;
+        gap: 10px;
     }
 
     #product-details .product-detail-right h2 {
@@ -5447,7 +5446,7 @@ s {
     }
 
     #product-details .product-detail-right .price {
-        font-size: 28px !important;
+        font-size: 1px !important;
         align-self: flex-start;
     }
 
@@ -6200,7 +6199,7 @@ s {
     }
 
     .content {
-        padding: 20px;
+        padding: 10px;
     }
 
     .slide img {
