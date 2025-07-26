@@ -84,7 +84,7 @@
             margin: 8px 0;
         }
         .group-product-item .group-product-info .price .sale-price {
-            color: #EF4444;
+            color: #fb5050;
             font-size: 20px;
             font-weight: bold;
             margin-right: 10px;
@@ -106,7 +106,7 @@
         }
         .sale-timer {
             font-size: 14px;
-            color: #EF4444;
+            color: #fb5050;
             margin-top: 5px;
         }
         .custom-select {
@@ -131,10 +131,16 @@
             font-size: 18px;
         }
         .price .sale-price {
-            color: #EF4444;
+            color: #fb5050;
             font-size: 22px;
             font-weight: bold;
             margin-right: 10px;
+        }
+        .sale-price .price-value {
+            color: #fb5050 !important;
+        }
+        .sale-price .price-suffix {
+            color: #fb5050 !important;
         }
         .price s {
             color: #999;
@@ -192,9 +198,15 @@
         }
         .product-detail-price .sale-price {
             font-size: 28px;
-            color: #EF4444;
+            color: #fb5050;
             font-weight: bold;
             order: 2;
+        }
+        .product-detail-price .sale-price .price-value {
+            color: #fb5050 !important;
+        }
+        .product-detail-price .sale-price .price-suffix {
+            color: #fb5050 !important;
         }
         .product-detail-price .regular-price {
             font-size: 24px;
@@ -255,6 +267,16 @@
             #socials h3 {
                 color: #e6e6e6;
             }
+            .group-product-item .group-product-info .price .sale-price,
+            .price .sale-price,
+            .product-detail-price .sale-price,
+            .sale-timer,
+            .sale-price .price-value,
+            .product-detail-price .sale-price .price-value,
+            .sale-price .price-suffix,
+            .product-detail-price .sale-price .price-suffix {
+                color: #fb5050 !important;
+            }
         }
         #about-text iframe, #about-text video,
         #product-description-editor iframe, #product-description-editor video {
@@ -279,6 +301,23 @@
             margin: 16px auto;
             border-radius: 10px;
             background: #000;
+        }
+        ul.custom-options-list li.custom-option .sale-price .price-value {
+            font-size: 16px !important;
+            color: #fb5050 !important;
+            font-weight: bold;
+        }
+        ul.custom-options-list li.custom-option .price-value {
+            font-size: 16px !important;
+        }
+        .selected-option .price-value {
+            font-size: 16px !important;
+        }
+        .selected-option .price-suffix {
+            font-size: 15px !important;
+        }
+        ul.custom-options-list li.custom-option span.price-value + span.price-suffix {
+            font-size: 15px !important;
         }
     </style>
 </head>

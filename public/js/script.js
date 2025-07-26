@@ -2701,9 +2701,9 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#000000;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;">${size.price} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;" class="price-value">${size.price}</span> <span class="price-suffix">грн</span></span>`;
                 }
             }
 
@@ -5067,6 +5067,57 @@ function openGallery(productSlug, index = 0) {
 
         modal.style.display = 'flex';
         modal.classList.add('active');
+        
+        // Блокуємо прокрутку основної сторінки
+        document.body.style.overflow = 'hidden';
+        
+        // Додаємо обробник колеса миші для гортання фото
+        const handleWheel = (e) => {
+            e.preventDefault();
+            if (e.deltaY > 0) {
+                // Прокрутка вниз - наступне фото
+                nextGalleryImage();
+            } else {
+                // Прокрутка вгору - попереднє фото
+                prevGalleryImage();
+            }
+        };
+        
+        // Зберігаємо обробник для подальшого видалення
+        modal._wheelHandler = handleWheel;
+        modal.addEventListener('wheel', handleWheel, { passive: false });
+        
+        // Повертаємо на початок сторінки, щоб уникнути появи плаваючих кнопок
+        window.scrollTo(0, 0);
+        
+        // Додаємо обробник клавіші Escape для закриття галереї
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeGallery();
+            } else if (e.key === 'ArrowLeft') {
+                // Стрілка вліво - попереднє фото
+                prevGalleryImage();
+            } else if (e.key === 'ArrowRight') {
+                // Стрілка вправо - наступне фото
+                nextGalleryImage();
+            }
+        };
+        
+        // Зберігаємо обробник для подальшого видалення
+        modal._keyHandler = handleKeyDown;
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // Додаємо обробник кліку на фон для закриття галереї
+        const handleModalClick = (e) => {
+            if (e.target === modal) {
+                closeGallery();
+            }
+        };
+        
+        // Зберігаємо обробник для подальшого видалення
+        modal._clickHandler = handleModalClick;
+        modal.addEventListener('click', handleModalClick);
+        
     } else {
         console.error('Модальне вікно, зображення або контейнер мініатюр не знайдено:', { modal, img, thumbnails });
     }
@@ -5110,6 +5161,27 @@ function closeGallery() {
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
+        
+        // Відновлюємо прокрутку основної сторінки
+        document.body.style.overflow = '';
+        
+        // Видаляємо обробник колеса миші
+        if (modal._wheelHandler) {
+            modal.removeEventListener('wheel', modal._wheelHandler);
+            delete modal._wheelHandler;
+        }
+        
+        // Видаляємо обробник клавіші Escape
+        if (modal._keyHandler) {
+            document.removeEventListener('keydown', modal._keyHandler);
+            delete modal._keyHandler;
+        }
+        
+        // Видаляємо обробник кліку на фон
+        if (modal._clickHandler) {
+            modal.removeEventListener('click', modal._clickHandler);
+            delete modal._clickHandler;
+        }
     }
     currentGalleryImages = []; 
     currentGalleryIndex = 0;

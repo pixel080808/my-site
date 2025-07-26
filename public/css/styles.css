@@ -13,7 +13,7 @@
     --muted-text: #6B7280;
     --background: #ffffff;
     --card-bg: #FFFFFF;
-    --sale-color: #EF4444;
+    --sale-color: #fb5050;
     --border-color: #d8d8d8;
     --base-font-size: 16px;
     --base-padding: 10px;
@@ -22,6 +22,22 @@
     --product-height: 400px;
     --category-width: 220px;
     --category-height: 300px;
+}
+
+.mattress-size .sale-price,
+.mattress-size .sale-price .price-value,
+.mattress-size .sale-price .price-suffix {
+    color: #fb5050 !important;
+    font-size: 16px !important;
+    font-weight: bold;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mattress-size .sale-price,
+  .mattress-size .sale-price .price-value,
+  .mattress-size .sale-price .price-suffix {
+    color: #fb5050 !important;
+  }
 }
 
 body {
@@ -1024,7 +1040,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .group-products .group-product-item .price .sale-price {
-    color: var(--sale-color);
+    color: #fb5050;
     font-size: 22px;
     font-weight: 700;
     text-align: left;
@@ -1520,77 +1536,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     margin-left: 10px;
 }
 
-.sort-menu {
-    position: relative;
-}
-
-.sort-btn {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    color: var(--text-color);
-    cursor: pointer;
-    font-weight: 500;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
-}
-
-.sort-btn:hover {
-    background: var(--border-color);
-    /* transform: translateY(-2px); */
-    border-color: var(--primary-color);
-}
-
-.sort-btn:focus {
-    outline: none;
-    border-color: #007bff;
-}
-
-.sort-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: #fff;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    z-index: 100;
-    min-width: 150px;
-    padding: 5px 0;
-}
-
-.sort-menu:hover .sort-dropdown {
-    display: block;
-}
-
-.sort-dropdown button {
-    display: block;
-    width: 100%;
-    padding: 10px 20px;
-    background: none;
-    border: none;
-    color: var(--text-color);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.sort-dropdown button:hover {
-    background: var(--border-color);
-    color: var(--primary-color);
-}
-
-.sort-dropdown button:focus {
-    outline: none;
-    background: var(--border-color);
-}
-
-.per-page-menu {
-    position: relative;
-    margin-left: 10px;
-}
-
 .per-page-btn {
     background: #fff;
     border: 1px solid var(--border-color);
@@ -1666,11 +1611,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 
 .filter-sort-container .sort-menu {
     margin-right: 10px;
-}
-
-.filter-sort-container .sort-btn {
-    width: auto;
-    text-align: center;
 }
 
 .filter-sort-container .sort-dropdown {
@@ -2214,6 +2154,15 @@ s {
     font-size: 22px;
     font-weight: bold;
     margin-right: 10px;
+}
+
+.sale-price .price-value,
+.product-detail-price .sale-price .price-value,
+.group-product-item .group-product-info .price .sale-price .price-value,
+.sale-price .price-suffix,
+.product-detail-price .sale-price .price-suffix,
+.group-product-item .group-product-info .price .sale-price .price-suffix {
+    color: #fb5050 !important;
 }
 
 .price s {
@@ -3189,7 +3138,7 @@ s {
 .color-circle.selected span,
 .color-circle .color-name-expanded {
     position: absolute;
-    top: 90%;
+    top: 105%;
     left: 50%;
     transform: translateX(-50%);
     margin-top: 0px;
@@ -3197,7 +3146,7 @@ s {
     z-index: 10;
     background: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 5px 0px;
+    padding: 1px 0px;
     min-width: 100px;
     max-width: 160px;
     white-space: normal;
@@ -3305,6 +3254,7 @@ s {
     align-items: center;
     z-index: 1000;
     transition: opacity var(--transition-speed) ease;
+    cursor: pointer; /* Курсор вказує на можливість кліку */
 }
 
 .gallery-modal.active {
@@ -3327,6 +3277,7 @@ s {
     flex-direction: column;
     background-color: #ffffff; /* Біле тло для світлої теми */
     box-sizing: border-box;
+    cursor: default; /* Змінюємо курсор на звичайний для контенту */
 }
 
 .gallery-modal-content:hover {
@@ -3351,6 +3302,7 @@ s {
     border-radius: 8px;
     margin-bottom: 15px; /* Відступ до мініатюр */
     background-color: #ffffff; /* Білі поля для світлої теми */
+    transition: none;
 }
 
 .gallery-thumbnails {
@@ -3459,6 +3411,8 @@ s {
     background: rgba(0, 0, 0, 0.3);
     cursor: not-allowed;
 }
+
+
 
 .cart-modal {
     position: fixed;
@@ -5276,23 +5230,6 @@ s {
         width: calc(100% - 30px);
         max-width: 220px;
         margin: 0;
-    }
-
-    .filter-scroll {
-        max-height: calc(100vh - 129px);
-        overflow-y: auto;
-    }
-
-    .breadcrumbs {
-        z-index: 98;
-    }
-
-    .filters .back-btn {
-        display: block;
-        width: 100%;
-        max-width: 220px;
-        padding: 10px 20px;
-        margin: 0px 0;
         border: 1px solid var(--border-color);
         border-radius: 20px;
         font-size: 14px;
@@ -6274,7 +6211,7 @@ s {
         --muted-text: #A0AEC0;
         --background: #1A202C;
         --card-bg: #2D3748;
-        --sale-color: #F87171;
+        --sale-color: #fb5050;
         --border-color: #4A5568;
         --button-background: #4A5568;
         --button-hover-background: #60A5FA;
@@ -7315,7 +7252,7 @@ s {
     }
 
     .group-product-item .group-product-info .price .sale-price {
-        color: var(--price-sale-color);
+        color: #fb5050;
         text-align: left;
     }
 
@@ -8216,6 +8153,24 @@ s {
   s.price-value {
     color: #f4f5f6 !important; /* Перекреслена ціна — сіра */
   }
+  .sale-price .price-value {
+    color: #fb5050 !important;
+  }
+  .product-detail-price .sale-price .price-value {
+    color: #fb5050 !important;
+  }
+  .group-product-item .group-product-info .price .sale-price .price-value {
+    color: #fb5050 !important;
+  }
+  .sale-price .price-suffix {
+    color: #fb5050 !important;
+  }
+  .product-detail-price .sale-price .price-suffix {
+    color: #fb5050 !important;
+  }
+  .group-product-item .group-product-info .price .sale-price .price-suffix {
+    color: #fb5050 !important;
+  }
 }
 
 /* Базові стилі для випадаючого меню матраців (світла тема) */
@@ -8443,13 +8398,13 @@ s {
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 1px 2px;
+    padding: 1px 0px;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     pointer-events: none;
     height: 25px;
-    width: 70px;
+    width: 90px;
 }
 
 /* Для маленьких кружечків (групові товари) */
@@ -8462,8 +8417,8 @@ s {
 
 @media (max-width: 768px) {
     .color-circle span {
-        width: 60px;
-        max-width: 70px;
+        width: 80px;
+        max-width: 90px;
         font-size: 14px;
     }
     .group-color-circle span {

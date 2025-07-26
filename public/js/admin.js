@@ -5133,7 +5133,7 @@ function renderMattressSizes() {
     const sizeList = document.getElementById('mattress-size-list');
     sizeList.innerHTML = newProduct.sizes.map((size, index) => `
         <div class="mattress-size draggable" draggable="true" ondragstart="dragMattressSize(event, ${index})" ondragover="allowDropMattressSize(event)" ondrop="dropMattressSize(event, ${index})">
-            ${size.name}: ${size.price} грн${size.salePrice && size.salePrice < size.price ? ` <span class='sale-price'>(акція: ${size.salePrice} грн)</span>` : ''}
+            ${size.name}: <s class="price-value">${size.price} <span class="price-suffix">грн</span>${size.salePrice && size.salePrice < size.price ? ` <span class='sale-price'>(акція: <span class="price-value">${size.salePrice}</span> <span class="price-suffix">грн</span>)</span>` : ''}
             <button class="edit-btn" onclick="editMattressSize(${index})">Редагувати</button>
             <button class="delete-btn" onclick="deleteMattressSize(${index})">Видалити</button>
         </div>
