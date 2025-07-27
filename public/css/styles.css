@@ -1401,7 +1401,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 
 .dimension-value {
     font-size: 14px;
-    color: #666;
+    color: #000000;
     white-space: nowrap;
     text-align: center;
     flex: 1;
@@ -2015,7 +2015,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .product .price s {
-    color: #999;
+    color: #000000;
     font-size: 16px;
 }
 
@@ -7882,7 +7882,7 @@ s {
 }
 
 .price s + .price-suffix {
-  color: #999;
+  color: #000000;
   font-size: 0.65em;
 }
 
