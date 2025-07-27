@@ -5550,14 +5550,60 @@ document.addEventListener('DOMContentLoaded', async () => {
                 categories.forEach(category => {
                     const categoryItem = document.createElement('div');
                     categoryItem.classList.add('burger-category-item');
-                    categoryItem.innerHTML = `
-                        <a href="#" onclick="currentCategory='${category.slug}'; currentSubcategory=null; showSection('catalog'); return false;">${category.name}</a>
-                        <div class="burger-subcategory">
-                            ${(category.subcategories || []).map(sub => `
-                                <a href="#" onclick="currentCategory='${category.slug}'; currentSubcategory='${sub.slug}'; showSection('catalog'); return false;">${sub.name}</a>
-                            `).join('')}
-                        </div>
-                    `;
+                    
+                    // Створюємо посилання для категорії
+                    const categoryLink = document.createElement('a');
+                    categoryLink.href = '#';
+                    categoryLink.textContent = category.name;
+                    categoryLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentProduct = null;
+                        currentCategory = category.slug;
+                        currentSubcategory = null;
+                        isSearchActive = false;
+                        searchQuery = '';
+                        searchResults = [];
+                        baseSearchResults = [];
+                        saveToStorage('isSearchActive', false);
+                        saveToStorage('searchQuery', '');
+                        saveToStorage('searchResults', []);
+                        showSection('catalog');
+                        burgerMenu.classList.remove('active');
+                        burgerContent.classList.remove('active');
+                        burgerCatalogDropdown.classList.remove('active');
+                    });
+                    categoryItem.appendChild(categoryLink);
+                    
+                    // Створюємо контейнер для підкатегорій
+                    const subcategoryContainer = document.createElement('div');
+                    subcategoryContainer.className = 'burger-subcategory';
+                    
+                    // Додаємо підкатегорії
+                    (category.subcategories || []).forEach(sub => {
+                        const subcategoryLink = document.createElement('a');
+                        subcategoryLink.href = '#';
+                        subcategoryLink.textContent = sub.name;
+                        subcategoryLink.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            currentProduct = null;
+                            currentCategory = category.slug;
+                            currentSubcategory = sub.slug;
+                            isSearchActive = false;
+                            searchQuery = '';
+                            searchResults = [];
+                            baseSearchResults = [];
+                            saveToStorage('isSearchActive', false);
+                            saveToStorage('searchQuery', '');
+                            saveToStorage('searchResults', []);
+                            showSection('catalog');
+                            burgerMenu.classList.remove('active');
+                            burgerContent.classList.remove('active');
+                            burgerCatalogDropdown.classList.remove('active');
+                        });
+                        subcategoryContainer.appendChild(subcategoryLink);
+                    });
+                    
+                    categoryItem.appendChild(subcategoryContainer);
                     burgerCatalogDropdown.appendChild(categoryItem);
                 });
 
