@@ -1101,6 +1101,11 @@ function showSection(sectionId) {
     if (searchInput && sectionId !== 'catalog') {
         searchInput.value = '';
     }
+    
+    // Скидаємо фільтри при переході на інші сторінки (крім каталогу)
+    if (sectionId !== 'catalog' && sectionId !== 'product-details') {
+        clearFilters();
+    }
 
     if (sectionId === 'home') {
         currentProduct = null;
@@ -2164,6 +2169,32 @@ function createFilterBlock(title, name, options, activeFilters = {}) {
         return block;
     }
     return null;
+}
+
+function clearFilters() {
+    // Скидаємо всі активні фільтри
+    const filterInputs = document.querySelectorAll('input[name="promo"], input[name="brand"], input[name="material"], input[name="price"]');
+    filterInputs.forEach(input => {
+        input.checked = false;
+    });
+    
+    // Очищаємо збережені фільтри
+    saveToStorage('activeFilters', {});
+    
+    // Скидаємо сортування
+    currentSort = '';
+    saveToStorage('currentSort', '');
+    
+    // Відновлюємо оригінальний список продуктів
+    if (isSearchActive) {
+        searchResults = [...baseSearchResults];
+    } else {
+        filteredProducts = [...baseFilteredProducts];
+    }
+    
+    currentPage = 1;
+    updateHistoryState();
+    renderProducts(isSearchActive ? searchResults : filteredProducts);
 }
 
 function filterProducts() {
@@ -3636,20 +3667,24 @@ function validateAndFixPageState() {
         currentSubcategory = null;
         currentProduct = null;
         isSearchActive = false;
+        clearFilters();
         showSection('home');
         return;
     }
 
     // --- Обробка спеціальних сторінок ---
     if (parts[0] === 'about') {
+        clearFilters();
         showSection('about');
         return;
     }
     if (parts[0] === 'contacts') {
+        clearFilters();
         showSection('contacts');
         return;
     }
     if (parts[0] === 'cart') {
+        clearFilters();
         showSection('cart');
         return;
     }
@@ -3726,6 +3761,7 @@ function validateAndFixPageState() {
 
     // Якщо нічого не знайдено, показуємо головну сторінку
     showNotification('Сторінку не знайдено!', 'error');
+    clearFilters();
     showSection('home');
 }
 
@@ -5252,6 +5288,8 @@ async function handleNavigation(path, isPopstate = false) {
             currentSubcategory = null;
             currentProduct = null;
             isSearchActive = false;
+            // Скидаємо фільтри при переході на головну сторінку
+            clearFilters();
             showSection('home');
             if (!isPopstate) {
                 const state = {
@@ -5273,10 +5311,13 @@ async function handleNavigation(path, isPopstate = false) {
         }
 
         if (parts[0] === 'cart') {
+            clearFilters();
             showSection('cart');
         } else if (parts[0] === 'contacts') {
+            clearFilters();
             showSection('contacts');
         } else if (parts[0] === 'about') {
+            clearFilters();
             showSection('about');
         } else if (parts[0] === 'catalog' && parts[1] === 'search') {
             const query = parts[2] ? transliterate(parts[2], true) : loadFromStorage('searchQuery', '');
