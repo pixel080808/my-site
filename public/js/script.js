@@ -1102,8 +1102,8 @@ function showSection(sectionId) {
         searchInput.value = '';
     }
     
-    // Скидаємо фільтри при переході на інші сторінки (крім каталогу)
-    if (sectionId !== 'catalog' && sectionId !== 'product-details') {
+    // Скидаємо фільтри при переході на інші сторінки (крім каталогу та кошика)
+    if (sectionId !== 'catalog' && sectionId !== 'product-details' && sectionId !== 'cart') {
         clearFilters();
     }
 
@@ -1189,7 +1189,7 @@ function showSection(sectionId) {
         }
         if (typeof renderProductDetails === 'function') {
             renderProductDetails().then(() => {
-                if (currentProduct.type === 'group' && typeof updateFloatingGroupCart === 'function') {
+                if (currentProduct && currentProduct.type === 'group' && typeof updateFloatingGroupCart === 'function') {
                     updateFloatingGroupCart();
                 }
                 if (typeof updateFloatingFavorite === 'function') {
@@ -1209,7 +1209,7 @@ function showSection(sectionId) {
         }
         const catSlug = transliterate(currentCategory.replace('ь', ''));
         const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
-        newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct.slug}`;
+        newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct ? currentProduct.slug : ''}`;
     }
 
     const productGrid = document.querySelector('.product-grid');
@@ -1237,7 +1237,7 @@ function showSection(sectionId) {
     saveToStorage('currentSubcategory', currentSubcategory);
     saveToStorage('lastCatalogState', state);
     if (typeof updateMetaTags === 'function') {
-        updateMetaTags(sectionId === 'product-details' ? currentProduct : null, currentCategory, currentSubcategory);
+        updateMetaTags(sectionId === 'product-details' && currentProduct ? currentProduct : null, currentCategory, currentSubcategory);
     }
     if (typeof renderBreadcrumbs === 'function') {
         renderBreadcrumbs();
@@ -2193,8 +2193,13 @@ function clearFilters() {
     }
     
     currentPage = 1;
-    updateHistoryState();
-    renderProducts(isSearchActive ? searchResults : filteredProducts);
+    
+    // Оновлюємо історію та рендеримо продукти тільки якщо ми на сторінці каталогу
+    const activeSection = document.querySelector('.section.active');
+    if (activeSection && activeSection.id === 'catalog') {
+        updateHistoryState();
+        renderProducts(isSearchActive ? searchResults : filteredProducts);
+    }
 }
 
 function filterProducts() {
@@ -6738,6 +6743,11 @@ if (product.colors?.length > 0) {
     addToCart(cartItem);
     showNotification('Товар додано в кошик!', 'success');
     updateCartCount();
+    
+    // Оновлюємо плаваючий кошик, якщо він є
+    if (typeof updateFloatingGroupCart === 'function' && currentProduct && currentProduct.type === 'group') {
+        updateFloatingGroupCart();
+    }
 }
 
 function selectColor(productId, colorIndex) {
