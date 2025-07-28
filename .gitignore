@@ -1,2 +1,52 @@
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
+
+# Scraped data files
+exports/
+miromark-products-*.json
+*-products-*.json
+scraped-data/
+
+# Scraping scripts
+scrape-*.js
+validate-*.js
+cleanup-*.js
+
+# Log files
+*.log
+combined.log
+error.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.bak
+*.backup
+
+# Uploads (if not needed on server)
+uploads/
+public/uploads/
+
+# Development files
+*.md
+!README.md
