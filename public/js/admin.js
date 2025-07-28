@@ -403,6 +403,17 @@ async function fetchWithAuth(url, options = {}) {
                 errorData = { error: `HTTP error ${response.status}` };
             }
             console.error('Помилка запиту:', { url, status: response.status, errorData });
+            
+            // Покращене логування деталей помилки
+            if (errorData.details) {
+                console.error('Деталі помилки валідації:', errorData.details);
+                if (Array.isArray(errorData.details)) {
+                    errorData.details.forEach((detail, index) => {
+                        console.error(`Помилка ${index + 1}:`, detail);
+                    });
+                }
+            }
+            
             const error = new Error(errorData.error || errorData.message || `HTTP error ${response.status}`);
             error.status = response.status;
             error.errorData = errorData;
@@ -4308,13 +4319,20 @@ async function importProductsBackup() {
                     
                     try {
                         const errorData = JSON.parse(errorText);
+                        console.error('Деталі помилки імпорту:', errorData);
+                        
                         if (errorData.error) {
                             errorMessage = errorData.error;
                             if (errorData.details) {
-                                errorMessage += ': ' + JSON.stringify(errorData.details);
+                                if (Array.isArray(errorData.details)) {
+                                    errorMessage += ': ' + errorData.details.join(', ');
+                                } else {
+                                    errorMessage += ': ' + JSON.stringify(errorData.details);
+                                }
                             }
                         }
                     } catch (parseError) {
+                        console.error('Помилка парсингу відповіді:', parseError);
                         errorMessage = errorText;
                     }
                     
