@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест функціональності кольорів</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .color-block {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            padding: 5px;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+        .color-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест функціональності кольорів та priceChange</h1>
+    
+    <div class="test-section">
+        <h2>Тест 1: Перевірка функції getAllColors</h2>
+        <p>Тестуємо функцію getAllColors з різними структурами даних:</p>
+        <button onclick="testGetAllColors()">Тестувати getAllColors</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 2: Симуляція додавання в кошик з priceChange</h2>
+        <p>Симулюємо додавання товару в кошик з кольорами та priceChange:</p>
+        <button onclick="testAddToCartWithPriceChange()">Тестувати додавання в кошик</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 3: Перевірка відображення кольорів на сайті</h2>
+        <p>Перевіряємо, чи правильно відображаються кольори з блоками:</p>
+        <button onclick="testColorDisplay()">Тестувати відображення кольорів</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <script>
+        // Копіюємо функцію getAllColors з script.js
+        function getAllColors(product) {
+            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+                const allColors = [];
+                product.colorBlocks.forEach((block, blockIndex) => {
+                    if (block.colors && Array.isArray(block.colors)) {
+                        block.colors.forEach((color, colorIndex) => {
+                            const colorObj = {
+                                ...color,
+                                blockIndex,
+                                colorIndex,
+                                globalIndex: allColors.length
+                            };
+                            allColors.push(colorObj);
+                        });
+                    }
+                });
+                return allColors;
+            } else if (product.colors && Array.isArray(product.colors)) {
+                // Для старої структури
+                return product.colors.map((color, index) => ({
+                    ...color,
+                    blockIndex: 0,
+                    colorIndex: index,
+                    globalIndex: index
+                }));
+            }
+            return [];
+        }
+
+        function testGetAllColors() {
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            // Тестовий товар з блоками кольорів
+            const productWithBlocks = {
+                name: 'Тестовий товар з блоками',
+                price: 1000,
+                colorBlocks: [
+                    {
+                        blockName: 'Колір корпусу',
+                        colors: [
+                            { name: 'Білий', value: '#FFFFFF', priceChange: 0 },
+                            { name: 'Чорний', value: '#000000', priceChange: 100 }
+                        ]
+                    },
+                    {
+                        blockName: 'Колір фасаду',
+                        colors: [
+                            { name: 'Дерево', value: '#8B4513', priceChange: 50 }
+                        ]
+                    }
+                ]
+            };
+
+            // Тестовий товар з старою структурою
+            const productWithOldStructure = {
+                name: 'Тестовий товар зі старою структурою',
+                price: 800,
+                colors: [
+                    { name: 'Червоний', value: '#FF0000', priceChange: 25 },
+                    { name: 'Синій', value: '#0000FF', priceChange: 30 }
+                ]
+            };
+
+            // Тестовий товар без кольорів
+            const productWithoutColors = {
+                name: 'Тестовий товар без кольорів',
+                price: 500
+            };
+
+            const results = [];
+            
+            // Тестуємо товар з блоками
+            const colorsFromBlocks = getAllColors(productWithBlocks);
+            results.push({
+                test: 'Товар з блоками кольорів',
+                colors: colorsFromBlocks,
+                expected: 3,
+                actual: colorsFromBlocks.length,
+                success: colorsFromBlocks.length === 3
+            });
+
+            // Тестуємо товар зі старою структурою
+            const colorsFromOld = getAllColors(productWithOldStructure);
+            results.push({
+                test: 'Товар зі старою структурою',
+                colors: colorsFromOld,
+                expected: 2,
+                actual: colorsFromOld.length,
+                success: colorsFromOld.length === 2
+            });
+
+            // Тестуємо товар без кольорів
+            const colorsFromNone = getAllColors(productWithoutColors);
+            results.push({
+                test: 'Товар без кольорів',
+                colors: colorsFromNone,
+                expected: 0,
+                actual: colorsFromNone.length,
+                success: colorsFromNone.length === 0
+            });
+
+            const successCount = results.filter(r => r.success).length;
+            const totalCount = results.length;
+
+            resultDiv.innerHTML = `
+                <div class="${successCount === totalCount ? 'success' : 'error'}">
+                    <h3>${successCount === totalCount ? '✅ Успішно!' : '❌ Є помилки!'}</h3>
+                    <p>Пройдено тестів: ${successCount}/${totalCount}</p>
+                    <h4>Результати:</h4>
+                    ${results.map(r => `
+                        <div style="margin: 10px 0; padding: 10px; border: 1px solid ${r.success ? '#28a745' : '#dc3545'}; border-radius: 3px;">
+                            <strong>${r.test}</strong><br>
+                            Очікувано: ${r.expected}, Отримано: ${r.actual}<br>
+                            Статус: ${r.success ? '✅ Успішно' : '❌ Помилка'}<br>
+                            <small>Кольори: ${JSON.stringify(r.colors.map(c => ({ name: c.name, priceChange: c.priceChange })))}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function testAddToCartWithPriceChange() {
+            const resultDiv = document.getElementById('test2-result');
+            resultDiv.innerHTML = '<p>Симулюємо додавання в кошик...</p>';
+            
+            // Симулюємо товар з priceChange
+            const product = {
+                _id: 'test-product',
+                name: 'Тестовий товар',
+                price: 1000,
+                colorBlocks: [
+                    {
+                        blockName: 'Колір корпусу',
+                        colors: [
+                            { name: 'Білий', value: '#FFFFFF', priceChange: 0 },
+                            { name: 'Чорний', value: '#000000', priceChange: 100 }
+                        ]
+                    },
+                    {
+                        blockName: 'Колір фасаду',
+                        colors: [
+                            { name: 'Дерево', value: '#8B4513', priceChange: 50 }
+                        ]
+                    }
+                ]
+            };
+
+            // Симулюємо функцію addToCartWithColor
+            function simulateAddToCartWithColor(productId) {
+                const product = products.find(p => p._id === productId);
+                if (!product) {
+                    return { error: 'Товар не знайдено' };
+                }
+                
+                let color = null;
+                const allColors = getAllColors(product);
+                
+                if (allColors.length > 0) {
+                    if (allColors.length === 1) {
+                        // Якщо лише 1 колір — вибираємо його автоматично
+                        color = allColors[0];
+                    } else {
+                        // Для тесту вибираємо перший колір
+                        color = allColors[0];
+                    }
+                }
+                
+                let price = product.price;
+                if (color && color.priceChange) {
+                    price += parseFloat(color.priceChange);
+                }
+                
+                return {
+                    success: true,
+                    product: product.name,
+                    selectedColor: color ? color.name : 'Немає',
+                    basePrice: product.price,
+                    priceChange: color ? color.priceChange : 0,
+                    finalPrice: price
+                };
+            }
+
+            // Симулюємо масив products
+            const products = [product];
+            
+            const results = [];
+            
+            // Тестуємо додавання з різними кольорами
+            const allColors = getAllColors(product);
+            allColors.forEach((color, index) => {
+                // Симулюємо вибір кольору
+                const selectedColors = {};
+                selectedColors[product._id] = index;
+                
+                let price = product.price;
+                if (color && color.priceChange) {
+                    price += parseFloat(color.priceChange);
+                }
+                
+                results.push({
+                    color: color.name,
+                    priceChange: color.priceChange,
+                    basePrice: product.price,
+                    finalPrice: price
+                });
+            });
+
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Симуляція успішна!</h3>
+                    <p><strong>Товар:</strong> ${product.name}</p>
+                    <p><strong>Базова ціна:</strong> ${product.price} грн</p>
+                    <h4>Результати для кожного кольору:</h4>
+                    ${results.map(r => `
+                        <div style="margin: 10px 0; padding: 10px; border: 1px solid #28a745; border-radius: 3px;">
+                            <strong>${r.color}</strong><br>
+                            Базова ціна: ${r.basePrice} грн<br>
+                            Зміна ціни: +${r.priceChange} грн<br>
+                            <strong>Фінальна ціна: ${r.finalPrice} грн</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function testColorDisplay() {
+            const resultDiv = document.getElementById('test3-result');
+            resultDiv.innerHTML = '<p>Тестуємо відображення кольорів...</p>';
+            
+            // Симулюємо товар з блоками кольорів
+            const product = {
+                _id: 'test-product',
+                name: 'Тестовий товар',
+                colorBlocks: [
+                    {
+                        blockName: 'Колір корпусу',
+                        colors: [
+                            { name: 'Білий', value: '#FFFFFF', priceChange: 0, photo: null },
+                            { name: 'Чорний', value: '#000000', priceChange: 100, photo: 'test-photo.jpg' }
+                        ]
+                    },
+                    {
+                        blockName: 'Колір фасаду',
+                        colors: [
+                            { name: 'Дерево', value: '#8B4513', priceChange: 50, photo: 'wood-photo.jpg' }
+                        ]
+                    }
+                ]
+            };
+
+            // Симулюємо відображення кольорів
+            const displayResults = [];
+            
+            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+                product.colorBlocks.forEach((block, blockIndex) => {
+                    if (block.colors && Array.isArray(block.colors) && block.colors.length > 0) {
+                        const hasPhotos = block.colors.some(c => c.photo);
+                        if (hasPhotos) {
+                            displayResults.push({
+                                blockName: block.blockName,
+                                colors: block.colors.filter(c => c.photo),
+                                blockIndex: blockIndex
+                            });
+                        }
+                    }
+                });
+            }
+
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Відображення кольорів працює!</h3>
+                    <p><strong>Товар:</strong> ${product.name}</p>
+                    <h4>Блоки кольорів для відображення:</h4>
+                    ${displayResults.map(block => `
+                        <div class="color-block">
+                            <h5>${block.blockName}</h5>
+                            ${block.colors.map(color => `
+                                <div class="color-item">
+                                    <div class="color-circle" style="background-color: ${color.value};"></div>
+                                    <span>${color.name} (Зміна ціни: ${color.priceChange} грн)</span>
+                                    ${color.photo ? `<small>Фото: ${color.photo}</small>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('')}
+                    <p><strong>Всього блоків для відображення:</strong> ${displayResults.length}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 

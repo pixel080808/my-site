@@ -2738,6 +2738,36 @@ function createPaginationDiv() {
     return paginationDiv;
 }
 
+// Функція для отримання всіх кольорів з блоків
+function getAllColors(product) {
+    if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+        const allColors = [];
+        product.colorBlocks.forEach((block, blockIndex) => {
+            if (block.colors && Array.isArray(block.colors)) {
+                block.colors.forEach((color, colorIndex) => {
+                    const colorObj = {
+                        ...color,
+                        blockIndex,
+                        colorIndex,
+                        globalIndex: allColors.length
+                    };
+                    allColors.push(colorObj);
+                });
+            }
+        });
+        return allColors;
+    } else if (product.colors && Array.isArray(product.colors)) {
+        // Для старої структури
+        return product.colors.map((color, index) => ({
+            ...color,
+            blockIndex: 0,
+            colorIndex: index,
+            globalIndex: index
+        }));
+    }
+    return [];
+}
+
 async function renderProductDetails() {
     const productSection = document.getElementById('product-details');
     if (!productSection) {
@@ -3124,34 +3154,7 @@ document.addEventListener('click', closeDropdownHandler, true);
         rightDiv.appendChild(actionsRow);
 
         // Функція для отримання всіх кольорів з блоків
-        function getAllColors(product) {
-            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
-                const allColors = [];
-                product.colorBlocks.forEach((block, blockIndex) => {
-                    if (block.colors && Array.isArray(block.colors)) {
-                        block.colors.forEach((color, colorIndex) => {
-                            const colorObj = {
-                                ...color,
-                                blockIndex,
-                                colorIndex,
-                                globalIndex: allColors.length
-                            };
-                            allColors.push(colorObj);
-                        });
-                    }
-                });
-                return allColors;
-            } else if (product.colors && Array.isArray(product.colors)) {
-                // Для старої структури
-                return product.colors.map((color, index) => ({
-                    ...color,
-                    blockIndex: 0,
-                    colorIndex: index,
-                    globalIndex: index
-                }));
-            }
-            return [];
-        }
+
 
         // Відображаємо кольори згруповано по блоках
         if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
