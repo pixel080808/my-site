@@ -19,7 +19,7 @@ const rateLimit = require("express-rate-limit");
 const csurf = require("csurf");
 const winston = require("winston");
 
-const { Product } = require("./models/Product");
+const { Product, productSchemaValidation } = require("./models/Product");
 const { Order, orderSchemaValidation } = require("./models/Order");
 const Category = require("./models/Category");
 const Slide = require("./models/Slide");

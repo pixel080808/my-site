@@ -5183,11 +5183,6 @@ function addColorBlock() {
 }
 
 function removeColorBlock(blockIndex) {
-    if (newProduct.colorBlocks.length <= 1) {
-        alert('Повинен бути хоча б один блок кольорів!');
-        return;
-    }
-    
     newProduct.colorBlocks.splice(blockIndex, 1);
     const blockElement = document.querySelector(`[data-block-index="${blockIndex}"]`);
     if (blockElement) {
