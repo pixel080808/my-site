@@ -1046,6 +1046,9 @@ app.get("/api/products", authenticateToken, async (req, res) => {
         sortOptions["brand"] = order === "asc" ? 1 : -1
       } else if (key === "price") {
       }
+    } else {
+      // За замовчуванням сортуємо за _id в спадному порядку (найновіші спочатку)
+      sortOptions["_id"] = -1
     }
 
     let products
