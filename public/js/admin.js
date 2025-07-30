@@ -5319,7 +5319,9 @@ function changeGroupProductPage(page, query) {
 function addGroupProduct(productId) {
     if (!newProduct.groupProducts.includes(productId)) {
         newProduct.groupProducts.push(productId);
-        await renderGroupProducts();
+        renderGroupProducts().catch(err => {
+            console.error('Помилка при оновленні групових товарів:', err);
+        });
         document.getElementById('group-product-search').value = '';
         document.getElementById('group-product-results').innerHTML = '';
         resetInactivityTimer();
@@ -6229,7 +6231,7 @@ async function saveEditedProduct(productId) {
                 validatedGroupProducts = newProduct.groupProducts.filter(id => existingIds.includes(id));
                 showNotification(`Видалено ${missingIds.length} некоректних товарів із групи. Залишилось ${validatedGroupProducts.length} товарів.`);
                 newProduct.groupProducts = validatedGroupProducts;
-                renderGroupProducts();
+                await renderGroupProducts();
                 if (validatedGroupProducts.length === 0) {
                     showNotification('Усі товари в групі не знайдені. Будь ласка, додайте коректні товари.');
                     return;
