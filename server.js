@@ -285,58 +285,7 @@ mongoose
     process.exit(1)
   })
 
-const productSchemaValidation = Joi.object({
-  id: Joi.number().optional(),
-  type: Joi.string().valid('simple', 'mattresses', 'group').required(),
-  name: Joi.string().min(1).max(255).required().trim(),
-  slug: Joi.string().min(1).max(255).required().trim(),
-  brand: Joi.string().max(100).allow('').optional().trim(),
-  category: Joi.string().max(100).required().trim(),
-  subcategory: Joi.string().max(255).allow('', null).optional().trim(),
-  material: Joi.string().max(100).allow('').optional().trim(),
-  price: Joi.number()
-    .min(0)
-    .when('type', { is: 'simple', then: Joi.required(), otherwise: Joi.allow(null).optional() }),
-  salePrice: Joi.number()
-    .min(0)
-    .when('type', { is: 'simple', then: Joi.allow(null).optional(), otherwise: Joi.allow(null).optional() }),
-  saleEnd: Joi.date().allow(null).optional(),
-  description: Joi.string().allow('').optional().trim(),
-  widthCm: Joi.number().min(0).allow(null).optional(),
-  depthCm: Joi.number().min(0).allow(null).optional(),
-  heightCm: Joi.number().min(0).allow(null).optional(),
-  lengthCm: Joi.number().min(0).allow(null).optional(),
-  photos: Joi.array().items(Joi.string().uri().allow('')).default([]),
-  colors: Joi.array().items(
-    Joi.object({
-      name: Joi.string().max(100).required().trim(),
-      value: Joi.string().max(100).required().trim(),
-      priceChange: Joi.number().default(0).allow(null).optional(),
-      photo: Joi.string().uri().allow('', null).optional()
-    })
-  ).default([]),
-   sizes: Joi.array().items(
-     Joi.object({
-       name: Joi.string().max(100).required().trim(),
-       price: Joi.number().min(0).required(),
-       salePrice: Joi.number().min(0).allow(null).optional(),
-       saleEnd: Joi.date().allow(null).optional()
-     })
-   ).default([]),
-  groupProducts: Joi.array().items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/)).default([]),
-  active: Joi.boolean().default(true),
-  visible: Joi.boolean().default(true),
-  filters: Joi.array().items(
-    Joi.object({
-      name: Joi.string().required(),
-      value: Joi.string().required()
-    })
-  ).default([]),
-  popularity: Joi.number().min(0).default(0),
-  metaTitle: Joi.string().allow('').optional(),
-  metaDescription: Joi.string().allow('').optional(),
-  metaKeywords: Joi.string().allow('').optional(),
-}).unknown(false);
+
 
 const settingsSchemaValidation = Joi.object({
   name: Joi.string().allow("").optional(),
