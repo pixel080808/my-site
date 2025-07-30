@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест priceChange для кольорів</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .color-block {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            padding: 5px;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+        .color-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест priceChange для кольорів</h1>
+    
+    <div class="test-section">
+        <h2>Тест 1: Створення товару з priceChange</h2>
+        <p>Створюємо товар з кольорами, які мають різні priceChange:</p>
+        <div class="color-block">
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #FFFFFF;"></div>
+                <span>Білий (priceChange: 0 грн)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #000000;"></div>
+                <span>Чорний (priceChange: 100 грн)</span>
+            </div>
+        </div>
+        <div class="color-block">
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #8B4513;"></div>
+                <span>Дерево (priceChange: 50 грн)</span>
+            </div>
+        </div>
+        <button onclick="testPriceChange()">Тестувати priceChange</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 2: Симуляція додавання в кошик</h2>
+        <p>Симулюємо додавання товару в кошик з різними кольорами:</p>
+        <button onclick="testAddToCart()">Тестувати додавання в кошик</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <script>
+        function testPriceChange() {
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            const testProduct = {
+                name: "Тестовий товар з priceChange",
+                category: "test-category",
+                price: 1000,
+                slug: "test-product-price-change-" + Date.now(),
+                type: "simple",
+                colorBlocks: [
+                    {
+                        blockName: "Колір корпусу",
+                        colors: [
+                            {
+                                name: "Білий",
+                                value: "#FFFFFF",
+                                priceChange: 0
+                            },
+                            {
+                                name: "Чорний",
+                                value: "#000000",
+                                priceChange: 100
+                            }
+                        ]
+                    },
+                    {
+                        blockName: "Колір фасаду",
+                        colors: [
+                            {
+                                name: "Дерево",
+                                value: "#8B4513",
+                                priceChange: 50
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            try {
+                fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer test-token',
+                        'X-CSRF-Token': 'test-csrf'
+                    },
+                    body: JSON.stringify(testProduct)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result._id) {
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <h3>✅ Успішно!</h3>
+                                <p>Товар з priceChange збережено.</p>
+                                <p><strong>Базова ціна:</strong> ${testProduct.price} грн</p>
+                                <p><strong>Кольори з priceChange:</strong></p>
+                                <ul>
+                                    <li>Білий: +0 грн (ціна: ${testProduct.price + 0} грн)</li>
+                                    <li>Чорний: +100 грн (ціна: ${testProduct.price + 100} грн)</li>
+                                    <li>Дерево: +50 грн (ціна: ${testProduct.price + 50} грн)</li>
+                                </ul>
+                                <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="error">
+                                <h3>❌ Помилка!</h3>
+                                <pre>${JSON.stringify(result, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка мережі!</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function testAddToCart() {
+            const resultDiv = document.getElementById('test2-result');
+            resultDiv.innerHTML = '<p>Симулюємо додавання в кошик...</p>';
+            
+            // Симулюємо товар з priceChange
+            const product = {
+                _id: 'test-product',
+                name: 'Тестовий товар',
+                price: 1000,
+                colorBlocks: [
+                    {
+                        blockName: 'Колір корпусу',
+                        colors: [
+                            { name: 'Білий', value: '#FFFFFF', priceChange: 0 },
+                            { name: 'Чорний', value: '#000000', priceChange: 100 }
+                        ]
+                    },
+                    {
+                        blockName: 'Колір фасаду',
+                        colors: [
+                            { name: 'Дерево', value: '#8B4513', priceChange: 50 }
+                        ]
+                    }
+                ]
+            };
+
+            // Симулюємо функцію getAllColors
+            function getAllColors(product) {
+                if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+                    const allColors = [];
+                    product.colorBlocks.forEach((block, blockIndex) => {
+                        if (block.colors && Array.isArray(block.colors)) {
+                            block.colors.forEach((color, colorIndex) => {
+                                const colorObj = {
+                                    ...color,
+                                    blockIndex,
+                                    colorIndex,
+                                    globalIndex: allColors.length
+                                };
+                                console.log('Колір з priceChange:', colorObj.name, 'priceChange:', colorObj.priceChange);
+                                allColors.push(colorObj);
+                            });
+                        }
+                    });
+                    return allColors;
+                }
+                return [];
+            }
+
+            // Симулюємо додавання в кошик
+            const allColors = getAllColors(product);
+            const results = [];
+
+            allColors.forEach((color, index) => {
+                let price = product.price;
+                if (color && color.priceChange) {
+                    console.log('Додаємо зміну ціни для кольору:', color.name, 'priceChange:', color.priceChange, 'поточна ціна:', price);
+                    price += parseFloat(color.priceChange);
+                    console.log('Нова ціна після додавання priceChange:', price);
+                }
+                
+                results.push({
+                    color: color.name,
+                    priceChange: color.priceChange,
+                    finalPrice: price
+                });
+            });
+
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Результати симуляції:</h3>
+                    <p><strong>Базова ціна товару:</strong> ${product.price} грн</p>
+                    <p><strong>Результати для кожного кольору:</strong></p>
+                    <ul>
+                        ${results.map(r => `<li>${r.color}: +${r.priceChange} грн = ${r.finalPrice} грн</li>`).join('')}
+                    </ul>
+                    <p><strong>Логи в консолі:</strong> Перевірте консоль браузера для детальних логів.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 

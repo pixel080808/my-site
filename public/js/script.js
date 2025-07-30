@@ -3130,12 +3130,13 @@ document.addEventListener('click', closeDropdownHandler, true);
                 product.colorBlocks.forEach((block, blockIndex) => {
                     if (block.colors && Array.isArray(block.colors)) {
                         block.colors.forEach((color, colorIndex) => {
-                            allColors.push({
+                            const colorObj = {
                                 ...color,
                                 blockIndex,
                                 colorIndex,
                                 globalIndex: allColors.length
-                            });
+                            };
+                            allColors.push(colorObj);
                         });
                     }
                 });
@@ -7089,15 +7090,26 @@ if (allColors.length > 0) {
 function selectColor(productId, colorIndex) {
     selectedColors[productId] = colorIndex;
     saveToStorage('selectedColors', selectedColors);
-    // Підсвічування вибраного кольору
-    const colorCircles = document.querySelectorAll(`#color-options-${productId} .color-circle`);
-    colorCircles.forEach((circle, idx) => {
-        if (idx === colorIndex) {
-            circle.classList.add('selected');
-        } else {
-            circle.classList.remove('selected');
-        }
-    });
+    
+    // Знаходимо товар для отримання інформації про блоки
+    const product = products.find(p => p._id === productId || p.id === productId);
+    if (!product) return;
+    
+    // Отримуємо всі кольори з блоками
+    const allColors = getAllColors(product);
+    const selectedColor = allColors[colorIndex];
+    
+    if (selectedColor) {
+        // Підсвічування вибраного кольору в правильному блоці
+        const colorCircles = document.querySelectorAll(`#color-options-${productId}-${selectedColor.blockIndex} .color-circle`);
+        colorCircles.forEach((circle, idx) => {
+            if (idx === selectedColor.colorIndex) {
+                circle.classList.add('selected');
+            } else {
+                circle.classList.remove('selected');
+            }
+        });
+    }
 }
 
 function selectGroupProductColor(productId, colorIndex) {
