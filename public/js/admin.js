@@ -410,6 +410,15 @@ async function fetchWithAuth(url, options = {}) {
                 if (Array.isArray(errorData.details)) {
                     errorData.details.forEach((detail, index) => {
                         console.error(`Помилка ${index + 1}:`, detail);
+                        if (detail.path) {
+                            console.error(`   Поле: ${detail.path.join('.')}`);
+                        }
+                        if (detail.message) {
+                            console.error(`   Повідомлення: ${detail.message}`);
+                        }
+                        if (detail.value) {
+                            console.error(`   Значення: ${detail.value}`);
+                        }
                     });
                 }
             }
@@ -4327,7 +4336,7 @@ async function importProductsBackup() {
                                 if (Array.isArray(errorData.details)) {
                                     errorMessage += ': ' + errorData.details.join(', ');
                                 } else {
-                                    errorMessage += ': ' + JSON.stringify(errorData.details);
+                                errorMessage += ': ' + JSON.stringify(errorData.details);
                                 }
                             }
                         }
@@ -5779,7 +5788,7 @@ async function openEditProductModal(productId) {
     modal.innerHTML = `
         <div class="modal-content">
             <h3>Редагувати товар</h3>
-            <select id="product-type">
+            <select id="product-type" onchange="updateProductType()">
                 <option value="simple" ${product.type === 'simple' ? 'selected' : ''}>Простий товар</option>
                 <option value="mattresses" ${product.type === 'mattresses' ? 'selected' : ''}>Матраци</option>
                 <option value="group" ${product.type === 'group' ? 'selected' : ''}>Груповий товар</option>
@@ -5984,6 +5993,9 @@ async function openEditProductModal(productId) {
     if (addColorBtn) {
         addColorBtn.onclick = addProductColor;
     }
+
+    // Оновлюємо відображення полів відповідно до типу товару
+    updateProductType();
 
     resetInactivityTimer();
 }
