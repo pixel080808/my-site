@@ -977,7 +977,7 @@ app.get("/api/products", authenticateToken, async (req, res) => {
 
     const skip = (parsedPage - 1) * parsedLimit
     logger.info(
-      `GET /api/products: slug=${slug}, search=${search}, page=${parsedPage}, limit=${parsedLimit}, sort=${sort}, types=${req.query.types}, excludeType=${req.query.excludeType}, user=${req.user.username}`,
+      `GET /api/products: slug=${slug}, search=${search}, page=${parsedPage}, limit=${parsedLimit}, sort=${sort}, types=${req.query.types}, excludeType=${req.query.excludeType}, ids=${req.query.ids}, user=${req.user.username}`,
     )
 
     const query = {}
@@ -986,6 +986,17 @@ app.get("/api/products", authenticateToken, async (req, res) => {
     }
     if (search) {
       query.$or = [{ name: { $regex: search, $options: "i" } }, { brand: { $regex: search, $options: "i" } }]
+    }
+    
+    // Пошук за конкретними ID
+    if (req.query.ids) {
+      const ids = req.query.ids.split(',').filter(id => id.trim() !== '');
+      if (ids.length > 0) {
+        const validIds = ids.filter(id => mongoose.Types.ObjectId.isValid(id));
+        if (validIds.length > 0) {
+          query._id = { $in: validIds.map(id => new mongoose.Types.ObjectId(id)) };
+        }
+      }
     }
     
     // Фільтрація за типами товарів
