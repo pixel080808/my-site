@@ -4426,6 +4426,94 @@ async function importProductsBackup() {
     }
 }
 
+async function importProductsAdd() {
+    const file = document.getElementById('import-products-add-file').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const productsData = JSON.parse(e.target.result);
+                const tokenRefreshed = await refreshToken();
+                if (!tokenRefreshed) {
+                    showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                    showSection('admin-login');
+                    return;
+                }
+
+                // Просто очищаємо системні поля, сервер сам обробить зв'язки
+                const cleanedProductsData = productsData.map(product => {
+                    const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
+
+                    if (cleanedProduct.sizes && Array.isArray(cleanedProduct.sizes)) {
+                        cleanedProduct.sizes = cleanedProduct.sizes.map(size => {
+                            const { _id, ...cleanedSize } = size;
+                            return cleanedSize;
+                        });
+                    }
+
+                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                            const { _id, ...cleanedColor } = color;
+                            return cleanedColor;
+                        });
+                    }
+
+                    return cleanedProduct;
+                });
+
+                // Створюємо FormData і додаємо файл
+                const formData = new FormData();
+                const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
+                formData.append('file', blob, 'products-add.json');
+
+                const response = await fetchWithAuth('/api/import/products/add', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = 'Помилка додавання товарів';
+                    
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        console.error('Деталі помилки додавання товарів:', errorData);
+                        
+                        if (errorData.error) {
+                            errorMessage = errorData.error;
+                            if (errorData.details) {
+                                if (Array.isArray(errorData.details)) {
+                                    errorMessage += ': ' + errorData.details.join(', ');
+                                } else {
+                                errorMessage += ': ' + JSON.stringify(errorData.details);
+                                }
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error('Помилка парсингу відповіді:', parseError);
+                        errorMessage = errorText;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                await loadProducts(productsCurrentPage, productsPerPage);
+                renderAdmin();
+                showNotification('Товари додано успішно!');
+                unsavedChanges = false;
+                resetInactivityTimer();
+            } catch (err) {
+                console.error('Помилка додавання товарів:', err);
+                showNotification('Помилка додавання товарів: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    } else {
+        showNotification('Виберіть файл для імпорту!');
+    }
+}
+
 async function importOrdersBackup() {
     const file = document.getElementById('import-orders-file')?.files[0];
     if (!file) {
@@ -4562,6 +4650,10 @@ document.getElementById('import-site-file').addEventListener('change', function(
 
 document.getElementById('import-products-file').addEventListener('change', function() {
     importProductsBackup();
+});
+
+document.getElementById('import-products-add-file').addEventListener('change', function() {
+    importProductsAdd();
 });
 
 document.getElementById('import-orders-file').addEventListener('change', function() {

@@ -1522,7 +1522,11 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                         <button onclick="exportProductsBackup()">Експортувати (Товари)</button>
                         <div class="import-group">
                             <input accept=".json" id="import-products-file" style="display: none;" type="file"/>
-                            <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (Товари)</button>
+                            <button class="import-btn" onclick="document.getElementById('import-products-file').click()">Імпортувати файл (замінити всі товари)</button>
+                        </div>
+                        <div class="import-group">
+                            <input accept=".json" id="import-products-add-file" style="display: none;" type="file"/>
+                            <button class="import-btn" onclick="document.getElementById('import-products-add-file').click()">Імпортувати файл (додати товари)</button>
                         </div>
                     </div>
                     <div class="backup-group">

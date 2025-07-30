@@ -890,14 +890,18 @@ async function updateProducts() {
 function loadMoreProducts() {
     let allProducts = isSearchActive ? searchResults : filteredProducts;
     const productGrid = document.querySelector('.product-grid');
-    if (!productGrid) {
-        console.warn('Елемент .product-grid не знайдено');
+    const productList = document.querySelector('.product-list');
+    
+    // Визначаємо який елемент використовується
+    const productContainer = productGrid || productList;
+    if (!productContainer) {
+        console.warn('Елемент .product-grid або .product-list не знайдено');
         return;
     }
 
     console.log('loadMoreProducts: currentPage=', currentPage, 'allProducts.length=', allProducts.length);
 
-    const currentCount = productGrid.children.length;
+    const currentCount = productContainer.children.length;
     const productsPerLoad = currentCount >= perPage ? 14 : perPage - currentCount;
     const startIndex = currentCount;
     const productsToShow = allProducts.slice(startIndex, startIndex + productsPerLoad);
@@ -913,8 +917,8 @@ function loadMoreProducts() {
         return;
     }
 
-    while (productGrid.firstChild) {
-        productGrid.removeChild(productGrid.firstChild);
+    while (productContainer.firstChild) {
+        productContainer.removeChild(productContainer.firstChild);
     }
 
     const allProductsToShow = allProducts.slice(0, startIndex + productsPerLoad);
@@ -922,16 +926,20 @@ function loadMoreProducts() {
 
     allProductsToShow.forEach(product => {
         const productElement = createProductElement(product);
-        productGrid.appendChild(productElement);
+        productContainer.appendChild(productElement);
         addedCount++;
     });
 
     console.log('Added products:', addedCount);
 
+    // Оновлюємо currentPage на основі кількості відображених товарів
+    const newDisplayedCount = productContainer.children.length;
+    currentPage = Math.ceil(newDisplayedCount / perPage);
+    console.log('Updated currentPage to:', currentPage, 'based on displayed count:', newDisplayedCount);
+
     const showMoreBtn = document.querySelector('.show-more-btn');
-    const displayedCount = productGrid.children.length;
     if (showMoreBtn) {
-        if (displayedCount >= allProducts.length) {
+        if (newDisplayedCount >= allProducts.length) {
             showMoreBtn.disabled = true;
             showMoreBtn.textContent = 'Більше немає товарів';
         } else {
@@ -941,7 +949,7 @@ function loadMoreProducts() {
     }
 
     const totalPages = Math.ceil(allProducts.length / perPage);
-    renderPagination(totalPages, allProducts.length);
+    renderPagination(totalPages, allProducts.length, true);
 
     updateHistoryState();
 }
@@ -1253,6 +1261,14 @@ function showSection(sectionId) {
     if (catalogDropdown) {
         catalogDropdown.scrollTop = 0;
     }
+
+    // Оновлюємо лічильники обраних товарів при зміні секції
+    if (typeof updateFavoriteCount === 'function') {
+        updateFavoriteCount();
+    }
+    if (typeof updateFloatingFavorite === 'function') {
+        updateFloatingFavorite();
+    }
 }
 
 function updateMetaTags(product = null, category = null, subcategory = null) {
@@ -1345,6 +1361,64 @@ function renderBreadcrumbs() {
         };
         searchSpan.appendChild(searchLink);
         breadcrumbsContainer.appendChild(searchSpan);
+        
+        // Якщо є поточний товар і він був знайдений через пошук, додаємо його категорію
+        if (currentProduct && currentProduct.category) {
+            searchSpan.appendChild(document.createTextNode(' > '));
+            const categorySpan = document.createElement('span');
+            const categoryLink = document.createElement('a');
+            categoryLink.href = `/${currentProduct.category}`;
+            // Знаходимо правильну назву категорії
+            const cat = categories.find(c => c.slug === currentProduct.category);
+            categoryLink.textContent = cat ? cat.name : currentProduct.category;
+            categoryLink.classList.add('breadcrumb-link');
+            categoryLink.style.display = 'inline-block';
+            categoryLink.style.padding = '0 5px';
+            categoryLink.onclick = (e) => {
+                e.preventDefault();
+                const cat = categories.find(c => c.slug === currentProduct.category);
+                if (cat) {
+                    currentCategory = cat.slug;
+                    currentSubcategory = null;
+                    currentProduct = null;
+                    isSearchActive = false;
+                    searchQuery = '';
+                    searchResults = [];
+                    showSection('catalog');
+                }
+            };
+            categorySpan.appendChild(categoryLink);
+            breadcrumbsContainer.appendChild(categorySpan);
+            
+            // Якщо є підкатегорія, додаємо її
+            if (currentProduct.subcategory) {
+                categorySpan.appendChild(document.createTextNode(' > '));
+                const subcategorySpan = document.createElement('span');
+                const subcategoryLink = document.createElement('a');
+                subcategoryLink.href = `/${currentProduct.category}/${currentProduct.subcategory}`;
+                // Знаходимо правильну назву підкатегорії
+                const subCat = cat && cat.subcategories ? cat.subcategories.find(sc => sc.slug === currentProduct.subcategory) : null;
+                subcategoryLink.textContent = subCat ? subCat.name : currentProduct.subcategory;
+                subcategoryLink.classList.add('breadcrumb-link');
+                subcategoryLink.style.display = 'inline-block';
+                subcategoryLink.style.padding = '0 5px';
+                subcategoryLink.onclick = (e) => {
+                    e.preventDefault();
+                    const cat = categories.find(c => c.slug === currentProduct.category);
+                    if (cat) {
+                        currentCategory = cat.slug;
+                        currentSubcategory = currentProduct.subcategory;
+                        currentProduct = null;
+                        isSearchActive = false;
+                        searchQuery = '';
+                        searchResults = [];
+                        showSection('catalog');
+                    }
+                };
+                subcategorySpan.appendChild(subcategoryLink);
+                breadcrumbsContainer.appendChild(subcategorySpan);
+            }
+        }
     } else if (pathSegments.length > 0) {
         homeSpan.appendChild(document.createTextNode(' > '));
         let currentPath = '';
@@ -1401,6 +1475,10 @@ function renderBreadcrumbs() {
                         if (cat) {
                             currentCategory = cat.slug;
                             currentProduct = null;
+                            // Скидаємо стан пошуку при переході на категорію через breadcrumbs
+                            isSearchActive = false;
+                            searchQuery = '';
+                            searchResults = [];
                             // Якщо клік по категорії (index === 0), підкатегорія не встановлюється
                             if (parts.length >= 2 && index > 0) {
                                 // Якщо клік по підкатегорії
@@ -1558,6 +1636,25 @@ function renderCatalogDropdown() {
         itemDiv.className = 'dropdown-item';
         itemDiv.dataset.category = cat.slug;
 
+        // Створюємо контейнер для зображення та тексту
+        const contentContainer = document.createElement('div');
+        contentContainer.style.display = 'flex';
+        contentContainer.style.alignItems = 'center';
+        contentContainer.style.gap = '10px';
+
+        // Додаємо мініатюру зображення категорії
+        const categoryImg = document.createElement('img');
+        categoryImg.src = cat.photo || NO_IMAGE_URL;
+        categoryImg.alt = cat.name;
+        categoryImg.style.width = '45px';
+        categoryImg.style.height = '45px';
+        categoryImg.style.objectFit = 'cover';
+        categoryImg.style.borderRadius = '4px';
+        categoryImg.style.flexShrink = '0';
+        categoryImg.loading = 'lazy';
+        categoryImg.onerror = () => { categoryImg.src = NO_IMAGE_URL; };
+        contentContainer.appendChild(categoryImg);
+
         const span = document.createElement('span');
         span.textContent = cat.name;
         span.style.textDecoration = 'none';
@@ -1566,6 +1663,7 @@ function renderCatalogDropdown() {
         span.style.padding = '8px 5px';
         span.style.margin = '0';
         span.style.fontWeight = 'bold';
+        span.style.flex = '1';
 
         // Динамічний розмір шрифту залежно від розміру екрану
         if (window.innerWidth <= 650) {
@@ -1593,6 +1691,8 @@ function renderCatalogDropdown() {
                 span.classList.add('active');
             }
         };
+
+        contentContainer.appendChild(span);
 
         span.addEventListener('mouseenter', () => span.classList.add('active'));
         span.addEventListener('mouseleave', () => {
@@ -1628,7 +1728,7 @@ const goToCategory = (e) => {
 span.addEventListener('click', goToCategory);
 span.addEventListener('touchend', goToCategory);
 
-        itemDiv.appendChild(span);
+        itemDiv.appendChild(contentContainer);
 
         const subList = document.createElement('div');
         subList.className = 'sub-list';
@@ -1641,6 +1741,27 @@ span.addEventListener('touchend', goToCategory);
         styleObserver.observe(subList, { attributes: true, attributeFilter: ['class'] });
 
         (cat.subcategories || []).forEach(sub => {
+            // Створюємо контейнер для зображення та тексту підкатегорії
+            const subContentContainer = document.createElement('div');
+            subContentContainer.style.display = 'flex';
+            subContentContainer.style.alignItems = 'center';
+            subContentContainer.style.gap = '8px';
+
+            // Додаємо мініатюру зображення підкатегорії тільки якщо є фото
+            if (sub.photo) {
+                const subcategoryImg = document.createElement('img');
+                subcategoryImg.src = sub.photo;
+                subcategoryImg.alt = sub.name;
+                subcategoryImg.style.width = '20px';
+                subcategoryImg.style.height = '20px';
+                subcategoryImg.style.objectFit = 'cover';
+                subcategoryImg.style.borderRadius = '3px';
+                subcategoryImg.style.flexShrink = '0';
+                subcategoryImg.loading = 'lazy';
+                subcategoryImg.onerror = () => { subcategoryImg.src = NO_IMAGE_URL; };
+                subContentContainer.appendChild(subcategoryImg);
+            }
+
             const p = document.createElement('p');
             p.textContent = sub.name;
             p.style.textDecoration = 'none';
@@ -1648,6 +1769,7 @@ span.addEventListener('touchend', goToCategory);
             p.style.margin = '0';
             p.style.cursor = 'pointer';
             p.style.fontWeight = 'normal';
+            p.style.flex = '1';
 
             // Динамічний розмір шрифту для підкатегорій
             if (window.innerWidth <= 650) {
@@ -1666,28 +1788,30 @@ span.addEventListener('touchend', goToCategory);
                 }
             };
             p.onmouseout = (e) => { e.target.style.backgroundColor = ''; };
-p.onclick = (e) => {
-    e.stopPropagation();
-    currentProduct = null;
-    currentCategory = cat.slug;
-    currentSubcategory = sub.slug;
-    isSearchActive = false;
-    searchQuery = '';
-    searchResults = [];
-    baseSearchResults = [];
-    saveToStorage('isSearchActive', false);
-    saveToStorage('searchQuery', '');
-    saveToStorage('searchResults', []);
-    showSection('catalog');
-    // --- Додаємо скидання підсвічування ---
-    document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
-    document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
-    dropdown.classList.remove('active');
-    document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-    // Скидання скролу при переході на будь-яку сторінку
-    dropdown.scrollTop = 0;
-};
-            subList.appendChild(p);
+            subContentContainer.appendChild(p);
+
+            p.onclick = (e) => {
+                e.stopPropagation();
+                currentProduct = null;
+                currentCategory = cat.slug;
+                currentSubcategory = sub.slug;
+                isSearchActive = false;
+                searchQuery = '';
+                searchResults = [];
+                baseSearchResults = [];
+                saveToStorage('isSearchActive', false);
+                saveToStorage('searchQuery', '');
+                saveToStorage('searchResults', []);
+                showSection('catalog');
+                // --- Додаємо скидання підсвічування ---
+                document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
+                document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
+                dropdown.classList.remove('active');
+                document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+                // Скидання скролу при переході на будь-яку сторінку
+                dropdown.scrollTop = 0;
+            };
+            subList.appendChild(subContentContainer);
         });
 
         itemDiv.appendChild(subList);
@@ -1969,6 +2093,7 @@ function createSortMenu() {
     sortMenu.style.display = 'inline-flex';
     sortMenu.style.alignItems = 'center';
     sortMenu.style.marginRight = '10px';
+    sortMenu.style.position = 'relative';
 
     const sortBtn = document.createElement('button');
     sortBtn.className = 'sort-btn';
@@ -1986,7 +2111,8 @@ function createSortMenu() {
     sortBtn.style.justifyContent = 'center';
     sortBtn.onclick = (e) => {
         e.stopPropagation();
-        sortDropdown.style.display = sortDropdown.style.display === 'block' ? 'none' : 'block';
+        const isVisible = sortDropdown.style.display === 'block';
+        sortDropdown.style.display = isVisible ? 'none' : 'block';
     };
     sortMenu.appendChild(sortBtn);
 
@@ -1994,12 +2120,16 @@ function createSortMenu() {
     sortDropdown.className = 'sort-dropdown';
     sortDropdown.style.display = 'none';
     sortDropdown.style.position = 'absolute';
+    sortDropdown.style.top = '100%';
+    sortDropdown.style.left = '50%';
+    sortDropdown.style.transform = 'translateX(-50%)';
     sortDropdown.style.backgroundColor = '#fff';
     sortDropdown.style.border = '1px solid #ccc';
     sortDropdown.style.borderRadius = '12px';
     sortDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
     sortDropdown.style.zIndex = '1000';
-    sortDropdown.style.marginTop = '5px';
+    sortDropdown.style.minWidth = '150px';
+    sortDropdown.style.padding = '5px 0';
 
     const sortOptions = [
         { text: 'Назва (А-Я)', value: 'name-asc' },
@@ -2279,16 +2409,19 @@ function sortProducts(sortType) {
 
 function renderProducts(filtered) {
     const productList = document.getElementById('product-list');
-    if (!productList) return;
+    const productGrid = document.querySelector('.product-grid');
+    const productContainer = productList || productGrid;
+    
+    if (!productContainer) return;
 
-    const existingTimers = productList.querySelectorAll('.sale-timer');
+    const existingTimers = productContainer.querySelectorAll('.sale-timer');
     existingTimers.forEach(timer => {
         if (timer.dataset.intervalId) {
             clearInterval(parseInt(timer.dataset.intervalId));
         }
     });
 
-    while (productList.firstChild) productList.removeChild(productList.firstChild);
+    while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
 
     document.querySelector('.filters').style.display = currentProduct ? 'none' : 'block';
 
@@ -2330,18 +2463,28 @@ function renderProducts(filtered) {
     if (productsToShow.length === 0) {
         const p = document.createElement('p');
         p.textContent = 'Нічого не знайдено';
-        productList.appendChild(p);
-        renderPagination(totalPages, totalItems);
+        productContainer.appendChild(p);
+        renderPagination(totalPages, totalItems, true);
         return;
     }
 
     productsToShow.forEach(product => {
         const productElement = createProductElement(product);
-        productList.appendChild(productElement);
+        productContainer.appendChild(productElement);
     });
 
     const showMoreBtn = document.querySelector('.show-more-btn');
-    const displayedCount = productList.children.length;
+    const displayedCount = productContainer.children.length;
+    
+    // Оновлюємо currentPage на основі відображених товарів
+    if (displayedCount > 0) {
+        const calculatedPage = Math.ceil(displayedCount / perPage);
+        if (calculatedPage !== currentPage) {
+            currentPage = calculatedPage;
+            console.log('Updated currentPage in renderProducts to:', currentPage, 'based on displayed count:', displayedCount);
+        }
+    }
+    
     if (showMoreBtn) {
         if (displayedCount >= totalItems) {
             showMoreBtn.disabled = true;
@@ -2352,12 +2495,12 @@ function renderProducts(filtered) {
         }
     }
 
-    renderPagination(totalPages, totalItems);
+    renderPagination(totalPages, totalItems, true);
 
     updateHistoryState();
 }
 
-function renderPagination(totalPages, totalItems) {
+function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) {
     const paginationDiv = document.getElementById('pagination') || createPaginationDiv();
     while (paginationDiv.firstChild) paginationDiv.removeChild(paginationDiv.firstChild);
 
@@ -2370,7 +2513,19 @@ function renderPagination(totalPages, totalItems) {
     showMoreBtn.onclick = loadMoreProducts;
 
     const productGrid = document.querySelector('.product-grid');
-    const displayedCount = productGrid ? productGrid.children.length : 0;
+    const productList = document.querySelector('.product-list');
+    const productContainer = productGrid || productList;
+    const displayedCount = productContainer ? productContainer.children.length : 0;
+    
+    // Оновлюємо currentPage на основі відображених товарів тільки якщо autoUpdateCurrentPage = true
+    if (autoUpdateCurrentPage && displayedCount > 0) {
+        const calculatedPage = Math.ceil(displayedCount / perPage);
+        if (calculatedPage !== currentPage) {
+            currentPage = calculatedPage;
+            console.log('Updated currentPage in renderPagination to:', currentPage, 'based on displayed count:', displayedCount);
+        }
+    }
+    
     if (displayedCount >= totalItems) {
         showMoreBtn.disabled = true;
         showMoreBtn.textContent = 'Більше немає товарів';
@@ -2381,48 +2536,55 @@ function renderPagination(totalPages, totalItems) {
     paginationInnerDiv.className = 'pagination';
 
     const prevButton = document.createElement('button');
-    prevButton.textContent = '←';
-    prevButton.className = 'pagination-btn pagination-arrow';
+    prevButton.textContent = '← Попередня';
+    prevButton.className = 'pagination-btn';
+    prevButton.setAttribute('data-direction', 'prev');
+    prevButton.style.cssText = 'margin-right: 10px;';
     prevButton.disabled = currentPage === 1;
     prevButton.onclick = () => {
         if (currentPage > 1) {
             currentPage--;
             const productGrid = document.querySelector('.product-grid');
-            if (productGrid) {
-                while (productGrid.firstChild) productGrid.removeChild(productGrid.firstChild);
+            const productList = document.querySelector('.product-list');
+            const productContainer = productGrid || productList;
+            if (productContainer) {
+                while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
             }
             const start = (currentPage - 1) * perPage;
             const end = start + perPage;
             const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
             productsToShow.forEach(product => {
                 const productElement = createProductElement(product);
-                productGrid.appendChild(productElement);
+                productContainer.appendChild(productElement);
             });
             updateHistoryState();
-            renderPagination(totalPages, totalItems);
+            renderPagination(totalPages, totalItems, false);
         }
     };
     paginationInnerDiv.appendChild(prevButton);
 
-    for (let i = 1; i <= totalPages; i++) {
-        const pageButton = document.createElement('button');
-        pageButton.textContent = i;
-        pageButton.className = 'pagination-btn' + (currentPage === i ? ' active' : '');
-        pageButton.onclick = () => {
-            currentPage = i;
+    // Функція для створення кнопки сторінки
+    function createPageButton(pageNum, text = pageNum, isActive = false) {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = `pagination-btn ${isActive ? 'active' : ''}`;
+        btn.onclick = () => {
+            currentPage = pageNum;
             const productGrid = document.querySelector('.product-grid');
-            if (productGrid) {
-                while (productGrid.firstChild) productGrid.removeChild(productGrid.firstChild);
+            const productList = document.querySelector('.product-list');
+            const productContainer = productGrid || productList;
+            if (productContainer) {
+                while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
             }
             const start = (currentPage - 1) * perPage;
             const end = start + perPage;
             const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
             productsToShow.forEach(product => {
                 const productElement = createProductElement(product);
-                productGrid.appendChild(productElement);
+                productContainer.appendChild(productElement);
             });
             updateHistoryState();
-            renderPagination(totalPages, totalItems);
+            renderPagination(totalPages, totalItems, false);
             const showMoreBtn = document.querySelector('.show-more-btn');
             if (showMoreBtn) {
                 if (end >= totalItems) {
@@ -2434,29 +2596,80 @@ function renderPagination(totalPages, totalItems) {
                 }
             }
         };
-        paginationInnerDiv.appendChild(pageButton);
+        return btn;
     }
 
+    // Функція для створення еліпсиса
+    function createEllipsis() {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.className = 'pagination-ellipsis';
+        return span;
+    }
+
+    // Логіка відображення сторінок
+    const pages = [];
+    
+    if (totalPages <= 7) {
+        // Якщо сторінок мало, показуємо всі
+        for (let i = 1; i <= totalPages; i++) {
+            pages.push(createPageButton(i, i, i === currentPage));
+        }
+    } else {
+        // Якщо сторінок багато, використовуємо еліпсис
+        if (currentPage <= 4) {
+            // Показуємо перші 5 сторінок + еліпсис + останню
+            for (let i = 1; i <= 5; i++) {
+                pages.push(createPageButton(i, i, i === currentPage));
+            }
+            pages.push(createEllipsis());
+            pages.push(createPageButton(totalPages, totalPages, false));
+        } else if (currentPage >= totalPages - 3) {
+            // Показуємо першу + еліпсис + останні 5 сторінок
+            pages.push(createPageButton(1, 1, false));
+            pages.push(createEllipsis());
+            for (let i = totalPages - 4; i <= totalPages; i++) {
+                pages.push(createPageButton(i, i, i === currentPage));
+            }
+        } else {
+            // Показуємо першу + еліпсис + поточну та 2 сусідні + еліпсис + останню
+            pages.push(createPageButton(1, 1, false));
+            pages.push(createEllipsis());
+            for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                pages.push(createPageButton(i, i, i === currentPage));
+            }
+            pages.push(createEllipsis());
+            pages.push(createPageButton(totalPages, totalPages, false));
+        }
+    }
+
+    // Додаємо всі кнопки сторінок
+    pages.forEach(pageBtn => paginationInnerDiv.appendChild(pageBtn));
+
     const nextButton = document.createElement('button');
-    nextButton.textContent = '→';
-    nextButton.className = 'pagination-btn pagination-arrow';
+    nextButton.textContent = 'Наступна →';
+    nextButton.className = 'pagination-btn';
+    nextButton.setAttribute('data-direction', 'next');
+    nextButton.style.cssText = 'margin-left: 10px;';
     nextButton.disabled = currentPage === totalPages;
     nextButton.onclick = () => {
         if (currentPage < totalPages) {
             currentPage++;
             const productGrid = document.querySelector('.product-grid');
-            if (productGrid) {
-                while (productGrid.firstChild) productGrid.removeChild(productGrid.firstChild);
+            const productList = document.querySelector('.product-list');
+            const productContainer = productGrid || productList;
+            if (productContainer) {
+                while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
             }
             const start = (currentPage - 1) * perPage;
             const end = start + perPage;
             const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
             productsToShow.forEach(product => {
                 const productElement = createProductElement(product);
-                productGrid.appendChild(productElement);
+                productContainer.appendChild(productElement);
             });
             updateHistoryState();
-            renderPagination(totalPages, totalItems);
+            renderPagination(totalPages, totalItems, false);
         }
     };
     paginationInnerDiv.appendChild(nextButton);
@@ -3902,7 +4115,9 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
         currentSubcategory: currentSubcategory,
         isSearchActive: isSearchActive,
         searchQuery: searchQuery,
-        searchResults: searchResults.map(p => p._id)
+        searchResults: searchResults.map(p => p._id),
+        // Зберігаємо інформацію про те, що товар був знайдений через пошук
+        wasFoundViaSearch: isSearchActive
     };
     history.pushState(state, '', newPath);
 
@@ -6123,13 +6338,36 @@ function addToCart(cartItem) {
 
 // === ФУНКЦІЇ ДЛЯ ОБРАНОГО === //
 function getFavorites() {
-    return loadFromStorage('favorites', []);
+    const favorites = loadFromStorage('favorites', []);
+    console.log('getFavorites: loaded favorites =', favorites);
+    
+    // Перевіряємо, чи всі ID товарів існують в списку товарів
+    if (favorites.length > 0 && typeof products !== 'undefined' && products.length > 0) {
+        const validFavorites = favorites.filter(id => {
+            const productExists = products.some(p => p._id === id);
+            if (!productExists) {
+                console.warn('getFavorites: removing invalid product ID:', id);
+            }
+            return productExists;
+        });
+        
+        if (validFavorites.length !== favorites.length) {
+            console.log('getFavorites: cleaned favorites from', favorites.length, 'to', validFavorites.length);
+            saveToStorage('favorites', validFavorites);
+            return validFavorites;
+        }
+    }
+    
+    return favorites;
 }
 
 function updateFavoriteCount() {
     const badge = document.getElementById('favorite-count-badge');
     if (badge) {
-        const count = getFavorites().length;
+        const favorites = getFavorites();
+        const count = favorites.length;
+        console.log('updateFavoriteCount: favorites =', favorites, 'count =', count);
+        
         if (count > 0) {
             badge.textContent = count;
             badge.style.display = 'flex';
@@ -6138,15 +6376,34 @@ function updateFavoriteCount() {
             badge.style.display = 'none';
         }
         badge.setAttribute('data-count', count);
+    } else {
+        console.warn('updateFavoriteCount: badge element not found');
     }
 }
-window.addEventListener('DOMContentLoaded', updateFavoriteCount);
+window.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded: updating favorite count');
+    updateFavoriteCount();
+    updateFloatingFavorite();
+});
+
+// Функція для примусового оновлення лічильників обраних товарів
+function forceUpdateFavoriteCounters() {
+    console.log('forceUpdateFavoriteCounters: forcing update');
+    updateFavoriteCount();
+    updateFloatingFavorite();
+}
 
 function updateFloatingFavorite() {
     const favBtn = document.getElementById('floating-favorite');
     const badge = document.getElementById('floating-favorite-count');
-    if (!favBtn || !badge) return;
-    const count = getFavorites().length;
+    if (!favBtn || !badge) {
+        console.warn('updateFloatingFavorite: elements not found');
+        return;
+    }
+    const favorites = getFavorites();
+    const count = favorites.length;
+    console.log('updateFloatingFavorite: favorites =', favorites, 'count =', count);
+    
     if (count > 0) {
         badge.textContent = count;
         badge.style.display = 'flex';
