@@ -8543,3 +8543,153 @@ s {
     width: 70px;
   }
 }
+
+/* Сучасна пагінація з еліпсисом */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+    padding: 20px 0;
+}
+
+.pagination-btn {
+    min-width: 40px;
+    height: 40px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--muted-text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    text-decoration: none;
+    user-select: none;
+}
+
+.pagination-btn.active {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.pagination-btn:hover:not(.active):not(:disabled) {
+    background: var(--border-color);
+    color: var(--text-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-btn:disabled {
+    background: #f8f9fa;
+    color: #adb5bd;
+    cursor: not-allowed;
+    border-color: #e9ecef;
+}
+
+.pagination-ellipsis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    color: var(--muted-text);
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+}
+
+/* Стилі для кнопок "Попередня" та "Наступна" */
+.pagination-btn[data-direction] {
+    font-weight: 600;
+    min-width: 100px;
+}
+
+/* Адаптивність для мобільних пристроїв */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 6px;
+        padding: 15px 0;
+    }
+    
+    .pagination-btn {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+        padding: 0 8px;
+    }
+    
+    .pagination-btn[data-direction] {
+        min-width: 80px;
+        font-size: 12px;
+    }
+    
+    .pagination-ellipsis {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination {
+        gap: 4px;
+    }
+    
+    .pagination-btn {
+        min-width: 32px;
+        height: 32px;
+        font-size: 12px;
+        padding: 0 6px;
+    }
+    
+    .pagination-btn[data-direction] {
+        min-width: 70px;
+        font-size: 11px;
+    }
+    
+    .pagination-ellipsis {
+        min-width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+}
+
+/* Темна тема для пагінації */
+@media (prefers-color-scheme: dark) {
+    .pagination-btn {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #a0aec0;
+    }
+    
+    .pagination-btn.active {
+        background: var(--secondary-color);
+        color: white;
+        border-color: var(--secondary-color);
+    }
+    
+    .pagination-btn:hover:not(.active):not(:disabled) {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .pagination-btn:disabled {
+        background: #1a202c;
+        color: #4a5568;
+        border-color: #2d3748;
+    }
+    
+    .pagination-ellipsis {
+        color: #a0aec0;
+    }
+}

@@ -2560,9 +2560,38 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
 
     const page = containerId === 'order-pagination' ? ordersCurrentPage : productsCurrentPage;
 
+    // Функція для створення кнопки сторінки
+    function createPageButton(pageNum, text = pageNum, isActive = false) {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = `pagination-btn ${isActive ? 'active' : ''}`;
+        btn.onclick = () => {
+            if (containerId === 'order-pagination') {
+                const statusFilter = document.getElementById('order-status-filter')?.value || '';
+                loadOrders(pageNum, itemsPerPage, statusFilter);
+            } else {
+                loadProducts(pageNum, itemsPerPage);
+            }
+        };
+        return btn;
+    }
+
+    // Функція для створення еліпсиса
+    function createEllipsis() {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.className = 'pagination-ellipsis';
+        span.style.cssText = 'padding: 8px 12px; color: #666; cursor: default;';
+        return span;
+    }
+
+    // Кнопка "Попередня"
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = 'Попередня';
+    prevBtn.textContent = '← Попередня';
     prevBtn.disabled = page <= 1;
+    prevBtn.className = 'pagination-btn';
+    prevBtn.setAttribute('data-direction', 'prev');
+    prevBtn.style.cssText = 'margin-right: 10px;';
     prevBtn.onclick = () => {
         if (page > 1) {
             const newPage = page - 1;
@@ -2576,26 +2605,52 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     };
     container.appendChild(prevBtn);
 
-    const startPage = Math.max(1, page - 2);
-    const endPage = Math.min(totalPages, page + 2);
-    for (let i = startPage; i <= endPage; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        btn.className = i === page ? 'active' : '';
-        btn.onclick = () => {
-            if (containerId === 'order-pagination') {
-                const statusFilter = document.getElementById('order-status-filter')?.value || '';
-                loadOrders(i, itemsPerPage, statusFilter);
-            } else {
-                loadProducts(i, itemsPerPage);
+    // Логіка відображення сторінок
+    const pages = [];
+    
+    if (totalPages <= 7) {
+        // Якщо сторінок мало, показуємо всі
+        for (let i = 1; i <= totalPages; i++) {
+            pages.push(createPageButton(i, i, i === page));
+        }
+    } else {
+        // Якщо сторінок багато, використовуємо еліпсис
+        if (page <= 4) {
+            // Показуємо перші 5 сторінок + еліпсис + останню
+            for (let i = 1; i <= 5; i++) {
+                pages.push(createPageButton(i, i, i === page));
             }
-        };
-        container.appendChild(btn);
+            pages.push(createEllipsis());
+            pages.push(createPageButton(totalPages, totalPages, false));
+        } else if (page >= totalPages - 3) {
+            // Показуємо першу + еліпсис + останні 5 сторінок
+            pages.push(createPageButton(1, 1, false));
+            pages.push(createEllipsis());
+            for (let i = totalPages - 4; i <= totalPages; i++) {
+                pages.push(createPageButton(i, i, i === page));
+            }
+        } else {
+            // Показуємо першу + еліпсис + поточну та 2 сусідні + еліпсис + останню
+            pages.push(createPageButton(1, 1, false));
+            pages.push(createEllipsis());
+            for (let i = page - 1; i <= page + 1; i++) {
+                pages.push(createPageButton(i, i, i === page));
+            }
+            pages.push(createEllipsis());
+            pages.push(createPageButton(totalPages, totalPages, false));
+        }
     }
 
+    // Додаємо всі кнопки сторінок
+    pages.forEach(pageBtn => container.appendChild(pageBtn));
+
+    // Кнопка "Наступна"
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Наступна';
+    nextBtn.textContent = 'Наступна →';
     nextBtn.disabled = page >= totalPages;
+    nextBtn.className = 'pagination-btn';
+    nextBtn.setAttribute('data-direction', 'next');
+    nextBtn.style.cssText = 'margin-left: 10px;';
     nextBtn.onclick = () => {
         if (page < totalPages) {
             const newPage = page + 1;
@@ -2608,6 +2663,12 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         }
     };
     container.appendChild(nextBtn);
+
+    // Додаємо інформацію про загальну кількість
+    const infoSpan = document.createElement('span');
+    infoSpan.textContent = `Сторінка ${page} з ${totalPages} (всього ${totalItems} елементів)`;
+    infoSpan.style.cssText = 'margin-left: 15px; color: #666; font-size: 14px;';
+    container.appendChild(infoSpan);
 }
 
 function closeModal() {
