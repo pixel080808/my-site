@@ -976,6 +976,46 @@ body.dark-mode .quill-media-selected {
     box-shadow: 0 0 5px rgba(41, 128, 185, 0.5);
 }
 
+.color-block {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin: 15px 0;
+    padding: 15px;
+    background: #f9f9f9;
+}
+
+body.dark-mode .color-block {
+    border-color: #444;
+    background: #2c2c2c;
+}
+
+.color-block-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+body.dark-mode .color-block-header {
+    border-bottom-color: #444;
+}
+
+.color-block-name {
+    flex: 1;
+    font-weight: bold;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+body.dark-mode .color-block-name {
+    color: #b0c4de;
+}
+
+.color-block-content {
+    padding: 10px 0;
+}
+
 .ql-toolbar .ql-undo,
 .ql-toolbar .ql-redo {
     background: none;

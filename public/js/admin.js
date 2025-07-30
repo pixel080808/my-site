@@ -3,7 +3,7 @@ let activeTab = 'products';
 let newProduct = {
     type: 'simple',
     photos: [],
-    colors: [],
+    colorBlocks: [],
     sizes: [],
     groupProducts: [],
     active: true,
@@ -4670,7 +4670,10 @@ function openAddProductModal() {
     newProduct = {
         type: 'simple',
         photos: [],
-        colors: [],
+        colorBlocks: [{
+            blockName: 'Колір',
+            colors: []
+        }],
         sizes: [],
         groupProducts: [],
         active: true,
@@ -4738,19 +4741,30 @@ function openAddProductModal() {
             <label for="product-photo-file">Завантажте фотографію</label>
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
-            <h4>Кольори</h4>
-            <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
-            <label for="product-color-name">Назва кольору</label>
-            <input type="color" id="product-color-value" value="#000000"><br/>
-            <label for="product-color-value">Значення кольору</label>
-            <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br/>
-            <label for="product-color-price-change">Зміна ціни для кольору (грн)</label>
-            <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br/>
-            <label for="product-color-photo-url">URL фото кольору</label>
-            <input type="file" id="product-color-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-            <label for="product-color-photo-file">Завантажте фото кольору</label>
-            <button onclick="addProductColor()">Додати колір</button>
-            <div id="product-color-list" class="color-photo-list"></div>
+            <h4>Блоки кольорів</h4>
+            <div id="color-blocks-container">
+                <div class="color-block" data-block-index="0">
+                    <div class="color-block-header">
+                        <input type="text" id="color-block-name-0" placeholder="Назва блоку кольорів" value="Колір" class="color-block-name">
+                        <button type="button" onclick="removeColorBlock(0)" class="delete-btn" style="margin-left: 10px;">Видалити блок</button>
+                    </div>
+                    <div class="color-block-content">
+                        <input type="text" id="product-color-name-0" placeholder="Назва кольору"><br/>
+                        <label for="product-color-name-0">Назва кольору</label>
+                        <input type="color" id="product-color-value-0" value="#000000"><br/>
+                        <label for="product-color-value-0">Значення кольору</label>
+                        <input type="number" id="product-color-price-change-0" placeholder="Зміна ціни (грн)" step="0.01"><br/>
+                        <label for="product-color-price-change-0">Зміна ціни для кольору (грн)</label>
+                        <input type="text" id="product-color-photo-url-0" placeholder="URL фото кольору"><br/>
+                        <label for="product-color-photo-url-0">URL фото кольору</label>
+                        <input type="file" id="product-color-photo-file-0" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                        <label for="product-color-photo-file-0">Завантажте фото кольору</label>
+                        <button type="button" onclick="addProductColor(0)">Додати колір</button>
+                        <div id="product-color-list-0" class="color-photo-list"></div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="addColorBlock()" style="margin-top: 10px;">+ Додати блок кольорів</button>
             <div id="mattress-sizes" class="type-specific">
                 <h4>Розміри матраців</h4>
                 <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br/>
@@ -5133,12 +5147,94 @@ function renderPhotoList() {
         resetInactivityTimer();
     }
 
-function addProductColor() {
-    const name = document.getElementById('product-color-name').value;
-    const value = document.getElementById('product-color-value').value;
-    const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-    const url = document.getElementById('product-color-photo-url').value;
-    const colorPhotoInput = document.getElementById('product-color-photo-file');
+function addColorBlock() {
+    const blockIndex = newProduct.colorBlocks.length;
+    const container = document.getElementById('color-blocks-container');
+    
+    const blockHtml = `
+        <div class="color-block" data-block-index="${blockIndex}">
+            <div class="color-block-header">
+                <input type="text" id="color-block-name-${blockIndex}" placeholder="Назва блоку кольорів" value="Колір ${blockIndex + 1}" class="color-block-name">
+                <button type="button" onclick="removeColorBlock(${blockIndex})" class="delete-btn" style="margin-left: 10px;">Видалити блок</button>
+            </div>
+            <div class="color-block-content">
+                <input type="text" id="product-color-name-${blockIndex}" placeholder="Назва кольору"><br/>
+                <label for="product-color-name-${blockIndex}">Назва кольору</label>
+                <input type="color" id="product-color-value-${blockIndex}" value="#000000"><br/>
+                <label for="product-color-value-${blockIndex}">Значення кольору</label>
+                <input type="number" id="product-color-price-change-${blockIndex}" placeholder="Зміна ціни (грн)" step="0.01"><br/>
+                <label for="product-color-price-change-${blockIndex}">Зміна ціни для кольору (грн)</label>
+                <input type="text" id="product-color-photo-url-${blockIndex}" placeholder="URL фото кольору"><br/>
+                <label for="product-color-photo-url-${blockIndex}">URL фото кольору</label>
+                <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                <label for="product-color-photo-file-${blockIndex}">Завантажте фото кольору</label>
+                <button type="button" onclick="addProductColor(${blockIndex})">Додати колір</button>
+                <div id="product-color-list-${blockIndex}" class="color-photo-list"></div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', blockHtml);
+    newProduct.colorBlocks.push({
+        blockName: `Колір ${blockIndex + 1}`,
+        colors: []
+    });
+    resetInactivityTimer();
+}
+
+function removeColorBlock(blockIndex) {
+    if (newProduct.colorBlocks.length <= 1) {
+        alert('Повинен бути хоча б один блок кольорів!');
+        return;
+    }
+    
+    newProduct.colorBlocks.splice(blockIndex, 1);
+    const blockElement = document.querySelector(`[data-block-index="${blockIndex}"]`);
+    if (blockElement) {
+        blockElement.remove();
+    }
+    
+    // Оновлюємо індекси для всіх блоків
+    updateColorBlockIndexes();
+    resetInactivityTimer();
+}
+
+function updateColorBlockIndexes() {
+    const blocks = document.querySelectorAll('.color-block');
+    blocks.forEach((block, newIndex) => {
+        block.setAttribute('data-block-index', newIndex);
+        
+        // Оновлюємо ID всіх елементів у блоці
+        const inputs = block.querySelectorAll('input, label, button, div');
+        inputs.forEach(input => {
+            if (input.id) {
+                input.id = input.id.replace(/-\d+$/, `-${newIndex}`);
+            }
+            if (input.htmlFor) {
+                input.htmlFor = input.htmlFor.replace(/-\d+$/, `-${newIndex}`);
+            }
+            if (input.onclick && input.onclick.toString().includes('addProductColor')) {
+                input.onclick = () => addProductColor(newIndex);
+            }
+            if (input.onclick && input.onclick.toString().includes('removeColorBlock')) {
+                input.onclick = () => removeColorBlock(newIndex);
+            }
+        });
+    });
+    
+    // Оновлюємо масив colorBlocks
+    newProduct.colorBlocks = newProduct.colorBlocks.map((block, index) => ({
+        ...block,
+        blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName
+    }));
+}
+
+function addProductColor(blockIndex) {
+    const name = document.getElementById(`product-color-name-${blockIndex}`).value;
+    const value = document.getElementById(`product-color-value-${blockIndex}`).value;
+    const priceChange = parseFloat(document.getElementById(`product-color-price-change-${blockIndex}`).value) || 0;
+    const url = document.getElementById(`product-color-photo-url-${blockIndex}`).value;
+    const colorPhotoInput = document.getElementById(`product-color-photo-file-${blockIndex}`);
     const file = colorPhotoInput ? colorPhotoInput.files[0] : null;
 
     if (name && value) {
@@ -5150,32 +5246,20 @@ function addProductColor() {
                 return;
             }
             color.photo = file;
-            newProduct.colors.push(color);
-            document.getElementById('product-color-name').value = '';
-            document.getElementById('product-color-value').value = '#000000';
-            document.getElementById('product-color-price-change').value = '';
-            document.getElementById('product-color-photo-url').value = '';
-            if (colorPhotoInput) colorPhotoInput.value = '';
-            renderColorsList();
+            newProduct.colorBlocks[blockIndex].colors.push(color);
+            clearColorInputs(blockIndex);
+            renderColorsList(blockIndex);
             resetInactivityTimer();
         } else if (url) {
             color.photo = url;
-            newProduct.colors.push(color);
-            document.getElementById('product-color-name').value = '';
-            document.getElementById('product-color-value').value = '#000000';
-            document.getElementById('product-color-price-change').value = '';
-            document.getElementById('product-color-photo-url').value = '';
-            if (colorPhotoInput) colorPhotoInput.value = '';
-            renderColorsList();
+            newProduct.colorBlocks[blockIndex].colors.push(color);
+            clearColorInputs(blockIndex);
+            renderColorsList(blockIndex);
             resetInactivityTimer();
         } else {
-            newProduct.colors.push(color);
-            document.getElementById('product-color-name').value = '';
-            document.getElementById('product-color-value').value = '#000000';
-            document.getElementById('product-color-price-change').value = '';
-            document.getElementById('product-color-photo-url').value = '';
-            if (colorPhotoInput) colorPhotoInput.value = '';
-            renderColorsList();
+            newProduct.colorBlocks[blockIndex].colors.push(color);
+            clearColorInputs(blockIndex);
+            renderColorsList(blockIndex);
             resetInactivityTimer();
         }
     } else {
@@ -5183,28 +5267,43 @@ function addProductColor() {
     }
 }
 
-function renderColorsList() {
-    const colorList = document.getElementById('product-color-list');
+function clearColorInputs(blockIndex) {
+    document.getElementById(`product-color-name-${blockIndex}`).value = '';
+    document.getElementById(`product-color-value-${blockIndex}`).value = '#000000';
+    document.getElementById(`product-color-price-change-${blockIndex}`).value = '';
+    document.getElementById(`product-color-photo-url-${blockIndex}`).value = '';
+    const colorPhotoInput = document.getElementById(`product-color-photo-file-${blockIndex}`);
+    if (colorPhotoInput) colorPhotoInput.value = '';
+}
+
+function renderColorsList(blockIndex) {
+    const colorList = document.getElementById(`product-color-list-${blockIndex}`);
     if (!colorList) {
-        console.warn('Елемент #product-color-list не знайдено, пропускаємо рендеринг кольорів.');
+        console.warn(`Елемент #product-color-list-${blockIndex} не знайдено, пропускаємо рендеринг кольорів.`);
         return;
     }
-    colorList.innerHTML = newProduct.colors.map((color, index) => {
+    
+    if (!newProduct.colorBlocks[blockIndex]) {
+        console.warn(`Блок кольорів з індексом ${blockIndex} не знайдено.`);
+        return;
+    }
+    
+    colorList.innerHTML = newProduct.colorBlocks[blockIndex].colors.map((color, index) => {
         const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
         return `
-            <div class="color-item draggable" draggable="true" ondragstart="dragColor(event, ${index})" ondragover="allowDropColor(event)" ondrop="dropColor(event, ${index})" style="border: 1px solid #ddd; padding: 5px; margin: 5px 0;">
-                <span style="background-color: ${color.value};"></span>
+            <div class="color-item draggable" draggable="true" ondragstart="dragColor(event, ${blockIndex}, ${index})" ondragover="allowDropColor(event)" ondrop="dropColor(event, ${blockIndex}, ${index})" style="border: 1px solid #ddd; padding: 5px; margin: 5px 0;">
+                <span style="background-color: ${color.value}; width: 20px; height: 20px; display: inline-block; border-radius: 50%; margin-right: 10px;"></span>
                 ${color.name} (Зміна ціни: ${color.priceChange} грн)
-                ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px;">` : ''}
-                <button class="edit-btn" onclick="openEditColorModal(${index})">Редагувати</button>
-                <button class="delete-btn" onclick="deleteProductColor(${index})">Видалити</button>
+                ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px; margin-left: 10px;">` : ''}
+                <button class="edit-btn" onclick="openEditColorModal(${blockIndex}, ${index})">Редагувати</button>
+                <button class="delete-btn" onclick="deleteProductColor(${blockIndex}, ${index})">Видалити</button>
             </div>
         `;
     }).join('');
 }
 
-function openEditColorModal(index) {
-    const color = newProduct.colors[index];
+function openEditColorModal(blockIndex, colorIndex) {
+    const color = newProduct.colorBlocks[blockIndex].colors[colorIndex];
     const photoSrc = color.photo instanceof File ? URL.createObjectURL(color.photo) : color.photo || '';
     const modal = document.createElement('div');
     modal.className = 'modal active';
@@ -5224,7 +5323,7 @@ function openEditColorModal(index) {
             <input type="file" id="edit-color-photo-file-modal" accept="image/jpeg,image/png,image/gif,image/webp" style="width: 100%;"><br/>
             ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору" style="max-width: 80px; margin: 10px 0;">` : ''}
             <div class="modal-actions" style="margin-top: 20px;">
-                <button class="save-btn" onclick="saveColorModal(${index})">Зберегти</button>
+                <button class="save-btn" onclick="saveColorModal(${blockIndex}, ${colorIndex})">Зберегти</button>
                 <button class="cancel-btn" onclick="cancelEditColorModal()">Скасувати</button>
             </div>
         </div>
@@ -5233,7 +5332,7 @@ function openEditColorModal(index) {
     document.body.style.overflow = 'hidden';
 }
 
-function saveColorModal(index) {
+function saveColorModal(blockIndex, colorIndex) {
     const newName = document.getElementById('edit-color-name-modal').value;
     const newValue = document.getElementById('edit-color-value-modal').value;
     const newPriceChange = parseFloat(document.getElementById('edit-color-price-change-modal').value) || 0;
@@ -5242,9 +5341,9 @@ function saveColorModal(index) {
     const newPhotoFile = newPhotoFileInput && newPhotoFileInput.files[0] ? newPhotoFileInput.files[0] : null;
     let newPhoto = newPhotoFile ? newPhotoFile : (newPhotoUrl ? newPhotoUrl : '');
     if (newName && newValue) {
-        newProduct.colors[index] = { name: newName, value: newValue, priceChange: newPriceChange, photo: newPhoto };
+        newProduct.colorBlocks[blockIndex].colors[colorIndex] = { name: newName, value: newValue, priceChange: newPriceChange, photo: newPhoto };
         cancelEditColorModal();
-        renderColorsList();
+        renderColorsList(blockIndex);
         resetInactivityTimer();
     } else {
         alert('Введіть назву та виберіть колір!');
@@ -5260,8 +5359,8 @@ function cancelEditColorModal() {
     resetInactivityTimer();
 }
 
-function dragColor(event, index) {
-    event.dataTransfer.setData('text/plain', index);
+function dragColor(event, blockIndex, colorIndex) {
+    event.dataTransfer.setData('text/plain', JSON.stringify({ blockIndex, colorIndex }));
     event.target.classList.add('dragging');
 }
 
@@ -5269,21 +5368,24 @@ function allowDropColor(event) {
     event.preventDefault();
 }
 
-function dropColor(event, targetIndex) {
+function dropColor(event, targetBlockIndex, targetColorIndex) {
     event.preventDefault();
-    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
-    if (sourceIndex !== targetIndex) {
-        const [movedColor] = newProduct.colors.splice(sourceIndex, 1);
-        newProduct.colors.splice(targetIndex, 0, movedColor);
-        renderColorsList();
+    const sourceData = JSON.parse(event.dataTransfer.getData('text/plain'));
+    const sourceBlockIndex = sourceData.blockIndex;
+    const sourceColorIndex = sourceData.colorIndex;
+    
+    if (sourceBlockIndex === targetBlockIndex && sourceColorIndex !== targetColorIndex) {
+        const [movedColor] = newProduct.colorBlocks[sourceBlockIndex].colors.splice(sourceColorIndex, 1);
+        newProduct.colorBlocks[targetBlockIndex].colors.splice(targetColorIndex, 0, movedColor);
+        renderColorsList(targetBlockIndex);
         resetInactivityTimer();
     }
     document.querySelectorAll('.color-item').forEach(item => item.classList.remove('dragging'));
 }
 
-function deleteProductColor(index) {
-    newProduct.colors.splice(index, 1);
-    renderColorsList();
+function deleteProductColor(blockIndex, colorIndex) {
+    newProduct.colorBlocks[blockIndex].colors.splice(colorIndex, 1);
+    renderColorsList(blockIndex);
     resetInactivityTimer();
 }
 
@@ -5843,11 +5945,14 @@ async function saveNewProduct() {
             heightCm,
             lengthCm,
             photos: [],
-            colors: newProduct.colors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: null
+            colorBlocks: newProduct.colorBlocks.map(block => ({
+                blockName: block.blockName,
+                colors: block.colors.map(color => ({
+                    name: color.name,
+                    value: color.value,
+                    priceChange: color.priceChange || 0,
+                    photo: null
+                }))
             })),
 sizes: newProduct.type === 'mattresses'
     ? newProduct.sizes.map(size => {
@@ -5938,14 +6043,17 @@ if (
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        for (let i = 0; i < newProduct.colors.length; i++) {
-            const color = newProduct.colors[i];
-            if (color.photo instanceof File) {
-                const validation = validateFile(color.photo);
-                if (!validation.valid) {
-                    showNotification(validation.error);
-                    return;
-                }
+        // Завантажуємо фото кольорів
+        for (let blockIndex = 0; blockIndex < newProduct.colorBlocks.length; blockIndex++) {
+            const block = newProduct.colorBlocks[blockIndex];
+            for (let colorIndex = 0; colorIndex < block.colors.length; colorIndex++) {
+                const color = block.colors[colorIndex];
+                if (color.photo instanceof File) {
+                    const validation = validateFile(color.photo);
+                    if (!validation.valid) {
+                        showNotification(validation.error);
+                        return;
+                    }
                 try {
                     const formData = new FormData();
                     formData.append('file', color.photo);
@@ -5954,15 +6062,16 @@ if (
                         body: formData
                     });
                     const data = await response.json();
-                    product.colors[i].photo = data.url;
+                    product.colorBlocks[blockIndex].colors[colorIndex].photo = data.url;
                 } catch (err) {
                     console.error('Помилка завантаження фото кольору:', err);
                     showNotification('Не вдалося завантажити фото кольору: ' + err.message);
                     return;
                 }
             } else if (typeof color.photo === 'string') {
-                product.colors[i].photo = color.photo;
+                product.colorBlocks[blockIndex].colors[colorIndex].photo = color.photo;
             }
+        }
         }
 
         delete product.id;
@@ -6018,9 +6127,26 @@ async function openEditProductModal(productId) {
         return;
     }
 
+    // Конвертуємо стару структуру кольорів в нову, якщо потрібно
+    let colorBlocks = [];
+    if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+        colorBlocks = [...product.colorBlocks];
+    } else if (product.colors && Array.isArray(product.colors)) {
+        // Конвертуємо стару структуру в нову
+        colorBlocks = [{
+            blockName: 'Колір',
+            colors: [...product.colors]
+        }];
+    } else {
+        colorBlocks = [{
+            blockName: 'Колір',
+            colors: []
+        }];
+    }
+
     newProduct = {
         ...product,
-        colors: [...product.colors],
+        colorBlocks: colorBlocks,
         photos: [...product.photos],
         sizes: product.sizes ? product.sizes.filter(size => size.name && typeof size.price === 'number' && size.price >= 0) : [],
         groupProducts: [...product.groupProducts]
@@ -6095,19 +6221,32 @@ async function openEditProductModal(productId) {
             <label for="product-photo-file">Завантажте фотографію</label>
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
-            <h4>Кольори</h4>
-            <input type="text" id="product-color-name" placeholder="Назва кольору"><br/>
-            <label for="product-color-name">Назва кольору</label>
-            <input type="color" id="product-color-value" value="#000000"><br/>
-            <label for="product-color-value">Значення кольору</label>
-            <input type="number" id="product-color-price-change" placeholder="Зміна ціни (грн)" step="0.01"><br/>
-            <label for="product-color-price-change">Зміна ціни для кольору (грн)</label>
-            <input type="text" id="product-color-photo-url" placeholder="URL фото кольору"><br/>
-            <label for="product-color-photo-url">URL фото кольору</label>
-            <input type="file" id="product-color-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
-            <label for="product-color-photo-file">Завантажте фото кольору</label>
-            <button onclick="addProductColor()">Додати колір</button>
-            <div id="product-color-list" class="color-photo-list"></div>
+            <h4>Блоки кольорів</h4>
+            <div id="color-blocks-container">
+                ${newProduct.colorBlocks.map((block, blockIndex) => `
+                    <div class="color-block" data-block-index="${blockIndex}">
+                        <div class="color-block-header">
+                            <input type="text" id="color-block-name-${blockIndex}" placeholder="Назва блоку кольорів" value="${block.blockName}" class="color-block-name">
+                            <button type="button" onclick="removeColorBlock(${blockIndex})" class="delete-btn" style="margin-left: 10px;">Видалити блок</button>
+                        </div>
+                        <div class="color-block-content">
+                            <input type="text" id="product-color-name-${blockIndex}" placeholder="Назва кольору"><br/>
+                            <label for="product-color-name-${blockIndex}">Назва кольору</label>
+                            <input type="color" id="product-color-value-${blockIndex}" value="#000000"><br/>
+                            <label for="product-color-value-${blockIndex}">Значення кольору</label>
+                            <input type="number" id="product-color-price-change-${blockIndex}" placeholder="Зміна ціни (грн)" step="0.01"><br/>
+                            <label for="product-color-price-change-${blockIndex}">Зміна ціни для кольору (грн)</label>
+                            <input type="text" id="product-color-photo-url-${blockIndex}" placeholder="URL фото кольору"><br/>
+                            <label for="product-color-photo-url-${blockIndex}">URL фото кольору</label>
+                            <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                            <label for="product-color-photo-file-${blockIndex}">Завантажте фото кольору</label>
+                            <button type="button" onclick="addProductColor(${blockIndex})">Додати колір</button>
+                            <div id="product-color-list-${blockIndex}" class="color-photo-list"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <button type="button" onclick="addColorBlock()" style="margin-top: 10px;">+ Додати блок кольорів</button>
             <div id="mattress-sizes" class="type-specific">
                 <h4>Розміри матраців</h4>
                 <input type="text" id="mattress-size-name" placeholder="Розмір (наприклад, 90x190)"><br/>
@@ -6167,7 +6306,10 @@ async function openEditProductModal(productId) {
         console.warn('Елемент #product-category або #product-subcategory не знайдено');
     }
 
-    renderColorsList();
+    // Рендеримо кольори для кожного блоку
+    newProduct.colorBlocks.forEach((block, blockIndex) => {
+        renderColorsList(blockIndex);
+    });
     renderPhotoList();
     renderMattressSizes();
     renderGroupProducts();
@@ -6186,28 +6328,27 @@ async function openEditProductModal(productId) {
         });
     }
 
-    const colorPhotoInput = document.getElementById('product-color-photo-file');
-    if (colorPhotoInput) {
-        colorPhotoInput.addEventListener('change', () => {
-            const file = colorPhotoInput.files[0];
-            if (file) {
-                const name = document.getElementById('product-color-name').value;
-                const value = document.getElementById('product-color-value').value;
-                const priceChange = parseFloat(document.getElementById('product-color-price-change').value) || 0;
-                if (name && value) {
-                    const color = { name, value, priceChange, photo: file };
-                    newProduct.colors.push(color);
-                    document.getElementById('product-color-name').value = '';
-                    document.getElementById('product-color-value').value = '#000000';
-                    document.getElementById('product-color-price-change').value = '';
-                    document.getElementById('product-color-photo-url').value = '';
-                    document.getElementById('product-color-photo-file').value = '';
-                    renderColorsList();
-                    resetInactivityTimer();
+    // Додаємо обробники для фото кольорів у кожному блоці
+    newProduct.colorBlocks.forEach((block, blockIndex) => {
+        const colorPhotoInput = document.getElementById(`product-color-photo-file-${blockIndex}`);
+        if (colorPhotoInput) {
+            colorPhotoInput.addEventListener('change', () => {
+                const file = colorPhotoInput.files[0];
+                if (file) {
+                    const name = document.getElementById(`product-color-name-${blockIndex}`).value;
+                    const value = document.getElementById(`product-color-value-${blockIndex}`).value;
+                    const priceChange = parseFloat(document.getElementById(`product-color-price-change-${blockIndex}`).value) || 0;
+                    if (name && value) {
+                        const color = { name, value, priceChange, photo: file };
+                        newProduct.colorBlocks[blockIndex].colors.push(color);
+                        clearColorInputs(blockIndex);
+                        renderColorsList(blockIndex);
+                        resetInactivityTimer();
+                    }
                 }
-            }
-        });
-    }
+            });
+        }
+    });
 
     const saveButton = document.getElementById('save-product-btn');
     if (saveButton) {
@@ -6244,11 +6385,13 @@ async function openEditProductModal(productId) {
         console.warn('Кнопка #cancel-product-btn не знайдена');
     }
 
-    // Додаємо обробник для кнопки "Додати колір" у режимі редагування
-    const addColorBtn = document.querySelector('button[onclick="addProductColor()"]');
-    if (addColorBtn) {
-        addColorBtn.onclick = addProductColor;
-    }
+    // Додаємо обробники для кнопок "Додати колір" у кожному блоці
+    newProduct.colorBlocks.forEach((block, blockIndex) => {
+        const addColorBtn = document.querySelector(`button[onclick="addProductColor(${blockIndex})"]`);
+        if (addColorBtn) {
+            addColorBtn.onclick = () => addProductColor(blockIndex);
+        }
+    });
 
     // Оновлюємо відображення полів відповідно до типу товару
     updateProductType();
@@ -6406,10 +6549,14 @@ async function saveEditedProduct(productId) {
             }
         }
 
-        const validatedColors = newProduct.colors.filter(color => {
-            const isValid = color.name && color.value;
-            return isValid;
-        });
+        // Валідуємо кольори в кожному блоці
+        const validatedColorBlocks = newProduct.colorBlocks.map(block => ({
+            blockName: block.blockName,
+            colors: block.colors.filter(color => {
+                const isValid = color.name && color.value;
+                return isValid;
+            })
+        })).filter(block => block.colors.length > 0);
 
         if (brand && !brands.includes(brand)) {
             try {
@@ -6457,11 +6604,14 @@ async function saveEditedProduct(productId) {
             heightCm,
             lengthCm,
             photos: [],
-            colors: validatedColors.map(color => ({
-                name: color.name,
-                value: color.value,
-                priceChange: color.priceChange || 0,
-                photo: color.photo || null
+            colorBlocks: validatedColorBlocks.map(block => ({
+                blockName: block.blockName,
+                colors: block.colors.map(color => ({
+                    name: color.name,
+                    value: color.value,
+                    priceChange: color.priceChange || 0,
+                    photo: color.photo || null
+                }))
             })),
 sizes: newProduct.type === 'mattresses'
     ? validatedSizes.map(size => {
@@ -6554,30 +6704,34 @@ if (
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-        for (let i = 0; i < validatedColors.length; i++) {
-            const color = validatedColors[i];
-            if (color.photo instanceof File) {
-                const validation = validateFile(color.photo);
-                if (!validation.valid) {
-                    showNotification(validation.error);
-                    return;
+        // Завантажуємо фото кольорів
+        for (let blockIndex = 0; blockIndex < validatedColorBlocks.length; blockIndex++) {
+            const block = validatedColorBlocks[blockIndex];
+            for (let colorIndex = 0; colorIndex < block.colors.length; colorIndex++) {
+                const color = block.colors[colorIndex];
+                if (color.photo instanceof File) {
+                    const validation = validateFile(color.photo);
+                    if (!validation.valid) {
+                        showNotification(validation.error);
+                        return;
+                    }
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', color.photo);
+                        const response = await fetchWithAuth('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await response.json();
+                        product.colorBlocks[blockIndex].colors[colorIndex].photo = data.url;
+                    } catch (err) {
+                        console.error('Помилка завантаження фото кольору:', err);
+                        showNotification('Не вдалося завантажити фото кольору: ' + err.message);
+                        return;
+                    }
+                } else if (typeof color.photo === 'string') {
+                    product.colorBlocks[blockIndex].colors[colorIndex].photo = color.photo;
                 }
-                try {
-                    const formData = new FormData();
-                    formData.append('file', color.photo);
-                    const response = await fetchWithAuth('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    product.colors[i].photo = data.url;
-                } catch (err) {
-                    console.error('Помилка завантаження фото кольору:', err);
-                    showNotification('Не вдалося завантажити фото кольору: ' + err.message);
-                    return;
-                }
-            } else if (typeof color.photo === 'string') {
-                product.colors[i].photo = color.photo;
             }
         }
 

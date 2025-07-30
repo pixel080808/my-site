@@ -46,19 +46,22 @@ const productSchema = new mongoose.Schema({
         salePrice: { type: Number }, // Додаю це поле, якщо його не було
         saleEnd: { type: Date, default: null }
     }],
-    colors: [{
-        name: { type: String, required: true },
-        value: { type: String, required: true },
-        photo: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                    return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
-                },
-                message: 'Color photo must be a valid URL or null'
-            }
-        },
-        priceChange: { type: Number, default: 0 }
+    colorBlocks: [{
+        blockName: { type: String, required: true, default: 'Колір' },
+        colors: [{
+            name: { type: String, required: true },
+            value: { type: String, required: true },
+            photo: {
+                type: String,
+                validate: {
+                    validator: function(v) {
+                        return !v || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                    },
+                    message: 'Color photo must be a valid URL or null'
+                }
+            },
+            priceChange: { type: Number, default: 0 }
+        }]
     }],
     groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     description: { type: String, trim: true },
@@ -153,12 +156,17 @@ const productSchemaValidation = Joi.object({
             saleEnd: Joi.date().allow(null).optional()
         })
     ).optional(),
-    colors: Joi.array().items(
+    colorBlocks: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required(),
-            photo: Joi.string().uri().allow('').optional(),
-            priceChange: Joi.number().default(0)
+            blockName: Joi.string().required().default('Колір'),
+            colors: Joi.array().items(
+                Joi.object({
+                    name: Joi.string().required(),
+                    value: Joi.string().required(),
+                    photo: Joi.string().uri().allow('').optional(),
+                    priceChange: Joi.number().default(0)
+                })
+            ).required()
         })
     ).optional(),
     groupProducts: Joi.array().items(

@@ -1126,14 +1126,32 @@ app.post("/api/products", authenticateToken, csrfProtection, async (req, res) =>
       productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img]
       delete productData.img
     }
-    if (productData.colors) {
-      productData.colors = productData.colors.map((color) => {
-        if (color.img && !color.photo) {
-          color.photo = color.img
-          delete color.img
+    if (productData.colorBlocks) {
+      productData.colorBlocks = productData.colorBlocks.map((block) => {
+        if (block.colors) {
+          block.colors = block.colors.map((color) => {
+            if (color.img && !color.photo) {
+              color.photo = color.img
+              delete color.img
+            }
+            return color
+          })
         }
-        return color
+        return block
       })
+    } else if (productData.colors) {
+      // Конвертуємо стару структуру в нову
+      productData.colorBlocks = [{
+        blockName: 'Колір',
+        colors: productData.colors.map((color) => {
+          if (color.img && !color.photo) {
+            color.photo = color.img
+            delete color.img
+          }
+          return color
+        })
+      }]
+      delete productData.colors
     }
 
     const { error } = productSchemaValidation.validate(productData, { abortEarly: false })
@@ -1297,24 +1315,38 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
       productData.photos = Array.isArray(productData.img) ? productData.img : [productData.img];
       delete productData.img;
     }
-    if (productData.colors) {
-      productData.colors = productData.colors.map((color) => {
-        if (color.img && !color.photo) {
-          color.photo = color.img;
-          delete color.img;
+    if (productData.colorBlocks) {
+      productData.colorBlocks = productData.colorBlocks.map((block) => {
+        if (block.colors) {
+          block.colors = block.colors.map((color) => {
+            if (color.img && !color.photo) {
+              color.photo = color.img;
+              delete color.img;
+            }
+            const { _id, ...rest } = color;
+            return rest;
+          });
         }
-        return color;
+        return block;
       });
+    } else if (productData.colors) {
+      // Конвертуємо стару структуру в нову
+      productData.colorBlocks = [{
+        blockName: 'Колір',
+        colors: productData.colors.map((color) => {
+          if (color.img && !color.photo) {
+            color.photo = color.img;
+            delete color.img;
+          }
+          const { _id, ...rest } = color;
+          return rest;
+        })
+      }];
+      delete productData.colors;
     }
 
     delete productData._id;
     delete productData.__v;
-    if (productData.colors) {
-      productData.colors = productData.colors.map((color) => {
-        const { _id, ...rest } = color;
-        return rest;
-      });
-    }
 
     const { error } = productSchemaValidation.validate(productData, { abortEarly: false });
     if (error) {
@@ -1414,7 +1446,26 @@ app.delete("/api/products/:id", authenticateToken, csrfProtection, async (req, r
     const product = await Product.findByIdAndDelete(req.params.id)
     if (!product) return res.status(404).json({ error: "Товар не знайдено" })
 
-    const photosToDelete = [...(product.photos || []), ...product.colors.map((color) => color.photo).filter(Boolean)]
+    const colorPhotos = [];
+    if (product.colorBlocks) {
+      product.colorBlocks.forEach(block => {
+        if (block.colors) {
+          block.colors.forEach(color => {
+            if (color.photo) {
+              colorPhotos.push(color.photo);
+            }
+          });
+        }
+      });
+    } else if (product.colors) {
+      // Для старої структури
+      product.colors.forEach(color => {
+        if (color.photo) {
+          colorPhotos.push(color.photo);
+        }
+      });
+    }
+    const photosToDelete = [...(product.photos || []), ...colorPhotos];
     for (const photoUrl of photosToDelete) {
       const publicId = getPublicIdFromUrl(photoUrl)
       if (publicId) {

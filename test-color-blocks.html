@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест блоків кольорів</title>
+    <style>
+        .color-block {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        
+        .color-block-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .color-block-name {
+            flex: 1;
+            font-weight: bold;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        .color-block-content {
+            padding: 10px 0;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            gap: 10px;
+        }
+        
+        .color-preview {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .delete-btn {
+            background: #e74c3c;
+        }
+        
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест блоків кольорів</h1>
+    
+    <div id="color-blocks-container">
+        <div class="color-block" data-block-index="0">
+            <div class="color-block-header">
+                <input type="text" id="color-block-name-0" placeholder="Назва блоку кольорів" value="Колір" class="color-block-name">
+                <button type="button" onclick="removeColorBlock(0)" class="delete-btn">Видалити блок</button>
+            </div>
+            <div class="color-block-content">
+                <input type="text" id="product-color-name-0" placeholder="Назва кольору"><br/>
+                <label for="product-color-name-0">Назва кольору</label>
+                <input type="color" id="product-color-value-0" value="#000000"><br/>
+                <label for="product-color-value-0">Значення кольору</label>
+                <input type="number" id="product-color-price-change-0" placeholder="Зміна ціни (грн)" step="0.01"><br/>
+                <label for="product-color-price-change-0">Зміна ціни для кольору (грн)</label>
+                <input type="text" id="product-color-photo-url-0" placeholder="URL фото кольору"><br/>
+                <label for="product-color-photo-url-0">URL фото кольору</label>
+                <input type="file" id="product-color-photo-file-0" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                <label for="product-color-photo-file-0">Завантажте фото кольору</label>
+                <button type="button" onclick="addProductColor(0)">Додати колір</button>
+                <div id="product-color-list-0" class="color-photo-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button type="button" onclick="addColorBlock()" style="margin-top: 10px;">+ Додати блок кольорів</button>
+    
+    <div style="margin-top: 30px;">
+        <h3>Поточні дані:</h3>
+        <pre id="current-data"></pre>
+    </div>
+
+    <script>
+        let newProduct = {
+            colorBlocks: [{
+                blockName: 'Колір',
+                colors: []
+            }]
+        };
+
+        function getAllColors(product) {
+            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+                const allColors = [];
+                product.colorBlocks.forEach((block, blockIndex) => {
+                    if (block.colors && Array.isArray(block.colors)) {
+                        block.colors.forEach((color, colorIndex) => {
+                            allColors.push({
+                                ...color,
+                                blockIndex,
+                                colorIndex,
+                                globalIndex: allColors.length
+                            });
+                        });
+                    }
+                });
+                return allColors;
+            } else if (product.colors && Array.isArray(product.colors)) {
+                return product.colors.map((color, index) => ({
+                    ...color,
+                    blockIndex: 0,
+                    colorIndex: index,
+                    globalIndex: index
+                }));
+            }
+            return [];
+        }
+
+        function addColorBlock() {
+            const blockIndex = newProduct.colorBlocks.length;
+            const container = document.getElementById('color-blocks-container');
+            
+            const blockHtml = `
+                <div class="color-block" data-block-index="${blockIndex}">
+                    <div class="color-block-header">
+                        <input type="text" id="color-block-name-${blockIndex}" placeholder="Назва блоку кольорів" value="Колір ${blockIndex + 1}" class="color-block-name">
+                        <button type="button" onclick="removeColorBlock(${blockIndex})" class="delete-btn">Видалити блок</button>
+                    </div>
+                    <div class="color-block-content">
+                        <input type="text" id="product-color-name-${blockIndex}" placeholder="Назва кольору"><br/>
+                        <label for="product-color-name-${blockIndex}">Назва кольору</label>
+                        <input type="color" id="product-color-value-${blockIndex}" value="#000000"><br/>
+                        <label for="product-color-value-${blockIndex}">Значення кольору</label>
+                        <input type="number" id="product-color-price-change-${blockIndex}" placeholder="Зміна ціни (грн)" step="0.01"><br/>
+                        <label for="product-color-price-change-${blockIndex}">Зміна ціни для кольору (грн)</label>
+                        <input type="text" id="product-color-photo-url-${blockIndex}" placeholder="URL фото кольору"><br/>
+                        <label for="product-color-photo-url-${blockIndex}">URL фото кольору</label>
+                        <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                        <label for="product-color-photo-file-${blockIndex}">Завантажте фото кольору</label>
+                        <button type="button" onclick="addProductColor(${blockIndex})">Додати колір</button>
+                        <div id="product-color-list-${blockIndex}" class="color-photo-list"></div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', blockHtml);
+            newProduct.colorBlocks.push({
+                blockName: `Колір ${blockIndex + 1}`,
+                colors: []
+            });
+            updateDisplay();
+        }
+
+        function removeColorBlock(blockIndex) {
+            if (newProduct.colorBlocks.length <= 1) {
+                alert('Повинен бути хоча б один блок кольорів!');
+                return;
+            }
+            
+            newProduct.colorBlocks.splice(blockIndex, 1);
+            const blockElement = document.querySelector(`[data-block-index="${blockIndex}"]`);
+            if (blockElement) {
+                blockElement.remove();
+            }
+            
+            updateColorBlockIndexes();
+            updateDisplay();
+        }
+
+        function updateColorBlockIndexes() {
+            const blocks = document.querySelectorAll('.color-block');
+            blocks.forEach((block, newIndex) => {
+                block.setAttribute('data-block-index', newIndex);
+                
+                const inputs = block.querySelectorAll('input, label, button, div');
+                inputs.forEach(input => {
+                    if (input.id) {
+                        input.id = input.id.replace(/-\d+$/, `-${newIndex}`);
+                    }
+                    if (input.htmlFor) {
+                        input.htmlFor = input.htmlFor.replace(/-\d+$/, `-${newIndex}`);
+                    }
+                    if (input.onclick && input.onclick.toString().includes('addProductColor')) {
+                        input.onclick = () => addProductColor(newIndex);
+                    }
+                    if (input.onclick && input.onclick.toString().includes('removeColorBlock')) {
+                        input.onclick = () => removeColorBlock(newIndex);
+                    }
+                });
+            });
+            
+            newProduct.colorBlocks = newProduct.colorBlocks.map((block, index) => ({
+                ...block,
+                blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName
+            }));
+        }
+
+        function addProductColor(blockIndex) {
+            const name = document.getElementById(`product-color-name-${blockIndex}`).value;
+            const value = document.getElementById(`product-color-value-${blockIndex}`).value;
+            const priceChange = parseFloat(document.getElementById(`product-color-price-change-${blockIndex}`).value) || 0;
+            const url = document.getElementById(`product-color-photo-url-${blockIndex}`).value;
+
+            if (name && value) {
+                const color = { name, value, priceChange };
+                if (url) {
+                    color.photo = url;
+                }
+                newProduct.colorBlocks[blockIndex].colors.push(color);
+                clearColorInputs(blockIndex);
+                renderColorsList(blockIndex);
+                updateDisplay();
+            } else {
+                alert('Введіть назву та виберіть колір!');
+            }
+        }
+
+        function clearColorInputs(blockIndex) {
+            document.getElementById(`product-color-name-${blockIndex}`).value = '';
+            document.getElementById(`product-color-value-${blockIndex}`).value = '#000000';
+            document.getElementById(`product-color-price-change-${blockIndex}`).value = '';
+            document.getElementById(`product-color-photo-url-${blockIndex}`).value = '';
+            const colorPhotoInput = document.getElementById(`product-color-photo-file-${blockIndex}`);
+            if (colorPhotoInput) colorPhotoInput.value = '';
+        }
+
+        function renderColorsList(blockIndex) {
+            const colorList = document.getElementById(`product-color-list-${blockIndex}`);
+            if (!colorList) return;
+            
+            colorList.innerHTML = newProduct.colorBlocks[blockIndex].colors.map((color, index) => {
+                const photoSrc = color.photo || '';
+                return `
+                    <div class="color-item">
+                        <span class="color-preview" style="background-color: ${color.value};"></span>
+                        ${color.name} (Зміна ціни: ${color.priceChange} грн)
+                        ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору ${color.name}" style="max-width: 30px; margin-left: 10px;">` : ''}
+                        <button onclick="deleteProductColor(${blockIndex}, ${index})">Видалити</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteProductColor(blockIndex, colorIndex) {
+            newProduct.colorBlocks[blockIndex].colors.splice(colorIndex, 1);
+            renderColorsList(blockIndex);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            // Оновлюємо назви блоків
+            newProduct.colorBlocks.forEach((block, index) => {
+                const nameInput = document.getElementById(`color-block-name-${index}`);
+                if (nameInput) {
+                    block.blockName = nameInput.value;
+                }
+            });
+
+            // Показуємо поточні дані
+            document.getElementById('current-data').textContent = JSON.stringify(newProduct, null, 2);
+        }
+
+        // Ініціалізація
+        updateDisplay();
+        renderColorsList(0);
+    </script>
+</body>
+</html> 
