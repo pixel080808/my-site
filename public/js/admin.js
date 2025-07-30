@@ -411,7 +411,7 @@ async function fetchWithAuth(url, options = {}) {
                     errorData.details.forEach((detail, index) => {
                         console.error(`Помилка ${index + 1}:`, detail);
                         if (detail.path) {
-                            console.error(`   Поле: ${detail.path.join('.')}`);
+                            console.error(`   Поле: ${Array.isArray(detail.path) ? detail.path.join('.') : String(detail.path)}`);
                         }
                         if (detail.message) {
                             console.error(`   Повідомлення: ${detail.message}`);

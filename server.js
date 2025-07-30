@@ -1161,8 +1161,8 @@ if (error) {
         error: "Помилка валідації",
         details: error.details.map(detail => ({
             message: detail.message,
-            path: detail.path.join('.'),
-            value: detail.context.value
+            path: Array.isArray(detail.path) ? detail.path.join('.') : String(detail.path),
+            value: detail.context?.value
         }))
     });
 }
@@ -1355,8 +1355,8 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
         error: "Помилка валідації",
         details: error.details.map(detail => ({
           message: detail.message,
-          path: detail.path.join('.'),
-          value: detail.context.value
+          path: Array.isArray(detail.path) ? detail.path.join('.') : String(detail.path),
+          value: detail.context?.value
         }))
       });
     }
