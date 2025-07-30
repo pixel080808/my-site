@@ -5940,8 +5940,8 @@ async function saveNewProduct() {
             heightCm,
             lengthCm,
             photos: [],
-            colorBlocks: newProduct.colorBlocks.map(block => ({
-                blockName: block.blockName,
+            colorBlocks: newProduct.colorBlocks.map((block, index) => ({
+                blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName,
                 colors: block.colors.map(color => ({
                     name: color.name,
                     value: color.value,
@@ -6545,8 +6545,8 @@ async function saveEditedProduct(productId) {
         }
 
         // Валідуємо кольори в кожному блоці
-        const validatedColorBlocks = newProduct.colorBlocks.map(block => ({
-            blockName: block.blockName,
+        const validatedColorBlocks = newProduct.colorBlocks.map((block, index) => ({
+            blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName,
             colors: block.colors.filter(color => {
                 const isValid = color.name && color.value;
                 return isValid;

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлення блоків кольорів</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .color-block {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .color-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-block-name {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            padding: 5px;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+        .color-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест виправлення блоків кольорів</h1>
+    
+    <div class="test-section">
+        <h2>Тест 1: Збереження назв блоків</h2>
+        <p>Створюємо товар з двома блоками кольорів з кастомними назвами:</p>
+        <div class="color-block">
+            <div class="color-block-header">
+                <input type="text" id="block-name-1" value="Колір корпусу" class="color-block-name">
+            </div>
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #FFFFFF;"></div>
+                <span>Білий</span>
+            </div>
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #000000;"></div>
+                <span>Чорний</span>
+            </div>
+        </div>
+        <div class="color-block">
+            <div class="color-block-header">
+                <input type="text" id="block-name-2" value="Колір фасаду" class="color-block-name">
+            </div>
+            <div class="color-item">
+                <div class="color-circle" style="background-color: #8B4513;"></div>
+                <span>Дерево</span>
+            </div>
+        </div>
+        <button onclick="testSaveBlockNames()">Тестувати збереження назв</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 2: Відображення на сайті</h2>
+        <p>Симулюємо відображення товару з блоками кольорів:</p>
+        <div id="product-display">
+            <h3>Товар з блоками кольорів</h3>
+            <div id="color-display"></div>
+        </div>
+        <button onclick="testDisplayBlocks()">Тестувати відображення</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <script>
+        function testSaveBlockNames() {
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            const blockName1 = document.getElementById('block-name-1').value;
+            const blockName2 = document.getElementById('block-name-2').value;
+            
+            const testProduct = {
+                name: "Тестовий товар з блоками",
+                category: "test-category",
+                price: 1500,
+                slug: "test-product-blocks-" + Date.now(),
+                type: "simple",
+                colorBlocks: [
+                    {
+                        blockName: blockName1,
+                        colors: [
+                            {
+                                name: "Білий",
+                                value: "#FFFFFF",
+                                priceChange: 0
+                            },
+                            {
+                                name: "Чорний",
+                                value: "#000000",
+                                priceChange: 100
+                            }
+                        ]
+                    },
+                    {
+                        blockName: blockName2,
+                        colors: [
+                            {
+                                name: "Дерево",
+                                value: "#8B4513",
+                                priceChange: 50
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            try {
+                fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer test-token',
+                        'X-CSRF-Token': 'test-csrf'
+                    },
+                    body: JSON.stringify(testProduct)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result._id) {
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <h3>✅ Успішно!</h3>
+                                <p>Товар з кастомними назвами блоків збережено.</p>
+                                <p><strong>Блок 1:</strong> ${blockName1}</p>
+                                <p><strong>Блок 2:</strong> ${blockName2}</p>
+                                <pre>${JSON.stringify(result, null, 2)}</pre>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="error">
+                                <h3>❌ Помилка!</h3>
+                                <pre>${JSON.stringify(result, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка мережі!</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function testDisplayBlocks() {
+            const resultDiv = document.getElementById('test2-result');
+            const colorDisplay = document.getElementById('color-display');
+            
+            resultDiv.innerHTML = '<p>Тестування відображення...</p>';
+            
+            // Симулюємо товар з блоками кольорів
+            const product = {
+                _id: 'test-product',
+                name: 'Тестовий товар',
+                colorBlocks: [
+                    {
+                        blockName: 'Колір корпусу',
+                        colors: [
+                            { name: 'Білий', value: '#FFFFFF', photo: null },
+                            { name: 'Чорний', value: '#000000', photo: null }
+                        ]
+                    },
+                    {
+                        blockName: 'Колір фасаду',
+                        colors: [
+                            { name: 'Дерево', value: '#8B4513', photo: null }
+                        ]
+                    }
+                ]
+            };
+
+            // Очищаємо попередній контент
+            colorDisplay.innerHTML = '';
+
+            // Відображаємо кольори згруповано по блоках
+            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+                product.colorBlocks.forEach((block, blockIndex) => {
+                    if (block.colors && Array.isArray(block.colors) && block.colors.length > 0) {
+                        const colorP = document.createElement('p');
+                        colorP.innerHTML = `<strong>${block.blockName}:</strong>`;
+                        colorDisplay.appendChild(colorP);
+                        
+                        const colorDiv = document.createElement('div');
+                        colorDiv.style.marginBottom = '15px';
+
+                        block.colors.forEach((c, i) => {
+                            const circle = document.createElement('div');
+                            circle.className = 'color-circle';
+                            circle.style.background = c.photo ? `url(${c.photo})` : c.value;
+                            circle.style.display = 'inline-block';
+                            circle.style.marginRight = '10px';
+                            circle.style.cursor = 'pointer';
+
+                            const span = document.createElement('span');
+                            span.textContent = c.name;
+                            span.style.marginRight = '15px';
+
+                            circle.appendChild(span);
+                            colorDiv.appendChild(circle);
+                        });
+                        
+                        colorDisplay.appendChild(colorDiv);
+                    }
+                });
+            }
+
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Успішно!</h3>
+                    <p>Кольори відображаються згруповано по блоках з кастомними назвами.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 
