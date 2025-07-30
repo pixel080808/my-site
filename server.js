@@ -977,7 +977,7 @@ app.get("/api/products", authenticateToken, async (req, res) => {
 
     const skip = (parsedPage - 1) * parsedLimit
     logger.info(
-      `GET /api/products: slug=${slug}, search=${search}, page=${parsedPage}, limit=${parsedLimit}, sort=${sort}, user=${req.user.username}`,
+      `GET /api/products: slug=${slug}, search=${search}, page=${parsedPage}, limit=${parsedLimit}, sort=${sort}, types=${req.query.types}, excludeType=${req.query.excludeType}, user=${req.user.username}`,
     )
 
     const query = {}
@@ -986,6 +986,30 @@ app.get("/api/products", authenticateToken, async (req, res) => {
     }
     if (search) {
       query.$or = [{ name: { $regex: search, $options: "i" } }, { brand: { $regex: search, $options: "i" } }]
+    }
+    
+    // Фільтрація за типами товарів
+    if (req.query.types) {
+      const types = req.query.types.split(',')
+      query.type = { $in: types }
+    } else if (req.query.type) {
+      query.type = req.query.type
+    }
+    
+    // Виключення певного типу товарів
+    if (req.query.excludeType) {
+      if (query.type) {
+        // Якщо вже є фільтр по типах, додаємо виключення
+        if (Array.isArray(query.type.$in)) {
+          query.type.$in = query.type.$in.filter(t => t !== req.query.excludeType)
+        } else if (query.type === req.query.excludeType) {
+          // Якщо тип співпадає з виключаємим, видаляємо фільтр
+          delete query.type
+        }
+      } else {
+        // Якщо немає фільтра по типах, додаємо виключення
+        query.type = { $ne: req.query.excludeType }
+      }
     }
 
     const sortOptions = {}

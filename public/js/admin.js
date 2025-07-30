@@ -5250,9 +5250,12 @@ async function searchGroupProducts(query = '') {
         // Формуємо параметри запиту
         const params = new URLSearchParams({
             page: groupProductPage.toString(),
-            limit: groupProductLimit.toString(),
-            type: 'simple' // Шукаємо тільки прості товари
+            limit: groupProductLimit.toString()
         });
+
+        // Додаємо фільтр для включення простих товарів та матраців, але виключаємо групові товари
+        params.append('types', 'simple,mattresses');
+        params.append('excludeType', 'group');
 
         if (actualQuery) {
             params.append('search', actualQuery);
@@ -5272,13 +5275,19 @@ async function searchGroupProducts(query = '') {
         const groupProducts = data.products;
         const groupProductTotal = data.total || 0;
 
-        results.innerHTML = groupProducts.map(p => `
-            <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
-                <strong>${p.name}</strong>
-                ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
-                <br><small>Ціна: ${p.price || 0} грн</small>
-            </div>
-        `).join('');
+        results.innerHTML = groupProducts.map(p => {
+            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
+                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                : p.price ? `${p.price} грн` : '0 грн';
+                
+            return `
+                <div class="group-product-result-item" style="padding: 8px; border: 1px solid #ddd; margin: 2px 0; cursor: pointer;" onclick="addGroupProduct('${p._id}')">
+                    <strong>${p.name}</strong>
+                    ${p.brand ? `<br><small>Бренд: ${p.brand}</small>` : ''}
+                    <br><small>Ціна: ${priceDisplay}</small>
+                </div>
+            `;
+        }).join('');
 
         // Рендеринг пагінації
         if (pagination) {
@@ -5340,12 +5349,18 @@ function renderGroupProducts() {
             <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
             ${newProduct.groupProducts.map((pid, index) => {
                 const p = products.find(pr => pr._id === pid);
-                return p ? `
+                if (!p) return '';
+                
+                const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
+                    ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                    : p.price ? `${p.price} грн` : '';
+                    
+                return `
                     <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                        <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${p.price ? p.price + ' грн' : ''}</span>
+                        <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
                         <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
                     </div>
-                ` : '';
+                `;
             }).join('')}
         `;
     }
@@ -5384,7 +5399,8 @@ function renderGroupProductsListModal() {
     const list = document.getElementById('group-products-list-modal');
     if (!list) return;
     const search = document.getElementById('group-products-search').value.trim().toLowerCase();
-    let filtered = products.filter(p => p.type === 'simple');
+    // Фільтруємо прості товари та матраци, але виключаємо групові товари
+    let filtered = products.filter(p => (p.type === 'simple' || p.type === 'mattresses') && p.type !== 'group');
     if (search) {
         filtered = filtered.filter(p =>
             (p.name && p.name.toLowerCase().includes(search)) ||
@@ -5393,10 +5409,14 @@ function renderGroupProductsListModal() {
     }
     list.innerHTML = filtered.length ? filtered.map(p => {
         const isAdded = newProduct.groupProducts.includes(p._id);
+        const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
+            ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+            : p.price ? `${p.price} грн` : '';
+            
         return `
             <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0;">
                 <div>
-                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${p.price ? p.price + ' грн' : ''}</span>
+                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
                 </div>
                 <button type="button" class="${isAdded ? 'added-btn' : 'add-btn'}" style="min-width:90px;${isAdded ? 'background:#4caf50;color:#fff;' : ''}" onclick="${isAdded ? `removeGroupProductModal('${p._id}')` : `addGroupProductModal('${p._id}')`}">${isAdded ? 'Додано' : 'Додати'}</button>
             </div>
