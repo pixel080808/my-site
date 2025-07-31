@@ -4363,7 +4363,25 @@ async function importProductsBackup() {
                         });
                     }
 
-                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                    // Обробляємо нову структуру colorBlocks
+                    if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
+                        cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
+                            const { _id, ...cleanedBlock } = block;
+                            
+                            if (cleanedBlock.colors && Array.isArray(cleanedBlock.colors)) {
+                                cleanedBlock.colors = cleanedBlock.colors.map(color => {
+                                    const { _id, ...cleanedColor } = color;
+                                    return cleanedColor;
+                                });
+                            }
+                            
+                            return cleanedBlock;
+                        });
+                        
+                        // Видаляємо стару структуру colors, якщо є colorBlocks
+                        delete cleanedProduct.colors;
+                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        // Обробляємо стару структуру colors для зворотної сумісності
                         cleanedProduct.colors = cleanedProduct.colors.map(color => {
                             const { _id, ...cleanedColor } = color;
                             return cleanedColor;
@@ -4451,7 +4469,25 @@ async function importProductsAdd() {
                         });
                     }
 
-                    if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                    // Обробляємо нову структуру colorBlocks
+                    if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
+                        cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
+                            const { _id, ...cleanedBlock } = block;
+                            
+                            if (cleanedBlock.colors && Array.isArray(cleanedBlock.colors)) {
+                                cleanedBlock.colors = cleanedBlock.colors.map(color => {
+                                    const { _id, ...cleanedColor } = color;
+                                    return cleanedColor;
+                                });
+                            }
+                            
+                            return cleanedBlock;
+                        });
+                        
+                        // Видаляємо стару структуру colors, якщо є colorBlocks
+                        delete cleanedProduct.colors;
+                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        // Обробляємо стару структуру colors для зворотної сумісності
                         cleanedProduct.colors = cleanedProduct.colors.map(color => {
                             const { _id, ...cleanedColor } = color;
                             return cleanedColor;
@@ -7131,12 +7167,30 @@ async function uploadBulkPrices() {
                     });
                 }
 
-                if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                    cleanedProduct.colors = cleanedProduct.colors.map(color => {
-                        const { _id, ...cleanedColor } = color;
-                        return cleanedColor;
-                    });
-                }
+                    // Обробляємо нову структуру colorBlocks
+                    if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
+                        cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
+                            const { _id, ...cleanedBlock } = block;
+                            
+                            if (cleanedBlock.colors && Array.isArray(cleanedBlock.colors)) {
+                                cleanedBlock.colors = cleanedBlock.colors.map(color => {
+                                    const { _id, ...cleanedColor } = color;
+                                    return cleanedColor;
+                                });
+                            }
+                            
+                            return cleanedBlock;
+                        });
+                        
+                        // Видаляємо стару структуру colors, якщо є colorBlocks
+                        delete cleanedProduct.colors;
+                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
+                        // Обробляємо стару структуру colors для зворотної сумісності
+                        cleanedProduct.colors = cleanedProduct.colors.map(color => {
+                            const { _id, ...cleanedColor } = color;
+                            return cleanedColor;
+                        });
+                    }
                     
                     productUpdates.set(product._id, {
                         product: product,
