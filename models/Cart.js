@@ -102,23 +102,12 @@ const cartSchemaValidation = Joi.array().items(
             })
         ).allow(null).optional(),
         // Валідація для одного кольору (зворотна сумісність)
-        color: Joi.alternatives().try(
-            Joi.object({
-                name: Joi.string().allow('').optional(),
-                value: Joi.string().allow('').optional(),
-                priceChange: Joi.number().default(0),
-                photo: Joi.string().uri().allow('', null).optional()
-            }),
-            Joi.array().items(
-                Joi.object({
-                    name: Joi.string().allow('').optional(),
-                    value: Joi.string().allow('').optional(),
-                    priceChange: Joi.number().default(0),
-                    photo: Joi.string().uri().allow('', null).optional(),
-                    blockIndex: Joi.number().default(0)
-                })
-            )
-        ).allow(null).optional(),
+        color: Joi.object({
+            name: Joi.string().allow('').optional(),
+            value: Joi.string().allow('').optional(),
+            priceChange: Joi.number().default(0),
+            photo: Joi.string().uri().allow('', null).optional()
+        }).allow(null).optional(),
         size: Joi.string().allow('', null).optional()
     }).unknown(false)
 );

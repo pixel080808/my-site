@@ -306,7 +306,8 @@ async function saveCartToServer() {
                     quantity: Number(item.quantity) || 1,
                     price: parseFloat(price) || 0,
                     photo: product.photos?.[0] || NO_IMAGE_URL,
-                    color: item.colors && Array.isArray(item.colors) ? item.colors : colorData,
+                    color: colorData,
+                    colors: item.colors && Array.isArray(item.colors) ? item.colors : null,
                     size: sizeData
                 };
                 return cartItem;
@@ -4548,14 +4549,6 @@ async function updateCartPrices() {
                     }
                 });
             } 
-            // Масив кольорів в полі color
-            else if (item.color && Array.isArray(item.color) && item.color.length > 0) {
-                item.color.forEach(color => {
-                    if (color && color.priceChange) {
-                        totalColorPriceChange += parseFloat(color.priceChange);
-                    }
-                });
-            }
             // Стара структура (один колір)
             else if (item.color && item.color.priceChange) {
                 totalColorPriceChange += parseFloat(item.color.priceChange);
@@ -4664,7 +4657,7 @@ async function renderCart() {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
             isAvailable = !!sizeInfo;
             console.log(`Перевірка розміру для товару ${item.name}: розмір ${item.size}, доступний: ${isAvailable}, поточні розміри:`, product.sizes?.map(s => s.name) || []);
-        } else if ((item.color && (item.color.name || Array.isArray(item.color))) || (item.colors && Array.isArray(item.colors) && item.colors.length > 0)) {
+        } else if ((item.color && item.color.name) || (item.colors && Array.isArray(item.colors) && item.colors.length > 0)) {
             const allColors = getAllColors(product);
             
             if (item.colors && Array.isArray(item.colors)) {
@@ -4674,13 +4667,6 @@ async function renderCart() {
                     return allColors.some(color => color.name?.toLowerCase().trim() === itemColorName);
                 });
                 console.log(`Перевірка кольорів для товару ${item.name}: кольори ${item.colors.map(c => c.name)}, доступні: ${isAvailable}, поточні кольори:`, allColors.map(c => c.name));
-            } else if (item.color && Array.isArray(item.color)) {
-                // Перевіряємо всі кольори з поля color (масив)
-                isAvailable = item.color.every(itemColor => {
-                    const itemColorName = itemColor.name.toLowerCase().trim();
-                    return allColors.some(color => color.name?.toLowerCase().trim() === itemColorName);
-                });
-                console.log(`Перевірка кольорів для товару ${item.name}: кольори ${item.color.map(c => c.name)}, доступні: ${isAvailable}, поточні кольори:`, allColors.map(c => c.name));
             } else if (item.color && item.color.name) {
                 // Для старої структури (один колір)
                 const itemColorName = item.color.name.toLowerCase().trim();
@@ -4716,11 +4702,6 @@ async function renderCart() {
             if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
                 // Сортуємо кольори за blockIndex для правильного порядку відображення
                 const sortedColors = item.colors.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
-                const colorNames = sortedColors.map(color => color.name).join(', ');
-                displayName += ` (${colorNames})`;
-            } else if (item.color && Array.isArray(item.color) && item.color.length > 0) {
-                // Сортуємо кольори за blockIndex для правильного порядку відображення
-                const sortedColors = item.color.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
                 const colorNames = sortedColors.map(color => color.name).join(', ');
                 displayName += ` (${colorNames})`;
             } else if (item.color && item.color.name) {
@@ -5089,16 +5070,6 @@ async function submitOrder() {
             if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
                 // Сортуємо кольори за blockIndex для правильного порядку
                 const sortedColors = item.colors.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
-                const colorNames = sortedColors.map(color => color.name).join(', ');
-                colorData = {
-                    name: colorNames,
-                    value: colorNames,
-                    priceChange: sortedColors.reduce((sum, color) => sum + (color.priceChange || 0), 0),
-                    photo: sortedColors.find(color => color.photo)?.photo || ''
-                };
-            } else if (item.color && Array.isArray(item.color) && item.color.length > 0) {
-                // Масив кольорів в полі color
-                const sortedColors = item.color.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
                 const colorNames = sortedColors.map(color => color.name).join(', ');
                 colorData = {
                     name: colorNames,
