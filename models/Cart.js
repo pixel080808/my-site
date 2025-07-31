@@ -98,8 +98,12 @@ const cartSchemaValidation = Joi.array().items(
                 value: Joi.string().allow('').optional(),
                 priceChange: Joi.number().default(0),
                 photo: Joi.string().uri().allow('', null).optional(),
-                blockIndex: Joi.number().default(0)
-            })
+                blockIndex: Joi.number().default(0),
+                _id: Joi.string().optional(),
+                colorIndex: Joi.number().optional(),
+                blockName: Joi.string().optional(),
+                globalIndex: Joi.number().optional()
+            }).unknown(true)
         ).allow(null).optional(),
         // Валідація для одного кольору (зворотна сумісність)
         color: Joi.object({
@@ -107,9 +111,9 @@ const cartSchemaValidation = Joi.array().items(
             value: Joi.string().allow('').optional(),
             priceChange: Joi.number().default(0),
             photo: Joi.string().uri().allow('', null).optional()
-        }).allow(null).optional(),
+        }).unknown(true).allow(null).optional(),
         size: Joi.string().allow('', null).optional()
-    }).unknown(false)
+    }).unknown(true)
 );
 
 module.exports = { Cart, cartSchemaValidation };
