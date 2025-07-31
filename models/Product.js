@@ -129,28 +129,28 @@ const Product = mongoose.model('Product', productSchema);
 const productSchemaValidation = Joi.object({
     name: Joi.string().required().trim(),
     category: Joi.string().required().trim(),
-    subcategory: Joi.string().trim().optional(),
+    subcategory: Joi.string().trim().allow('').optional(),
     price: Joi.number().min(0).allow(null).optional(),
     salePrice: Joi.number().min(0).allow(null).optional(),
     saleEnd: Joi.date().allow(null).optional(),
-    brand: Joi.string().trim().optional(),
-    material: Joi.string().trim().optional(),
+    brand: Joi.string().trim().allow('').optional(),
+    material: Joi.string().trim().allow('').optional(),
     filters: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
-            value: Joi.string().required()
+            name: Joi.string().required().allow(''),
+            value: Joi.string().required().allow('')
         })
     ).optional(),
     photos: Joi.array().items(
-        Joi.string().uri().allow('').optional()
+        Joi.string().uri().allow('', null).optional()
     ).optional(),
     visible: Joi.boolean().default(true),
     active: Joi.boolean().default(true),
-    slug: Joi.string().required().trim(),
+    slug: Joi.string().required().trim().allow(''),
     type: Joi.string().valid('simple', 'mattresses', 'group').required(),
     sizes: Joi.array().items(
         Joi.object({
-            name: Joi.string().required(),
+            name: Joi.string().required().allow(''),
             price: Joi.number().min(0).required(),
             salePrice: Joi.number().min(0).allow(null).optional(),
             saleEnd: Joi.date().allow(null).optional()
@@ -158,11 +158,11 @@ const productSchemaValidation = Joi.object({
     ).optional(),
     colorBlocks: Joi.array().items(
         Joi.object({
-            blockName: Joi.string().required().default('Колір'),
+            blockName: Joi.string().required().default('Колір').allow(''),
             colors: Joi.array().items(
                 Joi.object({
-                    name: Joi.string().required(),
-                    value: Joi.string().required(),
+                    name: Joi.string().required().allow(''),
+                    value: Joi.string().required().allow(''),
                     photo: Joi.string().uri().allow('').optional(),
                     priceChange: Joi.number().default(0)
                 })
@@ -172,15 +172,15 @@ const productSchemaValidation = Joi.object({
     groupProducts: Joi.array().items(
         Joi.string().regex(/^[0-9a-fA-F]{24}$/)
     ).optional(),
-    description: Joi.string().trim().optional(),
+    description: Joi.string().trim().allow('').optional(),
     widthCm: Joi.number().min(0).allow(null).optional(),
     depthCm: Joi.number().min(0).allow(null).optional(),
     heightCm: Joi.number().min(0).allow(null).optional(),
     lengthCm: Joi.number().min(0).allow(null).optional(),
     popularity: Joi.number().min(0).default(0),
-    metaTitle: Joi.string().trim().optional(),
-    metaDescription: Joi.string().trim().optional(),
-    metaKeywords: Joi.string().trim().optional(),
+    metaTitle: Joi.string().trim().allow('').optional(),
+    metaDescription: Joi.string().trim().allow('').optional(),
+    metaKeywords: Joi.string().trim().allow('').optional(),
 });
 
 module.exports = { Product, productSchemaValidation };

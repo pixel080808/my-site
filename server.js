@@ -3370,6 +3370,29 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
         cleanedProduct.groupProducts = []
       }
       
+      // Обробляємо порожні значення для обов'язкових полів
+      if (!cleanedProduct.material || cleanedProduct.material === '') {
+        cleanedProduct.material = ''
+      }
+      if (!cleanedProduct.metaTitle || cleanedProduct.metaTitle === '') {
+        cleanedProduct.metaTitle = ''
+      }
+      if (!cleanedProduct.metaDescription || cleanedProduct.metaDescription === '') {
+        cleanedProduct.metaDescription = ''
+      }
+      if (!cleanedProduct.metaKeywords || cleanedProduct.metaKeywords === '') {
+        cleanedProduct.metaKeywords = ''
+      }
+      if (!cleanedProduct.brand || cleanedProduct.brand === '') {
+        cleanedProduct.brand = ''
+      }
+      if (!cleanedProduct.subcategory || cleanedProduct.subcategory === '') {
+        cleanedProduct.subcategory = ''
+      }
+      if (!cleanedProduct.description || cleanedProduct.description === '') {
+        cleanedProduct.description = ''
+      }
+      
       return cleanedProduct
     })
 
