@@ -2892,7 +2892,6 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         if (color.photo) {
           logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`)
         }
-      }
       } else {
         if (item.price !== product.price) {
           logger.debug(
