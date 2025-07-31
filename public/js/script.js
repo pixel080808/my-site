@@ -7263,13 +7263,6 @@ function updateColorPrice(productId) {
         console.log('updateColorPrice: Вибраний колір не знайдено або індекс не валідний');
     }
 }
-        } else {
-            console.log('updateColorPrice: Елемент ціни не знайдено на сторінці');
-        }
-    } else {
-        console.log('updateColorPrice: Вибраний колір не знайдено або індекс не валідний');
-    }
-}
 
 // ... existing code ...
         // Додаю закриття меню фільтрів при кліку поза ним
