@@ -974,10 +974,11 @@ async function updateFloatingGroupCart() {
                 const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
                 let price = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
 
-                if (product.colors?.length > 0 && selectedColors[id] !== undefined) {
+                if (selectedColors[id] !== undefined) {
+                    const allColors = getAllColors(product);
                     const colorIndex = parseInt(selectedColors[id]);
-                    if (product.colors[colorIndex]) {
-                        price += parseFloat(product.colors[colorIndex].priceChange || 0);
+                    if (allColors[colorIndex]) {
+                        price += parseFloat(allColors[colorIndex].priceChange || 0);
                     }
                 }
 
@@ -3648,9 +3649,11 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                 await updateMattressPrice(product._id);
             }
         }
-        if (product.colors?.length >= 1 && selectedColors[product._id] !== undefined) {
-            if (product.colors.some(c => c.photo)) {
-                document.querySelector(`#color-options-${product._id} .color-circle[data-index="${selectedColors[product._id]}"]`)?.classList.add('selected');
+        const allColors = getAllColors(product);
+        if (allColors.length >= 1 && selectedColors[product._id] !== undefined) {
+            const selectedColor = allColors[selectedColors[product._id]];
+            if (selectedColor && selectedColor.photo) {
+                document.querySelector(`#color-options-${product._id}-${selectedColor.blockIndex} .color-circle[data-index="${selectedColor.colorIndex}"]`)?.classList.add('selected');
             } else {
                 document.getElementById(`color-select-${product._id}`).value = selectedColors[product._id];
                 if (typeof updateColorPrice === 'function') {
@@ -3716,7 +3719,8 @@ async function addGroupToCart(productId) {
         if (!p) continue;
 
         // Якщо у товару є кольори і їх більше одного
-        if (p.colors?.length > 1) {
+        const allColors = getAllColors(p);
+        if (allColors.length > 1) {
             const selectedColorIndex = selectedColors[p._id];
             if (selectedColorIndex === undefined || selectedColorIndex === null) {
                 productsNeedingColors.push(p.name);
@@ -3750,11 +3754,12 @@ async function addGroupToCart(productId) {
         let selectedColor = null;
         let selectedSize = null;
 
-        if (p.colors?.length > 0) {
+        const allColors = getAllColors(p);
+        if (allColors.length > 0) {
             let colorIndex;
             
             // Якщо у товару тільки один колір - вибираємо його автоматично
-            if (p.colors.length === 1) {
+            if (allColors.length === 1) {
                 colorIndex = 0;
                 selectedColors[p._id] = 0;
                 saveToStorage('selectedColors', selectedColors);
@@ -3768,12 +3773,12 @@ async function addGroupToCart(productId) {
                 }
             }
             
-            if (p.colors[colorIndex]) {
+            if (allColors[colorIndex]) {
                 selectedColor = {
-                    name: p.colors[colorIndex].name || 'Не вказано',
-                    value: p.colors[colorIndex].value || p.colors[colorIndex].name || '',
-                    priceChange: parseFloat(p.colors[colorIndex].priceChange || 0),
-                    photo: p.colors[colorIndex].photo || null
+                    name: allColors[colorIndex].name || 'Не вказано',
+                    value: allColors[colorIndex].value || allColors[colorIndex].name || '',
+                    priceChange: parseFloat(allColors[colorIndex].priceChange || 0),
+                    photo: allColors[colorIndex].photo || null
                 };
                 price += selectedColor.priceChange;
             } else {
@@ -4430,10 +4435,11 @@ async function renderCart() {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
             isAvailable = !!sizeInfo;
             console.log(`Перевірка розміру для товару ${item.name}: розмір ${item.size}, доступний: ${isAvailable}, поточні розміри:`, product.sizes?.map(s => s.name) || []);
-        } else if (item.color && item.color.name && product && product.colors) {
+        } else if (item.color && item.color.name && product) {
+            const allColors = getAllColors(product);
             const itemColorName = item.color.name.toLowerCase().trim();
-            isAvailable = product.colors.some(color => color.name?.toLowerCase().trim() === itemColorName);
-            console.log(`Перевірка кольору для товару ${item.name}: колір ${itemColorName}, доступний: ${isAvailable}, поточні кольори:`, product.colors.map(c => c.name));
+            isAvailable = allColors.some(color => color.name?.toLowerCase().trim() === itemColorName);
+            console.log(`Перевірка кольору для товару ${item.name}: колір ${itemColorName}, доступний: ${isAvailable}, поточні кольори:`, allColors.map(c => c.name));
         } else if (!product) {
             console.warn(`Товар з id ${item.id} не знайдено в products під час рендерингу:`, item);
             isAvailable = false;
@@ -6906,7 +6912,8 @@ function createProductElement(product) {
         cartIcon.className = 'cart-icon';
         cartIcon.onclick = async (e) => {
             e.preventDefault();
-            if (product.colors?.length > 1) {
+            const allColors = getAllColors(product);
+            if (allColors.length > 1) {
                 openProduct(product.slug);
                 showNotification('Виберіть потрібний колір', 'error');
                 return;

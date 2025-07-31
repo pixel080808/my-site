@@ -2756,12 +2756,29 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
         item.photo = item.photo || product.photos[0] || ""
       } else if (item.color && item.color.name) {
-        const color = product.colors.find((c) => c.name === item.color.name && c.value === item.color.value)
+        let color = null;
+        
+        // Спочатку шукаємо в новій структурі colorBlocks
+        if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+          for (const block of product.colorBlocks) {
+            if (block.colors && Array.isArray(block.colors)) {
+              color = block.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
+              if (color) break;
+            }
+          }
+        }
+        
+        // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
+        if (!color && product.colors && Array.isArray(product.colors)) {
+          color = product.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
+        }
+        
         if (!color) {
           await session.abortTransaction()
           session.endSession()
           return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` })
         }
+        
         const expectedPrice = product.price + (color.priceChange || 0)
         if (item.price !== expectedPrice) {
           logger.debug(

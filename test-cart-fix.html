@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлення кошика</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .cart-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест виправлення кошика</h1>
+    
+    <div class="test-section">
+        <h2>Тест 1: Додавання товару з кольором (стара структура)</h2>
+        <p>Тестуємо додавання товару з кольором використовуючи стару структуру colors:</p>
+        <button onclick="testOldColorStructure()">Тестувати стару структуру</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 2: Додавання товару з кольором (нова структура)</h2>
+        <p>Тестуємо додавання товару з кольором використовуючи нову структуру colorBlocks:</p>
+        <button onclick="testNewColorStructure()">Тестувати нову структуру</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 3: Додавання товару без кольору</h2>
+        <p>Тестуємо додавання товару без кольору:</p>
+        <button onclick="testNoColor()">Тестувати товар без кольору</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Тест 4: Перевірка кошика</h2>
+        <p>Перевіряємо вміст кошика:</p>
+        <button onclick="checkCart()">Перевірити кошик</button>
+        <div id="test4-result"></div>
+    </div>
+
+    <script>
+        const cartId = 'test-cart-' + Date.now();
+
+        async function testOldColorStructure() {
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            const cartItem = {
+                id: "test-product-old",
+                name: "Тестовий товар зі старою структурою",
+                quantity: 1,
+                price: 1000,
+                photo: "https://example.com/photo.jpg",
+                color: {
+                    name: "Червоний",
+                    value: "#FF0000",
+                    priceChange: 50
+                },
+                size: null
+            };
+
+            try {
+                const response = await fetch(`/api/cart?cartId=${cartId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([cartItem])
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Успішно!</h3>
+                            <p>Товар зі старою структурою кольорів додано в кошик.</p>
+                            <p><strong>Товар:</strong> ${cartItem.name}</p>
+                            <p><strong>Колір:</strong> ${cartItem.color.name}</p>
+                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка!</h3>
+                            <p>${result.error || 'Невідома помилка'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка мережі!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testNewColorStructure() {
+            const resultDiv = document.getElementById('test2-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            const cartItem = {
+                id: "test-product-new",
+                name: "Тестовий товар з новою структурою",
+                quantity: 1,
+                price: 1500,
+                photo: "https://example.com/photo.jpg",
+                color: {
+                    name: "Дуб артізан",
+                    value: "#000000",
+                    priceChange: 100
+                },
+                size: null
+            };
+
+            try {
+                const response = await fetch(`/api/cart?cartId=${cartId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([cartItem])
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Успішно!</h3>
+                            <p>Товар з новою структурою кольорів додано в кошик.</p>
+                            <p><strong>Товар:</strong> ${cartItem.name}</p>
+                            <p><strong>Колір:</strong> ${cartItem.color.name}</p>
+                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка!</h3>
+                            <p>${result.error || 'Невідома помилка'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка мережі!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testNoColor() {
+            const resultDiv = document.getElementById('test3-result');
+            resultDiv.innerHTML = '<p>Тестування...</p>';
+            
+            const cartItem = {
+                id: "test-product-no-color",
+                name: "Тестовий товар без кольору",
+                quantity: 1,
+                price: 800,
+                photo: "https://example.com/photo.jpg",
+                color: null,
+                size: null
+            };
+
+            try {
+                const response = await fetch(`/api/cart?cartId=${cartId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([cartItem])
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Успішно!</h3>
+                            <p>Товар без кольору додано в кошик.</p>
+                            <p><strong>Товар:</strong> ${cartItem.name}</p>
+                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка!</h3>
+                            <p>${result.error || 'Невідома помилка'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка мережі!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkCart() {
+            const resultDiv = document.getElementById('test4-result');
+            resultDiv.innerHTML = '<p>Перевіряємо кошик...</p>';
+            
+            try {
+                const response = await fetch(`/api/cart?cartId=${cartId}`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const items = result.items || [];
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Кошик завантажено!</h3>
+                            <p><strong>ID кошика:</strong> ${cartId}</p>
+                            <p><strong>Кількість товарів:</strong> ${items.length}</p>
+                            <h4>Товари в кошику:</h4>
+                            ${items.map(item => `
+                                <div class="cart-item">
+                                    <strong>${item.name}</strong><br>
+                                    Ціна: ${item.price} грн<br>
+                                    Кількість: ${item.quantity}<br>
+                                    ${item.color ? `Колір: ${item.color.name} (${item.color.value})` : 'Без кольору'}<br>
+                                    ${item.size ? `Розмір: ${item.size}` : ''}
+                                </div>
+                            `).join('')}
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Помилка завантаження кошика!</h3>
+                            <p>${result.error || 'Невідома помилка'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Помилка мережі!</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 
