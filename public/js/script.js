@@ -307,7 +307,7 @@ async function saveCartToServer() {
                     price: parseFloat(price) || 0,
                     photo: product.photos?.[0] || NO_IMAGE_URL,
                     color: colorData,
-                    colors: item.colors && Array.isArray(item.colors) ? item.colors : null,
+                    colors: item.colors && Array.isArray(item.colors) && item.colors.length > 0 ? item.colors : undefined,
                     size: sizeData
                 };
                 return cartItem;

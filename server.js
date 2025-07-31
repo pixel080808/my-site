@@ -2643,24 +2643,7 @@ app.get("/api/cart", async (req, res) => {
   }
 })
 
-const cartSchemaValidation = Joi.array().items(
-  Joi.object({
-    id: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
-    name: Joi.string().required(),
-    quantity: Joi.number().min(1).required(),
-    price: Joi.number().min(0).required(),
-    photo: Joi.string().uri().allow("").optional(),
-    color: Joi.object({
-      name: Joi.string().allow("").optional(),
-      value: Joi.string().allow("").optional(),
-      priceChange: Joi.number().default(0),
-      photo: Joi.string().uri().allow("", null).optional(),
-    })
-      .allow(null)
-      .optional(),
-    size: Joi.string().allow("", null).optional(),
-  }).unknown(false),
-)
+const { cartSchemaValidation } = require('./models/Cart');
 
 app.post("/api/cart", csrfProtection, async (req, res) => {
   const session = await mongoose.startSession()
@@ -2755,56 +2738,6 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
           item.price = expectedPrice
         }
         item.photo = item.photo || product.photos[0] || ""
-      } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-        // Обробка масиву кольорів (нова структура)
-        let totalPriceChange = 0;
-        let colorPhoto = null;
-        
-        for (const itemColor of item.colors) {
-          let color = null;
-          
-          // Шукаємо в новій структурі colorBlocks
-          if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
-            for (const block of product.colorBlocks) {
-              if (block.colors && Array.isArray(block.colors)) {
-                color = block.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
-                if (color) break;
-              }
-            }
-          }
-          
-          // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
-          if (!color && product.colors && Array.isArray(product.colors)) {
-            color = product.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
-          }
-          
-          if (!color) {
-            await session.abortTransaction()
-            session.endSession()
-            return res.status(400).json({ error: `Колір ${itemColor.name} не доступний для продукту ${item.name}` })
-          }
-          
-          totalPriceChange += (color.priceChange || 0);
-          if (color.photo && !colorPhoto) {
-            colorPhoto = color.photo;
-          }
-          
-          // Оновлюємо інформацію про колір в кошику
-          itemColor.priceChange = color.priceChange || 0;
-        }
-        
-        const expectedPrice = product.price + totalPriceChange;
-        if (item.price !== expectedPrice) {
-          logger.debug(
-            `Виправлено ціну для продукту ${item.id}, кольори ${item.colors.map(c => c.name).join(', ')}: з ${item.price} на ${expectedPrice}`,
-          )
-          item.price = expectedPrice;
-        }
-        
-        item.photo = colorPhoto || item.photo || product.photos[0] || "";
-        if (colorPhoto) {
-          logger.info(`Використано фото кольору для продукту ${item.id}: ${colorPhoto}`)
-        }
       } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
         // Обробка масиву кольорів (нова структура)
         let totalPriceChange = 0;
