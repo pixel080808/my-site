@@ -1006,6 +1006,26 @@ async function updateFloatingGroupCart() {
         }
 
         floatingGroupCart.classList.toggle('visible', hasSelection && currentProduct.type === 'group');
+        
+        // Показуємо повідомлення про зміну ціни, якщо вона є
+        if (hasSelection && currentProduct.type === 'group') {
+            let totalPriceChange = 0;
+            currentProduct.groupProducts.forEach(id => {
+                const product = products.find(p => p._id === id);
+                if (product && savedSelection[id] && savedSelection[id] > 0 && selectedColors[id] !== undefined) {
+                    const allColors = getAllColors(product);
+                    const colorIndex = parseInt(selectedColors[id]);
+                    if (allColors[colorIndex]) {
+                        totalPriceChange += parseFloat(allColors[colorIndex].priceChange || 0) * savedSelection[id];
+                    }
+                }
+            });
+            
+            if (totalPriceChange !== 0) {
+                const changeText = totalPriceChange > 0 ? `+${totalPriceChange}` : `${totalPriceChange}`;
+                showNotification(`Загальна зміна ціни: ${changeText} грн`, 'info');
+            }
+        }
     } catch (error) {
         console.error('Помилка в updateFloatingGroupCart:', error);
         showNotification('Помилка оновлення плаваючої кнопки кошика!', 'error');
@@ -2741,6 +2761,8 @@ function createPaginationDiv() {
 
 // Функція для отримання всіх кольорів з блоків
 function getAllColors(product) {
+    console.log('getAllColors: Товар:', product.name, 'colorBlocks:', product.colorBlocks, 'colors:', product.colors);
+    
     if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
         const allColors = [];
         product.colorBlocks.forEach((block, blockIndex) => {
@@ -2756,16 +2778,20 @@ function getAllColors(product) {
                 });
             }
         });
+        console.log('getAllColors: Результат для colorBlocks:', allColors);
         return allColors;
     } else if (product.colors && Array.isArray(product.colors)) {
         // Для старої структури
-        return product.colors.map((color, index) => ({
+        const result = product.colors.map((color, index) => ({
             ...color,
             blockIndex: 0,
             colorIndex: index,
             globalIndex: index
         }));
+        console.log('getAllColors: Результат для colors:', result);
+        return result;
     }
+    console.log('getAllColors: Немає кольорів');
     return [];
 }
 
@@ -3663,6 +3689,15 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
         }
         if (typeof renderBreadcrumbs === 'function') {
             await renderBreadcrumbs();
+        }
+
+        // Оновлюємо ціну при завантаженні сторінки, якщо вибраний колір
+        if (selectedColors[product._id] !== undefined) {
+            if (product.type === 'group') {
+                updateFloatingGroupCart();
+            } else {
+                updateColorPrice(product._id);
+            }
         }
 
         // ОНОВЛЮЄМО СТАН ІКОНКИ ПІСЛЯ РЕНДЕРУ
@@ -7098,16 +7133,23 @@ if (allColors.length > 0) {
 }
 
 function selectColor(productId, colorIndex) {
+    console.log('selectColor: Вибрано колір для товару', productId, 'індекс:', colorIndex);
+    
     selectedColors[productId] = colorIndex;
     saveToStorage('selectedColors', selectedColors);
     
     // Знаходимо товар для отримання інформації про блоки
     const product = products.find(p => p._id === productId || p.id === productId);
-    if (!product) return;
+    if (!product) {
+        console.log('selectColor: Товар не знайдено для ID:', productId);
+        return;
+    }
     
     // Отримуємо всі кольори з блоками
     const allColors = getAllColors(product);
     const selectedColor = allColors[colorIndex];
+    
+    console.log('selectColor: Всі кольори:', allColors, 'Вибраний колір:', selectedColor);
     
     if (selectedColor) {
         // Підсвічування вибраного кольору в правильному блоці
@@ -7119,6 +7161,18 @@ function selectColor(productId, colorIndex) {
                 circle.classList.remove('selected');
             }
         });
+        
+        // Оновлюємо ціну після вибору кольору
+        console.log('selectColor: Викликаємо updateColorPrice для товару:', productId);
+        updateColorPrice(productId);
+        
+        // Показуємо повідомлення про зміну ціни
+        if (selectedColor.priceChange !== 0) {
+            const changeText = selectedColor.priceChange > 0 ? `+${selectedColor.priceChange}` : `${selectedColor.priceChange}`;
+            showNotification(`Ціна змінена на ${changeText} грн`, 'info');
+        }
+    } else {
+        console.log('selectColor: Вибраний колір не знайдено');
     }
 }
 
@@ -7141,6 +7195,79 @@ function selectGroupProductColor(productId, colorIndex) {
     // Оновлюємо ціну в плаваючому кошику
     if (currentProduct && currentProduct.type === 'group') {
         updateFloatingGroupCart();
+    } else {
+        // Оновлюємо ціну для звичайного товару
+        updateColorPrice(productId);
+    }
+    
+    // Показуємо повідомлення про зміну ціни
+    const product = products.find(p => p._id === productId || p.id === productId);
+    if (product) {
+        const allColors = getAllColors(product);
+        const selectedColor = allColors[colorIndex];
+        if (selectedColor && selectedColor.priceChange !== 0) {
+            const changeText = selectedColor.priceChange > 0 ? `+${selectedColor.priceChange}` : `${selectedColor.priceChange}`;
+            showNotification(`Ціна змінена на ${changeText} грн`, 'info');
+        }
+    }
+}
+
+function updateColorPrice(productId) {
+    const product = products.find(p => p._id === productId || p.id === productId);
+    if (!product) {
+        console.log('updateColorPrice: Товар не знайдено для ID:', productId);
+        return;
+    }
+    
+    const allColors = getAllColors(product);
+    const selectedColorIndex = selectedColors[productId];
+    
+    console.log('updateColorPrice: Товар:', product.name, 'Всі кольори:', allColors, 'Вибраний індекс:', selectedColorIndex);
+    
+    if (selectedColorIndex !== undefined && allColors[selectedColorIndex]) {
+        const selectedColor = allColors[selectedColorIndex];
+        const priceChange = parseFloat(selectedColor.priceChange || 0);
+        
+        console.log('updateColorPrice: Вибраний колір:', selectedColor, 'Зміна ціни:', priceChange);
+        
+        // Знаходимо елемент ціни на сторінці товару
+        const priceElement = document.querySelector('#product-details .price');
+        if (priceElement) {
+            const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
+            let basePrice = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
+            let finalPrice = basePrice + priceChange;
+            
+            console.log('updateColorPrice: Базова ціна:', basePrice, 'Фінальна ціна:', finalPrice);
+            
+            // Оновлюємо відображення ціни
+            const priceValueElements = priceElement.querySelectorAll('.price-value');
+            priceValueElements.forEach(element => {
+                if (element.parentElement.classList.contains('sale-price')) {
+                    // Для акційної ціни
+                    element.textContent = finalPrice.toFixed(0);
+                } else if (!element.parentElement.classList.contains('original-price')) {
+                    // Для звичайної ціни
+                    element.textContent = finalPrice.toFixed(0);
+                }
+            });
+            
+            // Показуємо повідомлення про зміну ціни, якщо вона є
+            if (priceChange !== 0) {
+                const changeText = priceChange > 0 ? `+${priceChange}` : `${priceChange}`;
+                showNotification(`Ціна змінена на ${changeText} грн`, 'info');
+            }
+        } else {
+            console.log('updateColorPrice: Елемент ціни не знайдено на сторінці');
+        }
+    } else {
+        console.log('updateColorPrice: Вибраний колір не знайдено або індекс не валідний');
+    }
+}
+        } else {
+            console.log('updateColorPrice: Елемент ціни не знайдено на сторінці');
+        }
+    } else {
+        console.log('updateColorPrice: Вибраний колір не знайдено або індекс не валідний');
     }
 }
 
