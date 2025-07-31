@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест кошика</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест функціональності кошика</h1>
+    
+    <div class="test-section">
+        <h2>Тест 1: Додавання простого товару з кольором</h2>
+        <button class="test-button" onclick="testSimpleProductWithColor()">Тестувати</button>
+        <div id="test1-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Тест 2: Додавання групового товару з кольором</h2>
+        <button class="test-button" onclick="testGroupProductWithColor()">Тестувати</button>
+        <div id="test2-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Тест 3: Перевірка цін в кошику</h2>
+        <button class="test-button" onclick="testCartPrices()">Тестувати</button>
+        <div id="test3-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Тест 4: Очищення кошика</h2>
+        <button class="test-button" onclick="clearCart()">Очистити кошик</button>
+        <div id="test4-result" class="result"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        // Тестовий товар з кольорами
+        const testProduct = {
+            _id: 'test-product-1',
+            name: 'Тестовий товар з кольорами',
+            price: 1000,
+            photos: ['https://placehold.co/300x200?text=Тестовий+товар'],
+            colorBlocks: [
+                {
+                    blockName: 'Колір корпусу',
+                    colors: [
+                        { name: 'Білий', value: '#FFFFFF', priceChange: 0, photo: 'https://placehold.co/50x50?text=Білий' },
+                        { name: 'Чорний', value: '#000000', priceChange: 100, photo: 'https://placehold.co/50x50?text=Чорний' }
+                    ]
+                },
+                {
+                    blockName: 'Колір фасаду',
+                    colors: [
+                        { name: 'Дерево', value: '#8B4513', priceChange: 50, photo: 'https://placehold.co/50x50?text=Дерево' },
+                        { name: 'Метал', value: '#C0C0C0', priceChange: 200, photo: 'https://placehold.co/50x50?text=Метал' }
+                    ]
+                }
+            ]
+        };
+
+        const testGroupProduct = {
+            _id: 'test-group-1',
+            name: 'Тестовий груповий товар',
+            type: 'group',
+            groupProducts: ['test-product-1', 'test-product-2'],
+            price: 2000
+        };
+
+        async function testSimpleProductWithColor() {
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = 'Тестування...';
+            
+            try {
+                // Додаємо тестовий товар до списку товарів
+                if (!window.products) window.products = [];
+                window.products.push(testProduct);
+                
+                // Симулюємо вибір кольорів
+                if (!window.selectedColors) window.selectedColors = {};
+                window.selectedColors[testProduct._id] = {
+                    0: 0, // Білий колір з першого блоку
+                    1: 0  // Дерево з другого блоку
+                };
+                
+                // Викликаємо функцію додавання в кошик
+                await addToCartWithColor(testProduct._id);
+                
+                // Перевіряємо результат
+                const cart = loadFromStorage('cart', []);
+                console.log('Cart after adding:', cart);
+                
+                if (cart.length > 0) {
+                    const item = cart[0];
+                    const expectedPrice = 1000 + 0 + 50; // базова ціна + білий (0) + дерево (50)
+                    
+                    if (item.price === expectedPrice && item.colors && item.colors.length === 2) {
+                        resultDiv.innerHTML = `<div class="success">✅ Успішно! Товар додано в кошик з правильною ціною (${item.price} грн) та кольорами (${item.colors.map(c => c.name).join(', ')})</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">❌ Помилка! Очікувана ціна: ${expectedPrice}, отримана: ${item.price}. Кольори: ${item.colors ? item.colors.length : 0}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Помилка! Товар не додано в кошик</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Помилка: ${error.message}</div>`;
+            }
+        }
+
+        async function testGroupProductWithColor() {
+            const resultDiv = document.getElementById('test2-result');
+            resultDiv.innerHTML = 'Тестування...';
+            
+            try {
+                // Додаємо тестові товари
+                if (!window.products) window.products = [];
+                window.products.push(testProduct);
+                window.products.push(testGroupProduct);
+                
+                // Симулюємо вибір товарів у групі
+                saveToStorage(`groupSelection_${testGroupProduct._id}`, {
+                    [testProduct._id]: 2
+                });
+                
+                // Симулюємо вибір кольорів
+                if (!window.selectedColors) window.selectedColors = {};
+                window.selectedColors[testProduct._id] = {
+                    0: 1, // Чорний колір з першого блоку
+                    1: 1  // Метал з другого блоку
+                };
+                
+                // Викликаємо функцію додавання групового товару
+                await addGroupToCart(testGroupProduct._id);
+                
+                // Перевіряємо результат
+                const cart = loadFromStorage('cart', []);
+                console.log('Cart after adding group:', cart);
+                
+                if (cart.length > 0) {
+                    const item = cart[0];
+                    const expectedPrice = 1000 + 100 + 200; // базова ціна + чорний (100) + метал (200)
+                    
+                    if (item.price === expectedPrice && item.colors && item.colors.length === 2) {
+                        resultDiv.innerHTML = `<div class="success">✅ Успішно! Груповий товар додано в кошик з правильною ціною (${item.price} грн) та кольорами (${item.colors.map(c => c.name).join(', ')})</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">❌ Помилка! Очікувана ціна: ${expectedPrice}, отримана: ${item.price}. Кольори: ${item.colors ? item.colors.length : 0}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Помилка! Груповий товар не додано в кошик</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Помилка: ${error.message}</div>`;
+            }
+        }
+
+        async function testCartPrices() {
+            const resultDiv = document.getElementById('test3-result');
+            resultDiv.innerHTML = 'Тестування...';
+            
+            try {
+                const cart = loadFromStorage('cart', []);
+                console.log('Current cart:', cart);
+                
+                if (cart.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">❌ Кошик порожній. Спочатку додайте товари.</div>';
+                    return;
+                }
+                
+                // Викликаємо оновлення цін
+                await updateCartPrices();
+                
+                const updatedCart = loadFromStorage('cart', []);
+                console.log('Updated cart:', updatedCart);
+                
+                let allCorrect = true;
+                let resultText = '';
+                
+                updatedCart.forEach((item, index) => {
+                    const product = window.products.find(p => p._id === item.id);
+                    if (product) {
+                        let expectedPrice = product.price;
+                        
+                        // Додаємо зміну ціни від кольорів
+                        if (item.colors && Array.isArray(item.colors)) {
+                            item.colors.forEach(color => {
+                                if (color.priceChange) {
+                                    expectedPrice += parseFloat(color.priceChange);
+                                }
+                            });
+                        }
+                        
+                        if (item.price === expectedPrice) {
+                            resultText += `<div class="success">✅ Товар ${index + 1}: ціна правильна (${item.price} грн)</div>`;
+                        } else {
+                            resultText += `<div class="error">❌ Товар ${index + 1}: очікувана ціна ${expectedPrice}, отримана ${item.price}</div>`;
+                            allCorrect = false;
+                        }
+                    }
+                });
+                
+                if (allCorrect) {
+                    resultDiv.innerHTML = `<div class="success">✅ Всі ціни в кошику правильні!</div>${resultText}`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Є помилки в цінах!</div>${resultText}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Помилка: ${error.message}</div>`;
+            }
+        }
+
+        function clearCart() {
+            const resultDiv = document.getElementById('test4-result');
+            
+            try {
+                saveToStorage('cart', []);
+                saveToStorage('selectedColors', {});
+                resultDiv.innerHTML = '<div class="success">✅ Кошик очищено</div>';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Помилка: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html> 

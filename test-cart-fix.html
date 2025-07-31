@@ -15,41 +15,69 @@
             margin: 20px 0;
             padding: 15px;
             border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            margin: 10px 0;
             border-radius: 5px;
         }
-        .success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
+        .cart-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 15px;
         }
-        .error {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-            color: #721c24;
+        .cart-item-info {
+            flex: 1;
+        }
+        .cart-item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .cart-item-price {
+            color: #666;
+        }
+        .color-block {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .color-circle {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 5px;
+            cursor: pointer;
+            border: 2px solid #ddd;
+        }
+        .color-circle.selected {
+            border-color: #60A5FA;
+        }
+        .price-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
         }
         button {
-            background-color: #007bff;
+            background: #4CAF50;
             color: white;
-            border: none;
             padding: 10px 20px;
+            border: none;
             border-radius: 5px;
             cursor: pointer;
             margin: 5px;
         }
         button:hover {
-            background-color: #0056b3;
-        }
-        pre {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        .cart-item {
-            border: 1px solid #ddd;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
+            background: #45a049;
         }
     </style>
 </head>
@@ -57,254 +85,190 @@
     <h1>Тест виправлення кошика</h1>
     
     <div class="test-section">
-        <h2>Тест 1: Додавання товару з кольором (стара структура)</h2>
-        <p>Тестуємо додавання товару з кольором використовуючи стару структуру colors:</p>
-        <button onclick="testOldColorStructure()">Тестувати стару структуру</button>
-        <div id="test1-result"></div>
+        <h2>Симуляція товару з блоками кольорів</h2>
+        
+        <div class="color-block">
+            <h3>Блок 1: Колір корпусу</h3>
+            <div id="color-options-1-0">
+                <div class="color-circle" data-index="0" data-block-index="0" style="background: #8B4513;" onclick="selectColor(1, 0, 0)">
+                    <span>Коричневий (+100 грн)</span>
+                </div>
+                <div class="color-circle" data-index="1" data-block-index="0" style="background: #000000;" onclick="selectColor(1, 0, 1)">
+                    <span>Чорний (+0 грн)</span>
+                </div>
+                <div class="color-circle" data-index="2" data-block-index="0" style="background: #FFFFFF;" onclick="selectColor(1, 0, 2)">
+                    <span>Білий (+50 грн)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="color-block">
+            <h3>Блок 2: Колір фасаду</h3>
+            <div id="color-options-1-1">
+                <div class="color-circle" data-index="0" data-block-index="1" style="background: #FFD700;" onclick="selectColor(1, 1, 3)">
+                    <span>Золотий (+200 грн)</span>
+                </div>
+                <div class="color-circle" data-index="1" data-block-index="1" style="background: #C0C0C0;" onclick="selectColor(1, 1, 4)">
+                    <span>Срібний (+150 грн)</span>
+                </div>
+                <div class="color-circle" data-index="2" data-block-index="1" style="background: #CD7F32;" onclick="selectColor(1, 1, 5)">
+                    <span>Бронзовий (+75 грн)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="price-display">
+            <strong>Базова ціна:</strong> 1000 грн<br>
+            <strong>Поточна ціна:</strong> <span id="current-price">1000</span> грн
+        </div>
+        
+        <button onclick="addToCart()">Додати в кошик</button>
+        <button onclick="clearCart()">Очистити кошик</button>
     </div>
-
+    
     <div class="test-section">
-        <h2>Тест 2: Додавання товару з кольором (нова структура)</h2>
-        <p>Тестуємо додавання товару з кольором використовуючи нову структуру colorBlocks:</p>
-        <button onclick="testNewColorStructure()">Тестувати нову структуру</button>
-        <div id="test2-result"></div>
+        <h2>Кошик</h2>
+        <div id="cart-display">
+            <p>Кошик порожній</p>
+        </div>
     </div>
-
-    <div class="test-section">
-        <h2>Тест 3: Додавання товару без кольору</h2>
-        <p>Тестуємо додавання товару без кольору:</p>
-        <button onclick="testNoColor()">Тестувати товар без кольору</button>
-        <div id="test3-result"></div>
-    </div>
-
-    <div class="test-section">
-        <h2>Тест 4: Перевірка кошика</h2>
-        <p>Перевіряємо вміст кошика:</p>
-        <button onclick="checkCart()">Перевірити кошик</button>
-        <div id="test4-result"></div>
-    </div>
-
+    
     <script>
-        const cartId = 'test-cart-' + Date.now();
-
-        async function testOldColorStructure() {
-            const resultDiv = document.getElementById('test1-result');
-            resultDiv.innerHTML = '<p>Тестування...</p>';
+        // Симуляція даних
+        const selectedColors = {};
+        const cart = [];
+        const productId = '1';
+        
+        // Базова ціна товару
+        const basePrice = 1000;
+        
+        // Кольори з цінами
+        const colors = [
+            { globalIndex: 0, name: 'Коричневий', priceChange: 100, blockIndex: 0 },
+            { globalIndex: 1, name: 'Чорний', priceChange: 0, blockIndex: 0 },
+            { globalIndex: 2, name: 'Білий', priceChange: 50, blockIndex: 0 },
+            { globalIndex: 3, name: 'Золотий', priceChange: 200, blockIndex: 1 },
+            { globalIndex: 4, name: 'Срібний', priceChange: 150, blockIndex: 1 },
+            { globalIndex: 5, name: 'Бронзовий', priceChange: 75, blockIndex: 1 }
+        ];
+        
+        // Функція вибору кольору
+        function selectColor(productId, blockIndex, globalIndex) {
+            if (!selectedColors[productId]) {
+                selectedColors[productId] = {};
+            }
+            selectedColors[productId][blockIndex] = globalIndex;
+            
+            // Оновлюємо підсвічування
+            const colorCircles = document.querySelectorAll(`#color-options-${productId}-${blockIndex} .color-circle`);
+            colorCircles.forEach((circle, idx) => {
+                if (idx === globalIndex % 3) {
+                    circle.classList.add('selected');
+                } else {
+                    circle.classList.remove('selected');
+                }
+            });
+            
+            updatePrice();
+        }
+        
+        // Функція оновлення ціни
+        function updatePrice() {
+            let totalPrice = basePrice;
+            const selected = selectedColors[productId];
+            
+            if (selected) {
+                Object.values(selected).forEach(globalIndex => {
+                    const color = colors.find(c => c.globalIndex === globalIndex);
+                    if (color) {
+                        totalPrice += color.priceChange;
+                    }
+                });
+            }
+            
+            document.getElementById('current-price').textContent = totalPrice;
+        }
+        
+        // Функція додавання в кошик
+        function addToCart() {
+            const selected = selectedColors[productId];
+            
+            if (!selected || Object.keys(selected).length < 2) {
+                alert('Виберіть колір з кожного блоку!');
+                return;
+            }
+            
+            // Створюємо об'єкт кольорів для кошика
+            const selectedColorsForCart = [];
+            Object.entries(selected).forEach(([blockIndex, globalIndex]) => {
+                const color = colors.find(c => c.globalIndex === globalIndex);
+                if (color) {
+                    selectedColorsForCart.push(color);
+                }
+            });
+            
+            // Розраховуємо ціну
+            let totalPrice = basePrice;
+            selectedColorsForCart.forEach(color => {
+                totalPrice += color.priceChange;
+            });
             
             const cartItem = {
-                id: "test-product-old",
-                name: "Тестовий товар зі старою структурою",
+                id: productId,
+                name: 'Тестовий товар',
+                price: totalPrice,
                 quantity: 1,
-                price: 1000,
-                photo: "https://example.com/photo.jpg",
-                color: {
-                    name: "Червоний",
-                    value: "#FF0000",
-                    priceChange: 50
-                },
-                size: null
+                colors: selectedColorsForCart
             };
-
-            try {
-                const response = await fetch(`/api/cart?cartId=${cartId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify([cartItem])
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <h3>✅ Успішно!</h3>
-                            <p>Товар зі старою структурою кольорів додано в кошик.</p>
-                            <p><strong>Товар:</strong> ${cartItem.name}</p>
-                            <p><strong>Колір:</strong> ${cartItem.color.name}</p>
-                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="error">
-                            <h3>❌ Помилка!</h3>
-                            <p>${result.error || 'Невідома помилка'}</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        <h3>❌ Помилка мережі!</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-
-        async function testNewColorStructure() {
-            const resultDiv = document.getElementById('test2-result');
-            resultDiv.innerHTML = '<p>Тестування...</p>';
             
-            const cartItem = {
-                id: "test-product-new",
-                name: "Тестовий товар з новою структурою",
-                quantity: 1,
-                price: 1500,
-                photo: "https://example.com/photo.jpg",
-                color: {
-                    name: "Дуб артізан",
-                    value: "#000000",
-                    priceChange: 100
-                },
-                size: null
-            };
-
-            try {
-                const response = await fetch(`/api/cart?cartId=${cartId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify([cartItem])
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <h3>✅ Успішно!</h3>
-                            <p>Товар з новою структурою кольорів додано в кошик.</p>
-                            <p><strong>Товар:</strong> ${cartItem.name}</p>
-                            <p><strong>Колір:</strong> ${cartItem.color.name}</p>
-                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="error">
-                            <h3>❌ Помилка!</h3>
-                            <p>${result.error || 'Невідома помилка'}</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        <h3>❌ Помилка мережі!</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-
-        async function testNoColor() {
-            const resultDiv = document.getElementById('test3-result');
-            resultDiv.innerHTML = '<p>Тестування...</p>';
+            cart.push(cartItem);
+            updateCartDisplay();
             
-            const cartItem = {
-                id: "test-product-no-color",
-                name: "Тестовий товар без кольору",
-                quantity: 1,
-                price: 800,
-                photo: "https://example.com/photo.jpg",
-                color: null,
-                size: null
-            };
-
-            try {
-                const response = await fetch(`/api/cart?cartId=${cartId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify([cartItem])
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <h3>✅ Успішно!</h3>
-                            <p>Товар без кольору додано в кошик.</p>
-                            <p><strong>Товар:</strong> ${cartItem.name}</p>
-                            <p><strong>Ціна:</strong> ${cartItem.price} грн</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="error">
-                            <h3>❌ Помилка!</h3>
-                            <p>${result.error || 'Невідома помилка'}</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        <h3>❌ Помилка мережі!</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
+            alert(`Товар додано в кошик! Ціна: ${totalPrice} грн`);
         }
-
-        async function checkCart() {
-            const resultDiv = document.getElementById('test4-result');
-            resultDiv.innerHTML = '<p>Перевіряємо кошик...</p>';
+        
+        // Функція оновлення відображення кошика
+        function updateCartDisplay() {
+            const cartDisplay = document.getElementById('cart-display');
             
-            try {
-                const response = await fetch(`/api/cart?cartId=${cartId}`);
-                const result = await response.json();
-                
-                if (response.ok) {
-                    const items = result.items || [];
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <h3>✅ Кошик завантажено!</h3>
-                            <p><strong>ID кошика:</strong> ${cartId}</p>
-                            <p><strong>Кількість товарів:</strong> ${items.length}</p>
-                            <h4>Товари в кошику:</h4>
-                            ${items.map(item => `
-                                <div class="cart-item">
-                                    <strong>${item.name}</strong><br>
-                                    Ціна: ${item.price} грн<br>
-                                    Кількість: ${item.quantity}<br>
-                                    ${item.color ? `Колір: ${item.color.name} (${item.color.value})` : 'Без кольору'}<br>
-                                    ${item.size ? `Розмір: ${item.size}` : ''}
-                                </div>
-                            `).join('')}
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
+            if (cart.length === 0) {
+                cartDisplay.innerHTML = '<p>Кошик порожній</p>';
+                return;
+            }
+            
+            let html = '';
+            cart.forEach((item, index) => {
+                const colorNames = item.colors.map(color => color.name).join(', ');
+                html += `
+                    <div class="cart-item">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRkZGRkZGIi8+Cjx0ZXh0IHg9IjMwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+0KLQvtC70YzQutC+INGC0L7QsdC+0LvQvtCy0L7QujwvdGV4dD4KPC9zdmc+" alt="Товар">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.name} (${colorNames})</div>
+                            <div class="cart-item-price">${item.price} грн x ${item.quantity}</div>
                         </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="error">
-                            <h3>❌ Помилка завантаження кошика!</h3>
-                            <p>${result.error || 'Невідома помилка'}</p>
-                            <pre>${JSON.stringify(result, null, 2)}</pre>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        <h3>❌ Помилка мережі!</h3>
-                        <p>${error.message}</p>
+                        <button onclick="removeFromCart(${index})">Видалити</button>
                     </div>
                 `;
-            }
+            });
+            
+            cartDisplay.innerHTML = html;
         }
+        
+        // Функція видалення з кошика
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+        
+        // Функція очищення кошика
+        function clearCart() {
+            cart.length = 0;
+            updateCartDisplay();
+        }
+        
+        // Ініціалізація
+        updatePrice();
+        updateCartDisplay();
     </script>
 </body>
 </html> 

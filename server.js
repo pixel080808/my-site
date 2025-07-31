@@ -2755,41 +2755,145 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
           item.price = expectedPrice
         }
         item.photo = item.photo || product.photos[0] || ""
-      } else if (item.color && item.color.name) {
-        let color = null;
+      } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
+        // Обробка масиву кольорів (нова структура)
+        let totalPriceChange = 0;
+        let colorPhoto = null;
         
-        // Спочатку шукаємо в новій структурі colorBlocks
-        if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
-          for (const block of product.colorBlocks) {
-            if (block.colors && Array.isArray(block.colors)) {
-              color = block.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
-              if (color) break;
+        for (const itemColor of item.colors) {
+          let color = null;
+          
+          // Шукаємо в новій структурі colorBlocks
+          if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+            for (const block of product.colorBlocks) {
+              if (block.colors && Array.isArray(block.colors)) {
+                color = block.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
+                if (color) break;
+              }
             }
           }
+          
+          // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
+          if (!color && product.colors && Array.isArray(product.colors)) {
+            color = product.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
+          }
+          
+          if (!color) {
+            await session.abortTransaction()
+            session.endSession()
+            return res.status(400).json({ error: `Колір ${itemColor.name} не доступний для продукту ${item.name}` })
+          }
+          
+          totalPriceChange += (color.priceChange || 0);
+          if (color.photo && !colorPhoto) {
+            colorPhoto = color.photo;
+          }
+          
+          // Оновлюємо інформацію про колір в кошику
+          itemColor.priceChange = color.priceChange || 0;
         }
         
-        // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
-        if (!color && product.colors && Array.isArray(product.colors)) {
-          color = product.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
-        }
-        
-        if (!color) {
-          await session.abortTransaction()
-          session.endSession()
-          return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` })
-        }
-        
-        const expectedPrice = product.price + (color.priceChange || 0)
+        const expectedPrice = product.price + totalPriceChange;
         if (item.price !== expectedPrice) {
           logger.debug(
-            `Виправлено ціну для продукту ${item.id}, колір ${item.color.name}: з ${item.price} на ${expectedPrice}`,
+            `Виправлено ціну для продукту ${item.id}, кольори ${item.colors.map(c => c.name).join(', ')}: з ${item.price} на ${expectedPrice}`,
           )
-          item.price = expectedPrice
+          item.price = expectedPrice;
         }
-        item.color.priceChange = color.priceChange || 0
-        item.photo = color.photo || item.photo || product.photos[0] || ""
-        if (color.photo) {
-          logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`)
+        
+        item.photo = colorPhoto || item.photo || product.photos[0] || "";
+        if (colorPhoto) {
+          logger.info(`Використано фото кольору для продукту ${item.id}: ${colorPhoto}`)
+        }
+      } else if (item.color && (item.color.name || Array.isArray(item.color))) {
+        // Обробка кольорів (підтримка як одного кольору, так і масиву кольорів)
+        if (Array.isArray(item.color)) {
+          // Обробка масиву кольорів
+          let totalPriceChange = 0;
+          let colorPhoto = null;
+          
+          for (const itemColor of item.color) {
+            let color = null;
+            
+            // Шукаємо в новій структурі colorBlocks
+            if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+              for (const block of product.colorBlocks) {
+                if (block.colors && Array.isArray(block.colors)) {
+                  color = block.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
+                  if (color) break;
+                }
+              }
+            }
+            
+            // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
+            if (!color && product.colors && Array.isArray(product.colors)) {
+              color = product.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
+            }
+            
+            if (!color) {
+              await session.abortTransaction()
+              session.endSession()
+              return res.status(400).json({ error: `Колір ${itemColor.name} не доступний для продукту ${item.name}` })
+            }
+            
+            totalPriceChange += (color.priceChange || 0);
+            if (color.photo && !colorPhoto) {
+              colorPhoto = color.photo;
+            }
+            
+            // Оновлюємо інформацію про колір в кошику
+            itemColor.priceChange = color.priceChange || 0;
+          }
+          
+          const expectedPrice = product.price + totalPriceChange;
+          if (item.price !== expectedPrice) {
+            logger.debug(
+              `Виправлено ціну для продукту ${item.id}, кольори ${item.color.map(c => c.name).join(', ')}: з ${item.price} на ${expectedPrice}`,
+            )
+            item.price = expectedPrice;
+          }
+          
+          item.photo = colorPhoto || item.photo || product.photos[0] || "";
+          if (colorPhoto) {
+            logger.info(`Використано фото кольору для продукту ${item.id}: ${colorPhoto}`)
+          }
+        } else {
+          // Обробка одного кольору (стара структура для зворотної сумісності)
+          let color = null;
+          
+          // Спочатку шукаємо в новій структурі colorBlocks
+          if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
+            for (const block of product.colorBlocks) {
+              if (block.colors && Array.isArray(block.colors)) {
+                color = block.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
+                if (color) break;
+              }
+            }
+          }
+          
+          // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
+          if (!color && product.colors && Array.isArray(product.colors)) {
+            color = product.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
+          }
+          
+          if (!color) {
+            await session.abortTransaction()
+            session.endSession()
+            return res.status(400).json({ error: `Колір ${item.color.name} не доступний для продукту ${item.name}` })
+          }
+          
+          const expectedPrice = product.price + (color.priceChange || 0)
+          if (item.price !== expectedPrice) {
+            logger.debug(
+              `Виправлено ціну для продукту ${item.id}, колір ${item.color.name}: з ${item.price} на ${expectedPrice}`,
+            )
+            item.price = expectedPrice
+          }
+          item.color.priceChange = color.priceChange || 0
+          item.photo = color.photo || item.photo || product.photos[0] || ""
+          if (color.photo) {
+            logger.info(`Використано фото кольору для продукту ${item.id}: ${color.photo}`)
+          }
         }
       } else {
         if (item.price !== product.price) {

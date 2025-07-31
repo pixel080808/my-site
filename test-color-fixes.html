@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлень кольорів</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест виправлень кольорів</h1>
+    
+    <div class="test-section">
+        <h2>Перевірка виправлень</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Інструкції для тестування</h2>
+        <ol>
+            <li>Відкрийте сайт в браузері: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+            <li>Знайдіть товар з кольорами (наприклад, кухонні меблі)</li>
+            <li>Перевірте, чи відкривається сторінка товару без помилок</li>
+            <li>Виберіть колір і перевірте, чи змінюється ціна</li>
+            <li>Додайте товар в кошик і перевірте, чи відображається правильна ціна</li>
+            <li>Перевірте, чи відображаються назви кольорів в кошику</li>
+        </ol>
+    </div>
+
+    <script>
+        function addTestResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // Тестуємо доступність сервера
+        fetch('http://localhost:3000')
+            .then(response => {
+                if (response.ok) {
+                    addTestResult('✅ Сервер працює на http://localhost:3000', 'success');
+                } else {
+                    addTestResult('❌ Сервер не відповідає', 'error');
+                }
+            })
+            .catch(error => {
+                addTestResult('❌ Помилка підключення до сервера: ' + error.message, 'error');
+            });
+
+        // Перевіряємо чи є помилки в консолі
+        const originalError = console.error;
+        console.error = function(...args) {
+            addTestResult('❌ Помилка в консолі: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+
+        addTestResult('ℹ️ Перевірте консоль браузера на наявність помилок', 'info');
+        addTestResult('ℹ️ Основні виправлення:', 'info');
+        addTestResult('• Виправлено помилку з null елементами в renderProductDetails', 'info');
+        addTestResult('• Виправлено помилку з null currentCategory в showSection', 'info');
+        addTestResult('• Покращено updateColorPrice для кращого пошуку елементів ціни', 'info');
+        addTestResult('• Додано затримку для забезпечення рендерингу DOM', 'info');
+    </script>
+</body>
+</html> 

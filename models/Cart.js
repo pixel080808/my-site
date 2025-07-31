@@ -30,6 +30,27 @@ const cartSchema = new mongoose.Schema({
                     message: 'Photo must be a valid URL or empty string'
                 }
             },
+            // Підтримка масиву кольорів (нова структура)
+            colors: {
+                type: [{
+                    name: { type: String },
+                    value: { type: String },
+                    priceChange: { type: Number, default: 0 },
+                    photo: {
+                        type: String,
+                        default: null,
+                        validate: {
+                            validator: function(v) {
+                                return v === null || v === '' || /^(https?:\/\/[^\s$.?#].[^\s]*)$/.test(v);
+                            },
+                            message: 'Color photo must be a valid URL, empty string, or null'
+                        }
+                    },
+                    blockIndex: { type: Number, default: 0 }
+                }],
+                default: []
+            },
+            // Підтримка одного кольору (стара структура для зворотної сумісності)
             color: {
                 type: {
                     name: { type: String },
@@ -48,7 +69,7 @@ const cartSchema = new mongoose.Schema({
                 },
                 default: null
             },
-            size: { type: String, default: null } // Переміщено size на рівень items
+            size: { type: String, default: null }
         }
     ],
     updatedAt: { type: Date, default: Date.now }
@@ -70,13 +91,35 @@ const cartSchemaValidation = Joi.array().items(
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
-        color: Joi.object({
-            name: Joi.string().allow('').optional(),
-            value: Joi.string().allow('').optional(),
-            priceChange: Joi.number().default(0),
-            photo: Joi.string().uri().allow('', null).optional()
-        }).allow(null).optional(),
-        size: Joi.string().allow('', null).optional() // Додано size на рівень items
+        // Валідація для масиву кольорів
+        colors: Joi.array().items(
+            Joi.object({
+                name: Joi.string().allow('').optional(),
+                value: Joi.string().allow('').optional(),
+                priceChange: Joi.number().default(0),
+                photo: Joi.string().uri().allow('', null).optional(),
+                blockIndex: Joi.number().default(0)
+            })
+        ).allow(null).optional(),
+        // Валідація для одного кольору (зворотна сумісність)
+        color: Joi.alternatives().try(
+            Joi.object({
+                name: Joi.string().allow('').optional(),
+                value: Joi.string().allow('').optional(),
+                priceChange: Joi.number().default(0),
+                photo: Joi.string().uri().allow('', null).optional()
+            }),
+            Joi.array().items(
+                Joi.object({
+                    name: Joi.string().allow('').optional(),
+                    value: Joi.string().allow('').optional(),
+                    priceChange: Joi.number().default(0),
+                    photo: Joi.string().uri().allow('', null).optional(),
+                    blockIndex: Joi.number().default(0)
+                })
+            )
+        ).allow(null).optional(),
+        size: Joi.string().allow('', null).optional()
     }).unknown(false)
 );
 

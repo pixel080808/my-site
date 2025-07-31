@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виправлення цін в кошику</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест виправлення цін в кошику</h1>
+    
+    <div class="test-section">
+        <h2>Перевірка виправлень</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Інструкції для тестування</h2>
+        <ol>
+            <li>Відкрийте сайт в браузері: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+            <li>Знайдіть товар з кольорами (наприклад, кухонні меблі)</li>
+            <li>Виберіть колір, який має вплив на ціну (якщо є)</li>
+            <li>Перевірте, чи змінюється ціна на сторінці товару</li>
+            <li>Додайте товар в кошик</li>
+            <li>Перейдіть в кошик і перевірте:
+                <ul>
+                    <li>Чи відображається правильна ціна з урахуванням кольору</li>
+                    <li>Чи відображаються назви кольорів в дужках</li>
+                    <li>Чи правильно розраховується загальна сума</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Що було виправлено</h2>
+        <ul>
+            <li>✅ Додано виклик updateCartPrices() в функції addToCart()</li>
+            <li>✅ Додано виклик updateCartPrices() в функції addToCartWithColor()</li>
+            <li>✅ Функція updateCartPrices() правильно обробляє нову структуру кольорів (масив)</li>
+            <li>✅ Функція renderCart() правильно відображає назви кольорів</li>
+            <li>✅ Ціна в кошику тепер враховує зміну ціни від кольорів</li>
+        </ul>
+    </div>
+
+    <script>
+        function addTestResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // Тестуємо доступність сервера
+        fetch('http://localhost:3000')
+            .then(response => {
+                if (response.ok) {
+                    addTestResult('✅ Сервер працює на http://localhost:3000', 'success');
+                } else {
+                    addTestResult('❌ Сервер не відповідає', 'error');
+                }
+            })
+            .catch(error => {
+                addTestResult('❌ Помилка підключення до сервера: ' + error.message, 'error');
+            });
+
+        // Перевіряємо чи є помилки в консолі
+        const originalError = console.error;
+        console.error = function(...args) {
+            addTestResult('❌ Помилка в консолі: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+
+        addTestResult('ℹ️ Основні виправлення для кошика:', 'info');
+        addTestResult('• Додано виклик updateCartPrices() після додавання товару в кошик', 'info');
+        addTestResult('• Покращено обробку цін кольорів в кошику', 'info');
+        addTestResult('• Виправлено відображення назв кольорів в кошику', 'info');
+        
+        addTestResult('⚠️ Для тестування:', 'warning');
+        addTestResult('1. Виберіть товар з кольорами, які мають вплив на ціну', 'warning');
+        addTestResult('2. Додайте товар в кошик і перевірте правильність ціни', 'warning');
+        addTestResult('3. Перевірте, чи відображаються назви кольорів в кошику', 'warning');
+    </script>
+</body>
+</html> 
