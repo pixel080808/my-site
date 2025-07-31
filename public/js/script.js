@@ -897,6 +897,9 @@ async function initializeData() {
     if (currentSort) {
         sortProducts(currentSort);
     }
+    
+    // Відновлюємо графічне відображення вибраних кольорів
+    restoreSelectedColors();
 
     updateHeader();
     renderCategories();
@@ -1053,6 +1056,8 @@ async function updateFloatingGroupCart() {
 
         floatingGroupCart.classList.toggle('visible', hasSelection && currentProduct.type === 'group');
         
+        // Відновлюємо графічне відображення вибраних кольорів
+        restoreSelectedColors();
 
     } catch (error) {
         console.error('Помилка в updateFloatingGroupCart:', error);
@@ -2088,6 +2093,9 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
     if (currentSort) {
         sortProducts(currentSort);
     }
+    
+    // Відновлюємо графічне відображення вибраних кольорів
+    restoreSelectedColors();
 }
 
 function createControlsContainer() {
@@ -2545,6 +2553,9 @@ function renderProducts(filtered) {
     renderPagination(totalPages, totalItems, true);
 
     updateHistoryState();
+    
+    // Відновлюємо графічне відображення вибраних кольорів
+    restoreSelectedColors();
 }
 
 function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) {
@@ -3447,6 +3458,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                                 colorCircle.style.background = color.photo ? `url(${color.photo}) center/cover` : color.value;
                                 colorCircle.setAttribute('data-product-id', p._id);
                                 colorCircle.setAttribute('data-color-index', globalIndex);
+                                colorCircle.setAttribute('data-block-index', blockIndex);
                                 
                                 // Перевіряємо, чи цей колір вже вибраний
                                 const currentSelectedColor = selectedColors[p._id]?.[blockIndex];
@@ -3510,6 +3522,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                         colorCircle.style.background = color.photo ? `url(${color.photo}) center/cover` : color.value;
                         colorCircle.setAttribute('data-product-id', p._id);
                         colorCircle.setAttribute('data-color-index', colorIndex);
+                        colorCircle.setAttribute('data-block-index', '0');
                         
                         // Перевіряємо, чи цей колір вже вибраний
                         const currentSelectedColor = selectedColors[p._id]?.[0];
@@ -3844,6 +3857,9 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
 
         // ОНОВЛЮЄМО СТАН ІКОНКИ ПІСЛЯ РЕНДЕРУ
         updateFavoriteIconsOnPage();
+        
+        // Відновлюємо графічне відображення вибраних кольорів
+        restoreSelectedColors();
 
         return Promise.resolve();
     } catch (error) {
@@ -7467,11 +7483,16 @@ function selectGroupProductColor(productId, blockIndex, globalIndex) {
     selectedColors[productId][blockIndex] = globalIndex;
     saveToStorage('selectedColors', selectedColors);
     
-    // Підсвічування вибраного кольору в групових товарах
+    // Підсвічування вибраних кольорів в групових товарах
     const colorCircles = document.querySelectorAll(`.group-color-circle[data-product-id="${productId}"]`);
     colorCircles.forEach((circle) => {
         const circleColorIndex = parseInt(circle.getAttribute('data-color-index'));
-        if (circleColorIndex === globalIndex) {
+        const circleBlockIndex = parseInt(circle.getAttribute('data-block-index') || '0');
+        
+        // Перевіряємо, чи цей колір вибраний у своєму блоці
+        const isSelectedInBlock = selectedColors[productId]?.[circleBlockIndex] === circleColorIndex;
+        
+        if (isSelectedInBlock) {
             circle.classList.add('selected');
             circle.style.border = '2px solid #60A5FA';
         } else {
@@ -7540,6 +7561,54 @@ function updateColorPrice(productId) {
             }
         }
     }
+}
+
+function restoreSelectedColors() {
+    // Відновлюємо графічне відображення вибраних кольорів для всіх товарів
+    Object.keys(selectedColors).forEach(productId => {
+        const product = products.find(p => p._id === productId || p.id === productId);
+        if (!product) return;
+        
+        const selectedColorIndices = selectedColors[productId];
+        if (!selectedColorIndices) return;
+        
+        // Для групових товарів
+        const groupColorCircles = document.querySelectorAll(`.group-color-circle[data-product-id="${productId}"]`);
+        if (groupColorCircles.length > 0) {
+            groupColorCircles.forEach((circle) => {
+                const circleColorIndex = parseInt(circle.getAttribute('data-color-index'));
+                const circleBlockIndex = parseInt(circle.getAttribute('data-block-index') || '0');
+                
+                // Перевіряємо, чи цей колір вибраний у своєму блоці
+                const isSelectedInBlock = selectedColorIndices[circleBlockIndex] === circleColorIndex;
+                
+                if (isSelectedInBlock) {
+                    circle.classList.add('selected');
+                    circle.style.border = '2px solid #60A5FA';
+                } else {
+                    circle.classList.remove('selected');
+                    circle.style.border = '2px solid #ddd';
+                }
+            });
+        }
+        
+        // Для звичайних товарів
+        Object.entries(selectedColorIndices).forEach(([blockIndex, globalIndex]) => {
+            const allColors = getAllColors(product);
+            const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
+            
+            if (selectedColor) {
+                const colorCircles = document.querySelectorAll(`#color-options-${productId}-${selectedColor.blockIndex} .color-circle`);
+                colorCircles.forEach((circle, idx) => {
+                    if (idx === selectedColor.colorIndex) {
+                        circle.classList.add('selected');
+                    } else {
+                        circle.classList.remove('selected');
+                    }
+                });
+            }
+        });
+    });
 }
 
 function updateGroupProductPrice(productId) {
