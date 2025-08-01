@@ -5608,7 +5608,7 @@ function renderGroupProductModal() {
     searchGroupProducts(); // Завантажуємо першу сторінку за замовчуванням
 }
 
-async function renderGroupProducts() {
+function renderGroupProducts() {
     const groupList = document.getElementById('group-product-list');
     if (!groupList) return;
     
@@ -5619,39 +5619,39 @@ async function renderGroupProducts() {
         return;
     }
     
+    // Спочатку показуємо ID товарів для швидкого drag & drop
+    groupList.innerHTML = `
+        <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
+        ${newProduct.groupProducts.map((pid, index) => `
+            <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
+                <strong>Товар ID: ${pid}</strong>
+                <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
+            </div>
+        `).join('')}
+    `;
+    
+    resetInactivityTimer();
+    
+    // Асинхронно завантажуємо назви товарів
+    loadGroupProductNames();
+}
+
+async function loadGroupProductNames() {
+    const groupList = document.getElementById('group-product-list');
+    if (!groupList || newProduct.groupProducts.length === 0) return;
+    
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            showNotification('Токен відсутній або недійсний. Будь ласка, увійдіть знову.');
-            showSection('admin-login');
             return;
         }
 
-        // Отримуємо інформацію про всі додані товари
         const productIds = newProduct.groupProducts.join(',');
         
         // Перевіряємо кеш
         const cacheKey = productIds;
         if (groupProductsCache[cacheKey]) {
-            const groupProducts = groupProductsCache[cacheKey];
-            
-            groupList.innerHTML = `
-                <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
-                ${groupProducts.map((p, index) => {
-                    const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
-                        ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                        : p.price ? `${p.price} грн` : '';
-                        
-                    return `
-                        <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                            <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
-                            <button class="delete-btn" onclick="deleteGroupProduct('${p._id}')">Видалити</button>
-                        </div>
-                    `;
-                }).join('')}
-            `;
-            
-            resetInactivityTimer();
+            updateGroupProductDisplay(groupProductsCache[cacheKey]);
             return;
         }
         
@@ -5667,38 +5667,33 @@ async function renderGroupProducts() {
         // Зберігаємо в кеш
         groupProductsCache[cacheKey] = groupProducts;
         
-        groupList.innerHTML = `
-            <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
-            ${groupProducts.map((p, index) => {
-                const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
-                    ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                    : p.price ? `${p.price} грн` : '';
-                    
-                return `
-                    <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                        <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
-                        <button class="delete-btn" onclick="deleteGroupProduct('${p._id}')">Видалити</button>
-                    </div>
-                `;
-            }).join('')}
-        `;
+        updateGroupProductDisplay(groupProducts);
         
-        resetInactivityTimer();
     } catch (err) {
-        console.error('Помилка завантаження групових товарів:', err);
-        showNotification('Не вдалося завантажити інформацію про товари: ' + err.message);
-        
-        // Fallback: показуємо тільки ID товарів
-        groupList.innerHTML = `
-            <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
-            ${newProduct.groupProducts.map((pid, index) => `
-                <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
-                    <strong>Товар ID: ${pid}</strong>
-                    <button class="delete-btn" onclick="deleteGroupProduct('${pid}')">Видалити</button>
-                </div>
-            `).join('')}
-        `;
+        console.error('Помилка завантаження назв товарів:', err);
+        // Не показуємо помилку користувачу, залишаємо ID
     }
+}
+
+function updateGroupProductDisplay(groupProducts) {
+    const groupList = document.getElementById('group-product-list');
+    if (!groupList) return;
+    
+    groupList.innerHTML = `
+        <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
+        ${groupProducts.map((p, index) => {
+            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
+                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                : p.price ? `${p.price} грн` : '';
+                
+            return `
+                <div class="group-product draggable" draggable="true" ondragstart="dragGroupProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropGroupProduct(event, ${index})">
+                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
+                    <button class="delete-btn" onclick="deleteGroupProduct('${p._id}')">Видалити</button>
+                </div>
+            `;
+        }).join('')}
+    `;
 }
 
 function openGroupProductsModal() {
@@ -5806,7 +5801,7 @@ async function addGroupProductModal(productId) {
         // Очищаємо кеш при зміні списку товарів
         groupProductsCache = {};
         await renderGroupProductsListModal();
-        await renderGroupProducts();
+        renderGroupProducts();
         resetInactivityTimer();
     }
 }
@@ -5816,7 +5811,7 @@ async function removeGroupProductModal(productId) {
     // Очищаємо кеш при зміні списку товарів
     groupProductsCache = {};
     await renderGroupProductsListModal();
-    await renderGroupProducts();
+    renderGroupProducts();
     resetInactivityTimer();
 }
 
@@ -5835,7 +5830,7 @@ function allowDropGroupProduct(event) {
     event.preventDefault();
 }
 
-async function dropGroupProduct(event, targetIndex) {
+function dropGroupProduct(event, targetIndex) {
     event.preventDefault();
     const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
     if (sourceIndex !== targetIndex) {
@@ -5843,18 +5838,18 @@ async function dropGroupProduct(event, targetIndex) {
         newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
         // Очищаємо кеш при зміні порядку товарів
         groupProductsCache = {};
-        await renderGroupProducts();
+        renderGroupProducts();
         unsavedChanges = true;
         resetInactivityTimer();
     }
     document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
 }
 
-async function deleteGroupProduct(productId) {
+function deleteGroupProduct(productId) {
     newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
     // Очищаємо кеш при зміні списку товарів
     groupProductsCache = {};
-    await renderGroupProducts();
+    renderGroupProducts();
     resetInactivityTimer();
 }
 
