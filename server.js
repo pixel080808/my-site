@@ -3638,15 +3638,7 @@ app.post("/api/import/orders", authenticateToken, csrfProtection, importUpload.s
   }
 })
 
-app.get("*", (req, res) => {
-  logger.info(`Отримано запит на ${req.path}, відправляємо index.html`)
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      logger.error("Помилка при відправці index.html:", err)
-      res.status(500).send("Помилка при відображенні index.html")
-    }
-  })
-})
+
 
 app.post("/api/auth/login", loginLimiter, csrfProtection, (req, res, next) => {
   const { username, password } = req.body
@@ -3835,4 +3827,15 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
     logger.error("Помилка при експорті всіх товарів:", err)
     res.status(500).json({ error: "Помилка сервера", details: err.message })
   }
+})
+
+// Catch-all маршрут для SPA (повинен бути в кінці)
+app.get("*", (req, res) => {
+  logger.info(`Отримано запит на ${req.path}, відправляємо index.html`)
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      logger.error("Помилка при відправці index.html:", err)
+      res.status(500).send("Помилка при відображенні index.html")
+    }
+  })
 })
