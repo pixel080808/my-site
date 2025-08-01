@@ -5640,18 +5640,18 @@ async function loadGroupProductNames() {
     const groupList = document.getElementById('group-product-list');
     if (!groupList || newProduct.groupProducts.length === 0) return;
     
+    const productIds = newProduct.groupProducts.join(',');
+    const cacheKey = productIds;
+    
+    // Перевіряємо кеш
+    if (groupProductsCache[cacheKey]) {
+        updateGroupProductDisplay(groupProductsCache[cacheKey]);
+        return;
+    }
+    
     try {
         const tokenRefreshed = await refreshToken();
         if (!tokenRefreshed) {
-            return;
-        }
-
-        const productIds = newProduct.groupProducts.join(',');
-        
-        // Перевіряємо кеш
-        const cacheKey = productIds;
-        if (groupProductsCache[cacheKey]) {
-            updateGroupProductDisplay(groupProductsCache[cacheKey]);
             return;
         }
         
@@ -5679,9 +5679,20 @@ function updateGroupProductDisplay(groupProducts) {
     const groupList = document.getElementById('group-product-list');
     if (!groupList) return;
     
+    // Створюємо мапу товарів за ID для швидкого пошуку
+    const productsMap = {};
+    groupProducts.forEach(product => {
+        productsMap[product._id] = product;
+    });
+    
+    // Використовуємо порядок з newProduct.groupProducts
+    const orderedProducts = newProduct.groupProducts.map(productId => {
+        return productsMap[productId] || { _id: productId, name: `Товар ID: ${productId}` };
+    });
+    
     groupList.innerHTML = `
         <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
-        ${groupProducts.map((p, index) => {
+        ${orderedProducts.map((p, index) => {
             const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
                 ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
                 : p.price ? `${p.price} грн` : '';
@@ -5836,8 +5847,7 @@ function dropGroupProduct(event, targetIndex) {
     if (sourceIndex !== targetIndex) {
         const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
         newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
-        // Очищаємо кеш при зміні порядку товарів
-        groupProductsCache = {};
+        // Не очищаємо кеш при drag & drop, тільки перерендерюємо
         renderGroupProducts();
         unsavedChanges = true;
         resetInactivityTimer();
