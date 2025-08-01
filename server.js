@@ -3772,3 +3772,67 @@ app.post('/api/auth/generate-password-hash', (req, res) => {
   const hash = bcrypt.hashSync(newPassword, 12);
   res.json({ hash });
 });
+
+app.get("/api/products/export", authenticateToken, async (req, res) => {
+  try {
+    logger.info(`GET /api/products/export: user=${req.user.username}`)
+    
+    // Отримуємо всі товари без пагінації
+    const allProducts = await Product.find({}).sort({ _id: -1 })
+    
+    // Обробляємо товари для експорту
+    const productsForExport = allProducts.map(product => {
+      const productCopy = product.toObject()
+      
+      // Додаємо originalId для всіх товарів
+      productCopy.originalId = product._id.toString()
+      
+      // Якщо це груповий товар, замінюємо ID на повну інформацію про товари
+      if (productCopy.type === 'group' && productCopy.groupProducts && Array.isArray(productCopy.groupProducts)) {
+        const fullGroupProducts = []
+        
+        for (const groupProductId of productCopy.groupProducts) {
+          // Знаходимо повну інформацію про товар в групі
+          const groupProduct = allProducts.find(p => p._id.toString() === groupProductId.toString())
+          if (groupProduct) {
+            // Створюємо копію товару без системних полів
+            const { _id, createdAt, updatedAt, __v, ...cleanedGroupProduct } = groupProduct.toObject()
+            
+            // Очищаємо вкладені об'єкти
+            if (cleanedGroupProduct.sizes && Array.isArray(cleanedGroupProduct.sizes)) {
+              cleanedGroupProduct.sizes = cleanedGroupProduct.sizes.map(size => {
+                const { _id, ...cleanedSize } = size
+                return cleanedSize
+              })
+            }
+            
+            if (cleanedGroupProduct.colors && Array.isArray(cleanedGroupProduct.colors)) {
+              cleanedGroupProduct.colors = cleanedGroupProduct.colors.map(color => {
+                const { _id, ...cleanedColor } = color
+                return cleanedColor
+              })
+            }
+            
+            // Додаємо оригінальний ID як посилання
+            cleanedGroupProduct.originalId = _id.toString()
+            fullGroupProducts.push(cleanedGroupProduct)
+          }
+        }
+        
+        // Замінюємо масив ID на масив повних об'єктів товарів
+        productCopy.groupProducts = fullGroupProducts
+      }
+      
+      return productCopy
+    })
+    
+    res.json({
+      products: productsForExport,
+      total: productsForExport.length,
+      message: "Всі товари експортовано"
+    })
+  } catch (err) {
+    logger.error("Помилка при експорті всіх товарів:", err)
+    res.status(500).json({ error: "Помилка сервера", details: err.message })
+  }
+})

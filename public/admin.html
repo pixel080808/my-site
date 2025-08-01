@@ -1683,6 +1683,59 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                 document.body.classList.remove('dark-mode');
             }
         });
+
+        // Обробники подій для файлів імпорту
+        document.addEventListener('DOMContentLoaded', function() {
+            // Імпорт товарів (замінити всі)
+            const importProductsFile = document.getElementById('import-products-file');
+            if (importProductsFile) {
+                importProductsFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        importProductsBackup();
+                    }
+                });
+            }
+
+            // Імпорт товарів (додати)
+            const importProductsAddFile = document.getElementById('import-products-add-file');
+            if (importProductsAddFile) {
+                importProductsAddFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        importProductsAdd();
+                    }
+                });
+            }
+
+            // Імпорт замовлень
+            const importOrdersFile = document.getElementById('import-orders-file');
+            if (importOrdersFile) {
+                importOrdersFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        importOrdersBackup();
+                    }
+                });
+            }
+
+            // Імпорт сайту
+            const importSiteFile = document.getElementById('import-site-file');
+            if (importSiteFile) {
+                importSiteFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        importSiteBackup();
+                    }
+                });
+            }
+
+            // Оновлення цін
+            const bulkPriceFile = document.getElementById('bulk-price-file');
+            if (bulkPriceFile) {
+                bulkPriceFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        uploadBulkPrices();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

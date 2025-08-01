@@ -4162,62 +4162,40 @@ function exportSiteBackup() {
     resetInactivityTimer();
 }
 
-function exportProductsBackup() {
-    // Створюємо копію товарів для експорту
-    const productsForExport = products.map(product => {
-        const productCopy = { ...product };
-        
-        // Додаємо originalId для всіх товарів
-        productCopy.originalId = product._id;
-        
-        // Якщо це груповий товар, замінюємо ID на повну інформацію про товари
-        if (productCopy.type === 'group' && productCopy.groupProducts && Array.isArray(productCopy.groupProducts)) {
-            const fullGroupProducts = [];
-            
-            for (const groupProductId of productCopy.groupProducts) {
-                // Знаходимо повну інформацію про товар в групі
-                const groupProduct = products.find(p => p._id === groupProductId || p.id === groupProductId);
-                if (groupProduct) {
-                    // Створюємо копію товару без системних полів
-                    const { _id, createdAt, updatedAt, __v, ...cleanedGroupProduct } = groupProduct;
-                    
-                    // Очищаємо вкладені об'єкти
-                    if (cleanedGroupProduct.sizes && Array.isArray(cleanedGroupProduct.sizes)) {
-                        cleanedGroupProduct.sizes = cleanedGroupProduct.sizes.map(size => {
-                            const { _id, ...cleanedSize } = size;
-                            return cleanedSize;
-                        });
-                    }
-                    
-                    if (cleanedGroupProduct.colors && Array.isArray(cleanedGroupProduct.colors)) {
-                        cleanedGroupProduct.colors = cleanedGroupProduct.colors.map(color => {
-                            const { _id, ...cleanedColor } = color;
-                            return cleanedColor;
-                        });
-                    }
-                    
-                    // Додаємо оригінальний ID як посилання
-                    cleanedGroupProduct.originalId = _id;
-                    fullGroupProducts.push(cleanedGroupProduct);
-                }
-            }
-            
-            // Замінюємо масив ID на масив повних об'єктів товарів
-            productCopy.groupProducts = fullGroupProducts;
+async function exportProductsBackup() {
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) {
+            showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+            showSection('admin-login');
+            return;
         }
-        
-        return productCopy;
-    });
 
-    const blob = new Blob([JSON.stringify(productsForExport)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'products-backup.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification('Бекап товарів експортовано!');
-    resetInactivityTimer();
+        // Отримуємо всі товари з сервера
+        const response = await fetchWithAuth('/api/products/export');
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Не вдалося експортувати товари: ${text}`);
+        }
+
+        const data = await response.json();
+        if (!data.products || !Array.isArray(data.products)) {
+            throw new Error('Не вдалося отримати товари для експорту');
+        }
+
+        const blob = new Blob([JSON.stringify(data.products)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'products-backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification(`Бекап товарів експортовано! (${data.total} товарів)`);
+        resetInactivityTimer();
+    } catch (err) {
+        console.error('Помилка експорту товарів:', err);
+        showNotification('Помилка експорту товарів: ' + err.message);
+    }
 }
 
     function exportOrdersBackup() {
