@@ -5787,33 +5787,36 @@ async function removeGroupProductModal(productId) {
     resetInactivityTimer();
 }
 
-    function dragGroupProduct(event, index) {
-        event.dataTransfer.setData('text/plain', index);
-        event.target.classList.add('dragging');
-    }
 
-    function allowDropGroupProduct(event) {
-        event.preventDefault();
-    }
 
-    async function dropGroupProduct(event, targetIndex) {
-        event.preventDefault();
-        const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
-        if (sourceIndex !== targetIndex) {
-            const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
-            newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
-            await renderGroupProducts();
-            unsavedChanges = true;
-            resetInactivityTimer();
-        }
-        document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
-    }
+// Функції для drag & drop групових товарів
+function dragGroupProduct(event, index) {
+    event.dataTransfer.setData('text/plain', index);
+    event.target.classList.add('dragging');
+}
 
-    async function deleteGroupProduct(productId) {
-        newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
+function allowDropGroupProduct(event) {
+    event.preventDefault();
+}
+
+async function dropGroupProduct(event, targetIndex) {
+    event.preventDefault();
+    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
+    if (sourceIndex !== targetIndex) {
+        const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
+        newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
         await renderGroupProducts();
+        unsavedChanges = true;
         resetInactivityTimer();
     }
+    document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
+}
+
+async function deleteGroupProduct(productId) {
+    newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
+    await renderGroupProducts();
+    resetInactivityTimer();
+}
 
 async function saveNewProduct() {
     const saveButton = document.querySelector('.modal-actions button:first-child');

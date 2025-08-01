@@ -8668,3 +8668,55 @@ s {
         color: #a0aec0;
     }
 }
+
+/* Стилі для drag & drop групових товарів */
+.group-product {
+    cursor: grab;
+    transition: all 0.3s ease;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 5px 0;
+    background: #fff;
+}
+
+.group-product:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+.group-product.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    background: #e3f2fd;
+    border-color: #2196f3;
+    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.group-product.draggable {
+    user-select: none;
+}
+
+.group-product.draggable:active {
+    cursor: grabbing;
+}
+
+/* Стилі для темної теми */
+@media (prefers-color-scheme: dark) {
+    .group-product {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .group-product:hover {
+        background: #4a5568;
+        border-color: #63b3ed;
+    }
+    
+    .group-product.dragging {
+        background: #2c5282;
+        border-color: #63b3ed;
+        box-shadow: 0 4px 8px rgba(99, 179, 237, 0.3);
+    }
+}
