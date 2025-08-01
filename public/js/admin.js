@@ -309,7 +309,7 @@ async function fetchWithAuth(url, options = {}) {
     let csrfToken = localStorage.getItem('csrfToken');
     if (!csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
         try {
-            const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+            const csrfResponse = await fetch('/api/csrf-token', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -380,7 +380,7 @@ async function fetchWithAuth(url, options = {}) {
             }
         } else if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
             try {
-                const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+                const csrfResponse = await fetch('/api/csrf-token', {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` },
                     credentials: 'include'
@@ -1264,7 +1264,7 @@ async function login() {
 
     try {
         console.log('Отримуємо CSRF-токен...');
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+        const csrfResponse = await fetch('/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
@@ -1290,7 +1290,7 @@ async function login() {
         localStorage.setItem('csrfToken', csrfToken);
 
         console.log('Відправляємо запит на логін:', { username });
-        const response = await fetch('https://mebli.onrender.com/api/auth/login', {
+        const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1555,7 +1555,7 @@ async function refreshToken(attempt = 1) {
             return false;
         }
 
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+        const csrfResponse = await fetch('/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });
@@ -1684,7 +1684,7 @@ async function updateStoreInfo() {
         let finalLogoUrl = logoUrl;
         let finalFaviconUrl = faviconUrl;
 
-        const csrfResponse = await fetch('https://mebli.onrender.com/api/csrf-token', {
+        const csrfResponse = await fetch('/api/csrf-token', {
             method: 'GET',
             credentials: 'include'
         });

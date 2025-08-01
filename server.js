@@ -514,7 +514,7 @@ wss.on("connection", (ws, req) => {
   const refreshTokenWithRetry = async (retries = 3, delay = 5000) => {
     let csrfToken
     try {
-      const csrfResponse = await fetch("https://mebli.onrender.com/api/csrf-token", {
+      const csrfResponse = await fetch("/api/csrf-token", {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       })

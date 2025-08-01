@@ -8026,7 +8026,7 @@ s {
 }
 
 #catalog-dropdown .dropdown-item:hover img {
-  transform: scale(1.05);
+  transform: scale(1.0);
 }
 
 #catalog-dropdown .sub-list img {
@@ -8037,7 +8037,7 @@ s {
 }
 
 #catalog-dropdown .sub-list p:hover img {
-  transform: scale(1.05);
+  transform: scale(1.0);
 }
 
 /* Стилі для підкатегорій без зображень */
