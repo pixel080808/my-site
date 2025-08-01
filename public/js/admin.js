@@ -7303,60 +7303,54 @@ async function uploadBulkPrices() {
     reader.readAsText(file);
 }
 
-    function exportPrices() {
-        let counter = 1;
-        const activeProducts = products.filter(p => p.active && p.type !== 'group');
-        const productsWithSale = activeProducts.filter(p => p.salePrice !== null);
-        console.log(`Експортуємо ціни для ${activeProducts.length} активних товарів`);
-        console.log(`Товарів з акційними цінами: ${productsWithSale.length}`);
-        
-        if (activeProducts.length === 0) {
-            showNotification('Немає активних товарів для експорту!');
-            return;
+    async function exportPrices() {
+        try {
+            const tokenRefreshed = await refreshToken();
+            if (!tokenRefreshed) {
+                showNotification('Токен відсутній. Будь ласка, увійдіть знову.');
+                showSection('admin-login');
+                return;
+            }
+
+            console.log('Експортуємо ціни всіх товарів...');
+            
+            // Отримуємо всі товари з сервера
+            const response = await fetchWithAuth('/api/products/export-prices');
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Не вдалося експортувати ціни: ${text}`);
+            }
+
+            const csvContent = await response.text();
+            
+            console.log('Експортовані дані отримано з сервера');
+            console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
+            console.log('Приклад: 1,Вітальня "Марк",Без бренду,13800,12000');
+            console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
+            console.log('Приклад: 2,Матрац "Софія",Матролюкс,Розмір: 90х200,2000,1800');
+            
+            const blob = new Blob([csvContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'prices-export.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            // Підраховуємо товари з акційними цінами
+            const lines = csvContent.split('\n').filter(line => line.trim());
+            const productsWithSale = lines.filter(line => line.includes(',') && line.split(',').length > 4);
+            
+            if (productsWithSale.length > 0) {
+                showNotification(`Ціни експортовано! (${productsWithSale.length} товарів з акційними цінами)`);
+            } else {
+                showNotification('Ціни експортовано!');
+            }
+            resetInactivityTimer();
+        } catch (err) {
+            console.error('Помилка експорту цін:', err);
+            showNotification('Помилка експорту цін: ' + err.message);
         }
-        
-        const exportData = activeProducts
-            .map(p => {
-                if (p.type === 'simple') {
-                    // Додаємо акційну ціну, якщо вона є
-                    const salePrice = p.salePrice ? `,${p.salePrice}` : '';
-                    const line = `${counter},${p.name},${p.brand || 'Без бренду'},${p.price || '0'}${salePrice}`;
-                    console.log(`Експорт простого товару #${counter}: ${p.name} - ${p.price || '0'} грн${p.salePrice ? ` (акція: ${p.salePrice} грн)` : ''}`);
-                    counter++;
-                    return line;
-                } else if (p.type === 'mattresses') {
-                    // Для матраців для кожного розміру експортуємо свою акційну ціну
-                    const lines = p.sizes.map(s => {
-                        const salePrice = s.salePrice ? `,${s.salePrice}` : '';
-                        return `${counter},${p.name},${p.brand || 'Без бренду'},Розмір: ${s.name},${s.price || '0'}${salePrice}`;
-                    });
-                    console.log(`Експорт матрацу #${counter}: ${p.name} з ${p.sizes.length} розмірами`);
-                    counter++;
-                    return lines.join('\n');
-                }
-                return '';
-            })
-            .filter(line => line)
-            .join('\n');
-        console.log('Експортовані дані:', exportData);
-        console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
-        console.log('Приклад: 1,Вітальня "Марк",Без бренду,13800,12000');
-        console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
-        console.log('Приклад: 2,Матрац "Софія",Матролюкс,Розмір: 90х200,2000,1800');
-        const blob = new Blob([exportData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'prices-export.txt';
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        if (productsWithSale.length > 0) {
-            showNotification(`Ціни експортовано! (${productsWithSale.length} товарів з акційними цінами)`);
-        } else {
-        showNotification('Ціни експортовано!');
-        }
-        resetInactivityTimer();
     }
 
     function renderCountdown(product) {

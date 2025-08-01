@@ -3829,6 +3829,47 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
   }
 })
 
+app.get("/api/products/export-prices", authenticateToken, async (req, res) => {
+  try {
+    logger.info(`GET /api/products/export-prices: user=${req.user.username}`)
+    
+    // Отримуємо всі активні товари без пагінації
+    const allProducts = await Product.find({ active: true, type: { $ne: 'group' } }).sort({ _id: -1 })
+    
+    let counter = 1
+    const exportData = []
+    
+    for (const product of allProducts) {
+      if (product.type === 'simple') {
+        // Додаємо акційну ціну, якщо вона є
+        const salePrice = product.salePrice ? `,${product.salePrice}` : ''
+        const line = `${counter},${product.name},${product.brand || 'Без бренду'},${product.price || '0'}${salePrice}`
+        exportData.push(line)
+        counter++
+      } else if (product.type === 'mattresses') {
+        // Для матраців для кожного розміру експортуємо свою акційну ціну
+        for (const size of product.sizes) {
+          const salePrice = size.salePrice ? `,${size.salePrice}` : ''
+          const line = `${counter},${product.name},${product.brand || 'Без бренду'},Розмір: ${size.name},${size.price || '0'}${salePrice}`
+          exportData.push(line)
+          counter++
+        }
+      }
+    }
+    
+    const csvContent = exportData.join('\n')
+    
+    res.setHeader('Content-Type', 'text/plain')
+    res.setHeader('Content-Disposition', 'attachment; filename="prices-export.txt"')
+    res.send(csvContent)
+    
+    logger.info(`Експортовано ціни для ${allProducts.length} товарів`)
+  } catch (err) {
+    logger.error("Помилка при експорті цін:", err)
+    res.status(500).json({ error: "Помилка сервера", details: err.message })
+  }
+})
+
 // Catch-all маршрут для SPA (повинен бути в кінці)
 app.get("*", (req, res) => {
   logger.info(`Отримано запит на ${req.path}, відправляємо index.html`)
