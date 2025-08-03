@@ -959,7 +959,7 @@ function loadMoreProducts() {
         const showMoreBtn = document.querySelector('.show-more-btn');
         if (showMoreBtn) {
             showMoreBtn.disabled = true;
-            showMoreBtn.textContent = 'Більше немає товарів';
+            showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#10004;</span><span>Більше немає товарів</span>';
         }
         return;
     }
@@ -988,10 +988,10 @@ function loadMoreProducts() {
     if (showMoreBtn) {
         if (newDisplayedCount >= allProducts.length) {
             showMoreBtn.disabled = true;
-            showMoreBtn.textContent = 'Більше немає товарів';
+            showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#10004;</span><span>Більше немає товарів</span>';
         } else {
             showMoreBtn.disabled = false;
-            showMoreBtn.textContent = 'Показати ще';
+            showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#8634;</span><span>Показати ще</span>';
         }
     }
 
@@ -2566,8 +2566,18 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     paginationContainer.className = 'pagination-container';
 
     const showMoreBtn = document.createElement('button');
-    showMoreBtn.textContent = 'Показати ще';
     showMoreBtn.className = 'show-more-btn';
+    
+    // Створюємо іконку пів кола зі стрілкою
+    const icon = document.createElement('span');
+    icon.innerHTML = '&#8634;'; // Unicode символ для пів кола зі стрілкою
+    icon.style.cssText = 'font-size: 18px; margin-right: 8px;';
+    
+    const text = document.createElement('span');
+    text.textContent = 'Показати ще';
+    
+    showMoreBtn.appendChild(icon);
+    showMoreBtn.appendChild(text);
     showMoreBtn.onclick = loadMoreProducts;
 
     const productGrid = document.querySelector('.product-grid');
@@ -2586,40 +2596,41 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     
     if (displayedCount >= totalItems) {
         showMoreBtn.disabled = true;
-        showMoreBtn.textContent = 'Більше немає товарів';
+        showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#10004;</span><span>Більше немає товарів</span>';
     }
     paginationContainer.appendChild(showMoreBtn);
 
     const paginationInnerDiv = document.createElement('div');
     paginationInnerDiv.className = 'pagination';
 
-    const prevButton = document.createElement('button');
-    prevButton.textContent = '← Попередня';
-    prevButton.className = 'pagination-btn';
-    prevButton.setAttribute('data-direction', 'prev');
-    prevButton.style.cssText = 'margin-right: 10px;';
-    prevButton.disabled = currentPage === 1;
-    prevButton.onclick = () => {
-        if (currentPage > 1) {
-            currentPage--;
-            const productGrid = document.querySelector('.product-grid');
-            const productList = document.querySelector('.product-list');
-            const productContainer = productGrid || productList;
-            if (productContainer) {
-                while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
+    // Додаємо кнопку "Назад" тільки якщо не перша сторінка і є більше однієї сторінки
+    if (currentPage > 1 && totalPages > 1) {
+        const prevButton = document.createElement('button');
+        prevButton.className = 'pagination-btn';
+        prevButton.setAttribute('data-direction', 'prev');
+        prevButton.disabled = false;
+        prevButton.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                const productGrid = document.querySelector('.product-grid');
+                const productList = document.querySelector('.product-list');
+                const productContainer = productGrid || productList;
+                if (productContainer) {
+                    while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
+                }
+                const start = (currentPage - 1) * perPage;
+                const end = start + perPage;
+                const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
+                productsToShow.forEach(product => {
+                    const productElement = createProductElement(product);
+                    productContainer.appendChild(productElement);
+                });
+                updateHistoryState();
+                renderPagination(totalPages, totalItems, false);
             }
-            const start = (currentPage - 1) * perPage;
-            const end = start + perPage;
-            const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
-            productsToShow.forEach(product => {
-                const productElement = createProductElement(product);
-                productContainer.appendChild(productElement);
-            });
-            updateHistoryState();
-            renderPagination(totalPages, totalItems, false);
-        }
-    };
-    paginationInnerDiv.appendChild(prevButton);
+        };
+        paginationInnerDiv.appendChild(prevButton);
+    }
 
     // Функція для створення кнопки сторінки
     function createPageButton(pageNum, text = pageNum, isActive = false) {
@@ -2647,10 +2658,10 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
             if (showMoreBtn) {
                 if (end >= totalItems) {
                     showMoreBtn.disabled = true;
-                    showMoreBtn.textContent = 'Більше немає товарів';
+                    showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#10004;</span><span>Більше немає товарів</span>';
                 } else {
                     showMoreBtn.disabled = false;
-                    showMoreBtn.textContent = 'Показати ще';
+                    showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#8634;</span><span>Показати ще</span>';
                 }
             }
         };
@@ -2704,33 +2715,34 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     // Додаємо всі кнопки сторінок
     pages.forEach(pageBtn => paginationInnerDiv.appendChild(pageBtn));
 
-    const nextButton = document.createElement('button');
-    nextButton.textContent = 'Наступна →';
-    nextButton.className = 'pagination-btn';
-    nextButton.setAttribute('data-direction', 'next');
-    nextButton.style.cssText = 'margin-left: 10px;';
-    nextButton.disabled = currentPage === totalPages;
-    nextButton.onclick = () => {
-        if (currentPage < totalPages) {
-            currentPage++;
-            const productGrid = document.querySelector('.product-grid');
-            const productList = document.querySelector('.product-list');
-            const productContainer = productGrid || productList;
-            if (productContainer) {
-                while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
+    // Додаємо кнопку "Вперед" тільки якщо не остання сторінка і є більше однієї сторінки
+    if (currentPage < totalPages && totalPages > 1) {
+        const nextButton = document.createElement('button');
+        nextButton.className = 'pagination-btn';
+        nextButton.setAttribute('data-direction', 'next');
+        nextButton.disabled = false;
+        nextButton.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                const productGrid = document.querySelector('.product-grid');
+                const productList = document.querySelector('.product-list');
+                const productContainer = productGrid || productList;
+                if (productContainer) {
+                    while (productContainer.firstChild) productContainer.removeChild(productContainer.firstChild);
+                }
+                const start = (currentPage - 1) * perPage;
+                const end = start + perPage;
+                const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
+                productsToShow.forEach(product => {
+                    const productElement = createProductElement(product);
+                    productContainer.appendChild(productElement);
+                });
+                updateHistoryState();
+                renderPagination(totalPages, totalItems, false);
             }
-            const start = (currentPage - 1) * perPage;
-            const end = start + perPage;
-            const productsToShow = (isSearchActive ? searchResults : filteredProducts).slice(start, end);
-            productsToShow.forEach(product => {
-                const productElement = createProductElement(product);
-                productContainer.appendChild(productElement);
-            });
-            updateHistoryState();
-            renderPagination(totalPages, totalItems, false);
-        }
-    };
-    paginationInnerDiv.appendChild(nextButton);
+        };
+        paginationInnerDiv.appendChild(nextButton);
+    }
 
     paginationContainer.appendChild(paginationInnerDiv);
     paginationDiv.appendChild(paginationContainer);
@@ -6466,10 +6478,10 @@ window.addEventListener('popstate', async (event) => {
                     const displayedCount = productGrid ? productGrid.children.length : 0;
                     if (displayedCount >= allProducts.length || displayedCount >= perPage + 14) {
                         showMoreBtn.disabled = true;
-                        showMoreBtn.textContent = 'Більше немає товарів';
+                        showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#10004;</span><span>Більше немає товарів</span>';
                     } else {
                         showMoreBtn.disabled = false;
-                        showMoreBtn.textContent = 'Показати ще';
+                        showMoreBtn.innerHTML = '<span style="font-size: 18px; margin-right: 8px;">&#8634;</span><span>Показати ще</span>';
                     }
                 }
             } else if (state.sectionId === 'product-details') {

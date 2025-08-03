@@ -62,7 +62,7 @@ header {
     z-index: 101;
     transition: background var(--transition-speed) ease;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 0;
 }
 
 header.scrolled {
@@ -70,17 +70,32 @@ header.scrolled {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
 .logo {
     display: flex;
     align-items: center;
     padding-left: var(--base-padding);
-    margin-right: 15px;
+    margin-right: 0;
     background-size: contain;
     background-repeat: no-repeat;
     width: 200px;
     height: 60px;
     cursor: pointer;
     transition: transform 0.3s ease;
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-left: 0;
+    text-align: left;
+    transition: color var(--transition-speed) ease;
 }
 
 .logo:hover {
@@ -116,6 +131,23 @@ header.scrolled {
     margin-left: 15px;
     z-index: 20;
     user-select: none;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.phones::before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>') no-repeat center;
+    background-size: contain;
+    margin-right: 8px;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.phones:hover::before {
+    opacity: 0.8;
 }
 .phones .main-phone {
     font-weight: 600;
@@ -177,6 +209,11 @@ header.scrolled {
     .phones {
         font-size: 16px;
     }
+    .phones::before {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+    }
     .phones .main-phone, .phones .phone-dropdown-item {
         font-size: 15px;
     }
@@ -185,6 +222,13 @@ header.scrolled {
     }
 }
 @media (prefers-color-scheme: dark) {
+    .phones::before {
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23e6e6e6" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>') no-repeat center;
+        background-size: contain;
+    }
+    .phones:hover::before {
+        opacity: 0.8;
+    }
     .phones .phone-dropdown-menu {
         background: #23272f;
         color: #e6e6e6;
@@ -209,6 +253,33 @@ header.scrolled {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Адаптивні стилі для контейнера пошуку та кошика */
+@media (min-width: 650px) {
+    .search-cart-container {
+        gap: 8px;
+    }
+}
+
+/* Додаткові стилі для екранів 651px-700px */
+@media (min-width: 651px) and (max-width: 700px) {
+    .search-cart-container {
+        gap: 5px;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-cart-container {
+        gap: 6px;
+    }
+}
+
+@media (min-width: 920px) {
+    .search-cart-container {
+        gap: 10px;
+    }
 }
 
 .search-bar {
@@ -216,8 +287,83 @@ header.scrolled {
     display: flex;
     align-items: center;
     flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 200px;
     max-width: 350px;
-    margin: 0 20px;
+    margin: 0 0px;
+}
+
+/* Адаптивні стилі для рядка пошуку на екранах від 650px */
+@media (min-width: 650px) {
+    .search-bar {
+        max-width: 300px;
+    }
+}
+
+/* Більш точні налаштування для екранів 651px-700px */
+@media (min-width: 651px) and (max-width: 700px) {
+    .search-bar {
+        max-width: 200px;
+    }
+    
+    .search-bar input {
+        font-size: 13px;
+        padding: 7px 30px 7px 10px;
+    }
+    
+    .search-btn {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .search-btn::before {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-bar {
+        max-width: 280px;
+    }
+}
+
+@media (min-width: 920px) {
+    .search-bar {
+        max-width: 320px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .search-bar {
+        max-width: 350px;
+    }
+}
+
+/* Додаткові стилі для дуже малих екранів */
+@media (max-width: 480px) {
+    .search-cart-container {
+        gap: 3px;
+    }
+    
+    .search-bar {
+        min-width: 120px;
+    }
+    
+    .search-bar input {
+        font-size: 13px;
+        padding: 6px 30px 6px 8px;
+    }
+    
+    .search-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .search-btn::before {
+        width: 14px;
+        height: 14px;
+    }
 }
 
 .search-bar input {
@@ -230,6 +376,29 @@ header.scrolled {
     color: var(--text-color);
     outline: none;
     transition: border-color var(--transition-speed) ease;
+}
+
+/* Адаптивні стилі для поля вводу пошуку */
+@media (min-width: 650px) {
+    .search-bar input {
+        font-size: 14px;
+        padding: 8px 35px 8px 12px;
+    }
+}
+
+/* Стилі для поля вводу на екранах 651px-700px */
+@media (min-width: 651px) and (max-width: 700px) {
+    .search-bar input {
+        font-size: 13px;
+        padding: 7px 30px 7px 10px;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-bar input {
+        font-size: 15px;
+        padding: 8px 40px 8px 15px;
+    }
 }
 
 .search-bar input:focus {
@@ -254,6 +423,29 @@ header.scrolled {
     transition: transform 0.3s ease;
 }
 
+/* Адаптивні стилі для кнопки пошуку */
+@media (min-width: 650px) {
+    .search-btn {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Стилі для кнопки пошуку на екранах 651px-700px */
+@media (min-width: 651px) and (max-width: 700px) {
+    .search-btn {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-btn {
+        width: 30px;
+        height: 30px;
+    }
+}
+
 .search-btn::before {
     content: "";
     display: block;
@@ -261,6 +453,29 @@ header.scrolled {
     height: 16px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
     background-size: contain;
+}
+
+/* Адаптивні стилі для іконки пошуку */
+@media (min-width: 650px) {
+    .search-btn::before {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Стилі для іконки пошуку на екранах 651px-700px */
+@media (min-width: 651px) and (max-width: 700px) {
+    .search-btn::before {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-btn::before {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 .search-btn:hover::before {
@@ -281,6 +496,7 @@ header.scrolled {
     transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
     margin-right: var(--base-padding);
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .cart:hover {
@@ -339,6 +555,8 @@ header.scrolled {
     align-items: center;
     vertical-align: middle;
     left: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .favorite-icon:hover {
@@ -370,8 +588,8 @@ header.scrolled {
 }
 
 .nav {
-    background: #EDF2F7;
-    padding: 10px 0;
+    background: #ffffff;
+    padding: 2px 0;
     text-align: center;
     border-bottom: 1px solid var(--border-color);
     width: 100%;
@@ -1707,29 +1925,50 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 
 .show-more-btn {
     padding: 12px 30px;
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
+    background: #3B82F6;
+    color: white;
+    border: none;
     border-radius: 25px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+}
+
+.show-more-btn::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid white;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .show-more-btn:hover {
-    background: var(--border-color);
-    color: var(--text-color);
-    /* transform: translateY(-2px); */
-     box-shadow: 0 4px 12px var(--shadow-color);
+    background: #2563EB;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .show-more-btn:disabled {
-    background: #F7FAFC;
-    color: var(--muted-text);
+    background: #ccc;
+    color: #666;
     cursor: not-allowed;
     box-shadow: none;
+    transform: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .social-link {
@@ -1752,7 +1991,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
     max-width: 100%;
     flex-wrap: wrap;
@@ -1761,67 +2000,54 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 .pagination-btn {
     width: 40px;
     height: 40px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    color: var(--muted-text);
-    font-size: 15px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #666;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .pagination-btn.active {
-    background: #E2E8F0;
-    color: var(--text-color);
-    border-color: #E2E8F0;
-        box-shadow: 0 4px 12px var(--shadow-color);
+    background: #3B82F6;
+    color: white;
+    border-color: #3B82F6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.pagination-btn:hover {
-    background: var(--border-color);
-    color: var(--text-color);
-       /* transform: translateY(-2px); */
-        box-shadow: 0 4px 12px var(--shadow-color);
+.pagination-btn:hover:not(.active):not(:disabled) {
+    background: #f8f9fa;
+    color: #333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-btn:disabled {
-    background: #F7FAFC;
-    color: var(--muted-text);
+    background: #f8f9fa;
+    color: #ccc;
     cursor: not-allowed;
     box-shadow: none;
+    opacity: 0.5;
 }
 
-.pagination-arrow {
-    width: 30px;
-    height: 30px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    color: var(--muted-text);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.pagination-btn[data-direction] {
+    font-size: 18px;
+    font-weight: bold;
 }
 
-.pagination-arrow:hover {
-    background: var(--border-color);
-    color: var(--text-color);
-    /* transform: translateY(-2px); */
-    box-shadow: 0 4px 12px var(--shadow-color);
+.pagination-btn[data-direction="prev"]::before {
+    content: '‹';
 }
 
-.pagination-arrow:disabled {
-    background: #F7FAFC;
-    color: var(--muted-text);
-    cursor: not-allowed;
-    box-shadow: none;
+.pagination-btn[data-direction="next"]::before {
+    content: '›';
 }
 
 .product-grid {
@@ -3779,10 +4005,17 @@ s {
         gap: 5px;
     }
 
+    .logo-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+    }
+
     .logo {
         margin: 0;
         text-align: center;
         width: auto;
+        margin-right: 0;
     }
 
     .logo img {
@@ -3791,7 +4024,8 @@ s {
 
     .logo-text {
         font-size: 14px;
-        margin-left: 10px;
+        margin-left: 0;
+        text-align: left;
     }
 
 .phones {
@@ -3802,7 +4036,7 @@ s {
     margin-left: 0px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 2px;
     justify-content: flex-end;
 }
 
@@ -3810,6 +4044,7 @@ s {
         width: 100%;
         max-width: calc(100% - 20px);
         justify-content: space-between;
+        gap: 5px;
     }
 
     .search-bar {
@@ -3817,6 +4052,7 @@ s {
         max-width: none;
         margin: 0;
         padding: 0;
+        min-width: 150px;
     }
 
     .search-bar input {
@@ -4691,12 +4927,17 @@ s {
         flex-wrap: nowrap;
         justify-content: center;
         align-items: center;
-        gap: 15px;
+        gap: 5px;
+    }
+
+    .logo-container {
+        gap: 0;
     }
 
     .logo {
         margin-left: 0;
         flex-shrink: 0;
+        margin-right: 0;
     }
 
     .logo img {
@@ -4705,7 +4946,8 @@ s {
 
     .logo-text {
         font-size: 16px;
-        margin-left: 15px;
+        margin-left: 0;
+        text-align: left;
     }
 
     .phones {
@@ -4722,21 +4964,27 @@ s {
         flex-grow: 1;
         max-width: 400px;
         margin: 0;
+        gap: 1px;
     }
 
     .search-bar {
         flex-grow: 1;
-        max-width: none;
+        max-width: 200px;
+    }
+    
+    .search-bar input {
+        font-size: 14px;
+        padding: 8px 35px 8px 12px;
     }
 
     .search-btn {
-        width: 35px;
-        height: 35px;
+        width: 32px;
+        height: 32px;
     }
 
     .search-btn::before {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
     }
 
     .cart {
@@ -7124,63 +7372,49 @@ s {
     }
 
     .show-more-btn {
-        background: var(--button-background);
-        color: var(--button-text-color);
-        border-color: var(--border-color);
-        box-shadow: 0 2px 6px var(--shadow-color);
+        background: #3B82F6;
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
     .show-more-btn:hover {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
-        box-shadow: 0 4px 12px var(--shadow-color);
+        background: #2563EB;
+        color: white;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
     }
 
     .show-more-btn:disabled {
-        background: var(--input-bg);
-        color: var(--muted-text);
+        background: #666;
+        color: #999;
+        box-shadow: none;
     }
 
     .pagination-btn {
-        background: var(--button-background);
-        color: var(--button-text-color);
-        border-color: var(--border-color);
-        box-shadow: 0 2px 4px var(--shadow-color);
+        background: #2d3748;
+        color: #e2e8f0;
+        border-color: #4a5568;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .pagination-btn.active {
-        background: var(--primary-color);
-        color: #FFFFFF;
-        border-color: var(--primary-color);
+        background: #3B82F6;
+        color: white;
+        border-color: #3B82F6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
-    .pagination-btn:hover {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
-        box-shadow: 0 4px 8px var(--shadow-color);
+    .pagination-btn:hover:not(.active):not(:disabled) {
+        background: #4a5568;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .pagination-btn:disabled {
-        background: var(--input-bg);
-        color: var(--muted-text);
-    }
-
-    .pagination-arrow {
-        background: var(--button-background);
-        color: var(--button-text-color);
-        border-color: var(--border-color);
-        box-shadow: 0 2px 4px var(--shadow-color);
-    }
-
-    .pagination-arrow:hover {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
-        box-shadow: 0 4px 8px var(--shadow-color);
-    }
-
-    .pagination-arrow:disabled {
-        background: var(--input-bg);
-        color: var(--muted-text);
+        background: #2d3748;
+        color: #718096;
+        opacity: 0.5;
+        box-shadow: none;
     }
 
 .group-products {
@@ -8048,7 +8282,7 @@ s {
 #catalog-dropdown .dropdown-item,
 #catalog-dropdown .dropdown-item span,
 #catalog-dropdown .sub-list p {
-  padding: 8px 8px !important;
+  padding: 8px 15px !important;
   border: 1px solid transparent !important;
   outline: none !important;
   box-sizing: border-box !important;
@@ -8074,7 +8308,7 @@ s {
 }
 
 #catalog-dropdown {
-    max-height: 80vh;
+    max-height: 60vh;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #bdbdbd #f5f5f5;
@@ -8586,7 +8820,7 @@ s {
 /* Стилі для кнопок "Попередня" та "Наступна" */
 .pagination-btn[data-direction] {
     font-weight: 600;
-    min-width: 100px;
+    min-width: 40px;
 }
 
 /* Адаптивність для мобільних пристроїв */
@@ -8604,8 +8838,9 @@ s {
     }
     
     .pagination-btn[data-direction] {
-        min-width: 80px;
-        font-size: 12px;
+        min-width: 36px;
+        height: 36px;
+        font-size: 16px;
     }
     
     .pagination-ellipsis {
@@ -8644,24 +8879,27 @@ s {
     .pagination-btn {
         background: #2d3748;
         border-color: #4a5568;
-        color: #a0aec0;
+        color: #e2e8f0;
     }
     
     .pagination-btn.active {
-        background: var(--secondary-color);
+        background: #3B82F6;
         color: white;
-        border-color: var(--secondary-color);
+        border-color: #3B82F6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
     
     .pagination-btn:hover:not(.active):not(:disabled) {
         background: #4a5568;
-        color: #e2e8f0;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     
     .pagination-btn:disabled {
-        background: #1a202c;
-        color: #4a5568;
-        border-color: #2d3748;
+        background: #2d3748;
+        color: #718096;
+        opacity: 0.5;
+        box-shadow: none;
     }
     
     .pagination-ellipsis {
