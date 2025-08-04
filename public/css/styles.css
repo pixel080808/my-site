@@ -14,7 +14,7 @@
     --background: #ffffff;
     --card-bg: #FFFFFF;
     --sale-color: #fb5050;
-    --border-color: #d8d8d8;
+    --border-color: #ededed;
     --base-font-size: 16px;
     --base-padding: 10px;
     --transition-speed: 0.3s;
@@ -161,7 +161,6 @@ header.scrolled {
     align-items: center;
     margin-left: 2px;
     transition: transform 0.2s;
-    color: #4caf50;
 }
 .phones .phone-dropdown-arrow.active {
     transform: rotate(180deg);
@@ -1925,19 +1924,15 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 
 .show-more-btn {
     padding: 12px 30px;
-    background: #3B82F6;
-    color: white;
-    border: none;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
     border-radius: 25px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0px;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .show-more-btn::before {
@@ -1953,17 +1948,17 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .show-more-btn:hover {
-    background: #2563EB;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    background: var(--border-color);
+    color: var(--text-color);
+    /* transform: translateY(-2px); */
+     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .show-more-btn:disabled {
-    background: #ccc;
-    color: #666;
+    background: #F7FAFC;
+    color: var(--muted-text);
     cursor: not-allowed;
     box-shadow: none;
-    transform: none;
 }
 
 @keyframes spin {
@@ -5788,9 +5783,9 @@ s {
     }
 
     .nav a {
-        font-size: 18px;
+        font-size: 19px;
         margin: 0 15px;
-        padding: 8px 15px;
+        padding: 8px 32px;
     }
 
     #catalog-dropdown,
@@ -6442,10 +6437,6 @@ s {
         color: var(--text-color);
     }
 
-    .phones:hover {
-        color: var(--primary-color);
-    }
-
     .search-bar input {
         border: none;
         border-bottom: 1px solid var(--input-border);
@@ -6503,7 +6494,7 @@ s {
     }
 
     .nav {
-        background: var(--card-bg);
+        background: #1a202c;
         border-bottom: 1px solid var(--border-color);
     }
 
@@ -7372,22 +7363,21 @@ s {
     }
 
     .show-more-btn {
-        background: #3B82F6;
-        color: white;
-        border: none;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        background: var(--button-background);
+        color: var(--button-text-color);
+        border-color: var(--border-color);
+        box-shadow: 0 2px 6px var(--shadow-color);
     }
 
     .show-more-btn:hover {
-        background: #2563EB;
-        color: white;
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        background: var(--button-hover-background);
+        color: #FFFFFF;
+        box-shadow: 0 4px 12px var(--shadow-color);
     }
 
     .show-more-btn:disabled {
-        background: #666;
-        color: #999;
-        box-shadow: none;
+        background: var(--input-bg);
+        color: var(--muted-text);
     }
 
     .pagination-btn {
@@ -8009,11 +7999,7 @@ s {
     justify-content: center;
     align-items: center;
 }
-.phone-dropdown-portal .phone-dropdown-item:hover,
-.phone-dropdown-portal .phone-dropdown-item:focus {
-    background: #e8f5e9;
-    color: #388e3c;
-}
+
 @media (max-width: 650px) {
     .phone-dropdown-portal {
         min-width: 120px;
@@ -8032,11 +8018,6 @@ s {
     }
     .phone-dropdown-portal .phone-dropdown-item {
         color: #e6e6e6;
-    }
-    .phone-dropdown-portal .phone-dropdown-item:hover,
-    .phone-dropdown-portal .phone-dropdown-item:focus {
-        background: #2e3b2e;
-        color: #4caf50;
     }
 }
 
@@ -8326,7 +8307,7 @@ s {
 /* --- Випадаюче меню Каталог у темній темі --- */
 @media (prefers-color-scheme: dark) {
   #catalog-dropdown {
-    background: rgba(35, 39, 47, 0.98) !important;
+    background: rgb(26 32 44) !important;
     color: #fff !important;
     box-shadow: 0 2px 12px rgba(0,0,0,0.7);
     border: 1px solid #333;
@@ -8794,7 +8775,7 @@ s {
 .pagination-btn:hover:not(.active):not(:disabled) {
     background: var(--border-color);
     color: var(--text-color);
-    transform: translateY(-1px);
+    transform: translateY(0px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
