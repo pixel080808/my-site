@@ -4,13 +4,15 @@
   "description": "Скрипт для витягування інформації з сайту MiroMark",
   "main": "miromark_scraper.js",
   "scripts": {
-    "start": "node miromark_scraper.js",
-    "simple": "node miromark_scraper_simple.js",
-    "test": "node test_scraper.js",
-    "import": "node import_miromark_data.js",
-    "scrape": "node miromark_scraper.js && node import_miromark_data.js",
-    "cleanup": "node cleanup.js",
-    "full": "node cleanup.js && node miromark_scraper.js && node import_miromark_data.js"
+    "start": "node script/miromark_scraper_http_fixed_v10.js",
+    "simple": "node script/miromark_scraper_http_fixed_v10.js",
+    "test": "node script/test_site_access.js",
+    "import": "node script/import_miromark_data.js",
+    "scrape": "node script/miromark_scraper_http_fixed_v10.js",
+    "demo": "node script/demo_scraper.js",
+    "download-images": "node script/download_images.js",
+    "full": "node script/run_full_scraping.js",
+    "test-site": "node script/test_site_access.js"
   },
   "dependencies": {
     "puppeteer": "^21.0.0"
