@@ -1447,9 +1447,9 @@ function renderBreadcrumbs() {
                 categorySpan.appendChild(document.createTextNode(' > '));
                 const subcategorySpan = document.createElement('span');
                 const subcategoryLink = document.createElement('a');
-                subcategoryLink.href = `/${currentProduct.category}/${currentProduct.subcategory}`;
+                subcategoryLink.href = `/${currentProduct.category}/${subCat ? subCat.slug : currentProduct.subcategory}`;
                 // Знаходимо правильну назву підкатегорії
-                const subCat = cat && cat.subcategories ? cat.subcategories.find(sc => sc.slug === currentProduct.subcategory) : null;
+                const subCat = cat && cat.subcategories ? cat.subcategories.find(sc => sc.name === currentProduct.subcategory) : null;
                 subcategoryLink.textContent = subCat ? subCat.name : currentProduct.subcategory;
                 subcategoryLink.classList.add('breadcrumb-link');
                 subcategoryLink.style.display = 'inline-block';
@@ -1459,7 +1459,7 @@ function renderBreadcrumbs() {
                     const cat = categories.find(c => c.slug === currentProduct.category);
                     if (cat) {
                         currentCategory = cat.slug;
-                        currentSubcategory = currentProduct.subcategory;
+                        currentSubcategory = subCat ? subCat.slug : currentProduct.subcategory;
                         currentProduct = null;
                         isSearchActive = false;
                         searchQuery = '';
@@ -2069,18 +2069,6 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             subcategoryName = selectedSubCat ? selectedSubCat.name : subcategory;
         }
 
-        // Додаємо детальне логування для діагностики
-        console.log('=== ДІАГНОСТИКА ФІЛЬТРАЦІЇ ===');
-        console.log('Category:', category);
-        console.log('Subcategory:', subcategory);
-        console.log('SubcategoryName:', subcategoryName);
-        console.log('Total products:', products.length);
-        
-        // Показуємо всі товари в цій категорії
-        const categoryProducts = products.filter(p => p.category === category && p.visible);
-        console.log('Products in category:', categoryProducts.length);
-        console.log('Category products subcategories:', categoryProducts.map(p => ({ name: p.name, subcategory: p.subcategory })));
-        
         filteredProducts = products.filter(p => 
             p.category === category && 
             (!subcategoryName || p.subcategory === subcategoryName) && 
@@ -2088,9 +2076,6 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
         );
 
         baseFilteredProducts = [...filteredProducts];
-
-        console.log('Filtered products for category:', category, 'subcategory:', subcategory, 'subcategoryName:', subcategoryName, 'count:', filteredProducts.length);
-        console.log('=== КІНЕЦЬ ДІАГНОСТИКИ ===');
 
         if (filteredProducts.length === 0) {
             const p = document.createElement('p');
@@ -4391,7 +4376,7 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
         ? categories
         .filter(cat => cat.slug === product.category)
             .flatMap(cat => cat.subcategories || [])
-            .some(sub => sub.slug === product.subcategory)
+            .some(sub => sub.name === product.subcategory)
         : true;
     if (!subCategoryExists) {
         console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
@@ -7147,7 +7132,12 @@ function createProductElement(product) {
 
     // --- Зображення ---
     const imgLink = document.createElement('a');
-    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    // Знаходимо slug підкатегорії за назвою
+    const category = categories.find(c => c.slug === product.category);
+    const subcategory = category?.subcategories?.find(sub => sub.name === product.subcategory);
+    const subcategorySlug = subcategory ? transliterate(subcategory.slug.replace('ь', '')) : '';
+    
+    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
         e.preventDefault();
         openProduct(product.slug);
@@ -7167,7 +7157,7 @@ function createProductElement(product) {
 
     // --- Назва ---
     const h3Link = document.createElement('a');
-    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${product.subcategory ? `/${transliterate(product.subcategory.replace('ь', ''))}` : ''}/${product.slug}`;
+    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     h3Link.onclick = (e) => {
         e.preventDefault();
         openProduct(product.slug);

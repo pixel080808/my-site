@@ -6351,9 +6351,11 @@ async function openEditProductModal(productId) {
         // Встановлюємо підкатегорію
         if (product.subcategory) {
             const category = categories.find(c => c.slug === product.category);
-            if (category && category.subcategories.some(sub => sub.slug === product.subcategory && sub.visible !== false)) {
-                subcatSelect.value = product.subcategory;
-                console.log('Встановлено subcategory:', product.subcategory);
+            if (category && category.subcategories.some(sub => sub.name === product.subcategory && sub.visible !== false)) {
+                // Знаходимо slug підкатегорії за назвою
+                const subcategory = category.subcategories.find(sub => sub.name === product.subcategory);
+                subcatSelect.value = subcategory.slug;
+                console.log('Встановлено subcategory:', product.subcategory, 'slug:', subcategory.slug);
             } else {
                 subcatSelect.value = '';
                 console.warn('Підкатегорія не знайдена в опціях або прихована:', product.subcategory);

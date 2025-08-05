@@ -1160,6 +1160,8 @@ if (error) {
           field: "subcategory",
         })
       }
+      // Зберігаємо назву підкатегорії замість slug
+      productData.subcategory = subcategory.name;
     }
 
     if (productData.groupProducts && productData.groupProducts.length > 0) {
@@ -1354,6 +1356,8 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
           field: "subcategory",
         });
       }
+      // Зберігаємо назву підкатегорії замість slug
+      productData.subcategory = subcategory.name;
     }
 
     if (productData.groupProducts && productData.groupProducts.length > 0) {
