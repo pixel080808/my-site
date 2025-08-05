@@ -2,27 +2,53 @@
   "name": "miromark-scraper",
   "version": "1.0.0",
   "description": "Скрипт для витягування інформації з сайту MiroMark",
-  "main": "miromark_scraper.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node script/miromark_scraper_http_fixed_v10.js",
-    "simple": "node script/miromark_scraper_http_fixed_v10.js",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test-db": "node test-db.js",
+    "check-env": "node check-env.js",
+    "check-deps": "node check-deps.js",
+    "init-db": "node init-db.js",
+    "simple": "node script/miromark_scraper_http_fixed_v11.js",
     "test": "node script/test_site_access.js",
     "import": "node script/import_miromark_data.js",
-    "scrape": "node script/miromark_scraper_http_fixed_v10.js",
+    "scrape": "node script/miromark_scraper_http_fixed_v11.js",
     "demo": "node script/demo_scraper.js",
     "download-images": "node script/download_images.js",
     "full": "node script/run_full_scraping.js",
     "test-site": "node script/test_site_access.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "multer": "^1.4.5-lts.1",
+    "cloudinary": "^1.40.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "sanitize-html": "^2.10.0",
+    "joi": "^17.9.2",
+    "ws": "^8.13.0",
+    "express-rate-limit": "^6.10.0",
+    "csurf": "^1.11.0",
+    "winston": "^3.10.0",
+    "cookie-parser": "^1.4.6",
     "puppeteer": "^21.0.0"
   },
   "keywords": [
     "scraper",
     "puppeteer",
     "miromark",
-    "furniture"
+    "furniture",
+    "express",
+    "mongodb"
   ],
   "author": "Your Name",
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
