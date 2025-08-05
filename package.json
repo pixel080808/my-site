@@ -1,54 +1,38 @@
 {
-  "name": "miromark-scraper",
+  "name": "my-site",
   "version": "1.0.0",
-  "description": "Скрипт для витягування інформації з сайту MiroMark",
   "main": "server.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "node server.js",
-    "test-db": "node test-db.js",
-    "check-env": "node check-env.js",
-    "check-deps": "node check-deps.js",
-    "init-db": "node init-db.js",
-    "simple": "node script/miromark_scraper_http_fixed_v11.js",
-    "test": "node script/test_site_access.js",
-    "import": "node script/import_miromark_data.js",
-    "scrape": "node script/miromark_scraper_http_fixed_v11.js",
-    "demo": "node script/demo_scraper.js",
-    "download-images": "node script/download_images.js",
-    "full": "node script/run_full_scraping.js",
-    "test-site": "node script/test_site_access.js"
+    "dev": "nodemon server.js"
   },
+  "keywords": [],
+  "author": "Ваше Ім'я <ваш.email@example.com>",
+  "license": "ISC",
+  "description": "Меблевий магазин із реальним часом оновлення через WebSocket та інтеграцією з MongoDB і Cloudinary.",
   "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.5.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
+    "cloudinary": "^1.41.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "multer": "^1.4.5-lts.1",
-    "cloudinary": "^1.40.0",
-    "multer-storage-cloudinary": "^4.0.0",
-    "sanitize-html": "^2.10.0",
-    "joi": "^17.9.2",
-    "ws": "^8.13.0",
-    "express-rate-limit": "^6.10.0",
     "csurf": "^1.11.0",
-    "winston": "^3.10.0",
-    "cookie-parser": "^1.4.6",
-    "puppeteer": "^21.0.0"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.13.1",
+    "multer": "^1.4.5-lts.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "sanitize-html": "^2.16.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.1"
   },
-  "keywords": [
-    "scraper",
-    "puppeteer",
-    "miromark",
-    "furniture",
-    "express",
-    "mongodb"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "eslint": "^9.24.0",
+    "globals": "^16.0.0",
+    "nodemon": "^3.1.7"
   }
 }
