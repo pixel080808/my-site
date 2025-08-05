@@ -61,13 +61,12 @@ header {
   min-height: 80px;
   z-index: 101;
   transition: background var(--transition-speed) ease;
-  position: sticky;
-  top: 0;
+  position: relative;
 }
 
 header.scrolled {
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .logo-container {
@@ -607,14 +606,15 @@ header.scrolled {
     background: #ffffff;
     padding: 2px 0;
     text-align: center;
-    border-bottom: 1px solid var(--border-color);
+    /* border-bottom: 1px solid var(--border-color); */
     width: 100%;
     z-index: 100;
     transition: background var(--transition-speed) ease;
+    position: relative;
 }
 
 .nav.scrolled {
-    background: rgba(237, 242, 247, 0.95);
+    background: #ffffff;
 }
 
 .nav a {
@@ -4193,7 +4193,7 @@ s {
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 0px;
 }
 
 .nav a {
@@ -6536,7 +6536,7 @@ s {
     }
 
     .nav.scrolled {
-        background: rgba(45, 55, 72, 0.95);
+        background: var(--card-bg);
     }
 
     .nav a {
