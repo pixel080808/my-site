@@ -5281,7 +5281,7 @@ s {
     }
 
     .content {
-        padding: 5px;
+        padding: 1px;
     }
 
     h2 {
@@ -5850,7 +5850,7 @@ s {
     }
 
     .content {
-        padding: var(--base-padding);
+      padding: 1px;
     }
 
     h2 {
@@ -6348,7 +6348,7 @@ s {
     }
 
     .content {
-        padding: 10px;
+        padding: 1px;
     }
 
     .slide img {
