@@ -51,18 +51,18 @@ body {
 }
 
 header {
-    background: var(--card-bg);
-    padding: 5px 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    min-height: 60px;
-    z-index: 101;
-    transition: background var(--transition-speed) ease;
-    flex-wrap: wrap;
-    gap: 0;
+  background: var(--card-bg);
+  padding: 20px 24px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 80px;
+  z-index: 101;
+  transition: background var(--transition-speed) ease;
+  position: sticky;
+  top: 0;
 }
 
 header.scrolled {
@@ -71,9 +71,20 @@ header.scrolled {
 }
 
 .logo-container {
-    display: flex;
-    align-items: center;
-    gap: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.logo-container img {
+  height: 40px;
+  width: auto;
 }
 
 .logo {
@@ -372,14 +383,14 @@ header.scrolled {
 
 .search-bar input {
     width: 100%;
-    padding: 8px 40px 8px 15px;
-    border: none;
-    border-bottom: 2px solid var(--border-color);
-    background: transparent;
+    padding: 10px 40px 10px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    background: var(--card-bg);
     font-size: 15px;
     color: var(--text-color);
     outline: none;
-    transition: border-color var(--transition-speed) ease;
+    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
 
 /* Адаптивні стилі для поля вводу пошуку */
@@ -407,6 +418,7 @@ header.scrolled {
 
 .search-bar input:focus {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .search-bar input::placeholder {
@@ -609,12 +621,13 @@ header.scrolled {
     color: var(--text-color);
     text-decoration: none;
     margin: 0 15px;
-    font-weight: 500;
+    font-weight: 700;
     font-size: 18px;
     padding: 8px 15px;
     border-radius: 20px;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
     cursor: pointer;
+    text-transform: uppercase;
 }
 
 .nav a:hover,
@@ -4191,6 +4204,8 @@ s {
     display: flex;
     align-items: center;
     height: 100%;
+    text-transform: uppercase;
+    font-weight: 700;
 }
 
     .burger-menu {
@@ -5094,6 +5109,8 @@ s {
         font-size: 18px;
         margin: 0 15px;
         padding: 8px 15px;
+        text-transform: uppercase;
+        font-weight: bold;
     }
 
 .floating-cart {
@@ -5791,6 +5808,8 @@ s {
         font-size: 18px;
         margin: 0 15px;
         padding: 8px 15px;
+        text-transform: uppercase;
+        font-weight: bold;
     }
 
     #catalog-dropdown,
@@ -6522,6 +6541,8 @@ s {
 
     .nav a {
         color: var(--text-color);
+        text-transform: uppercase;
+        font-weight: 700;
     }
 
     .nav a:hover,
