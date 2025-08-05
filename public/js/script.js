@@ -2063,21 +2063,34 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
         productList.className = 'product-grid';
         productsDiv.appendChild(productList);
 
-        let subcategorySlug = null;
+        let subcategoryName = null;
         if (subcategory) {
             const selectedSubCat = selectedCat.subcategories?.find(sub => sub.slug === subcategory);
-            subcategorySlug = selectedSubCat ? selectedSubCat.slug : subcategory;
+            subcategoryName = selectedSubCat ? selectedSubCat.name : subcategory;
         }
 
+        // Додаємо детальне логування для діагностики
+        console.log('=== ДІАГНОСТИКА ФІЛЬТРАЦІЇ ===');
+        console.log('Category:', category);
+        console.log('Subcategory:', subcategory);
+        console.log('SubcategoryName:', subcategoryName);
+        console.log('Total products:', products.length);
+        
+        // Показуємо всі товари в цій категорії
+        const categoryProducts = products.filter(p => p.category === category && p.visible);
+        console.log('Products in category:', categoryProducts.length);
+        console.log('Category products subcategories:', categoryProducts.map(p => ({ name: p.name, subcategory: p.subcategory })));
+        
         filteredProducts = products.filter(p => 
             p.category === category && 
-            (!subcategorySlug || p.subcategory === subcategorySlug) && 
+            (!subcategoryName || p.subcategory === subcategoryName) && 
             p.visible
         );
 
         baseFilteredProducts = [...filteredProducts];
 
-        console.log('Filtered products for category:', category, 'subcategory:', subcategory, 'subcategorySlug:', subcategorySlug, 'count:', filteredProducts.length);
+        console.log('Filtered products for category:', category, 'subcategory:', subcategory, 'subcategoryName:', subcategoryName, 'count:', filteredProducts.length);
+        console.log('=== КІНЕЦЬ ДІАГНОСТИКИ ===');
 
         if (filteredProducts.length === 0) {
             const p = document.createElement('p');

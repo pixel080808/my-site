@@ -53,7 +53,6 @@ body {
 header {
   background: var(--card-bg);
   padding: 20px 24px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -66,7 +65,6 @@ header {
 
 header.scrolled {
     background: var(--card-bg);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .logo-container {
@@ -143,9 +141,9 @@ header.scrolled {
     user-select: none;
     flex-shrink: 0;
     white-space: nowrap;
-    background: rgba(59, 130, 246, 0.1);
+    background: #ffffff;
     border-radius: 25px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    /* border: 1px solid #e2e8f0; */
     transition: all 0.3s ease;
 }
 
@@ -352,6 +350,41 @@ header.scrolled {
     .search-bar {
         max-width: 350px;
     }
+
+    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1200px */
+    #contacts,
+    #about {
+        padding: 20px 24px !important;
+        max-width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    #contacts h3,
+    #about h3 {
+        margin-bottom: 20px;
+        color: var(--text-color);
+    }
+
+    #contacts p,
+    #about p {
+        margin-bottom: 15px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    #contacts a,
+    #about a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: color var(--transition-speed) ease;
+    }
+
+    #contacts a:hover,
+    #about a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
 }
 
 /* Додаткові стилі для дуже малих екранів */
@@ -382,14 +415,15 @@ header.scrolled {
 
 .search-bar input {
     width: 100%;
-    padding: 10px 40px 10px 16px;
-    border: 2px solid var(--border-color);
-    border-radius: 25px;
-    background: var(--card-bg);
+    padding: 10px 40px 10px 0;
+    border: none;
+    border-bottom: 2px solid var(--border-color);
+    border-radius: 0;
+    background: transparent;
     font-size: 15px;
     color: var(--text-color);
     outline: none;
-    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: border-color var(--transition-speed) ease;
 }
 
 /* Адаптивні стилі для поля вводу пошуку */
@@ -416,8 +450,7 @@ header.scrolled {
 }
 
 .search-bar input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-bottom-color: var(--primary-color);
 }
 
 .search-bar input::placeholder {
@@ -606,11 +639,20 @@ header.scrolled {
     background: #ffffff;
     padding: 2px 0;
     text-align: center;
-    /* border-bottom: 1px solid var(--border-color); */
     width: 100%;
     z-index: 100;
     transition: background var(--transition-speed) ease;
     position: relative;
+}
+
+.nav::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
 }
 
 .nav.scrolled {
@@ -784,7 +826,6 @@ header.scrolled {
     outline: none;
     cursor: pointer;
 }
-
 .breadcrumbs span.separator {
     margin: 0 10px;
     font-size: 16px;
@@ -1581,7 +1622,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         font-size: 10px;
     }
 }
-
 @media (max-width: 320px) {
     .dimensions-container {
         flex-direction: column;
@@ -2378,7 +2418,6 @@ s {
     color: white;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-
 .product .buy-btn:hover {
     background: #059669;
     /* transform: translateY(-2px); */
@@ -3171,7 +3210,6 @@ s {
     margin-right: 8px;
     transition: opacity var(--transition-speed) ease;
 }
-
 .product .buy-btn.added::before,
 #product-details .product-detail-right .buy-btn.added::before,
 .group-products .buy-btn.added::before {
@@ -3970,7 +4008,6 @@ s {
     border: 1px solid rgba(255, 255, 255, 0.1); /* Легкий контур для елегантності */
     background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%); /* Градієнтний фон */
 }
-
 .confirm-btn,
 .cancel-btn {
     padding: 12px 25px;
@@ -4113,6 +4150,41 @@ s {
     #contacts span {
         font-size: 14px; /* Зменшений розмір тексту */
     }
+
+/* Додаємо відступи для розділів Контакти та Про нас */
+#contacts,
+#about {
+    padding: 20px 24px !important;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+#contacts h3,
+#about h3 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+#contacts p,
+#about p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+    color: var(--text-color);
+}
+
+#contacts a,
+#about a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color var(--transition-speed) ease;
+}
+
+#contacts a:hover,
+#about a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
 
 #catalog-dropdown,
     .dropdown {
@@ -4745,7 +4817,6 @@ s {
     bottom: 13px; /* Вирівнюємо з рядком ціни */
     right: 8px;
 }
-
     .product img {
         margin: 0 auto 3px auto;
     }
@@ -5035,6 +5106,152 @@ s {
     #contacts a,
     #contacts span {
         font-size: 15px; /* Зменшений розмір тексту */
+    }
+
+    /* Стилі для темної теми для розділів Контакти та Про нас */
+    #contacts,
+    #about {
+        padding: 20px 24px !important;
+        max-width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    #contacts h3,
+    #about h3 {
+        margin-bottom: 20px;
+        color: var(--text-color);
+    }
+
+    #contacts p,
+    #about p {
+        margin-bottom: 15px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    #contacts a,
+    #about a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: color var(--transition-speed) ease;
+    }
+
+    #contacts a:hover,
+    #about a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+
+    /* Додаткові стилі для екранів від 920px в темній темі */
+    @media (min-width: 920px) {
+        #contacts,
+        #about {
+            padding: 20px 24px !important;
+            max-width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        #contacts h3,
+        #about h3 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+
+        #contacts p,
+        #about p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        #contacts a,
+        #about a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color var(--transition-speed) ease;
+        }
+
+        #contacts a:hover,
+        #about a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+    }
+
+    /* Додаткові стилі для екранів від 1200px в темній темі */
+    @media (min-width: 1200px) {
+        #contacts,
+        #about {
+            padding: 20px 24px !important;
+            max-width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        #contacts h3,
+        #about h3 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+
+        #contacts p,
+        #about p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        #contacts a,
+        #about a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color var(--transition-speed) ease;
+        }
+
+        #contacts a:hover,
+        #about a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+    }
+
+    /* Додаткові стилі для екранів від 1400px в темній темі */
+    @media (min-width: 1400px) {
+        #contacts,
+        #about {
+            padding: 20px 24px !important;
+            max-width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        #contacts h3,
+        #about h3 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+
+        #contacts p,
+        #about p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        #contacts a,
+        #about a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color var(--transition-speed) ease;
+        }
+
+        #contacts a:hover,
+        #about a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
     }
 
 #catalog-dropdown,
@@ -5475,7 +5692,6 @@ s {
     transition: background var(--transition-speed) ease;
     white-space: nowrap;
 }
-
     .filter-toggle:hover {
         background: var(--secondary-color);
     }
@@ -5738,6 +5954,41 @@ s {
 
     .favorite-icon {
         margin-right: 18px;
+    }
+
+    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 920px */
+    #contacts,
+    #about {
+        padding: 20px 24px !important;
+        max-width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    #contacts h3,
+    #about h3 {
+        margin-bottom: 20px;
+        color: var(--text-color);
+    }
+
+    #contacts p,
+    #about p {
+        margin-bottom: 15px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    #contacts a,
+    #about a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: color var(--transition-speed) ease;
+    }
+
+    #contacts a:hover,
+    #about a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
     }
     
     .product-detail-right .favorite-icon {
@@ -6247,7 +6498,6 @@ s {
         padding: 12px 25px;
     }
 }
-
 @media (min-width: 0px) {
 .catalog-menu {
         display: inline-flex;
@@ -6412,6 +6662,41 @@ s {
     .main-product-image {
         max-width: 600px;
     }
+
+    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1400px */
+    #contacts,
+    #about {
+        padding: 20px 24px !important;
+        max-width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    #contacts h3,
+    #about h3 {
+        margin-bottom: 20px;
+        color: var(--text-color);
+    }
+
+    #contacts p,
+    #about p {
+        margin-bottom: 15px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    #contacts a,
+    #about a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: color var(--transition-speed) ease;
+    }
+
+    #contacts a:hover,
+    #about a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -6468,10 +6753,14 @@ s {
 
     .phones {
         color: var(--text-color);
+        background: #2d3748;
+        border: 1px solid #4a5568;
     }
 
     .phones:hover {
         color: var(--primary-color);
+        background: #374151;
+        border-color: var(--primary-color);
     }
 
     .search-bar input {
@@ -6483,8 +6772,7 @@ s {
     }
 
     .search-bar input:focus {
-        border-bottom: 1px solid var(--primary-color);
-        box-shadow: none;
+        border-bottom-color: var(--primary-color);
     }
 
     .search-bar input::placeholder {
@@ -6532,7 +6820,10 @@ s {
 
     .nav {
         background: #1a202c;
-        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .nav::after {
+        background: var(--border-color);
     }
 
     .nav.scrolled {
@@ -6966,7 +7257,6 @@ s {
     border-color: var(--primary-color) !important;
     box-shadow: 0 0 8px rgba(96, 165, 250, 0.3) !important;
 }
-
     .filters .back-btn:hover {
         background: var(--button-hover-background);
         color: #FFFFFF;
@@ -7451,7 +7741,6 @@ s {
     border: none;
     box-shadow: none;
 }
-
     .group-product-item {
         background-color: var(--card-bg) !important;
         box-shadow: 0 2px 5px var(--shadow-color);
@@ -8245,7 +8534,6 @@ s {
     padding: 5px 0;
   }
 }
-
 /* --- Ефект наведення для випадаючого меню Каталог --- */
 #catalog-dropdown .dropdown-item:hover,
 #catalog-dropdown .dropdown-item.active {
