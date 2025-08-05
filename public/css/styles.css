@@ -6438,6 +6438,15 @@ s {
         color: var(--primary-color);
     }
 
+.phones .main-phone {
+    font-weight: 600;
+    font-size: 16px;
+    padding: 0 8px 0 0;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+    color: #ffffff;
+}
+
     .phones {
         color: var(--text-color);
     }
