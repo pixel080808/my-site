@@ -58,7 +58,7 @@ header {
   align-items: center;
   width: 100%;
   min-height: 80px;
-  z-index: 101;
+  z-index: 50;
   transition: background var(--transition-speed) ease;
   position: relative;
 }
@@ -640,9 +640,14 @@ header.scrolled {
     padding: 2px 0;
     text-align: center;
     width: 100%;
-    z-index: 100;
-    transition: background var(--transition-speed) ease;
+    z-index: 99;
+    transition: background var(--transition-speed) ease, z-index var(--transition-speed) ease;
     position: relative;
+}
+
+/* Коли фільтри активні, навігація ховається за ними */
+.nav.filters-active {
+    z-index: 10;
 }
 
 .nav::after {
@@ -684,6 +689,20 @@ header.scrolled {
     transform: translateY(0);
 }
 
+/* Покращені стилі для випадаючого меню Каталог в навігації */
+.catalog-menu {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    text-align: center;
+    width: max-content;
+    min-width: unset;
+    padding: 0;
+    margin: 0;
+    z-index: 1000; /* Високий z-index для випадаючого меню */
+}
+
 .catalog-menu {
     display: inline-flex;
     flex-direction: column;
@@ -701,23 +720,50 @@ header.scrolled {
     display: none;
     position: absolute;
     background: var(--card-bg);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
     min-width: 200px;
-    z-index: 102;
-    padding: 8px 0;
-    transition: opacity var(--transition-speed) ease;
+    z-index: 1001;
+    padding: 12px 0;
+    transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
     font-family: 'Inter', 'Roboto', Arial, sans-serif;
     font-size: 16px; /* Базовий розмір шрифту для адаптації */
+    border: 1px solid var(--border-color);
 }
 
 .catalog-menu #catalog-dropdown.active,
 .catalog-menu .dropdown.active {
     display: block;
     opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Покращені стилі для кнопки Каталог в навігації */
+.catalog-menu a {
+    color: var(--text-color);
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: 700;
+    font-size: 18px;
+    padding: 8px 15px;
+    border-radius: 20px;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.catalog-menu a:hover,
+.catalog-menu a:focus {
+    background: var(--border-color);
+    color: var(--primary-color);
+    outline: none;
+}
+
+.catalog-menu a:active {
+    transform: translateY(0);
 }
 
 .dropdown-item {
@@ -781,7 +827,7 @@ header.scrolled {
     color: var(--light-text);
     padding: 10px 0;
     width: 100%;
-    z-index: 99;
+    z-index: 40;
     background: #ffffff00;
     text-align: left;
     box-shadow: 0 2px 6px rgb(255 255 255 / 5%);
@@ -791,7 +837,7 @@ header.scrolled {
 
 .breadcrumbs-container {
     position: relative;
-    z-index: 99;
+    z-index: 40;
     width: 100%;
     padding: 0 var(--base-padding);
     display: flex;
@@ -1144,6 +1190,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     flex-shrink: 0;
     min-height: 0;
     box-sizing: border-box;
+    z-index: 1000; /* Високий z-index для фільтрів */
 }
 
 .filters:hover {
@@ -1894,7 +1941,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 
     .breadcrumbs {
-        z-index: 99;
+        z-index: 48;
     }
 }
 
@@ -1919,8 +1966,8 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         top: 0;
         left: 0;
         background: #f9f9f9;
-        height: calc(100vh - 60px);
-        z-index: 1001;
+        height: calc(100vh - 100px);
+        z-index: 222222 !important;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         box-sizing: border-box;
@@ -1930,6 +1977,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 
     .filters.active {
         transform: translateX(0);
+        z-index: 1001; /* Ще вищий z-index для активних фільтрів */
     }
 
     .filters .back-btn {
@@ -4046,6 +4094,19 @@ s {
 }
 
 @media (max-width: 650px) {
+    .catalog-menu a {
+        font-size: 14px;
+        margin: 0 3px;
+        padding: 5px 6px;
+    }
+    
+    #catalog-dropdown,
+    .dropdown {
+        min-width: 180px;
+        font-size: 14px;
+        padding: 8px 0;
+    }
+    
     header {
         flex-direction: column;
         min-height: auto;
@@ -4328,7 +4389,7 @@ s {
     }
 
     .breadcrumbs {
-        z-index: 98;
+        z-index: 20;
     }
 
     .breadcrumbs-container {
@@ -4502,7 +4563,7 @@ s {
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: calc(100vh - 60px);
+        height: calc(100vh - 100px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
@@ -5031,7 +5092,7 @@ s {
     }
 
     .logo-text {
-        font-size: 16px;
+        font-size: 14px;
         margin-left: 0;
         text-align: left;
     }
@@ -5323,7 +5384,7 @@ s {
     }
 
     .nav a {
-        font-size: 18px;
+        font-size: 16px;
         margin: 0 15px;
         padding: 8px 15px;
         text-transform: uppercase;
@@ -5635,7 +5696,7 @@ s {
         top: 0;
         left: 0;
         background: var(--card-bg);
-        height: calc(100vh - 60px);
+        height: calc(100vh - 100px);
         z-index: 1005;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
@@ -5650,13 +5711,11 @@ s {
     }
 
     .filters .back-btn {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: calc(100% - 30px);
+        display: block;
+        width: 100%;
         max-width: 220px;
-        margin: 0;
+        padding: 10px 20px;
+        margin: 0px 0;
         border: 1px solid var(--border-color);
         border-radius: 20px;
         font-size: 14px;
@@ -5679,19 +5738,20 @@ s {
         box-shadow: 0 2px 6px var(--shadow-color);
     }
 
-.filter-toggle {
-    display: block;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 8px 40px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    margin: 10px 0;
-    transition: background var(--transition-speed) ease;
-    white-space: nowrap;
-}
+    .filter-toggle {
+        display: block;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 40px;
+        border-radius: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background var(--transition-speed) ease;
+        white-space: nowrap;
+    }
+
     .filter-toggle:hover {
         background: var(--secondary-color);
     }
@@ -6840,6 +6900,23 @@ s {
     .nav a:focus {
         background: var(--button-background);
         color: #ffffff;
+    }
+    
+    .catalog-menu a {
+        color: var(--text-color);
+    }
+    
+    .catalog-menu a:hover,
+    .catalog-menu a:focus {
+        background: var(--button-background);
+        color: var(--primary-color);
+    }
+    
+    #catalog-dropdown,
+    .dropdown {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
     }
 
 #catalog-dropdown,
@@ -8298,7 +8375,7 @@ s {
 
 .phone-dropdown-portal {
     position: fixed !important;
-    z-index: 2147483647 !important;
+    z-index: 22222 !important;
     min-width: 170px;
     background: #fff;
     border-radius: 14px;

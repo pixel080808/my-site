@@ -270,7 +270,12 @@ async function saveCartToServer() {
                             console.warn(`Розмір ${item.size} не знайдено для товару ${item.name}`);
                             return null;
                         }
-                        price = parseFloat(sizeInfo.price || price);
+                        // Спочатку перевіряємо акційну ціну розміру
+                        if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
+                            price = parseFloat(sizeInfo.salePrice);
+                        } else {
+                            price = parseFloat(sizeInfo.price || price);
+                        }
                         sizeData = item.size;
                     } else {
                         console.log(`Матрац ${item.name} без розміру, використовуємо базову ціну: ${price}`);
@@ -1447,9 +1452,12 @@ function renderBreadcrumbs() {
                 categorySpan.appendChild(document.createTextNode(' > '));
                 const subcategorySpan = document.createElement('span');
                 const subcategoryLink = document.createElement('a');
-                subcategoryLink.href = `/${currentProduct.category}/${subCat ? subCat.slug : currentProduct.subcategory}`;
+                
                 // Знаходимо правильну назву підкатегорії
                 const subCat = cat && cat.subcategories ? cat.subcategories.find(sc => sc.name === currentProduct.subcategory) : null;
+                
+                // Використовуємо slug для URL і назву для відображення
+                subcategoryLink.href = `/${currentProduct.category}/${subCat ? subCat.slug : currentProduct.subcategory}`;
                 subcategoryLink.textContent = subCat ? subCat.name : currentProduct.subcategory;
                 subcategoryLink.classList.add('breadcrumb-link');
                 subcategoryLink.style.display = 'inline-block';
@@ -1459,7 +1467,7 @@ function renderBreadcrumbs() {
                     const cat = categories.find(c => c.slug === currentProduct.category);
                     if (cat) {
                         currentCategory = cat.slug;
-                        currentSubcategory = subCat ? subCat.slug : currentProduct.subcategory;
+                        currentSubcategory = subCat ? subCat.name : currentProduct.subcategory;
                         currentProduct = null;
                         isSearchActive = false;
                         searchQuery = '';
@@ -1476,7 +1484,11 @@ function renderBreadcrumbs() {
         let currentPath = '';
 
         pathSegments.forEach((segment, index) => {
-            currentPath = index === 0 ? `/${segment}` : `${currentPath}/${segment}`;
+            // Декодуємо URL сегмент
+            const decodedSegment = decodeURIComponent(segment);
+            currentPath = index === 0 ? `/${decodedSegment}` : `${currentPath}/${decodedSegment}`;
+            
+
 
             const span = document.createElement('span');
             const link = document.createElement('a');
@@ -1485,7 +1497,7 @@ function renderBreadcrumbs() {
             link.style.display = 'inline-block';
             link.style.padding = '0 5px';
 
-            let displayText = segment;
+            let displayText = decodedSegment;
 
             // Визначаємо, що показувати
             if (segment === 'contacts') displayText = 'Контакти';
@@ -1497,12 +1509,36 @@ function renderBreadcrumbs() {
                 link.onclick = (e) => e.preventDefault();
             } else {
                 // Пошук категорії по slug
-                const cat = categories.find(c => c.slug === segment);
-                if (cat) displayText = cat.name;
-                else {
+                const cat = categories.find(c => c.slug === decodedSegment);
+                if (cat) {
+                    displayText = cat.name;
+                } else {
                     // Пошук підкатегорії по slug
-                    let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === segment);
-                    if (subCat) displayText = subCat.name;
+                    // Спочатку знаходимо категорію з попереднього сегмента
+                    if (index > 0) {
+                        const prevSegment = decodeURIComponent(pathSegments[index - 1]);
+                        const prevCat = categories.find(c => c.slug === prevSegment);
+                        if (prevCat) {
+                            // Спочатку шукаємо по точному slug
+                            let subCat = (prevCat.subcategories || []).find(sc => sc.slug === decodedSegment);
+                            
+                            // Якщо не знайдено, шукаємо по транслитерованому slug
+                            if (!subCat) {
+                                subCat = (prevCat.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === decodedSegment);
+                            }
+                            
+                            if (subCat) {
+                                displayText = subCat.name;
+                            }
+                        }
+                    }
+                    // Якщо не знайдено в попередній категорії, шукаємо по всіх
+                    if (displayText === decodedSegment) {
+                        let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === decodedSegment);
+                        if (subCat) {
+                            displayText = subCat.name;
+                        }
+                    }
                 }
             }
 
@@ -1536,7 +1572,7 @@ function renderBreadcrumbs() {
                                 // Якщо клік по підкатегорії
                                 const subCat = (cat.subcategories || []).find(sc => sc.slug === parts[1]);
                                 if (subCat) {
-                                    currentSubcategory = subCat.slug;
+                                    currentSubcategory = subCat.name;
                                 } else {
                                     currentSubcategory = null;
                                 }
@@ -1653,7 +1689,7 @@ function renderCategories() {
             subLink.onclick = (e) => {
                 e.preventDefault();
                 currentCategory = cat.slug;
-                currentSubcategory = sub.slug;
+                currentSubcategory = sub.name;
                 currentProduct = null;
                 isSearchActive = false;
                 searchQuery = '';
@@ -1846,7 +1882,7 @@ span.addEventListener('touchend', goToCategory);
                 e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.slug;
-                currentSubcategory = sub.slug;
+                currentSubcategory = sub.name;
                 isSearchActive = false;
                 searchQuery = '';
                 searchResults = [];
@@ -2043,7 +2079,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
                 btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
                 btnLink.onclick = (e) => {
                     e.preventDefault();
-                    currentSubcategory = sub.slug;
+                    currentSubcategory = sub.name;
                     currentPage = 1;
                     showSection('catalog');
                 };
@@ -2069,6 +2105,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             subcategoryName = selectedSubCat ? selectedSubCat.name : subcategory;
         }
 
+        // Фільтруємо товари
         filteredProducts = products.filter(p => 
             p.category === category && 
             (!subcategoryName || p.subcategory === subcategoryName) && 
@@ -2131,7 +2168,16 @@ function createControlsContainer() {
     filterBtn.style.justifyContent = 'center';
     filterBtn.onclick = () => {
         const filters = document.querySelector('.filters');
-        if (filters) filters.classList.toggle('active');
+        const nav = document.querySelector('.nav');
+        if (filters) {
+            filters.classList.toggle('active');
+            // Додаємо/видаляємо клас filters-active для навігації
+            if (filters.classList.contains('active')) {
+                nav.classList.add('filters-active');
+            } else {
+                nav.classList.remove('filters-active');
+            }
+        }
     };
     filterSortContainer.appendChild(filterBtn);
 
@@ -3994,7 +4040,12 @@ async function addGroupToCart(productId) {
             selectedSize = selectedMattressSizes[p._id];
             const sizeInfo = p.sizes?.find(s => s.name === selectedSize);
             if (sizeInfo) {
-                price = parseFloat(sizeInfo.price || price);
+                // Перевіряємо акційну ціну розміру
+                if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
+                    price = parseFloat(sizeInfo.salePrice);
+                } else {
+                    price = parseFloat(sizeInfo.price || price);
+                }
             } else {
                 console.warn(`Розмір ${selectedSize} недоступний для товару ${p.name}`);
                 invalidItems.push(p.name);
@@ -4170,7 +4221,7 @@ async function fetchProductBySlug(slug) {
 
 async function validateAndFixPageState() {
     const path = window.location.pathname.slice(1) || '';
-    const parts = path.split('/').filter(p => p);
+    const parts = path.split('/').filter(p => p).map(p => decodeURIComponent(p));
 
     // Якщо шлях порожній, показуємо головну сторінку
     if (!parts.length) {
@@ -4215,9 +4266,16 @@ async function validateAndFixPageState() {
 
         // 2. Підкатегорія по slug
         if (parts.length === 2) {
-            const subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            // Спочатку шукаємо по точному slug
+            let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            
+            // Якщо не знайдено, шукаємо по транслитерованому slug
+            if (!subCat) {
+                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
+            }
+            
             if (subCat) {
-                currentSubcategory = subCat.slug;
+                currentSubcategory = subCat.name;
                 renderCatalog(currentCategory, currentSubcategory);
                 showSection('catalog');
                 return;
@@ -4234,9 +4292,16 @@ async function validateAndFixPageState() {
         }
         // 3. Підкатегорія + товар
         if (parts.length === 3) {
-            const subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            // Спочатку шукаємо по точному slug
+            let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
+            
+            // Якщо не знайдено, шукаємо по транслитерованому slug
+            if (!subCat) {
+                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
+            }
+            
             if (subCat) {
-                currentSubcategory = subCat.slug;
+                currentSubcategory = subCat.name;
                 const product = products.find(p => p.slug === parts[2]);
                 if (product) {
                     currentProduct = product;
@@ -4398,7 +4463,15 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
     currentSubcategory = product.subcategory || null;
 
     const catSlug = transliterate(currentCategory.replace('ь', ''));
-    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
+    
+    // Знаходимо slug підкатегорії за назвою
+    let subCatSlug = '';
+    if (currentSubcategory) {
+        const category = categories.find(c => c.slug === product.category);
+        const subcategory = category?.subcategories?.find(sub => sub.name === currentSubcategory);
+        subCatSlug = subcategory ? subcategory.slug : '';
+    }
+    
     const newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${product.slug}`;
     const state = {
         sectionId: 'product-details',
@@ -4553,14 +4626,14 @@ async function updateCartPrices() {
         if (product.type === 'mattresses' && item.size) {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
             if (sizeInfo) {
-                if (
-                    typeof sizeInfo.salePrice === 'number' &&
-                    !isNaN(sizeInfo.salePrice) &&
-                    sizeInfo.salePrice < sizeInfo.price
-                ) {
+                console.log('updateCartPrices - Size info for', item.size, ':', sizeInfo);
+                // Спочатку перевіряємо акційну ціну розміру
+                if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
                     price = sizeInfo.salePrice;
+                    console.log('updateCartPrices - Using sale price for size:', sizeInfo.salePrice);
                 } else {
                     price = sizeInfo.price || price;
+                    console.log('updateCartPrices - Using regular price for size:', sizeInfo.price);
                 }
             }
         } else {
@@ -6226,7 +6299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             e.preventDefault();
                             currentProduct = null;
                             currentCategory = category.slug;
-                            currentSubcategory = sub.slug;
+                            currentSubcategory = sub.name;
                             isSearchActive = false;
                             searchQuery = '';
                             searchResults = [];
@@ -6317,6 +6390,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
+                // Видаляємо клас filters-active з навігації
+                const nav = document.querySelector('.nav');
+                if (nav) nav.classList.remove('filters-active');
                 toggleBodyScroll(false);
                 const headerHeight = document.querySelector('header').offsetHeight;
                 if (window.scrollY > headerHeight) {
@@ -6334,6 +6410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (filterToggle) {
             filterToggle.addEventListener('click', () => {
                 filters.classList.add('active');
+                // Додаємо клас filters-active для навігації
+                const nav = document.querySelector('.nav');
+                if (nav) nav.classList.add('filters-active');
                 toggleBodyScroll(true);
                 burgerMenu.classList.remove('active');
                 burgerMenu.classList.remove('visible');
@@ -6692,12 +6771,20 @@ if (!document.getElementById('mattress-select-style')) {
 
 // Додаю функцію для додавання товару в кошик
 function addToCart(cartItem) {
+    console.log('addToCart called with cartItem:', cartItem);
+    console.log('addToCart - cartItem.price:', cartItem.price);
     let cart = loadFromStorage('cart', []);
     if (!Array.isArray(cart)) cart = [];
     
     // Для товарів з кольорами порівнюємо ключові властивості
     const isSameColors = (a, b) => {
+        // Якщо обидва null або undefined - вони однакові
         if (!a && !b) return true;
+        
+        // Якщо один null/undefined, а інший порожній масив - вони однакові
+        if ((!a && Array.isArray(b) && b.length === 0) || (!b && Array.isArray(a) && a.length === 0)) return true;
+        
+        // Якщо один null/undefined, а інший не порожній - вони різні
         if (!a || !b) return false;
         
         // Якщо це масив кольорів (нова структура)
@@ -6722,16 +6809,40 @@ function addToCart(cartItem) {
         const sameId = item.id === cartItem.id;
         const sameSize = item.size === cartItem.size;
         const sameColors = isSameColors(item.colors || item.color, cartItem.colors || cartItem.color);
+        
+        const comparisonDetails = {
+            itemId: item.id,
+            cartItemId: cartItem.id,
+            sameId: sameId,
+            itemSize: item.size,
+            cartItemSize: cartItem.size,
+            sameSize: sameSize,
+            itemColors: item.colors || item.color,
+            cartItemColors: cartItem.colors || cartItem.color,
+            sameColors: sameColors,
+            itemIdType: typeof item.id,
+            cartItemIdType: typeof cartItem.id,
+            itemSizeType: typeof item.size,
+            cartItemSizeType: typeof cartItem.size,
+            itemIdStrict: item.id === cartItem.id,
+            itemSizeStrict: item.size === cartItem.size
+        };
+        console.log('addToCart - Comparing items:', JSON.stringify(comparisonDetails, null, 2));
+        
         return sameId && sameSize && sameColors;
     });
     
     if (existing) {
+        console.log('addToCart - Found existing item, updating quantity from', existing.quantity, 'to', existing.quantity + cartItem.quantity);
         existing.quantity += cartItem.quantity;
     } else {
+        console.log('addToCart - No existing item found, adding new item to cart');
         cart.push(cartItem);
     }
     
     saveToStorage('cart', cart);
+    console.log('Cart saved, current cart:', cart);
+    console.log('Cart saved - first item price:', cart[0]?.price);
     
     // НЕ викликаємо updateCartPrices тут, оскільки ціна вже правильно розрахована
     // updateCartPrices() буде викликано в renderCart при необхідності
@@ -6904,7 +7015,6 @@ if (!document.getElementById('favorite-style')) {
     document.head.appendChild(favoriteStyle);
 }
 
-// === МОДАЛЬНЕ ВІКНО ОБРАНОГО === //
 if (!document.getElementById('favorite-modal-style')) {
     const style = document.createElement('style');
     style.id = 'favorite-modal-style';
@@ -7135,7 +7245,7 @@ function createProductElement(product) {
     // Знаходимо slug підкатегорії за назвою
     const category = categories.find(c => c.slug === product.category);
     const subcategory = category?.subcategories?.find(sub => sub.name === product.subcategory);
-    const subcategorySlug = subcategory ? transliterate(subcategory.slug.replace('ь', '')) : '';
+    const subcategorySlug = subcategory ? subcategory.slug : '';
     
     imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
@@ -7387,6 +7497,8 @@ async function addToCartWithColor(productId) {
     let size = null;
     if (product.type === 'mattresses' && product.sizes?.length > 0) {
         size = selectedMattressSizes[product._id] || product.sizes[0]?.name;
+        console.log('Selected size for mattress:', size);
+        console.log('Available sizes:', product.sizes);
     }
     
     const qtyInput = document.getElementById(`quantity-${product._id}`);
@@ -7399,10 +7511,29 @@ async function addToCartWithColor(productId) {
     if (product.type === 'mattresses' && size) {
         const sizeInfo = product.sizes.find(s => s.name === size);
         if (sizeInfo) {
-            price = sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price ? sizeInfo.salePrice : sizeInfo.price;
+            console.log('Size info for', size, ':', sizeInfo);
+            // Спочатку перевіряємо акційну ціну розміру
+            if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
+                price = sizeInfo.salePrice;
+                console.log('Using sale price for size:', sizeInfo.salePrice);
+            } else {
+                price = sizeInfo.price;
+                console.log('Using regular price for size:', sizeInfo.price);
+            }
         }
-    } else if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
-        price = product.salePrice;
+    }
+    
+    // Перевіряємо загальну акційну ціну товару (якщо немає розміру або акційної ціни розміру)
+    if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
+        // Для матраців з розмірами використовуємо акційну ціну тільки якщо немає акційної ціни розміру
+        if (product.type === 'mattresses' && size) {
+            const sizeInfo = product.sizes.find(s => s.name === size);
+            if (!sizeInfo || !sizeInfo.salePrice || sizeInfo.salePrice >= sizeInfo.price) {
+                price = product.salePrice;
+            }
+        } else {
+            price = product.salePrice;
+        }
     }
     
     // Додаємо зміну ціни від усіх вибраних кольорів
@@ -7415,6 +7546,8 @@ async function addToCartWithColor(productId) {
     });
     
     price += totalPriceChange;
+    
+    console.log('addToCartWithColor - Product:', product.name, 'Type:', product.type, 'Final price:', price, 'Original price:', product.price, 'Sale price:', product.salePrice);
     
     // Створюємо об'єкт кольорів для кошика
     const selectedColorsForCart = [];
@@ -7687,6 +7820,9 @@ function updateGroupProductPrice(productId) {
                 const isFilterBtn = filterBtn && filterBtn.contains(e.target);
                 if (!isFilters && !isFilterBtn) {
                     filters.classList.remove('active');
+                    // Видаляємо клас filters-active з навігації
+                    const nav = document.querySelector('.nav');
+                    if (nav) nav.classList.remove('filters-active');
                     e.stopPropagation();
                     e.preventDefault();
                     return false;

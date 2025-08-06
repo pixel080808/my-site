@@ -400,9 +400,16 @@ const authenticateToken = (req, res, next) => {
   }
 }
 
-const server = app.listen(process.env.PORT || 3000, () =>
-  logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`),
-)
+const server = app.listen(process.env.PORT || 3000, async () => {
+  logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`)
+  
+  // Запускаємо міграцію товарів при старті сервера
+  try {
+    await migrateProducts()
+  } catch (error) {
+    logger.error("Помилка при міграції товарів:", error)
+  }
+})
 const wss = new WebSocket.Server({ server })
 
 setInterval(
@@ -819,10 +826,23 @@ app.get("/api/public/products", async (req, res) => {
     const categories = await Category.find().lean()
     products = products.map((product) => {
       if (product.subcategory) {
-        const category = categories.find((cat) => cat.name === product.category)
-        if (!category || !category.subcategories?.some((sub) => sub.name === product.subcategory)) {
-          logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`)
+        const category = categories.find((cat) => cat.slug === product.category)
+        if (!category) {
+          logger.warn(`Категорія ${product.category} не існує для товару ${product.name}, очищаємо підкатегорію`)
           product.subcategory = null
+        } else {
+          // Перевіряємо, чи subcategory є назвою або slug
+          const subcategoryByName = category.subcategories?.find((sub) => sub.name === product.subcategory)
+          const subcategoryBySlug = category.subcategories?.find((sub) => sub.slug === product.subcategory)
+          
+          if (!subcategoryByName && !subcategoryBySlug) {
+            logger.warn(`Підкатегорія ${product.subcategory} не існує для товару ${product.name}, очищаємо`)
+            product.subcategory = null
+          } else if (subcategoryBySlug && !subcategoryByName) {
+            // Якщо знайдено за slug, але не за назвою, конвертуємо в назву
+            logger.info(`Конвертуємо slug підкатегорії в назву для товару ${product.name}: ${product.subcategory} -> ${subcategoryBySlug.name}`)
+            product.subcategory = subcategoryBySlug.name
+          }
         }
       }
       const { __v, ...cleanedProduct } = product
@@ -2906,6 +2926,58 @@ const cleanupOldCarts = async () => {
     throw err
   } finally {
     session.endSession()
+  }
+}
+
+// Функція міграції товарів
+const migrateProducts = async () => {
+  try {
+    logger.info("Початок міграції товарів...")
+    
+    const categories = await Category.find({})
+    const products = await Product.find({})
+    
+    logger.info(`Знайдено категорій: ${categories.length}`)
+    logger.info(`Знайдено товарів: ${products.length}`)
+    
+    let updatedCount = 0
+    let skippedCount = 0
+    
+    for (const product of products) {
+      if (!product.subcategory) {
+        skippedCount++
+        continue
+      }
+      
+      const category = categories.find(cat => cat.slug === product.category)
+      if (!category) {
+        logger.warn(`Товар ${product.name}: категорія ${product.category} не знайдена`)
+        continue
+      }
+      
+      // Перевіряємо, чи subcategory є slug або назвою
+      const subcategoryByName = category.subcategories?.find(sub => sub.name === product.subcategory)
+      const subcategoryBySlug = category.subcategories?.find(sub => sub.slug === product.subcategory)
+      
+      if (subcategoryBySlug && !subcategoryByName) {
+        // Конвертуємо slug в назву
+        logger.info(`Мігруємо товар ${product.name}: ${product.subcategory} -> ${subcategoryBySlug.name}`)
+        product.subcategory = subcategoryBySlug.name
+        await product.save()
+        updatedCount++
+      } else if (!subcategoryByName && !subcategoryBySlug) {
+        logger.warn(`Товар ${product.name}: підкатегорія ${product.subcategory} не знайдена, очищаємо`)
+        product.subcategory = null
+        await product.save()
+        updatedCount++
+      } else {
+        logger.info(`Товар ${product.name}: підкатегорія ${product.subcategory} вже правильна`)
+      }
+    }
+    
+    logger.info(`Міграція завершена. Оновлено товарів: ${updatedCount}, пропущено: ${skippedCount}`)
+  } catch (error) {
+    logger.error("Помилка міграції товарів:", error)
   }
 }
 
