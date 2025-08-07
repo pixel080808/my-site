@@ -1772,12 +1772,6 @@ function renderCatalogDropdown() {
             e.preventDefault();
             e.stopPropagation();
             
-            // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
-            if (hasMoved) {
-                hasMoved = false;
-                return;
-            }
-            
             const currentItem = itemDiv;
             const subList = currentItem.querySelector('.sub-list');
             const isActive = subList.classList.contains('active');
@@ -1813,42 +1807,6 @@ function renderCatalogDropdown() {
             }
         };
 
-        // Обробка сенсорних подій для кращого UX
-        const handleTouchStart = (e) => {
-            touchStartY = e.touches[0].clientY;
-            touchStartTime = Date.now();
-            hasMoved = false;
-            
-            // Очищаємо попередній таймаут
-            if (touchTimeout) {
-                clearTimeout(touchTimeout);
-                touchTimeout = null;
-            }
-        };
-
-        const handleTouchMove = (e) => {
-            const touchY = e.touches[0].clientY;
-            const deltaY = Math.abs(touchY - touchStartY);
-            
-            // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
-            if (deltaY > 10) {
-                hasMoved = true;
-            }
-        };
-
-        const handleTouchEnd = (e) => {
-            const touchEndTime = Date.now();
-            const touchDuration = touchEndTime - touchStartTime;
-            
-            // Якщо дотик був коротким (менше 500мс) і не було руху
-            if (touchDuration < 500 && !hasMoved) {
-                // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
-                touchTimeout = setTimeout(() => {
-                    toggleSubDropdown(e);
-                }, 10);
-            }
-        };
-
         contentContainer.appendChild(span);
 
         span.addEventListener('mouseenter', () => span.classList.add('active'));
@@ -1857,21 +1815,8 @@ function renderCatalogDropdown() {
         });
 
         if (cat.subcategories && cat.subcategories.length > 0) {
-            // Додаємо сенсорні обробники
-            span.addEventListener('touchstart', handleTouchStart, { passive: true });
-            span.addEventListener('touchmove', handleTouchMove, { passive: true });
-            span.addEventListener('touchend', handleTouchEnd, { passive: true });
-            
-            // Залишаємо click для десктопних пристроїв
+            // Використовуємо тільки click подію для всіх пристроїв
             span.addEventListener('click', toggleSubDropdown);
-            
-            // Додаємо додаткову перевірку для сенсорних пристроїв
-            span.addEventListener('click', (e) => {
-                // Якщо це сенсорний пристрій, запобігаємо подвійному спрацьовуванню
-                if ('ontouchstart' in window) {
-                    e.preventDefault();
-                }
-            });
         }
 
         // Змінні для обробки сенсорних подій для переходу в категорію
@@ -1881,12 +1826,6 @@ function renderCatalogDropdown() {
         let categoryTouchTimeout = null;
 
         const goToCategory = (e) => {
-            // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
-            if (categoryHasMoved) {
-                categoryHasMoved = false;
-                return;
-            }
-            
             if (!cat.subcategories || cat.subcategories.length === 0) {
                 e.preventDefault();
                 currentProduct = null;
@@ -1908,48 +1847,7 @@ function renderCatalogDropdown() {
             }
         };
 
-        // Обробка сенсорних подій для переходу в категорію
-        const handleCategoryTouchStart = (e) => {
-            categoryTouchStartY = e.touches[0].clientY;
-            categoryTouchStartTime = Date.now();
-            categoryHasMoved = false;
-            
-            // Очищаємо попередній таймаут
-            if (categoryTouchTimeout) {
-                clearTimeout(categoryTouchTimeout);
-                categoryTouchTimeout = null;
-            }
-        };
-
-        const handleCategoryTouchMove = (e) => {
-            const touchY = e.touches[0].clientY;
-            const deltaY = Math.abs(touchY - categoryTouchStartY);
-            
-            // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
-            if (deltaY > 10) {
-                categoryHasMoved = true;
-            }
-        };
-
-        const handleCategoryTouchEnd = (e) => {
-            const touchEndTime = Date.now();
-            const touchDuration = touchEndTime - categoryTouchStartTime;
-            
-            // Якщо дотик був коротким (менше 500мс) і не було руху
-            if (touchDuration < 500 && !categoryHasMoved) {
-                // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
-                categoryTouchTimeout = setTimeout(() => {
-                    goToCategory(e);
-                }, 10);
-            }
-        };
-
-        // Додаємо сенсорні обробники для переходу в категорію
-        span.addEventListener('touchstart', handleCategoryTouchStart, { passive: true });
-        span.addEventListener('touchmove', handleCategoryTouchMove, { passive: true });
-        span.addEventListener('touchend', handleCategoryTouchEnd, { passive: true });
-        
-        // Залишаємо click для десктопних пристроїв
+        // Використовуємо тільки click подію для всіх пристроїв
         span.addEventListener('click', goToCategory);
 
         itemDiv.appendChild(contentContainer);
@@ -2027,12 +1925,6 @@ function renderCatalogDropdown() {
             let subcategoryTouchTimeout = null;
 
             const goToSubcategory = (e) => {
-                // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
-                if (subcategoryHasMoved) {
-                    subcategoryHasMoved = false;
-                    return;
-                }
-                
                 e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.slug;
@@ -2054,48 +1946,7 @@ function renderCatalogDropdown() {
                 dropdown.scrollTop = 0;
             };
 
-            // Обробка сенсорних подій для підкатегорій
-            const handleSubcategoryTouchStart = (e) => {
-                subcategoryTouchStartY = e.touches[0].clientY;
-                subcategoryTouchStartTime = Date.now();
-                subcategoryHasMoved = false;
-                
-                // Очищаємо попередній таймаут
-                if (subcategoryTouchTimeout) {
-                    clearTimeout(subcategoryTouchTimeout);
-                    subcategoryTouchTimeout = null;
-                }
-            };
-
-            const handleSubcategoryTouchMove = (e) => {
-                const touchY = e.touches[0].clientY;
-                const deltaY = Math.abs(touchY - subcategoryTouchStartY);
-                
-                // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
-                if (deltaY > 10) {
-                    subcategoryHasMoved = true;
-                }
-            };
-
-            const handleSubcategoryTouchEnd = (e) => {
-                const touchEndTime = Date.now();
-                const touchDuration = touchEndTime - subcategoryTouchStartTime;
-                
-                // Якщо дотик був коротким (менше 500мс) і не було руху
-                if (touchDuration < 500 && !subcategoryHasMoved) {
-                    // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
-                    subcategoryTouchTimeout = setTimeout(() => {
-                        goToSubcategory(e);
-                    }, 10);
-                }
-            };
-
-            // Додаємо сенсорні обробники для підкатегорій
-            p.addEventListener('touchstart', handleSubcategoryTouchStart, { passive: true });
-            p.addEventListener('touchmove', handleSubcategoryTouchMove, { passive: true });
-            p.addEventListener('touchend', handleSubcategoryTouchEnd, { passive: true });
-            
-            // Залишаємо click для десктопних пристроїв
+            // Використовуємо тільки click подію для всіх пристроїв
             p.addEventListener('click', goToSubcategory);
             subList.appendChild(subContentContainer);
         });
