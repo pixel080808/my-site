@@ -1782,14 +1782,34 @@ function renderCatalogDropdown() {
             const subList = currentItem.querySelector('.sub-list');
             const isActive = subList.classList.contains('active');
 
-            document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-            document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
-            document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
+            // Закриваємо всі інші підкатегорії
+            document.querySelectorAll('.sub-list').forEach(sl => {
+                if (sl !== subList) {
+                    sl.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => {
+                if (it !== currentItem) {
+                    it.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => {
+                if (sp !== span) {
+                    sp.classList.remove('active');
+                }
+            });
 
-            if (!isActive && subList) {
-                subList.classList.add('active');
-                currentItem.classList.add('active');
-                span.classList.add('active');
+            // Перемикаємо поточну підкатегорію
+            if (subList) {
+                if (isActive) {
+                    subList.classList.remove('active');
+                    currentItem.classList.remove('active');
+                    span.classList.remove('active');
+                } else {
+                    subList.classList.add('active');
+                    currentItem.classList.add('active');
+                    span.classList.add('active');
+                }
             }
         };
 
@@ -1820,12 +1840,12 @@ function renderCatalogDropdown() {
             const touchEndTime = Date.now();
             const touchDuration = touchEndTime - touchStartTime;
             
-            // Якщо дотик був коротким (менше 300мс) і не було руху
-            if (touchDuration < 300 && !hasMoved) {
-                // Додаємо невелику затримку для уникнення випадкових кліків
+            // Якщо дотик був коротким (менше 500мс) і не було руху
+            if (touchDuration < 500 && !hasMoved) {
+                // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
                 touchTimeout = setTimeout(() => {
                     toggleSubDropdown(e);
-                }, 50);
+                }, 10);
             }
         };
 
@@ -1844,6 +1864,14 @@ function renderCatalogDropdown() {
             
             // Залишаємо click для десктопних пристроїв
             span.addEventListener('click', toggleSubDropdown);
+            
+            // Додаємо додаткову перевірку для сенсорних пристроїв
+            span.addEventListener('click', (e) => {
+                // Якщо це сенсорний пристрій, запобігаємо подвійному спрацьовуванню
+                if ('ontouchstart' in window) {
+                    e.preventDefault();
+                }
+            });
         }
 
         // Змінні для обробки сенсорних подій для переходу в категорію
@@ -1907,12 +1935,12 @@ function renderCatalogDropdown() {
             const touchEndTime = Date.now();
             const touchDuration = touchEndTime - categoryTouchStartTime;
             
-            // Якщо дотик був коротким (менше 300мс) і не було руху
-            if (touchDuration < 300 && !categoryHasMoved) {
-                // Додаємо невелику затримку для уникнення випадкових кліків
+            // Якщо дотик був коротким (менше 500мс) і не було руху
+            if (touchDuration < 500 && !categoryHasMoved) {
+                // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
                 categoryTouchTimeout = setTimeout(() => {
                     goToCategory(e);
-                }, 50);
+                }, 10);
             }
         };
 
@@ -2053,12 +2081,12 @@ function renderCatalogDropdown() {
                 const touchEndTime = Date.now();
                 const touchDuration = touchEndTime - subcategoryTouchStartTime;
                 
-                // Якщо дотик був коротким (менше 300мс) і не було руху
-                if (touchDuration < 300 && !subcategoryHasMoved) {
-                    // Додаємо невелику затримку для уникнення випадкових кліків
+                // Якщо дотик був коротким (менше 500мс) і не було руху
+                if (touchDuration < 500 && !subcategoryHasMoved) {
+                    // Зменшуємо затримку для кращого відгуку на сенсорних пристроях
                     subcategoryTouchTimeout = setTimeout(() => {
                         goToSubcategory(e);
-                    }, 50);
+                    }, 10);
                 }
             };
 
