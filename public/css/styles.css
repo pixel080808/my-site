@@ -357,7 +357,7 @@ header.scrolled {
     /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1200px */
     #contacts,
     #about {
-        padding: 20px 24px !important;
+        padding: 0px 15px !important;
         max-width: 100%;
         margin: 0;
         box-sizing: border-box;
@@ -4236,7 +4236,7 @@ s {
 /* Додаємо відступи для розділів Контакти та Про нас */
 #contacts,
 #about {
-    padding: 20px 24px !important;
+    padding: 0px 15px !important;
     max-width: 100%;
     margin: 0;
     box-sizing: border-box;
@@ -5193,7 +5193,7 @@ s {
     /* Стилі для темної теми для розділів Контакти та Про нас */
     #contacts,
     #about {
-        padding: 20px 24px !important;
+        padding: 0px 15px !important;
         max-width: 100%;
         margin: 0;
         box-sizing: border-box;
@@ -5229,7 +5229,7 @@ s {
     @media (min-width: 920px) {
         #contacts,
         #about {
-            padding: 20px 24px !important;
+            padding: 0px 15px !important;
             max-width: 100%;
             margin: 0;
             box-sizing: border-box;
@@ -5266,7 +5266,7 @@ s {
     @media (min-width: 1200px) {
         #contacts,
         #about {
-            padding: 20px 24px !important;
+            padding: 0px 15px !important;
             max-width: 100%;
             margin: 0;
             box-sizing: border-box;
@@ -5303,7 +5303,7 @@ s {
     @media (min-width: 1400px) {
         #contacts,
         #about {
-            padding: 20px 24px !important;
+            padding: 0px 15px !important;
             max-width: 100%;
             margin: 0;
             box-sizing: border-box;
@@ -6040,7 +6040,7 @@ s {
     /* Додаємо відступи для розділів Контакти та Про нас на екранах від 920px */
     #contacts,
     #about {
-        padding: 20px 24px !important;
+        padding: 0px 15px !important;
         max-width: 100%;
         margin: 0;
         box-sizing: border-box;
@@ -6757,7 +6757,7 @@ s {
     /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1400px */
     #contacts,
     #about {
-        padding: 20px 24px !important;
+        padding: 0px 15px !important;
         max-width: 100%;
         margin: 0;
         box-sizing: border-box;
