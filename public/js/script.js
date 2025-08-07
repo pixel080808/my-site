@@ -3322,53 +3322,88 @@ document.addEventListener('click', closeDropdownHandler, true);
         if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
             product.colorBlocks.forEach((block, blockIndex) => {
                 if (block.colors && Array.isArray(block.colors) && block.colors.length > 0) {
-                    const hasPhotos = block.colors.some(c => c.photo);
-                    if (hasPhotos) {
-                        const colorP = document.createElement('p');
-                        colorP.innerHTML = `<strong>${block.blockName}:</strong>`;
-                        rightDiv.appendChild(colorP);
-                        const colorDiv = document.createElement('div');
-                        colorDiv.id = `color-options-${product._id}-${blockIndex}`;
+                    // Показуємо блок кольорів незалежно від наявності фото
+                    const colorP = document.createElement('p');
+                    colorP.innerHTML = `<strong>${block.blockName}:</strong>`;
+                    rightDiv.appendChild(colorP);
+                    const colorDiv = document.createElement('div');
+                    colorDiv.id = `color-options-${product._id}-${blockIndex}`;
 
-                        block.colors.forEach((c, i) => {
-                            const circle = document.createElement('div');
-                            circle.className = 'color-circle';
-                            circle.style.background = c.photo ? `url(${c.photo})` : c.value;
-                            circle.setAttribute('data-index', i);
-                            circle.setAttribute('data-block-index', blockIndex);
+                    block.colors.forEach((c, i) => {
+                        const circle = document.createElement('div');
+                        circle.className = 'color-circle';
+                        circle.style.background = c.photo ? `url(${c.photo})` : c.value;
+                        circle.setAttribute('data-index', i);
+                        circle.setAttribute('data-block-index', blockIndex);
 
-                            const span = document.createElement('span');
-                            span.textContent = c.name;
+                        const span = document.createElement('span');
+                        span.textContent = c.name;
 
-                            // Додаємо клас expanded лише для вибраного кольору
-                            const globalIndex = getAllColors(product).findIndex(color => 
-                                color.blockIndex === blockIndex && color.colorIndex === i
-                            );
-                            if (selectedColors[product._id]?.[blockIndex] === globalIndex) {
-                                span.classList.add('expanded');
-                            }
+                        // Додаємо клас expanded лише для вибраного кольору
+                        const globalIndex = getAllColors(product).findIndex(color => 
+                            color.blockIndex === blockIndex && color.colorIndex === i
+                        );
+                        if (selectedColors[product._id]?.[blockIndex] === globalIndex) {
+                            span.classList.add('expanded');
+                        }
 
-                            circle.onclick = () => {
-                                // Знімаємо expanded з усіх span в цьому блоці
-                                const allSpans = colorDiv.querySelectorAll('span');
-                                allSpans.forEach(s => s.classList.remove('expanded'));
-                                // Додаємо expanded лише для поточного
-                                span.classList.add('expanded');
-                                // Викликаємо вибір кольору
-                                if (typeof selectColor === 'function') selectColor(product._id, blockIndex, globalIndex);
-                            };
+                        circle.onclick = () => {
+                            // Знімаємо expanded з усіх span в цьому блоці
+                            const allSpans = colorDiv.querySelectorAll('span');
+                            allSpans.forEach(s => s.classList.remove('expanded'));
+                            // Додаємо expanded лише для поточного
+                            span.classList.add('expanded');
+                            // Викликаємо вибір кольору
+                            if (typeof selectColor === 'function') selectColor(product._id, blockIndex, globalIndex);
+                        };
 
-                            circle.appendChild(span);
-                            colorDiv.appendChild(circle);
-                        });
-                        rightDiv.appendChild(colorDiv);
-                    }
+                        circle.appendChild(span);
+                        colorDiv.appendChild(circle);
+                    });
+                    rightDiv.appendChild(colorDiv);
                 }
             });
         } else if (product.colors && Array.isArray(product.colors) && product.colors.length > 0) {
             // Для старої структури
-            const hasPhotos = product.colors.some(c => c.photo);
-            if (hasPhotos) {
+            // Показуємо кольори незалежно від наявності фото
+            const colorP = document.createElement('p');
+            colorP.innerHTML = '<strong>Колір:</strong>';
+            rightDiv.appendChild(colorP);
+            const colorDiv = document.createElement('div');
+            colorDiv.id = `color-options-${product._id}`;
+
+            product.colors.forEach((c, i) => {
+                const circle = document.createElement('div');
+                circle.className = 'color-circle';
+                circle.style.background = c.photo ? `url(${c.photo})` : c.value;
+                circle.setAttribute('data-index', i);
+
+                const span = document.createElement('span');
+                span.textContent = c.name;
+
+                // Додаємо клас expanded лише для вибраного кольору
+                if (selectedColors[product._id]?.[0] === i) {
+                    span.classList.add('expanded');
+                }
+
+                circle.onclick = () => {
+                    // Знімаємо expanded з усіх span
+                    const allSpans = colorDiv.querySelectorAll('span');
+                    allSpans.forEach(s => s.classList.remove('expanded'));
+                    // Додаємо expanded лише для поточного
+                    span.classList.add('expanded');
+                    // Викликаємо вибір кольору (якщо потрібно)
+                    if (typeof selectColor === 'function') selectColor(product._id, 0, i);
+                };
+
+                circle.appendChild(span);
+                colorDiv.appendChild(circle);
+            });
+            rightDiv.appendChild(colorDiv);
+        }
+        } else if (product.colors && Array.isArray(product.colors) && product.colors.length > 0) {
+            // Для старої структури
+            // Показуємо кольори незалежно від наявності фото
                 const colorP = document.createElement('p');
                 colorP.innerHTML = '<strong>Колір:</strong>';
                 rightDiv.appendChild(colorP);
