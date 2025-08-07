@@ -180,10 +180,7 @@ header.scrolled {
 }
 .phones .phone-dropdown-menu {
     display: none;
-    position: absolute;
-    left: 50%;
-    top: 110%;
-    transform: translateX(-50%);
+    position: fixed;
     min-width: 170px;
     background: #fff;
     border-radius: 14px;
@@ -257,8 +254,14 @@ header.scrolled {
     }
 }
 @keyframes fadeInPhoneMenu {
-    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px) scale(0.95); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
 }
 
 .search-cart-container {
@@ -772,6 +775,10 @@ header.scrolled {
     transition: background var(--transition-speed) ease;
     cursor: pointer;
     text-align: left;
+    /* Переконаємося, що підкатегорії відображаються знизу */
+    display: block !important;
+    float: none !important;
+    clear: both !important;
 }
 
 .dropdown-item:hover {
@@ -797,14 +804,28 @@ header.scrolled {
     margin-top: 4px;
     transition: opacity 0.2s ease;
     left: 0;
-    position: absolute;
+    position: static;
     width: 100%;
     box-sizing: border-box;
+    /* Примусово встановлюємо позиціонування знизу */
+    display: block !important;
+    float: none !important;
+    clear: both !important;
 }
 
 .dropdown-item .sub-dropdown.active {
     display: block;
     opacity: 1;
+}
+
+/* Стилі для підкатегорій у випадаючому меню Каталог */
+#catalog-dropdown .sub-list.active {
+    display: block !important;
+    opacity: 1;
+}
+
+#catalog-dropdown .sub-list:not(.active) {
+    display: none !important;
 }
 
 .sub-dropdown p {
@@ -6628,6 +6649,16 @@ s {
         display: block;
         opacity: 1;
     }
+    
+    /* Стилі для підкатегорій у випадаючому меню Каталог */
+    #catalog-dropdown .sub-list.active {
+        display: block !important;
+        opacity: 1;
+    }
+    
+    #catalog-dropdown .sub-list:not(.active) {
+        display: none !important;
+    }
 
     .sub-dropdown p {
         padding: 8px 20px;
@@ -6813,14 +6844,8 @@ s {
 
     .phones {
         color: var(--text-color);
-        background: #2d3748;
-        border: 1px solid #4a5568;
-    }
-
-    .phones:hover {
-        color: var(--primary-color);
-        background: #374151;
-        border-color: var(--primary-color);
+        background: #52699100;
+        border: 1px solid #8596b400;
     }
 
     .search-bar input {
@@ -6909,7 +6934,7 @@ s {
     .catalog-menu a:hover,
     .catalog-menu a:focus {
         background: var(--button-background);
-        color: var(--primary-color);
+        color: #ffffff;
     }
     
     #catalog-dropdown,
@@ -7352,7 +7377,7 @@ s {
 
     .sort-menu .sort-dropdown button,
     .sort-menu .per-page-dropdown button {
-        background: var(--button-background) !important;
+        /* background: var(--button-background) !important; */
         color: var(--button-text-color) !important;
         border: none !important;
         padding: 8px 16px !important;
@@ -8377,6 +8402,7 @@ s {
     position: fixed !important;
     z-index: 22222 !important;
     min-width: 170px;
+    max-width: 200px;
     background: #fff;
     border-radius: 14px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -8385,9 +8411,8 @@ s {
     padding: 10px 0;
     animation: fadeInPhoneMenu 0.18s;
     display: none;
-    left: 50%;
-    top: 60px;
-    transform: translateX(-50%);
+    white-space: nowrap;
+    transform: none !important;
 }
 .phone-dropdown-portal .phone-dropdown-item {
     font-size: 17px;
@@ -8403,18 +8428,23 @@ s {
     display: flex;
     justify-content: center;
     align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .phone-dropdown-portal .phone-dropdown-item:hover,
 .phone-dropdown-portal .phone-dropdown-item:focus {
-    background: #e8f5e9;
+    background: #e8e8e8;
 }
 @media (max-width: 650px) {
     .phone-dropdown-portal {
         min-width: 120px;
+        max-width: 160px;
         font-size: 15px;
     }
     .phone-dropdown-portal .phone-dropdown-item {
         font-size: 15px;
+        padding: 6px 12px;
     }
 }
 @media (prefers-color-scheme: dark) {
@@ -8423,14 +8453,16 @@ s {
         color: #e6e6e6;
         border: 1px solid #333;
         box-shadow: 0 8px 32px rgba(0,0,0,0.38);
+        position: fixed !important;
+        z-index: 22222 !important;
     }
     .phone-dropdown-portal .phone-dropdown-item {
         color: #e6e6e6;
     }
     .phone-dropdown-portal .phone-dropdown-item:hover,
     .phone-dropdown-portal .phone-dropdown-item:focus {
-        background: var(--button-hover-background);
-        color: #FFFFFF;
+        background: var(--button-background);
+        color: #e6e6e6;
     }
 }
 
@@ -8557,6 +8589,10 @@ s {
   transition: background 0.18s, box-shadow 0.18s;
   cursor: pointer;
   position: relative;
+  /* Покращення для сенсорних екранів */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 #catalog-dropdown .dropdown-item:hover {
   background: linear-gradient(90deg, #ffffff 60%, #ffffff 100%);
@@ -8576,12 +8612,22 @@ s {
 }
 #catalog-dropdown .sub-list {
   background: none;
-  margin: 0 0 0 10px;
+  margin: 0;
   padding: 4px 0 4px 16px;
   border-left: 2px solid #e2e8f0;
   border-radius: 0 0 10px 10px;
   box-shadow: none;
   transition: background 0.18s;
+  /* Повертаємо підкатегорії знизу категорії */
+  position: static !important;
+  width: 100% !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  /* Примусово встановлюємо позиціонування знизу */
+  display: block !important;
+  float: none !important;
+  clear: both !important;
 }
 #catalog-dropdown .sub-list p {
   font-size: 15px;
@@ -8591,6 +8637,12 @@ s {
   border-radius: 6px;
   transition: background 0.18s, color 0.18s;
   cursor: pointer;
+  /* Покращення для сенсорних екранів */
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  /* Переконаємося, що підкатегорії відображаються знизу */
+  position: relative;
 }
 #catalog-dropdown .sub-list p:hover {
   background: #e0e7ef;
@@ -8609,6 +8661,42 @@ s {
   #catalog-dropdown .sub-list p {
     font-size: 13px;
     padding: 5px 0;
+  }
+  /* Додаткові покращення для сенсорних екранів */
+  #catalog-dropdown .dropdown-item {
+    min-height: 48px;
+    padding: 0 12px;
+  }
+  #catalog-dropdown .sub-list p {
+    min-height: 40px;
+    padding: 8px 0;
+  }
+  /* Переконаємося, що підкатегорії відображаються знизу на малих екранах */
+  #catalog-dropdown .sub-list {
+    position: static !important;
+    width: 100% !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    /* Примусово встановлюємо позиціонування знизу */
+    display: block !important;
+    float: none !important;
+    clear: both !important;
+  }
+}
+
+/* Додаткові стилі для всіх розмірів екрану */
+@media (min-width: 651px) {
+  #catalog-dropdown .sub-list {
+    position: static !important;
+    width: 100% !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    /* Примусово встановлюємо позиціонування знизу */
+    display: block !important;
+    float: none !important;
+    clear: both !important;
   }
 }
 /* --- Ефект наведення для випадаючого меню Каталог --- */
@@ -8705,6 +8793,9 @@ s {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #bdbdbd #f5f5f5;
+    /* Покращення для сенсорних екранів */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
 }
 
 #catalog-dropdown::-webkit-scrollbar {
@@ -8742,6 +8833,28 @@ s {
   #catalog-dropdown .sub-list .active {
     background: var(--button-background) !important;
     color: #fff !important;
+  }
+  /* Переконаємося, що підкатегорії відображаються знизу в темній темі */
+  #catalog-dropdown .sub-list {
+    position: static !important;
+    width: 100% !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    /* Примусово встановлюємо позиціонування знизу */
+    display: block !important;
+    float: none !important;
+    clear: both !important;
+  }
+  
+  /* Стилі для підкатегорій у випадаючому меню Каталог в темній темі */
+  #catalog-dropdown .sub-list.active {
+    display: block !important;
+    opacity: 1;
+  }
+  
+  #catalog-dropdown .sub-list:not(.active) {
+    display: none !important;
   }
 }
 

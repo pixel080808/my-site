@@ -1762,9 +1762,22 @@ function renderCatalogDropdown() {
             span.style.fontSize = '16px';
         }
 
+        // Змінні для обробки сенсорних подій
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let hasMoved = false;
+        let touchTimeout = null;
+
         const toggleSubDropdown = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            
+            // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
+            if (hasMoved) {
+                hasMoved = false;
+                return;
+            }
+            
             const currentItem = itemDiv;
             const subList = currentItem.querySelector('.sub-list');
             const isActive = subList.classList.contains('active');
@@ -1780,6 +1793,42 @@ function renderCatalogDropdown() {
             }
         };
 
+        // Обробка сенсорних подій для кращого UX
+        const handleTouchStart = (e) => {
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+            hasMoved = false;
+            
+            // Очищаємо попередній таймаут
+            if (touchTimeout) {
+                clearTimeout(touchTimeout);
+                touchTimeout = null;
+            }
+        };
+
+        const handleTouchMove = (e) => {
+            const touchY = e.touches[0].clientY;
+            const deltaY = Math.abs(touchY - touchStartY);
+            
+            // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
+            if (deltaY > 10) {
+                hasMoved = true;
+            }
+        };
+
+        const handleTouchEnd = (e) => {
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - touchStartTime;
+            
+            // Якщо дотик був коротким (менше 300мс) і не було руху
+            if (touchDuration < 300 && !hasMoved) {
+                // Додаємо невелику затримку для уникнення випадкових кліків
+                touchTimeout = setTimeout(() => {
+                    toggleSubDropdown(e);
+                }, 50);
+            }
+        };
+
         contentContainer.appendChild(span);
 
         span.addEventListener('mouseenter', () => span.classList.add('active'));
@@ -1787,34 +1836,93 @@ function renderCatalogDropdown() {
             if (!itemDiv.classList.contains('active')) span.classList.remove('active');
         });
 
-if (cat.subcategories && cat.subcategories.length > 0) {
-    span.addEventListener('click', toggleSubDropdown);
-    span.addEventListener('touchend', toggleSubDropdown);
-}
+        if (cat.subcategories && cat.subcategories.length > 0) {
+            // Додаємо сенсорні обробники
+            span.addEventListener('touchstart', handleTouchStart, { passive: true });
+            span.addEventListener('touchmove', handleTouchMove, { passive: true });
+            span.addEventListener('touchend', handleTouchEnd, { passive: true });
+            
+            // Залишаємо click для десктопних пристроїв
+            span.addEventListener('click', toggleSubDropdown);
+        }
 
-const goToCategory = (e) => {
-    if (!cat.subcategories || cat.subcategories.length === 0) {
-        e.preventDefault();
-        currentProduct = null;
-        currentCategory = cat.slug;
-        currentSubcategory = null;
-        isSearchActive = false;
-        searchQuery = '';
-        searchResults = [];
-        baseSearchResults = [];
-        saveToStorage('isSearchActive', false);
-        saveToStorage('searchQuery', '');
-        saveToStorage('searchResults', []);
-        showSection('catalog');
-        document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
-        document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
-        dropdown.classList.remove('active');
-        document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-        dropdown.scrollTop = 0;
-    }
-};
-span.addEventListener('click', goToCategory);
-span.addEventListener('touchend', goToCategory);
+        // Змінні для обробки сенсорних подій для переходу в категорію
+        let categoryTouchStartY = 0;
+        let categoryTouchStartTime = 0;
+        let categoryHasMoved = false;
+        let categoryTouchTimeout = null;
+
+        const goToCategory = (e) => {
+            // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
+            if (categoryHasMoved) {
+                categoryHasMoved = false;
+                return;
+            }
+            
+            if (!cat.subcategories || cat.subcategories.length === 0) {
+                e.preventDefault();
+                currentProduct = null;
+                currentCategory = cat.slug;
+                currentSubcategory = null;
+                isSearchActive = false;
+                searchQuery = '';
+                searchResults = [];
+                baseSearchResults = [];
+                saveToStorage('isSearchActive', false);
+                saveToStorage('searchQuery', '');
+                saveToStorage('searchResults', []);
+                showSection('catalog');
+                document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
+                document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
+                dropdown.classList.remove('active');
+                document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
+                dropdown.scrollTop = 0;
+            }
+        };
+
+        // Обробка сенсорних подій для переходу в категорію
+        const handleCategoryTouchStart = (e) => {
+            categoryTouchStartY = e.touches[0].clientY;
+            categoryTouchStartTime = Date.now();
+            categoryHasMoved = false;
+            
+            // Очищаємо попередній таймаут
+            if (categoryTouchTimeout) {
+                clearTimeout(categoryTouchTimeout);
+                categoryTouchTimeout = null;
+            }
+        };
+
+        const handleCategoryTouchMove = (e) => {
+            const touchY = e.touches[0].clientY;
+            const deltaY = Math.abs(touchY - categoryTouchStartY);
+            
+            // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
+            if (deltaY > 10) {
+                categoryHasMoved = true;
+            }
+        };
+
+        const handleCategoryTouchEnd = (e) => {
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - categoryTouchStartTime;
+            
+            // Якщо дотик був коротким (менше 300мс) і не було руху
+            if (touchDuration < 300 && !categoryHasMoved) {
+                // Додаємо невелику затримку для уникнення випадкових кліків
+                categoryTouchTimeout = setTimeout(() => {
+                    goToCategory(e);
+                }, 50);
+            }
+        };
+
+        // Додаємо сенсорні обробники для переходу в категорію
+        span.addEventListener('touchstart', handleCategoryTouchStart, { passive: true });
+        span.addEventListener('touchmove', handleCategoryTouchMove, { passive: true });
+        span.addEventListener('touchend', handleCategoryTouchEnd, { passive: true });
+        
+        // Залишаємо click для десктопних пристроїв
+        span.addEventListener('click', goToCategory);
 
         itemDiv.appendChild(contentContainer);
 
@@ -1822,6 +1930,12 @@ span.addEventListener('touchend', goToCategory);
         subList.className = 'sub-list';
         subList.style.display = 'none';
         subList.style.paddingLeft = '30px';
+        // Переконаємося, що підкатегорії відображаються знизу категорії
+        subList.style.position = 'static';
+        subList.style.width = '100%';
+        subList.style.left = 'auto';
+        subList.style.top = 'auto';
+        subList.style.transform = 'none';
 
         const styleObserver = new MutationObserver(() => {
             subList.style.display = subList.classList.contains('active') ? 'block' : 'none';
@@ -1878,7 +1992,19 @@ span.addEventListener('touchend', goToCategory);
             p.onmouseout = (e) => { e.target.style.backgroundColor = ''; };
             subContentContainer.appendChild(p);
 
-            p.onclick = (e) => {
+            // Змінні для обробки сенсорних подій для підкатегорій
+            let subcategoryTouchStartY = 0;
+            let subcategoryTouchStartTime = 0;
+            let subcategoryHasMoved = false;
+            let subcategoryTouchTimeout = null;
+
+            const goToSubcategory = (e) => {
+                // Перевіряємо, чи не було руху пальцем (для сенсорних екранів)
+                if (subcategoryHasMoved) {
+                    subcategoryHasMoved = false;
+                    return;
+                }
+                
                 e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.slug;
@@ -1899,6 +2025,50 @@ span.addEventListener('touchend', goToCategory);
                 // Скидання скролу при переході на будь-яку сторінку
                 dropdown.scrollTop = 0;
             };
+
+            // Обробка сенсорних подій для підкатегорій
+            const handleSubcategoryTouchStart = (e) => {
+                subcategoryTouchStartY = e.touches[0].clientY;
+                subcategoryTouchStartTime = Date.now();
+                subcategoryHasMoved = false;
+                
+                // Очищаємо попередній таймаут
+                if (subcategoryTouchTimeout) {
+                    clearTimeout(subcategoryTouchTimeout);
+                    subcategoryTouchTimeout = null;
+                }
+            };
+
+            const handleSubcategoryTouchMove = (e) => {
+                const touchY = e.touches[0].clientY;
+                const deltaY = Math.abs(touchY - subcategoryTouchStartY);
+                
+                // Якщо палець рухається більше ніж на 10px, вважаємо це прокруткою
+                if (deltaY > 10) {
+                    subcategoryHasMoved = true;
+                }
+            };
+
+            const handleSubcategoryTouchEnd = (e) => {
+                const touchEndTime = Date.now();
+                const touchDuration = touchEndTime - subcategoryTouchStartTime;
+                
+                // Якщо дотик був коротким (менше 300мс) і не було руху
+                if (touchDuration < 300 && !subcategoryHasMoved) {
+                    // Додаємо невелику затримку для уникнення випадкових кліків
+                    subcategoryTouchTimeout = setTimeout(() => {
+                        goToSubcategory(e);
+                    }, 50);
+                }
+            };
+
+            // Додаємо сенсорні обробники для підкатегорій
+            p.addEventListener('touchstart', handleSubcategoryTouchStart, { passive: true });
+            p.addEventListener('touchmove', handleSubcategoryTouchMove, { passive: true });
+            p.addEventListener('touchend', handleSubcategoryTouchEnd, { passive: true });
+            
+            // Залишаємо click для десктопних пристроїв
+            p.addEventListener('click', goToSubcategory);
             subList.appendChild(subContentContainer);
         });
 
@@ -5382,18 +5552,25 @@ function updateHeader() {
                 phoneMenu.style.zIndex = '2147483647';
                 phoneMenu.style.display = 'none';
                 phoneMenu.style.minWidth = '170px';
+                phoneMenu.style.maxWidth = '200px';
                 phoneMenu.style.textAlign = 'center';
                 phoneMenu.style.borderRadius = '14px';
                 phoneMenu.style.boxShadow = '0 8px 32px rgba(0,0,0,0.18)';
+                phoneMenu.style.whiteSpace = 'nowrap';
+                phoneMenu.style.transform = 'none';
                 function applyMenuTheme() {
                     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                         phoneMenu.style.background = '#23272f';
                         phoneMenu.style.color = '#e6e6e6';
                         phoneMenu.style.border = '1px solid #333';
+                        phoneMenu.style.position = 'fixed';
+                        phoneMenu.style.zIndex = '2147483647';
                     } else {
                         phoneMenu.style.background = '#fff';
                         phoneMenu.style.color = '#222';
                         phoneMenu.style.border = '1px solid #e0e0e0';
+                        phoneMenu.style.position = 'fixed';
+                        phoneMenu.style.zIndex = '2147483647';
                     }
                 }
                 applyMenuTheme();
@@ -5407,6 +5584,11 @@ function updateHeader() {
                             item.style.color = '#222';
                         }
                     });
+                    
+                    // Якщо меню відкрите, оновлюємо його позицію
+                    if (phoneMenu.style.display === 'block') {
+                        updateMenuPosition();
+                    }
                 };
                 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', window.__phoneDropdownThemeListener);
                 phoneList.forEach(phone => {
@@ -5442,12 +5624,66 @@ function updateHeader() {
                 } else {
                     // Позиціонуємо меню під телефоном
                     const rect = phones.getBoundingClientRect();
-                    phoneMenu.style.left = (rect.left + rect.width/2 - phoneMenu.offsetWidth/2) + 'px';
-                    phoneMenu.style.top = (rect.bottom + 6) + 'px';
                     phoneMenu.style.display = 'block';
                     arrow.classList.add('active');
+                    
+                    // Невелика затримка для правильного розрахунку ширини меню
+                    setTimeout(() => {
+                        const menuWidth = phoneMenu.offsetWidth || 170;
+                        let left = rect.left + rect.width/2 - menuWidth/2;
+                        
+                        // Перевіряємо, чи меню не виходить за межі екрану
+                        if (left < 10) {
+                            left = 10; // Мінімальний відступ від лівого краю
+                        } else if (left + menuWidth > window.innerWidth - 10) {
+                            left = window.innerWidth - menuWidth - 10; // Мінімальний відступ від правого краю
+                        }
+                        
+                        phoneMenu.style.left = left + 'px';
+                        phoneMenu.style.top = (rect.bottom + 6) + 'px';
+                    }, 0);
                 }
             };
+            
+            // Оновлюємо позицію меню при прокрутці
+            const updateMenuPosition = () => {
+                if (phoneMenu && phoneMenu.style.display === 'block') {
+                    const rect = phones.getBoundingClientRect();
+                    const menuWidth = phoneMenu.offsetWidth || 170;
+                    let left = rect.left + rect.width/2 - menuWidth/2;
+                    
+                    // Перевіряємо, чи меню не виходить за межі екрану
+                    if (left < 10) {
+                        left = 10; // Мінімальний відступ від лівого краю
+                    } else if (left + menuWidth > window.innerWidth - 10) {
+                        left = window.innerWidth - menuWidth - 10; // Мінімальний відступ від правого краю
+                    }
+                    
+                    phoneMenu.style.left = left + 'px';
+                    phoneMenu.style.top = (rect.bottom + 6) + 'px';
+                    
+                    // Додатково переконуємося, що меню має правильну позицію
+                    phoneMenu.style.position = 'fixed';
+                    phoneMenu.style.zIndex = '2147483647';
+                }
+            };
+            
+            // Закриваємо меню при прокрутці
+            const closeMenuOnScroll = () => {
+                if (phoneMenu && phoneMenu.style.display === 'block') {
+                    phoneMenu.style.display = 'none';
+                    if (arrow) arrow.classList.remove('active');
+                    
+                    // Додатково переконуємося, що меню має правильну позицію при закритті
+                    phoneMenu.style.position = 'fixed';
+                    phoneMenu.style.zIndex = '2147483647';
+                }
+            };
+            
+            // Додаємо обробник прокрутки
+            window.addEventListener('scroll', updateMenuPosition);
+            window.addEventListener('scroll', closeMenuOnScroll);
+            window.addEventListener('resize', updateMenuPosition);
             // Закриття при кліку поза меню
             closeDropdownHandler = function(e) {
                 // Перевіряємо, чи елементи існують
@@ -5459,9 +5695,18 @@ function updateHeader() {
                 }
             };
             document.addEventListener('click', closeDropdownHandler);
+            
+            // Зберігаємо посилання на обробники для очищення
+            const scrollHandler = updateMenuPosition;
+            const scrollCloseHandler = closeMenuOnScroll;
+            const resizeHandler = updateMenuPosition;
+            
             window.addEventListener('beforeunload', () => {
                 if (window.__phoneDropdownMenu) window.__phoneDropdownMenu.remove();
                 if (window.__phoneDropdownThemeListener) window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', window.__phoneDropdownThemeListener);
+                window.removeEventListener('scroll', scrollHandler);
+                window.removeEventListener('scroll', scrollCloseHandler);
+                window.removeEventListener('resize', resizeHandler);
             });
         } else {
             // Якщо лише один телефон, клік дзвонить
