@@ -780,7 +780,6 @@ async function initializeData() {
         isInitializing = false;
     }
 }
-
 async function checkAuth() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -1545,7 +1544,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
-
 async function refreshToken(attempt = 1) {
     const maxAttempts = 3;
     try {
@@ -2218,7 +2216,6 @@ function renderAdmin(section = activeTab, data = {}) {
 
     resetInactivityTimer();
 }
-
 function renderCategoriesAdmin() {
     const categoryList = document.getElementById('category-list-admin');
     if (!categoryList) {
@@ -3010,7 +3007,6 @@ async function updateCategoryData(categoryId) {
         isUpdatingCategories = false;
     }
 }
-
 function deepEqual(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return a === b;
@@ -3810,7 +3806,6 @@ async function updateSlideshowSettings() {
         showNotification('Не вдалося оновити налаштування: ' + err.message);
     }
 }
-
 async function updateSlide(slideId) {
     try {
         const tokenRefreshed = await refreshToken();
@@ -5397,7 +5392,6 @@ function deleteProductColor(blockIndex, colorIndex) {
     renderColorsList(blockIndex);
     resetInactivityTimer();
 }
-
 function addMattressSize() {
     const name = document.getElementById('mattress-size-name').value;
     const price = parseFloat(document.getElementById('mattress-size-price').value);
@@ -6138,6 +6132,19 @@ if (
             console.warn('Поле id все ще присутнє перед відправкою:', product.id);
         }
 
+        // Нормалізація: photo завжди рядок
+        if (product.colorBlocks) {
+            product.colorBlocks.forEach(block => {
+                if (block.colors) {
+                    block.colors.forEach(color => {
+                        if (typeof color.photo !== 'string') {
+                            color.photo = '';
+                        }
+                    });
+                }
+            });
+        }
+
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
         const response = await fetchWithAuth('/api/products', {
@@ -6176,7 +6183,6 @@ if (
         if (saveButton) saveButton.disabled = false;
     }
 }
-
 async function openEditProductModal(productId) {
     const product = products.find(p => p._id === productId);
     if (!product) {
@@ -6796,6 +6802,19 @@ if (
 
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
+        // Нормалізація: photo завжди рядок
+        if (product.colorBlocks) {
+            product.colorBlocks.forEach(block => {
+                if (block.colors) {
+                    block.colors.forEach(color => {
+                        if (typeof color.photo !== 'string') {
+                            color.photo = '';
+                        }
+                    });
+                }
+            });
+        }
+
         const response = await fetchWithAuth(`/api/products/${productId}`, {
             method: 'PUT',
             body: JSON.stringify(product)
@@ -6971,7 +6990,6 @@ async function sortAdminProducts(sortType) {
     }
     resetInactivityTimer();
 }
-
 async function searchProducts(page = 1) {
     const query = document.getElementById('product-search')?.value?.trim().toLowerCase();
     if (!query) {
@@ -7653,7 +7671,6 @@ function handleOrdersUpdate(data) {
         renderAdmin('orders', { total: totalOrders });
     }
 }
-
 function connectAdminWebSocket(attempt = 1) {
     const wsUrl = window.location.hostname === 'localhost'
         ? 'ws://localhost:3000'
