@@ -5369,16 +5369,22 @@ function updateHeader() {
     document.title = settings.name || 'Меблевий магазин';
     const logo = document.getElementById('logo');
     if (logo) {
-        const logoUrl = settings.logo || NO_IMAGE_URL;
+        const defaultLogo = '/assets/logo/prostirmebliv-logo-horizontal.svg';
+        const logoUrl = (settings.logo && settings.logo.trim()) ? settings.logo : defaultLogo;
         console.log('Оновлення логотипу:', logoUrl);
         logo.style.backgroundImage = `url(${logoUrl})`;
-        logo.style.width = `${settings.logoWidth || 150}px`;
-        logo.style.height = 'auto';
+        if (settings.logoWidth && Number(settings.logoWidth) > 0) {
+            logo.style.width = `${settings.logoWidth}px`;
+        } else {
+            logo.style.removeProperty('width');
+        }
+        // Не примушуємо висоту, дозволяємо керувати через CSS
+        logo.style.removeProperty('height');
         const img = new Image();
         img.src = logoUrl;
         img.onerror = () => {
             console.warn('Помилка завантаження логотипу, використовуємо NO_IMAGE_URL');
-            logo.style.backgroundImage = `url(${NO_IMAGE_URL})`;
+            logo.style.backgroundImage = `url(${defaultLogo})`;
         };
     }
     const logoText = document.getElementById('logo-text');

@@ -6,3 +6,4 @@ Disallow: /uploads/
 Allow: /
 
 Sitemap: https://mebli.onrender.com/api/sitemap
+Allow: /assets/logo/

@@ -19,7 +19,8 @@
     <meta name="twitter:image" content="https://mebli.onrender.com/og-image.jpg"/>
     <title>Меблевий магазин</title>
     <link href="/css/styles.css" rel="stylesheet"/>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
     <script type="text/javascript" src="/js/script.js?v=1.0.27" defer></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script type="text/javascript">
@@ -32,14 +33,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         .logo {
+            background-image: url('/assets/logo/prostirmebliv-logo-horizontal.svg');
             background-size: contain;
             background-repeat: no-repeat;
-            background-position: center;
-            width: 150px;
-            height: auto;
-            padding-top: 18%;
+            background-position: left center;
+            width: 220px;
+            height: 44px;
             cursor: pointer;
             position: relative;
+        }
+        @media (max-width: 640px) {
+            .logo { width: 170px; height: 36px; }
         }
         #about-text img,
         #about-text iframe {
@@ -324,7 +328,7 @@
 <body>
     <header>
         <div class="logo-container">
-            <div class="logo" id="logo" onclick="showSection('home')"></div>
+            <div class="logo" id="logo" onclick="showSection('home')" title="prostirmebliv.com.ua"></div>
             <div class="logo-text" id="logo-text"></div>
         </div>
         <div class="phones" id="phones"></div>

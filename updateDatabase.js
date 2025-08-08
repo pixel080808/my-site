@@ -30,6 +30,22 @@ async function updateDatabase() {
         );
         console.log('Оновлення categories:', categoryResult);
 
+        // Встановлення (або оновлення) налаштувань сайту: назва, логотип, фавікон
+        const settingsCol = mongoose.connection.db.collection('settings');
+        const absoluteBase = 'https://mebli.onrender.com';
+        const update = {
+            name: 'Prostir Mebliv',
+            logo: `${absoluteBase}/assets/logo/prostirmebliv-logo-horizontal.svg`,
+            logoWidth: 220,
+            favicon: `${absoluteBase}/favicon.svg`,
+        };
+        const settingsResult = await settingsCol.updateOne(
+            {},
+            { $set: update },
+            { upsert: true }
+        );
+        console.log('Оновлення settings:', settingsResult);
+
         console.log('Оновлення завершено!');
     } catch (err) {
         console.error('Помилка оновлення бази даних:', err);
