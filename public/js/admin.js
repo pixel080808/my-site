@@ -2487,7 +2487,7 @@ function renderSlideModal(slide = {}) {
         <div class="modal-content">
             <h2>${slide._id ? 'Редагувати слайд' : 'Додати слайд'}</h2>
             <label>Фото слайду:</label>
-            <input type="file" id="slide-photo-file" accept="image/*">
+                            <input type="file" id="slide-photo-file" accept="image/*,.svg">
             ${slide.photo ? `<img src="${slide.photo}" alt="Slide Photo" style="max-width: 100px; margin-top: 10px;">` : ''}
             <label>Посилання:</label>
             <input type="text" id="slide-link" value="${slide.link || ''}" placeholder="Введіть URL">
@@ -2687,9 +2687,9 @@ function closeModal() {
 
 function validateFile(file) {
     const maxSize = 10 * 1024 * 1024;
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
-        return { valid: false, error: 'Непідтримуваний тип файлу!' };
+        return { valid: false, error: 'Непідтримуваний тип файлу! Дозволені: JPEG, PNG, GIF, WebP, SVG' };
     }
     if (file.size > maxSize) {
         return { valid: false, error: 'Файл занадто великий (максимум 10 МБ)!' };
@@ -2733,7 +2733,7 @@ function openEditCategoryModal(categoryId) {
                 <label for="category-slug">Шлях категорії</label>
                 <input id="category-photo-url" placeholder="URL зображення" type="text" value="${sanitize(category.photo) || ''}" /><br/>
                 <label for="category-photo-url">URL зображення</label>
-                <input accept="image/*" id="category-photo-file" type="file" /><br/>
+                <input accept="image/*,.svg" id="category-photo-file" type="file" /><br/>
                 <label for="category-photo-file">Завантажте зображення</label>
                 <select id="category-visible">
                     <option value="true" ${category.visible ? 'selected' : ''}>Показувати</option>
@@ -2778,7 +2778,7 @@ function openAddCategoryModal() {
             <label for="category-slug">Шлях категорії</label>
             <input type="text" id="category-photo-url" placeholder="URL фотографії"><br/>
             <label for="category-photo-url">URL фотографії</label>
-            <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <input type="file" id="category-photo-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"><br/>
             <label for="category-photo-file">Завантажте фотографію</label>
             <select id="category-visible">
                 <option value="true">Показувати</option>
@@ -3288,7 +3288,7 @@ function openAddSubcategoryModal() {
             <label for="subcategory-slug">Шлях підкатегорії</label>
             <input type="text" id="subcategory-photo-url" placeholder="URL фотографії"><br/>
             <label for="subcategory-photo-url">URL фотографії</label>
-            <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+            <input type="file" id="subcategory-photo-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"><br/>
             <label for="subcategory-photo-file">Завантажте фотографію</label>
             <select id="subcategory-visible">
                 <option value="true">Показувати</option>
@@ -3611,7 +3611,7 @@ function openEditSubcategoryModal(categoryId, subcategoryId) {
                 <label for="subcategory-slug">Шлях підкатегорії</label>
                 <input id="subcategory-photo-url" placeholder="URL зображення" type="text" value="${sanitize(subcategory.photo) || ''}" /><br/>
                 <label for="subcategory-photo-url">URL зображення</label>
-                <input accept="image/*" id="subcategory-photo-file" type="file" /><br/>
+                <input accept="image/*,.svg" id="subcategory-photo-file" type="file" /><br/>
                 <label for="subcategory-photo-file">Завантажте зображення</label>
                 <select id="subcategory-visible">
                     <option value="true" ${subcategory.visible ? 'selected' : ''}>Показувати</option>
@@ -4005,7 +4005,7 @@ function editSlide(order) {
             <label for="edit-slide-order">Порядковий номер</label>
             <input type="text" id="edit-slide-img-url" value="${slide.img || ''}"><br/>
             <label for="edit-slide-img-url">URL зображення</label>
-            <input type="file" id="edit-slide-img-file" accept="image/*"><br/>
+                            <input type="file" id="edit-slide-img-file" accept="image/*,.svg"><br/>
             <label for="edit-slide-img-file">Завантажте зображення</label>
             ${slide.img ? `<img src="${slide.img}" style="max-width: 100px;">` : ''}
             <input type="text" id="edit-slide-url" value="${slide.url || ''}"><br/>
@@ -4746,7 +4746,7 @@ function openAddProductModal() {
             <h4>Фотографії</h4>
             <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
             <label for="product-photo-url">URL фотографії</label>
-            <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" multiple><br/>
+            <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" multiple><br/>
             <label for="product-photo-file">Завантажте фотографію</label>
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
@@ -4766,7 +4766,7 @@ function openAddProductModal() {
                         <label for="product-color-price-change-0">Зміна ціни для кольору (грн)</label>
                         <input type="text" id="product-color-photo-url-0" placeholder="URL фото кольору"><br/>
                         <label for="product-color-photo-url-0">URL фото кольору</label>
-                        <input type="file" id="product-color-photo-file-0" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                        <input type="file" id="product-color-photo-file-0" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"><br/>
                         <label for="product-color-photo-file-0">Завантажте фото кольору</label>
                         <button type="button" onclick="addProductColor(0)">Додати колір</button>
                         <div id="product-color-list-0" class="color-photo-list"></div>
@@ -5175,7 +5175,7 @@ function addColorBlock() {
                 <label for="product-color-price-change-${blockIndex}">Зміна ціни для кольору (грн)</label>
                 <input type="text" id="product-color-photo-url-${blockIndex}" placeholder="URL фото кольору"><br/>
                 <label for="product-color-photo-url-${blockIndex}">URL фото кольору</label>
-                <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"><br/>
                 <label for="product-color-photo-file-${blockIndex}">Завантажте фото кольору</label>
                 <button type="button" onclick="addProductColor(${blockIndex})">Додати колір</button>
                 <div id="product-color-list-${blockIndex}" class="color-photo-list"></div>
@@ -5324,7 +5324,7 @@ function openEditColorModal(blockIndex, colorIndex) {
             <label for="edit-color-photo-url-modal">URL фото (необов'язково)</label>
             <input type="text" id="edit-color-photo-url-modal" value="${typeof color.photo === 'string' ? color.photo : ''}" placeholder="URL фото (необов'язково)" style="width: 100%;">
             <label for="edit-color-photo-file-modal">Завантажте фото кольору</label>
-            <input type="file" id="edit-color-photo-file-modal" accept="image/jpeg,image/png,image/gif,image/webp" style="width: 100%;"><br/>
+            <input type="file" id="edit-color-photo-file-modal" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" style="width: 100%;"><br/>
             ${photoSrc ? `<img src="${photoSrc}" alt="Фото кольору" style="max-width: 80px; margin: 10px 0;">` : ''}
             <div class="modal-actions" style="margin-top: 20px;">
                 <button class="save-btn" onclick="saveColorModal(${blockIndex}, ${colorIndex})">Зберегти</button>
@@ -6280,7 +6280,7 @@ async function openEditProductModal(productId) {
             <h4>Фотографії</h4>
             <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
             <label for="product-photo-url">URL фотографії</label>
-            <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" multiple><br/>
+            <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" multiple><br/>
             <label for="product-photo-file">Завантажте фотографію</label>
             <button onclick="addProductPhoto()">Додати фото</button>
             <div id="product-photo-list" class="photo-list"></div>
@@ -6301,7 +6301,7 @@ async function openEditProductModal(productId) {
                             <label for="product-color-price-change-${blockIndex}">Зміна ціни для кольору (грн)</label>
                             <input type="text" id="product-color-photo-url-${blockIndex}" placeholder="URL фото кольору"><br/>
                             <label for="product-color-photo-url-${blockIndex}">URL фото кольору</label>
-                            <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp"><br/>
+                            <input type="file" id="product-color-photo-file-${blockIndex}" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"><br/>
                             <label for="product-color-photo-file-${blockIndex}">Завантажте фото кольору</label>
                             <button type="button" onclick="addProductColor(${blockIndex})">Додати колір</button>
                             <div id="product-color-list-${blockIndex}" class="color-photo-list"></div>
