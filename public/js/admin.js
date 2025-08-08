@@ -1103,7 +1103,7 @@ function initializeProductEditor(description = '', descriptionDelta = null) {
         toolbar.addHandler('image', async () => {
             const input = document.createElement('input');
             input.setAttribute('type', 'file');
-            input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp');
+            input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml');
             input.click();
             input.onchange = async () => {
                 const file = input.files[0];

@@ -56,7 +56,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "products",
-    allowed_formats: ["jpg", "png", "jpeg", "gif", "webp"],
+    allowed_formats: ["jpg", "png", "jpeg", "gif", "webp", "svg"],
   },
 })
 
@@ -66,9 +66,9 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error("Дозволені лише файли JPEG, PNG, GIF або WebP"), false)
+      return cb(new Error("Дозволені лише файли JPEG, PNG, GIF, WebP або SVG"), false)
     }
     cb(null, true)
   },
