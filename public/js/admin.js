@@ -1669,18 +1669,18 @@ async function updateStoreInfo() {
             return;
         }
 
-        const name = document.getElementById('store-name').value;
-        const baseUrl = document.getElementById('base-url').value;
-        const logoUrl = document.getElementById('logo-url').value;
+        const name = document.getElementById('store-name').value || '';
+        const baseUrl = document.getElementById('base-url').value || '';
+        const logoUrl = document.getElementById('logo-url').value || '';
         const logoFile = document.getElementById('logo-file').files[0];
         const logoWidthInput = document.getElementById('logo-width').value;
         const logoWidth = logoWidthInput ? parseInt(logoWidthInput) || 0 : 0;
-        const faviconUrl = document.getElementById('favicon-url').value;
+        const faviconUrl = document.getElementById('favicon-url').value || '';
         const faviconFile = document.getElementById('favicon-file').files[0];
 
         const token = localStorage.getItem('adminToken');
-        let finalLogoUrl = logoUrl;
-        let finalFaviconUrl = faviconUrl;
+        let finalLogoUrl = logoUrl || '';
+        let finalFaviconUrl = faviconUrl || '';
 
         const csrfResponse = await fetch('/api/csrf-token', {
             method: 'GET',
@@ -1745,15 +1745,22 @@ async function updateStoreInfo() {
         const metaKeywords = metaKeywordsInput ? metaKeywordsInput.value.trim() : '';
 
         const updatedSettings = {
-            name: name || settings.name,
-            baseUrl: baseUrl || settings.baseUrl,
-            logo: finalLogoUrl || settings.logo,
+            name: name,
+            baseUrl: baseUrl,
+            logo: finalLogoUrl,
             logoWidth: logoWidth,
-            favicon: finalFaviconUrl || settings.favicon,
-            metaTitle: metaTitle || settings.metaTitle,
-            metaDescription: metaDescription || settings.metaDescription,
-            metaKeywords: metaKeywords || settings.metaKeywords
+            favicon: finalFaviconUrl,
+            metaTitle: metaTitle,
+            metaDescription: metaDescription,
+            metaKeywords: metaKeywords
         };
+
+        // Видаляємо undefined та null значення
+        Object.keys(updatedSettings).forEach(key => {
+            if (updatedSettings[key] === undefined || updatedSettings[key] === null) {
+                updatedSettings[key] = '';
+            }
+        });
 
         console.log('Надсилаємо налаштування:', updatedSettings);
 
