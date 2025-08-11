@@ -59,7 +59,7 @@ header {
   width: 100%;
   min-height: 80px;
   z-index: 50;
-  transition: background var(--transition-speed) ease;
+  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
   position: relative;
 }
 
@@ -70,7 +70,6 @@ header.scrolled {
 .logo-container {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
   font-size: 22px;
   font-weight: 700;
@@ -78,25 +77,29 @@ header.scrolled {
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
+  padding-left: 10px; /* Невеликий відступ зліва */
+  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .logo-container img {
   height: 40px;
   width: auto;
+  max-width: 200px;
+  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .logo {
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding-left: var(--base-padding);
     margin-right: 0;
     background-size: contain;
     background-repeat: no-repeat;
-    background-position: center;
     width: 200px;
     height: 60px;
     cursor: pointer;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
+    max-width: 200px;
 }
 
 .logo-text {
@@ -157,7 +160,7 @@ header.scrolled {
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%233B82F6" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>') no-repeat center;
     background-size: contain;
     margin-right: 8px;
-    transition: opacity var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .phones:hover::before {
@@ -166,16 +169,16 @@ header.scrolled {
 .phones .main-phone {
     font-weight: 600;
     font-size: 16px;
-    padding: 0 8px 0 0;
+    padding: 0 1px 0 0;
     letter-spacing: 0.5px;
-    transition: color 0.2s;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     color: #1e293b;
 }
 .phones .phone-dropdown-arrow {
     display: inline-flex;
     align-items: center;
     margin-left: 2px;
-    transition: transform 0.2s;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 .phones .phone-dropdown-arrow.active {
     transform: rotate(180deg);
@@ -200,7 +203,7 @@ header.scrolled {
     font-size: 17px;
     padding: 8px 18px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     color: #222;
     border: none;
     background: none;
@@ -255,6 +258,125 @@ header.scrolled {
         color: #4caf50;
     }
 }
+
+/* Медіа-запит для середніх екранів (768px - 1000px) - збільшене лого та стабільне вирівнювання */
+@media (min-width: 768px) and (max-width: 1000px) {
+    header { padding-left: 10px; }
+    .logo-container { padding-left: 15px; align-items: flex-start; }
+    /* Лого – це div, тому масштабуємо сам .logo і скидаємо padding-top */
+    .logo {height: 70px !important;width: 130px !important;max-width: 280px;padding-top: 0 !important;background-size: contain;background-position: left center;}
+}
+
+/* Медіа-запит для екранів від 1100px до 1199px - плавний перехід */
+@media (min-width: 1100px) and (max-width: 1199px) {
+    .logo-container { left: 24px; top: 2px; }
+    .logo { width: 200px; height: 110px; max-width: 200px; }
+    .logo-container img { height: 110px; max-width: 200px; }
+    .phones { margin-top: 0; }
+    .search-cart-container { margin-top: 0; }
+}
+
+/* Медіа-запит для великих екранів (від 1000px) - логотип перекриває 2 рядки (хедер + нав) */
+@media (min-width: 1000px) {
+    header {
+        position: relative;
+        padding: 10px 24px;
+        padding-left: 260px; /* більше місця між логотипом і телефонами */
+        min-height: 80px;
+        z-index: 3000; /* щоб лого (як нащадок) було над навігацією */
+        justify-content: flex-start; /* телефони одразу після логотипа */
+        gap: 16px;
+    }
+
+    .nav {
+        padding-left: 260px; /* вирівнюємо навігацію праворуч від логотипа */
+    }
+
+    .logo-container {
+        position: absolute;
+        top: 0;
+        left: 24px;
+        z-index: 2000; /* вище панелі навігації */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        height: auto;
+        padding-left: 0;
+    }
+
+    .logo {
+        width: 160px !important;
+        height: 125px !important;
+        max-width: 200px !important;
+        padding-top: 0 !important;
+        background-position: left center;
+        background-size: contain;
+        display: flex;
+        align-items: center; /* вертикальне центр-розміщення в контейнері */
+    }
+
+    .logo-text {
+        font-size: 15px;
+        font-weight: 600;
+        margin-left: 0;
+        margin-top: 0;
+        text-align: left;
+    }
+
+    .phones {
+        order: 1; /* між логотипом і пошуком */
+        margin: 0 12px 0 0;
+        align-self: center;
+        position: static;
+        display: inline-flex;
+    }
+
+    .search-cart-container {
+        order: 2;
+        align-self: center;
+        margin-top: 0;
+        margin-left: auto; /* штовхаємо пошук/кошик вправо */
+    }
+}
+
+/* Точне позиціонування логотипа для різних діапазонів */
+@media (min-width: 1000px) and (max-width: 1099px) {
+    .logo-container { top: 2px; }
+}
+
+/* Медіа-запит для екранів від 1300px до 1399px - плавний перехід */
+@media (min-width: 1200px) and (max-width: 1399px) {
+    .logo-container { left: 24px; top: 2px; }
+    .logo { width: 220px; height: 110px; max-width: 220px; display: flex; align-items: center; padding-top: 0; background-position: left center; background-size: contain; }
+    .logo-container img { height: 110px; max-width: 220px; }
+    .phones { margin-top: 0; }
+    .search-cart-container { margin-top: 0; }
+}
+
+/* Явне дублювання правил для ≥1200px, щоб лого не «сповзало» вниз */
+@media (min-width: 1200px) {
+    header { padding-left: 260px; }
+    .nav { padding-left: 260px; }
+    .logo-container { position: absolute; top: 0; left: 24px; z-index: 2000; }
+.logo {width: 175px !important;height: 95px !important;max-width: 200px !important;padding-top: 0 !important;background-position: left center;background-size: contain;display: flex;align-items: center;}
+    .phones { order: 1; margin: 0 12px 0 0; align-self: center; position: static; display: inline-flex; }
+    .search-cart-container { order: 2; align-self: center; margin-top: 0; margin-left: auto; }
+}
+
+/* Вирівнювання: на екранах від 1000px пошук/кошик праворуч, телефони по центру між логотипом і пошуком */
+@media (min-width: 1000px) {
+    header .search-cart-container { margin-left: auto; }
+    header .phones {
+        order: 1;
+        flex: 1 1 auto;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        margin: 0 !important;
+    }
+}
+
 @keyframes fadeInPhoneMenu {
     from { 
         opacity: 0; 
@@ -299,6 +421,14 @@ header.scrolled {
     }
 }
 
+/* Остаточне вирівнювання для екранів від 1000px (перекриває пізніші 920+ правила) */
+@media (min-width: 1000px) {
+    header { padding-left: 260px; }
+    .nav { padding-left: 260px; }
+    header .search-cart-container { margin-left: auto; }
+    header .phones { margin-left: 0; margin-right: 16px; }
+}
+
 .search-bar {
     position: relative;
     display: flex;
@@ -308,6 +438,7 @@ header.scrolled {
     min-width: 200px;
     max-width: 350px;
     margin: 0 0px;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 /* Адаптивні стилі для рядка пошуку на екранах від 650px */
@@ -354,6 +485,30 @@ header.scrolled {
 @media (min-width: 1200px) {
     .search-bar {
         max-width: 350px;
+    }
+    
+    .logo-container {
+        left: 30px;
+        top: 18px;
+    }
+    
+    .logo {
+        width: 260px;
+        height: 120px;
+        max-width: 260px;
+    }
+    
+    .logo-container img {
+        height: 120px;
+        max-width: 260px;
+    }
+    
+    .phones {
+        margin-top: 0px;
+    }
+    
+    .search-cart-container {
+        margin-top: 0px;
     }
 
     /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1200px */
@@ -428,7 +583,7 @@ header.scrolled {
     font-size: 15px;
     color: var(--text-color);
     outline: none;
-    transition: border-color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 /* Адаптивні стилі для поля вводу пошуку */
@@ -473,7 +628,7 @@ header.scrolled {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 /* Адаптивні стилі для кнопки пошуку */
@@ -546,7 +701,7 @@ header.scrolled {
     border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     margin-right: var(--base-padding);
     flex-shrink: 0;
     white-space: nowrap;
@@ -565,7 +720,7 @@ header.scrolled {
     height: 24px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
-    transition: background var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .cart:hover::before {
@@ -603,7 +758,7 @@ header.scrolled {
     border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
@@ -620,7 +775,7 @@ header.scrolled {
 .favorite-icon svg {
     width: 24px;
     height: 24px;
-    transition: all var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .favorite-icon:hover svg {
@@ -634,10 +789,10 @@ header.scrolled {
 .favorite-icon.active svg path {
   fill: #1cc289;
   stroke: #28c88f;
-  transition: fill 0.2s, stroke 0.2s;
+  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 .favorite-icon svg path {
-  transition: fill 0.2s, stroke 0.2s;
+  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .nav {
@@ -646,7 +801,7 @@ header.scrolled {
     text-align: center;
     width: 100%;
     z-index: 99;
-    transition: background var(--transition-speed) ease, z-index var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     position: relative;
 }
 
@@ -664,11 +819,9 @@ header.scrolled {
     height: 1px;
     background: var(--border-color);
 }
-
 .nav.scrolled {
     background: #ffffff;
 }
-
 .nav a {
     color: var(--text-color);
     text-decoration: none;
@@ -677,7 +830,7 @@ header.scrolled {
     font-size: 18px;
     padding: 8px 15px;
     border-radius: 20px;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     cursor: pointer;
     text-transform: uppercase;
 }
@@ -733,7 +886,7 @@ header.scrolled {
     min-width: 200px;
     z-index: 1001;
     padding: 12px 0;
-    transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     font-family: 'Inter', 'Roboto', Arial, sans-serif;
     font-size: 16px; /* Базовий розмір шрифту для адаптації */
     border: 1px solid var(--border-color);
@@ -774,7 +927,7 @@ header.scrolled {
 .dropdown-item {
     padding: 10px 20px;
     position: relative;
-    transition: background var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     cursor: pointer;
     text-align: left;
     /* Переконаємося, що підкатегорії відображаються знизу */
@@ -791,7 +944,7 @@ header.scrolled {
     cursor: pointer;
     color: var(--text-color);
     font-weight: 500;
-    transition: color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     font-size: inherit;
 }
 
@@ -804,7 +957,7 @@ header.scrolled {
     background: var(--card-bg);
     padding: 4px 0;
     margin-top: 4px;
-    transition: opacity 0.2s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     left: 0;
     position: static;
     width: 100%;
@@ -834,7 +987,7 @@ header.scrolled {
     padding: 8px 20px;
     color: var(--muted-text);
     font-size: inherit;
-    transition: color var(--transition-speed) ease, background 0.2s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     cursor: pointer;
     text-align: left;
 }
@@ -854,7 +1007,7 @@ header.scrolled {
     background: #ffffff00;
     text-align: left;
     box-shadow: 0 2px 6px rgb(255 255 255 / 5%);
-    transition: background var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     overflow-x: auto;
 }
 
@@ -873,7 +1026,7 @@ header.scrolled {
     text-decoration: none;
     font-weight: 500;
     cursor: pointer;
-    transition: color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     padding: 12px 10px;
     display: inline-flex;
     align-items: center;
@@ -886,6 +1039,7 @@ header.scrolled {
 .breadcrumbs .breadcrumb-btn:hover {
     color: var(--primary-color);
     text-decoration: none;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .breadcrumb-btn {
@@ -918,7 +1072,7 @@ header.scrolled {
     width: 100%;
     position: relative;
     z-index: 98;
-    transition: padding var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .section {
@@ -935,7 +1089,7 @@ h2 {
     margin: 15px 0;
     font-weight: 600;
     text-align: left;
-    transition: color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 5px;
 }
@@ -949,7 +1103,7 @@ h3 {
     text-transform: none;
     letter-spacing: 1.5px;
     padding-bottom: 10px;
-    transition: color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 /* Стилі для h3 на сторінці кошика */
@@ -1430,7 +1584,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     color: var(--text-color);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
-
 .group-products .group-product-item input[type="number"] {
     width: 60px;
     text-align: center;
@@ -1466,7 +1619,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     transform: translateY(20px); /* Зміщення вниз для анімації */
     pointer-events: none; /* Уникаємо взаємодії, коли кнопка прихована */
 }
-
 .floating-group-cart.visible {
     opacity: 1; /* Показуємо при додаванні класу visible */
     transform: translateY(0);
@@ -2229,7 +2381,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 .product img:hover {
     transform: scale(1.00);
 }
-
 .product a {
     text-decoration: none !important;
     color: inherit;
@@ -2267,7 +2418,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-decoration: none !important;
     color: inherit;
 }
-
 .product h3 a:link,
 .product h3 a:visited,
 .product h3 a:hover,
@@ -2760,7 +2910,7 @@ s {
     top: 110px;
     right: 10px;
     z-index: 1001;
-    transition: opacity 0.5s ease, transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     opacity: 0;
     transform: translateY(10px);
 }
@@ -2783,7 +2933,7 @@ s {
     background: var(--card-bg);
     border-radius: 18px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-icon:hover {
@@ -2832,7 +2982,7 @@ s {
     max-height: 580px;
     overflow-y: auto;
     z-index: 1002;
-    transition: transform 0.4s ease, opacity 0.4s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     transform: translateX(100%);
     opacity: 0;
     border: 1px solid var(--border-color);
@@ -2888,7 +3038,7 @@ s {
     height: 24px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
-    transition: background var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-content .cart:hover::before {
@@ -2982,7 +3132,7 @@ s {
     text-decoration: none;
     font-size: 16px;
     font-weight: 600;
-    transition: background 0.3s ease, color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     border-radius: 8px;
     margin: 5px 0;
 }
@@ -2991,7 +3141,7 @@ s {
     content: "▾";
     margin-left: auto;
     font-size: 14px;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-catalog-dropdown.active .burger-catalog-toggle::after {
@@ -3013,7 +3163,7 @@ s {
     border: 1px solid var(--border-color);
     opacity: 0;
     transform: translateY(8px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     background-color: #f9f9f9;
 }
 
@@ -3029,7 +3179,6 @@ s {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 6px;
 }
-
 .burger-category-item a {
     font-size: 14px;
     font-weight: 600;
@@ -3037,6 +3186,7 @@ s {
     border-radius: 4px;
     display: block;
     background-color: #ffffff;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-subcategory {
@@ -3052,28 +3202,30 @@ s {
     padding: 6px 10px;
     border-radius: 4px;
     display: block;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-subcategory a:hover {
     background: var(--border-color);
     color: var(--primary-color);
     transform: translateX(0px);
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
-
 .burger-contact-info {
     margin: 1px 0;
     padding: 1px 1px;
     border-top: 1px solid var(--border-color);
     font-size: 15px;
     color: var(--text-color);
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
-
 .burger-contact-info p {
     margin: 15px 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-bottom: 0px;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-contact-info strong {
@@ -3091,7 +3243,8 @@ s {
     font-weight: 600;
     color: var(--text-color);
     margin-bottom: 10px;
-    padding: 0px
+    padding: 0px;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .burger-social-link {
@@ -3102,7 +3255,7 @@ s {
     text-decoration: none;
     font-size: 13px;
     font-weight: 500;
-    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     border-radius: 6px;
     margin: 4px 0;
 }
@@ -3119,6 +3272,7 @@ s {
     margin: 0 0 15px 0;
     justify-content: flex-start;
     height: 40px;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 .quantity-btn {
@@ -3134,7 +3288,7 @@ s {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
@@ -3154,7 +3308,7 @@ s {
     margin: 0 11px;
     background: #f7fafc00;
     font-size: 15px;
-    transition: border-color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     height: 40px;
 }
 
@@ -3172,7 +3326,7 @@ s {
     font-size: 16px;
     background: var(--card-bg);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     cursor: pointer;
     position: relative;
     height: 48px;
@@ -3199,7 +3353,7 @@ s {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease, background var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     cursor: pointer;
     height: 48px;
 }
@@ -3250,7 +3404,7 @@ s {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
-    transition: background var(--transition-speed) ease, transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease, color var(--transition-speed) ease;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2);
     position: relative;
     overflow: hidden;
@@ -3822,7 +3976,6 @@ s {
     flex: 1;
     text-align: left;
 }
-
 .cart-item .quantity-selector {
     display: flex;
     flex-direction: row;
@@ -3855,12 +4008,10 @@ s {
     transform: scale(1);
     box-shadow: 0 4px 12px var(--shadow-color);
 }
-
 .cart-item .quantity-btn:focus {
     outline: none;
     box-shadow: 0 0 8px rgba(30, 58, 138, 0.3);
 }
-
 .cart-item .quantity-selector input[type="number"] {
     width: 40px;
     text-align: center;
@@ -4133,31 +4284,18 @@ s {
     header {
         flex-direction: column;
         min-height: auto;
-        padding: 5px 10px;
+        padding: 6px 8px; /* трохи менший лівий падінг */
         justify-content: center;
         align-items: center;
         gap: 5px;
     }
 
-    .logo-container {
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-    }
+.logo-container { flex-direction: column; align-items: center; gap: 0; width: 100%; }
 
-    .logo {
-        margin: 0;
-        text-align: center;
-        width: auto;
-        margin-right: 0;
-        justify-content: center;
-        background-position: center;
-    }
+.logo {margin-left: 0;flex-shrink: 0;margin-right: 0;height: 70px !important;width: 120px !important;max-width: 260px;padding-top: 0 !important;background-size: contain;background-position: left center;}
 
-    .logo img {
-        max-width: 150px;
-    }
+
+.logo img { max-width: 140px; }
 
     .logo-text {
         font-size: 14px;
@@ -4166,16 +4304,19 @@ s {
     }
 
 .phones {
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text-color);
     padding-right: var(--base-padding);
     cursor: default;
     margin-left: 0px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    justify-content: flex-end;
+    flex-wrap: nowrap; /* не переносити елементи */
+    white-space: nowrap; /* не переносити елементи */
+    gap: 6px;
+    justify-content: center;
 }
+.phones .main-phone,
+.phones .phone-dropdown-arrow { white-space: nowrap; }
 
     .search-cart-container {
         width: 100%;
@@ -4184,13 +4325,7 @@ s {
         gap: 5px;
     }
 
-    .search-bar {
-        flex-grow: 1;
-        max-width: none;
-        margin: 0;
-        padding: 0;
-        min-width: 150px;
-    }
+    .search-bar { flex-grow: 1; max-width: none; margin: 0; padding: 0; min-width: 180px; }
 
     .search-bar input {
         width: 100%;
@@ -4580,7 +4715,6 @@ s {
     #catalog .container .filter-toggle:hover {
         background: var(--secondary-color);
     }
-
 .filters {
         width: 240px;
         padding: 10px 15px;
@@ -5095,6 +5229,7 @@ s {
 @media (min-width: 650px) and (max-width: 920px) {
     header {
         padding: var(--base-padding) 15px;
+        padding-left: 10px; /* підсуваємо лого ближче до лівого краю */
         height: 80px;
         display: flex;
         flex-wrap: nowrap;
@@ -5103,19 +5238,9 @@ s {
         gap: 5px;
     }
 
-    .logo-container {
-        gap: 0;
-    }
+    .logo-container { gap: 0; align-items: flex-start; }
 
-    .logo {
-        margin-left: 0;
-        flex-shrink: 0;
-        margin-right: 0;
-    }
-
-    .logo img {
-        max-width: 200px;
-    }
+.logo {margin-left: 0;flex-shrink: 0;margin-right: 0;height: 70px !important;width: 120px !important;max-width: 260px;padding-top: 0 !important;background-size: contain;background-position: left center;}
 
     .logo-text {
         font-size: 14px;
@@ -5129,21 +5254,18 @@ s {
         margin: 0;
         text-align: center;
         max-width: calc(100% - 30px);
-        flex-wrap: wrap;
+        flex-wrap: nowrap; /* не переносити елементи */
+        white-space: nowrap; /* не переносити елементи */
         justify-content: center;
+        order: 1;
+        flex: 1 1 auto; /* центруємо між лого та пошуком */
     }
+    .phones .main-phone,
+    .phones .phone-dropdown-arrow { white-space: nowrap; }
 
-    .search-cart-container {
-        flex-grow: 1;
-        max-width: 400px;
-        margin: 0;
-        gap: 1px;
-    }
+    .search-cart-container { flex-grow: 1; max-width: 420px; margin: 0; gap: 1px; order: 2; }
 
-    .search-bar {
-        flex-grow: 1;
-        max-width: 200px;
-    }
+    .search-bar { flex-grow: 1; max-width: 240px; }
     
     .search-bar input {
         font-size: 14px;
@@ -5340,7 +5462,6 @@ s {
             text-decoration: underline;
         }
     }
-
 #catalog-dropdown,
     .dropdown {
         font-size: 15px;
@@ -6020,6 +6141,21 @@ s {
         margin: 0;
     }
 
+    /* Перекриття вирівнювання для великих екранів → пошук праворуч, телефони між логотипом і пошуком */
+    @media (min-width: 1000px) {
+        header { padding-left: 260px !important; }
+        .nav {/* padding-left: 260px !important; */}
+        header .search-cart-container { margin-left: auto !important; }
+        header .phones {
+            order: 1;
+            flex: 1 1 auto;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            margin: 0 !important;
+        }
+    }
+
     .search-bar {
         max-width: 400px;
     }
@@ -6102,7 +6238,6 @@ s {
         display: block !important;
         flex-shrink: 0 !important;
     }
-
 #catalog-dropdown,
     .dropdown {
         min-width: 220px;
@@ -6686,7 +6821,31 @@ s {
 
 @media (min-width: 1400px) {
     header {
-        padding: 10px 40px;
+        padding: 20px 40px 15px 40px;
+    }
+    
+    .logo-container {
+        left: 40px;
+        top: 20px;
+    }
+    
+    .logo {
+        width: 280px;
+        height: 140px;
+        max-width: 280px;
+    }
+    
+    .logo-container img {
+        height: 140px;
+        max-width: 280px;
+    }
+    
+    .phones {
+        margin-top: 0px;
+    }
+    
+    .search-cart-container {
+        margin-top: 0px;
     }
 
     .search-bar {
@@ -6846,7 +7005,6 @@ s {
     transition: color 0.2s;
     color: #ffffff;
 }
-
     .phones {
         color: var(--text-color);
         background: #52699100;
@@ -7237,6 +7395,7 @@ s {
 
     .burger-content a {
         color: var(--text-color);
+        transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     }
 
     .burger-content a:hover {
@@ -7535,7 +7694,6 @@ s {
     flex: 1;
     text-align: center;
 }
-
     .quantity-selector input[type="number"] {
         background: var(--input-bg);
         border-color: var(--input-border);
@@ -9126,7 +9284,6 @@ s {
     height: 25px;
     width: 90px;
 }
-
 /* Для маленьких кружечків (групові товари) */
 .group-color-circle span {
     width: 35px;
@@ -9134,7 +9291,6 @@ s {
     font-size: 11px;
     padding: 1px 1px;
 }
-
 @media (max-width: 768px) {
     .color-circle span {
         width: 80px;
