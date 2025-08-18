@@ -1595,7 +1595,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     -webkit-appearance: none;
     -moz-appearance: textfield;
 }
-
 .group-products h3 {
     margin-bottom: 20px;
 }
@@ -2391,7 +2390,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     justify-content: flex-start;
     height: 114px;
 }
-
 .product h3 {
     font-size: 18px;
     margin: 0 0 5px 0;
@@ -2972,7 +2970,7 @@ s {
     right: 10px;
     background: var(--card-bg);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-    border-radius: 10px;
+    border-radius: 18px;
     padding: 15px;
     min-width: 290px;
     max-width: 90vw;
@@ -3192,7 +3190,6 @@ s {
     margin-top: 4px;
     display: block;
 }
-
 .burger-subcategory a {
     font-size: 14px;
     font-weight: 400;
@@ -3981,7 +3978,6 @@ s {
     justify-content: center;
     margin: 0 15px;
 }
-
 .cart-item .quantity-btn {
     background: var(--card-bg);
     color: var(--muted-text);
