@@ -794,7 +794,6 @@ header.scrolled {
 .favorite-icon svg path {
   transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
-
 .nav {
     background: #ffffff;
     padding: 2px 0;
@@ -2385,7 +2384,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-decoration: none !important;
     color: inherit;
 }
-
 .product .product-content {
     flex-grow: 1;
     display: flex;
@@ -4958,8 +4956,8 @@ s {
         justify-content: center;
         align-items: center;
         gap: 8px;
-        background: #fffffff7;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        background: #ffffff00;
+        /* box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); */
         flex-wrap: wrap;
     }
 
@@ -5793,7 +5791,7 @@ s {
         align-items: center;
         gap: 8px;
         background: #fffffff7;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        /* box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); */
         flex-wrap: wrap;
     }
 
@@ -8346,7 +8344,7 @@ s {
 
 @media (max-width: 650px) {
     .filter-sort-container {
-        background: #1a202cfa;
+        background: #fffffff7;
     }
 }
 
