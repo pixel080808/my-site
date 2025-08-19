@@ -661,6 +661,7 @@ header.scrolled {
     height: 16px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
     background-size: contain;
+    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
 }
 
 /* Адаптивні стилі для іконки пошуку */
@@ -1595,6 +1596,32 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     -webkit-appearance: none;
     -moz-appearance: textfield;
 }
+/* Відступи для опису товару тільки на екранах до 1220px */
+.product-detail-description {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+@media (max-width: 1220px) {
+    .product-detail-description {
+        padding-left: 24px !important;
+        padding-right: 24px !important;
+    }
+}
+@media (max-width: 920px) {
+    .product-detail-description {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}
+@media (max-width: 600px) {
+    .product-detail-description {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+}
+
 .group-products h3 {
     margin-bottom: 20px;
 }
@@ -2363,7 +2390,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     transform: translateY(-0px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
-
 .product img {
     width: 100%;
     max-width: 100%;
@@ -3162,7 +3188,6 @@ s {
     transition: all 0.3s ease; /* Плавний перехід для всіх змін */
     background-color: #f9f9f9;
 }
-
 .burger-catalog-dropdown.active {
     display: block;
     opacity: 1;
@@ -3963,7 +3988,6 @@ s {
     margin-right: 10px;
     cursor: pointer;
 }
-
 .cart-item span {
     font-size: 16px;
     color: #2D3748;
@@ -6975,7 +6999,7 @@ s {
 
     header {
         background: var(--background);
-        box-shadow: 0 2px 6px var(--shadow-color);
+        box-shadow: 0 2px 6px rgb(255 255 255 / 0%);
     }
 
     header.scrolled {
@@ -8340,7 +8364,7 @@ s {
 
 @media (max-width: 650px) {
     .filter-sort-container {
-        background: #fffffff7;
+        background: #ffffff00;
     }
 }
 
