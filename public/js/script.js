@@ -792,7 +792,6 @@ function connectPublicWebSocket() {
         }
     };
 }
-
 async function initializeData() {
     let cartId = localStorage.getItem('cartId');
     if (!cartId) {
@@ -1370,7 +1369,6 @@ function updateMetaTags(product = null, category = null, subcategory = null) {
     const twitterImage = document.querySelector('meta[name="twitter:image"]');
     if (twitterImage && ogImage) twitterImage.content = ogImage;
 }
-
 function renderBreadcrumbs() {
     const breadcrumbsContainer = document.getElementById('breadcrumbs');
     if (!breadcrumbsContainer) return;
@@ -1992,7 +1990,6 @@ function renderCatalogDropdown() {
         });
     }
 }
-
 function renderCatalog(category = null, subcategory = null, product = null, searchResultsParam = null) {
     currentCategory = category;
     currentSubcategory = subcategory;
@@ -2650,7 +2647,6 @@ function renderProducts(filtered) {
     // Відновлюємо графічне відображення вибраних кольорів
     restoreSelectedColors();
 }
-
 function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) {
     const paginationDiv = document.getElementById('pagination') || createPaginationDiv();
     while (paginationDiv.firstChild) paginationDiv.removeChild(paginationDiv.firstChild);
@@ -3071,7 +3067,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -3783,7 +3779,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3793,7 +3789,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3805,7 +3801,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3815,7 +3811,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                         // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3982,7 +3978,6 @@ function updateFavoriteIconsOnPage() {
         }
     });
 }
-
 async function addGroupToCart(productId) {
     const product = products.find(p => p._id === productId);
     if (!product || product.type !== 'group') {
@@ -4706,7 +4701,6 @@ async function updateCartPrices() {
     
     saveToStorage('cart', cart);
 }
-
 async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
@@ -5364,7 +5358,6 @@ async function submitOrder() {
         }
     }
 }
-
 function updateHeader() {
     document.title = settings.name || 'Меблевий магазин';
     const logo = document.getElementById('logo');
@@ -6056,7 +6049,6 @@ function changeGroupQuantity(groupId, productId, change) {
         updateGroupProductPrice(productId);
     }
 }
-
 async function handleNavigation(path, isPopstate = false) {
     try {
         console.log('Обробка навігації для шляху:', path, 'isPopstate:', isPopstate);
@@ -6852,7 +6844,6 @@ responsiveStyle.textContent = `
     }
 `;
 document.head.appendChild(responsiveStyle);
-
 const filterStyle = document.createElement('style');
 filterStyle.textContent = `
     .filter-block {
@@ -7492,7 +7483,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -7547,7 +7538,7 @@ function createProductElement(product) {
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -7581,7 +7572,6 @@ function createProductElement(product) {
 
     return productElement;
 }
-
 async function addToCartWithColor(productId) {
     const product = products.find(p => p._id === productId || p.id === productId);
     if (!product) {
