@@ -4277,7 +4277,6 @@ async function validateAndFixPageState() {
         return;
     }
 
-    // --- Обробка спеціальних сторінок ---
     if (parts[0] === 'about') {
         clearFilters();
         showSection('about');
@@ -4294,12 +4293,30 @@ async function validateAndFixPageState() {
         return;
     }
     if (parts[0] === 'catalog' && parts[1] === 'search') {
+        const searchSlug = parts[2] || '';
+        if (typeof searchSlug === 'string') {
+            searchQuery = searchSlug.replace(/-/g, ' ').toLowerCase();
+            isSearchActive = true;
+            searchResults = products.filter(p => {
+                if (!p.visible) return false;
+                const name = (p.name || '').toLowerCase();
+                const brand = (p.brand || '').toLowerCase();
+                const description = (p.description || '').toLowerCase();
+                return name.includes(searchQuery) || brand.includes(searchQuery) || description.includes(searchQuery);
+            });
+            baseSearchResults = [...searchResults];
+            renderCatalog(null, null, null, searchResults);
+        } else {
+            isSearchActive = true;
+            searchQuery = '';
+            searchResults = [];
+            baseSearchResults = [];
+            renderCatalog(null, null, null, []);
+        }
         showSection('catalog');
         return;
     }
 
-    // --- Категорія/підкатегорія/товар ---
-    // 1. Категорія по slug
     const cat = categories.find(c => c.slug === parts[0]);
     if (cat) {
         currentCategory = cat.slug;
@@ -4307,12 +4324,9 @@ async function validateAndFixPageState() {
         currentProduct = null;
         isSearchActive = false;
 
-        // 2. Підкатегорія по slug
         if (parts.length === 2) {
-            // Спочатку шукаємо по точному slug
             let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
             
-            // Якщо не знайдено, шукаємо по транслитерованому slug
             if (!subCat) {
                 subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
             }
