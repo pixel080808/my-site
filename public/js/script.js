@@ -4292,30 +4292,28 @@ async function validateAndFixPageState() {
         showSection('cart');
         return;
     }
-    if (parts[0] === 'catalog' && parts[1] === 'search') {
-        const searchSlug = parts[2] || '';
-        if (typeof searchSlug === 'string') {
-            searchQuery = searchSlug.replace(/-/g, ' ').toLowerCase();
-            isSearchActive = true;
-            searchResults = products.filter(p => {
-                if (!p.visible) return false;
-                const name = (p.name || '').toLowerCase();
-                const brand = (p.brand || '').toLowerCase();
-                const description = (p.description || '').toLowerCase();
-                return name.includes(searchQuery) || brand.includes(searchQuery) || description.includes(searchQuery);
-            });
-            baseSearchResults = [...searchResults];
-            renderCatalog(null, null, null, searchResults);
-        } else {
-            isSearchActive = true;
-            searchQuery = '';
-            searchResults = [];
-            baseSearchResults = [];
-            renderCatalog(null, null, null, []);
-        }
-        showSection('catalog');
-        return;
+if (parts[0] === 'catalog' && parts[1] === 'search') {
+    const searchSlug = parts[2] || '';
+    searchQuery = searchSlug.replace(/-/g, ' ').toLowerCase();
+    isSearchActive = true;
+
+    // Дочекатися завантаження продуктів, якщо їх ще немає
+    if (!products || !products.length) {
+        await initializeData();
     }
+
+    searchResults = products.filter(p => {
+        if (!p.visible) return false;
+        const name = (p.name || '').toLowerCase();
+        const brand = (p.brand || '').toLowerCase();
+        const description = (p.description || '').toLowerCase();
+        return name.includes(searchQuery) || brand.includes(searchQuery) || description.includes(searchQuery);
+    });
+    baseSearchResults = [...searchResults];
+    renderCatalog(null, null, null, searchResults);
+    showSection('catalog');
+    return;
+}
 
     const cat = categories.find(c => c.slug === parts[0]);
     if (cat) {
