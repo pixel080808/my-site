@@ -1205,8 +1205,8 @@ newPath = searchQuery
             renderCatalog(null, null, null, searchResults);
         }
     } else if (currentCategory) {
-                    const catSlug = transliterate(currentCategory);
-        const subCatSlug = currentSubcategory ? transliterate(currentSubcategory) : '';
+            const catSlug = transliterate(currentCategory.replace('ь', ''));
+            const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
             newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}`;
             if (typeof renderCatalog === 'function') {
                 renderCatalog(currentCategory, currentSubcategory, null);
@@ -1275,8 +1275,8 @@ newPath = searchQuery
             showSection('home');
             return;
         }
-        const catSlug = currentCategory ? transliterate(currentCategory) : '';
-        const subCatSlug = currentSubcategory ? transliterate(currentSubcategory) : '';
+        const catSlug = currentCategory ? transliterate(currentCategory.replace('ь', '')) : '';
+        const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
         newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}/${currentProduct ? currentProduct.slug : ''}`;
     }
 
@@ -1527,7 +1527,7 @@ function renderBreadcrumbs() {
                             
                             // Якщо не знайдено, шукаємо по транслитерованому slug
                             if (!subCat) {
-                                subCat = (prevCat.subcategories || []).find(sc => transliterate(sc.name) === decodedSegment);
+                                subCat = (prevCat.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === decodedSegment);
                             }
                             
                             if (subCat) {
@@ -2845,8 +2845,8 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
 }
 
 function updateHistoryState() {
-    const catSlug = currentCategory ? transliterate(currentCategory) : '';
-    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory) : '';
+    const catSlug = currentCategory ? transliterate(currentCategory.replace('ь', '')) : '';
+    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
     let newPath = isSearchActive
         ? `/catalog/search/${transliterate(searchQuery.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'))}`
         : currentCategory
@@ -3473,7 +3473,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                 itemDiv.className = 'group-product-item product';
 
                 const imgLink = document.createElement('a');
-                imgLink.href = `/${transliterate(p.category)}${p.subcategory ? `/${transliterate(p.subcategory)}` : ''}/${p.slug}`;
+                imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
                 imgLink.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -3491,7 +3491,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                 itemDiv.appendChild(imgLink);
 
                 const h3Link = document.createElement('a');
-                h3Link.href = `/${transliterate(p.category)}${p.subcategory ? `/${transliterate(p.subcategory)}` : ''}/${p.slug}`;
+                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
                 h3Link.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -4181,7 +4181,7 @@ async function addGroupToCart(productId) {
 
 async function fetchProductBySlug(slug) {
     // Перевіряємо, чи slug відповідає категорії
-    const category = categories.find(c => transliterate(c.name) === slug);
+    const category = categories.find(c => transliterate(c.name.replace('ь', '')) === slug);
     if (category) {
         console.log('fetchProductBySlug: slug відповідає категорії:', category.name);
         currentCategory = category.name;
@@ -4196,7 +4196,7 @@ async function fetchProductBySlug(slug) {
     // Перевіряємо, чи slug відповідає підкатегорії
     const subcategory = categories
         .flatMap(c => c.subcategories || [])
-        .find(sc => sc.slug === slug || transliterate(sc.name) === slug);
+        .find(sc => sc.slug === slug || transliterate(sc.name.replace('ь', '')) === slug);
     if (subcategory) {
         const parentCategory = categories.find(c => c.subcategories?.includes(subcategory));
         if (parentCategory) {
@@ -4342,7 +4342,7 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
             let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
             
             if (!subCat) {
-                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name) === parts[1]);
+                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
             }
             
             if (subCat) {
@@ -4368,7 +4368,7 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
             
             // Якщо не знайдено, шукаємо по транслитерованому slug
             if (!subCat) {
-                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name) === parts[1]);
+                subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
             }
             
             if (subCat) {
@@ -4533,7 +4533,7 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
     currentCategory = product.category;
     currentSubcategory = product.subcategory || null;
 
-    const catSlug = transliterate(currentCategory);
+    const catSlug = transliterate(currentCategory.replace('ь', ''));
     
     // Знаходимо slug підкатегорії за назвою
     let subCatSlug = '';
@@ -6203,8 +6203,8 @@ function saveScrollPosition() {
     const scrollY = window.scrollY;
     const productGrid = document.querySelector('.product-grid');
     const displayedProducts = productGrid ? productGrid.children.length : 0;
-    const catSlug = currentCategory ? transliterate(currentCategory) : '';
-    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory) : '';
+    const catSlug = currentCategory ? transliterate(currentCategory.replace('ь', '')) : '';
+    const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
     let newPath = isSearchActive
         ? `/catalog/search/${transliterate(searchQuery.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'))}`
         : currentCategory
@@ -6811,10 +6811,10 @@ window.addEventListener('popstate', async (event) => {
                 }
 
                 // Якщо продукт не знайдено, перевіряємо чи це підкатегорія
-                const category = categories.find(c => transliterate(c.name) === parts[0]);
+                const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
                 if (category) {
                     const subcategory = category.subcategories?.find(sub => 
-                        sub.slug === subCatSlug || transliterate(sub.name) === subCatSlug
+                        sub.slug === subCatSlug || transliterate(sub.name.replace('ь', '')) === subCatSlug
                     );
                     if (subcategory) {
                         currentCategory = category.name;
@@ -6844,11 +6844,11 @@ window.addEventListener('popstate', async (event) => {
                 showSection('home');
             } else {
                 currentProduct = null;
-                const category = categories.find(c => transliterate(c.name) === parts[0])?.name || null;
+                const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0])?.name || null;
                 let subcategory = null;
                 if (parts[1] && category) {
                     const selectedCat = categories.find(c => c.name === category);
-                    subcategory = selectedCat?.subcategories?.find(sub => transliterate(sub.name) === parts[1])?.name || null;
+                    subcategory = selectedCat?.subcategories?.find(sub => transliterate(sub.name.replace('ь', '')) === parts[1])?.name || null;
                 }
 
                 currentCategory = category;
@@ -7398,7 +7398,7 @@ function createProductElement(product) {
     const subcategory = category?.subcategories?.find(sub => sub.name === product.subcategory);
     const subcategorySlug = subcategory ? subcategory.slug : '';
     
-    imgLink.href = `/${transliterate(product.category)}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
+    imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
         e.preventDefault();
         openProduct(product.slug);
@@ -7418,7 +7418,7 @@ function createProductElement(product) {
 
     // --- Назва ---
     const h3Link = document.createElement('a');
-    h3Link.href = `/${transliterate(product.category)}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
+    h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     h3Link.onclick = (e) => {
         e.preventDefault();
         openProduct(product.slug);
