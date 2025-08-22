@@ -792,7 +792,6 @@ function connectPublicWebSocket() {
         }
     };
 }
-
 async function initializeData() {
     let cartId = localStorage.getItem('cartId');
     if (!cartId) {
@@ -1222,6 +1221,7 @@ newPath = searchQuery
             updateFloatingFavorite();
         }
     } else if (sectionId === 'cart') {
+        currentProduct = null;
         parentGroupProduct = null;
         saveToStorage('parentGroupProduct', null);
         if (typeof renderCart === 'function') {
@@ -1232,6 +1232,7 @@ newPath = searchQuery
         }
         newPath = '/cart';
     } else if (sectionId === 'contacts') {
+        currentProduct = null
         if (typeof renderContacts === 'function') {
             renderContacts();
         }
@@ -1240,6 +1241,7 @@ newPath = searchQuery
         }
         newPath = '/contacts';
     } else if (sectionId === 'about') {
+        currentProduct = null;
         if (typeof renderAbout === 'function') {
             renderAbout();
         }
@@ -1401,97 +1403,79 @@ function renderBreadcrumbs() {
     homeSpan.appendChild(homeLink);
     breadcrumbsContainer.appendChild(homeSpan);
 
-    const pathSegments = window.location.pathname.slice(1).split('/').filter(segment => segment);
-
-    if (isSearchActive && document.getElementById('search')?.value) {
-        homeSpan.appendChild(document.createTextNode(' > '));
-        const searchSpan = document.createElement('span');
-        const searchLink = document.createElement('a');
-        searchLink.href = '/catalog';
-        searchLink.textContent = `Результати пошуку "${document.getElementById('search').value}"`;
-        searchLink.classList.add('breadcrumb-link');
-        searchLink.style.display = 'inline-block';
-        searchLink.style.padding = '0 5px';
-        searchLink.onclick = (e) => {
-            e.preventDefault();
-            currentCategory = null;
-            currentSubcategory = null;
-            currentProduct = null;
-            showSection('catalog');
-        };
-        searchSpan.appendChild(searchLink);
-        breadcrumbsContainer.appendChild(searchSpan);
-        
-        // Якщо є поточний товар і він був знайдений через пошук, додаємо його категорію
-        if (currentProduct && currentProduct.category) {
-            searchSpan.appendChild(document.createTextNode(' > '));
-            const categorySpan = document.createElement('span');
-            const categoryLink = document.createElement('a');
-            categoryLink.href = `/${currentProduct.category}`;
-            // Знаходимо правильну назву категорії
-            const cat = categories.find(c => c.slug === currentProduct.category);
-            categoryLink.textContent = cat ? cat.name : currentProduct.category;
-            categoryLink.classList.add('breadcrumb-link');
-            categoryLink.style.display = 'inline-block';
-            categoryLink.style.padding = '0 5px';
-            categoryLink.onclick = (e) => {
+    // --- Якщо відкритий товар ---
+    if (currentProduct) {
+        // Категорія
+        const cat = categories.find(c => c.slug === currentProduct.category);
+        if (cat) {
+            breadcrumbsContainer.appendChild(document.createTextNode(' > '));
+            const catSpan = document.createElement('span');
+            const catLink = document.createElement('a');
+            catLink.href = `/${cat.slug}`;
+            catLink.textContent = cat.name;
+            catLink.classList.add('breadcrumb-link');
+            catLink.onclick = (e) => {
                 e.preventDefault();
-                const cat = categories.find(c => c.slug === currentProduct.category);
-                if (cat) {
-                    currentCategory = cat.slug;
-                    currentSubcategory = null;
-                    currentProduct = null;
-                    isSearchActive = false;
-                    searchQuery = '';
-                    searchResults = [];
-                    showSection('catalog');
-                }
+                currentCategory = cat.slug;
+                currentSubcategory = null;
+                currentProduct = null;
+                isSearchActive = false;
+                showSection('catalog');
             };
-            categorySpan.appendChild(categoryLink);
-            breadcrumbsContainer.appendChild(categorySpan);
-            
-            // Якщо є підкатегорія, додаємо її
+            catSpan.appendChild(catLink);
+            breadcrumbsContainer.appendChild(catSpan);
+
+            // Підкатегорія
             if (currentProduct.subcategory) {
-                categorySpan.appendChild(document.createTextNode(' > '));
-                const subcategorySpan = document.createElement('span');
-                const subcategoryLink = document.createElement('a');
-                
-                // Знаходимо правильну назву підкатегорії
-                const subCat = cat && cat.subcategories ? cat.subcategories.find(sc => sc.name === currentProduct.subcategory) : null;
-                
-                // Використовуємо slug для URL і назву для відображення
-                subcategoryLink.href = `/${currentProduct.category}/${subCat ? subCat.slug : currentProduct.subcategory}`;
-                subcategoryLink.textContent = subCat ? subCat.name : currentProduct.subcategory;
-                subcategoryLink.classList.add('breadcrumb-link');
-                subcategoryLink.style.display = 'inline-block';
-                subcategoryLink.style.padding = '0 5px';
-                subcategoryLink.onclick = (e) => {
-                    e.preventDefault();
-                    const cat = categories.find(c => c.slug === currentProduct.category);
-                    if (cat) {
+                let subCat = (cat.subcategories || []).find(sc => sc.slug === currentProduct.subcategory);
+                if (!subCat) {
+                    subCat = (cat.subcategories || []).find(sc => sc.name === currentProduct.subcategory);
+                }
+                if (subCat) {
+                    breadcrumbsContainer.appendChild(document.createTextNode(' > '));
+                    const subSpan = document.createElement('span');
+                    const subLink = document.createElement('a');
+                    subLink.href = `/${cat.slug}/${subCat.slug}`;
+                    subLink.textContent = subCat.name;
+                    subLink.classList.add('breadcrumb-link');
+                    subLink.onclick = (e) => {
+                        e.preventDefault();
                         currentCategory = cat.slug;
-                        currentSubcategory = subCat ? subCat.name : currentProduct.subcategory;
+                        currentSubcategory = subCat.slug;
                         currentProduct = null;
                         isSearchActive = false;
-                        searchQuery = '';
-                        searchResults = [];
                         showSection('catalog');
-                    }
-                };
-                subcategorySpan.appendChild(subcategoryLink);
-                breadcrumbsContainer.appendChild(subcategorySpan);
+                    };
+                    subSpan.appendChild(subLink);
+                    breadcrumbsContainer.appendChild(subSpan);
+                }
             }
         }
-    } else if (pathSegments.length > 0) {
-        homeSpan.appendChild(document.createTextNode(' > '));
+
+        // Сам товар (не клікабельний)
+        breadcrumbsContainer.appendChild(document.createTextNode(' > '));
+        const productSpan = document.createElement('span');
+        productSpan.textContent = currentProduct.name;
+        productSpan.classList.add('breadcrumb-current');
+        breadcrumbsContainer.appendChild(productSpan);
+
+        return;
+    }
+
+    // --- Якщо просто перегляд категорій/підкатегорій ---
+    const pathSegments = window.location.pathname.slice(1).split('/').filter(segment => segment);
+    if (pathSegments.length > 0) {
+        breadcrumbsContainer.appendChild(document.createTextNode(' > '));
         let currentPath = '';
 
+        let skipNext = false;
         pathSegments.forEach((segment, index) => {
-            // Декодуємо URL сегмент
+            if (skipNext) {
+                skipNext = false;
+                return;
+            }
             const decodedSegment = decodeURIComponent(segment);
             currentPath = index === 0 ? `/${decodedSegment}` : `${currentPath}/${decodedSegment}`;
-            
-
 
             const span = document.createElement('span');
             const link = document.createElement('a');
@@ -1501,111 +1485,64 @@ function renderBreadcrumbs() {
             link.style.padding = '0 5px';
 
             let displayText = decodedSegment;
-
-            // Визначаємо, що показувати
-            if (segment === 'contacts') displayText = 'Контакти';
-            else if (segment === 'about') displayText = 'Про нас';
-            else if (segment === 'cart') displayText = 'Кошик';
-            else if (index === pathSegments.length - 1 && currentProduct) {
-                displayText = currentProduct.name;
-                link.style.cursor = 'default';
-                link.onclick = (e) => e.preventDefault();
-            } else {
-                // Пошук категорії по slug
+            // Відображення українських назв для службових сторінок
+            if (decodedSegment === 'contacts') displayText = 'Контакти';
+            else if (decodedSegment === 'about') displayText = 'Про нас';
+            else if (decodedSegment === 'cart') displayText = 'Кошик';
+            else if (decodedSegment === 'catalog' && pathSegments[index + 1] === 'search') {
+                displayText = 'Пошук';
+                skipNext = true;
+            }
+            else if (decodedSegment === 'search') displayText = 'Пошук';
+            else {
                 const cat = categories.find(c => c.slug === decodedSegment);
                 if (cat) {
                     displayText = cat.name;
                 } else {
-                    // Пошук підкатегорії по slug
-                    // Спочатку знаходимо категорію з попереднього сегмента
-                    if (index > 0) {
-                        const prevSegment = decodeURIComponent(pathSegments[index - 1]);
-                        const prevCat = categories.find(c => c.slug === prevSegment);
-                        if (prevCat) {
-                            // Спочатку шукаємо по точному slug
-                            let subCat = (prevCat.subcategories || []).find(sc => sc.slug === decodedSegment);
-                            
-                            // Якщо не знайдено, шукаємо по транслитерованому slug
-                            if (!subCat) {
-                                subCat = (prevCat.subcategories || []).find(sc => transliterate(sc.name.replace('ь', '')) === decodedSegment);
-                            }
-                            
-                            if (subCat) {
-                                displayText = subCat.name;
-                            }
-                        }
-                    }
-                    // Якщо не знайдено в попередній категорії, шукаємо по всіх
-                    if (displayText === decodedSegment) {
-                        let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === decodedSegment);
-                        if (subCat) {
-                            displayText = subCat.name;
-                        }
+                    let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === decodedSegment);
+                    if (subCat) {
+                        displayText = subCat.name;
                     }
                 }
             }
 
             link.textContent = displayText;
-            link.dataset.path = currentPath;
 
-            // Додаємо обробник переходу для всіх breadcrumb, крім останнього (поточна сторінка)
-            if (index !== pathSegments.length - 1 || !currentProduct) {
+            if (index !== pathSegments.length - 1) {
                 link.onclick = (e) => {
                     e.preventDefault();
                     const parts = currentPath.slice(1).split('/');
-                    // parts[0] - категорія, parts[1] - підкатегорія (якщо є)
-                    if (parts[0] === 'contacts') {
-                        showSection('contacts');
-                    } else if (parts[0] === 'about') {
-                        showSection('about');
-                    } else if (parts[0] === 'cart') {
-                        showSection('cart');
-                    } else {
-                        // Категорія
-                        const cat = categories.find(c => c.slug === parts[0]);
-                        if (cat) {
-                            currentCategory = cat.slug;
-                            currentProduct = null;
-                            // Скидаємо стан пошуку при переході на категорію через breadcrumbs
-                            isSearchActive = false;
-                            searchQuery = '';
-                            searchResults = [];
-                            // Якщо клік по категорії (index === 0), підкатегорія не встановлюється
-                            if (parts.length >= 2 && index > 0) {
-                                // Якщо клік по підкатегорії
-                                const subCat = (cat.subcategories || []).find(sc => sc.slug === parts[1]);
-                                if (subCat) {
-                                    currentSubcategory = subCat.name;
-                                } else {
-                                    currentSubcategory = null;
-                                }
-                            } else {
-                                // Якщо клік по категорії
-                                currentSubcategory = null;
-                            }
-                            showSection('catalog');
+                    const cat = categories.find(c => c.slug === parts[0]);
+                    if (cat) {
+                        currentCategory = cat.slug;
+                        currentProduct = null;
+                        if (index === 0) {
+                            // Якщо клік по категорії
+                            currentSubcategory = null;
+                        } else {
+                            // Якщо клік по підкатегорії
+                            currentSubcategory = parts[1] || null;
                         }
+                        isSearchActive = false;
+                        showSection('catalog');
                     }
                 };
             } else {
-                // Останній breadcrumb (поточний товар) — не клікабельний
+                // останній елемент
                 link.onclick = (e) => e.preventDefault();
                 link.style.cursor = 'default';
             }
 
             span.appendChild(link);
-
-            if (index < pathSegments.length - 1) {
+            if (index < pathSegments.length - 1 + (skipNext ? 1 : 0)) {
                 span.appendChild(document.createTextNode(' > '));
             }
-
             breadcrumbsContainer.appendChild(span);
         });
     }
 
     breadcrumbsContainer.style.display = (pathSegments.length === 0 && !isSearchActive) ? 'none' : 'block';
 }
-
         document.addEventListener('click', (e) => {
             const catalogMenu = document.querySelector('.catalog-menu');
             const dropdown = document.getElementById('catalog-dropdown');
@@ -1692,7 +1629,7 @@ function renderCategories() {
             subLink.onclick = (e) => {
                 e.preventDefault();
                 currentCategory = cat.slug;
-                currentSubcategory = sub.name;
+                currentSubcategory = sub.slug;
                 currentProduct = null;
                 isSearchActive = false;
                 searchQuery = '';
@@ -1931,7 +1868,7 @@ function renderCatalogDropdown() {
                 e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.slug;
-                currentSubcategory = sub.name;
+                currentSubcategory = sub.slug;
                 isSearchActive = false;
                 searchQuery = '';
                 searchResults = [];
@@ -2131,7 +2068,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
                 btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
                 btnLink.onclick = (e) => {
                     e.preventDefault();
-                    currentSubcategory = sub.name;
+                    currentSubcategory = sub.slug;
                     currentPage = 1;
                     showSection('catalog');
                 };
@@ -2398,7 +2335,6 @@ function renderFilters() {
         applySavedFilters(savedFilters);
     }
 }
-
 function createFilterBlock(title, name, options, activeFilters = {}) {
     const block = document.createElement('div');
     block.className = 'filter-block';
@@ -3064,7 +3000,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             const minPrice = Math.min(...groupPrices);
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-        regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(regularSpan);
         const emptySpan = document.createElement('span');
         emptySpan.style.visibility = 'hidden';
@@ -3145,7 +3081,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s>           <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;" class="price-value">${size.price}</span> <span class="price-suffix">грн</span></span>`;
                 }
@@ -3473,7 +3409,11 @@ document.addEventListener('click', closeDropdownHandler, true);
                 itemDiv.className = 'group-product-item product';
 
                 const imgLink = document.createElement('a');
-                imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
+                // Знаходимо slug підкатегорії за назвою
+                const category = categories.find(c => c.slug === p.category);
+                const subcategory = category?.subcategories?.find(sub => sub.slug === p.subcategory);
+                const subcategorySlug = subcategory ? subcategory.slug : '';
+                imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${p.slug}`;
                 imgLink.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -3491,7 +3431,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                 itemDiv.appendChild(imgLink);
 
                 const h3Link = document.createElement('a');
-                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
+                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${p.slug}`;
                 h3Link.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -4202,7 +4142,7 @@ async function fetchProductBySlug(slug) {
         if (parentCategory) {
             console.log('fetchProductBySlug: slug відповідає підкатегорії:', subcategory.name);
             currentCategory = parentCategory.name;
-            currentSubcategory = subcategory.name;
+            currentSubcategory = subcategory.slug; // <-- виправлено з subcategory.name на subcategory.slug
             currentProduct = null;
             isSearchActive = false;
             renderCatalog(currentCategory, currentSubcategory);
@@ -4334,8 +4274,8 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
     const cat = categories.find(c => c.slug === parts[0]);
     if (cat) {
         currentCategory = cat.slug;
-        currentSubcategory = null;
         currentProduct = null;
+        currentSubcategory = parts[1] || null; // parts[1] вже є slug, це правильно
         isSearchActive = false;
 
         if (parts.length === 2) {
@@ -4508,17 +4448,22 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
         return;
     }
 
-    const subCategoryExists = product.subcategory 
-        ? categories
-        .filter(cat => cat.slug === product.category)
-            .flatMap(cat => cat.subcategories || [])
-            .some(sub => sub.name === product.subcategory)
-        : true;
-    if (!subCategoryExists) {
-        console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
-        product.subcategory = null;
-        currentSubcategory = null;
+    // Визначаємо slug підкатегорії для product
+    let subcategorySlug = null;
+    if (product.subcategory) {
+        const category = categories.find(c => c.slug === product.category);
+        if (category) {
+            // Шукаємо підкатегорію спочатку по slug, потім по name
+            let sub = (category.subcategories || []).find(s => s.slug === product.subcategory);
+            if (!sub) {
+                sub = (category.subcategories || []).find(s => s.name === product.subcategory);
+            }
+            if (sub) {
+                subcategorySlug = sub.slug;
+            }
+        }
     }
+    currentSubcategory = subcategorySlug || null;
 
     const groupProduct = products.find(p => p.type === 'group' && p.groupProducts?.includes(product._id));
     if (groupProduct && currentProduct?.type === 'group') {
@@ -4531,7 +4476,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
 
     currentProduct = product;
     currentCategory = product.category;
-    currentSubcategory = product.subcategory || null;
 
     const catSlug = transliterate(currentCategory.replace('ь', ''));
     
@@ -4539,7 +4483,7 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
     let subCatSlug = '';
     if (currentSubcategory) {
         const category = categories.find(c => c.slug === product.category);
-        const subcategory = category?.subcategories?.find(sub => sub.name === currentSubcategory);
+        const subcategory = category?.subcategories?.find(sub => sub.slug === currentSubcategory);
         subCatSlug = subcategory ? subcategory.slug : '';
     }
     
@@ -4565,7 +4509,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
 function normalizeString(str) {
     return str ? str.normalize('NFC').toLowerCase() : '';
 }
-
 function searchProducts(query = '') {
     const searchInput = document.getElementById('search');
     const burgerSearchInput = document.querySelector('#burger-search');
@@ -5140,7 +5083,6 @@ function updateCartCount() {
         floatingCartCount.textContent = totalItems > 0 ? totalItems : '';
     }
 }
-
 async function submitOrder() {
     const customer = orderFields.reduce((acc, field) => {
         const input = document.getElementById(`order-${field.name}`);
@@ -5870,7 +5812,6 @@ function renderSlideshow() {
 
     startSlideshow();
 }
-
         function startSlideshow() {
             if (!settings.showSlides || slides.length <= 1) return;
             clearInterval(slideInterval);
@@ -6450,7 +6391,7 @@ renderCatalogDropdown();
                             e.preventDefault();
                             currentProduct = null;
                             currentCategory = category.slug;
-                            currentSubcategory = sub.name;
+                            currentSubcategory = sub.slug;
                             isSearchActive = false;
                             searchQuery = '';
                             searchResults = [];
@@ -6621,7 +6562,6 @@ renderCatalogDropdown();
         }
     }
 });
-
 window.addEventListener('popstate', async (event) => {
     try {
         console.log('Подія popstate:', location.pathname, 'state:', event.state);
@@ -7384,7 +7324,6 @@ function createCharP(label, value) {
 
     return p;
 }
-
 function createProductElement(product) {
     const productElement = document.createElement('div');
     productElement.className = 'product';
@@ -7393,10 +7332,22 @@ function createProductElement(product) {
 
     // --- Зображення ---
     const imgLink = document.createElement('a');
-    // Знаходимо slug підкатегорії за назвою
-    const category = categories.find(c => c.slug === product.category);
-    const subcategory = category?.subcategories?.find(sub => sub.name === product.subcategory);
-    const subcategorySlug = subcategory ? subcategory.slug : '';
+    // Визначаємо slug підкатегорії для product
+    let subcategorySlug = null;
+    if (product.subcategory) {
+        const category = categories.find(c => c.slug === product.category);
+        if (category) {
+            // Шукаємо підкатегорію спочатку по slug, потім по name
+            let sub = (category.subcategories || []).find(s => s.slug === product.subcategory);
+            if (!sub) {
+                sub = (category.subcategories || []).find(s => s.name === product.subcategory);
+            }
+            if (sub) {
+                subcategorySlug = sub.slug;
+            }
+        }
+    }
+    currentSubcategory = subcategorySlug || null;
     
     imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
