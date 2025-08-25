@@ -30,7 +30,6 @@ const cartSchema = new mongoose.Schema({
                     message: 'Photo must be a valid URL or empty string'
                 }
             },
-            // Підтримка масиву кольорів (нова структура)
             colors: {
                 type: [{
                     name: { type: String },
@@ -50,7 +49,6 @@ const cartSchema = new mongoose.Schema({
                 }],
                 default: []
             },
-            // Підтримка одного кольору (стара структура для зворотної сумісності)
             color: {
                 type: {
                     name: { type: String },
@@ -91,7 +89,6 @@ const cartSchemaValidation = Joi.array().items(
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
-        // Валідація для масиву кольорів
         colors: Joi.array().items(
             Joi.object({
                 name: Joi.string().allow('').optional(),
@@ -105,7 +102,6 @@ const cartSchemaValidation = Joi.array().items(
                 globalIndex: Joi.number().optional()
             }).unknown(true)
         ).allow(null).optional(),
-        // Валідація для одного кольору (зворотна сумісність)
         color: Joi.object({
             name: Joi.string().allow('').optional(),
             value: Joi.string().allow('').optional(),

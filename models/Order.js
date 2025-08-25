@@ -45,9 +45,9 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     items: [{
-        id: { type: mongoose.Schema.Types.Mixed, required: true }, // Приймаємо як числа, так і рядки
+        id: { type: mongoose.Schema.Types.Mixed, required: true },
         name: { type: String, required: true },
-        brand: { type: String, default: '' }, // Додаємо поле для бренду
+        brand: { type: String, default: '' },
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true, min: 0 },
         photo: {

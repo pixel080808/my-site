@@ -1671,7 +1671,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
     </div>
     <div class="notification" id="notification"></div>
     <script>
-        // Dark mode toggle based on system preference
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.body.classList.add('dark-mode');
         }
@@ -1684,9 +1683,7 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
             }
         });
 
-        // Обробники подій для файлів імпорту
         document.addEventListener('DOMContentLoaded', function() {
-            // Імпорт товарів (замінити всі)
             const importProductsFile = document.getElementById('import-products-file');
             if (importProductsFile) {
                 importProductsFile.addEventListener('change', function() {
@@ -1696,7 +1693,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                 });
             }
 
-            // Імпорт товарів (додати)
             const importProductsAddFile = document.getElementById('import-products-add-file');
             if (importProductsAddFile) {
                 importProductsAddFile.addEventListener('change', function() {
@@ -1706,7 +1702,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                 });
             }
 
-            // Імпорт замовлень
             const importOrdersFile = document.getElementById('import-orders-file');
             if (importOrdersFile) {
                 importOrdersFile.addEventListener('change', function() {
@@ -1716,7 +1711,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                 });
             }
 
-            // Імпорт сайту
             const importSiteFile = document.getElementById('import-site-file');
             if (importSiteFile) {
                 importSiteFile.addEventListener('change', function() {
@@ -1726,7 +1720,6 @@ body.dark-mode .ql-toolbar .ql-redo[disabled] {
                 });
             }
 
-            // Оновлення цін
             const bulkPriceFile = document.getElementById('bulk-price-file');
             if (bulkPriceFile) {
                 bulkPriceFile.addEventListener('change', function() {
