@@ -68,6 +68,18 @@ function loadFromStorage(key, defaultValue) {
             return defaultValue;
         }
         const data = JSON.parse(decompressed) || defaultValue;
+        if (key === 'cart') {
+            const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+            if (data && typeof data === 'object' && data.hasOwnProperty('value') && data.hasOwnProperty('ts')) {
+                const isExpired = Date.now() - Number(data.ts) > TEN_DAYS_MS;
+                if (isExpired) {
+                    console.warn('Локальний кошик прострочено (>10 днів). Очищаємо.');
+                    localStorage.removeItem('cart');
+                    return defaultValue;
+                }
+                return Array.isArray(data.value) ? data.value : defaultValue;
+            }
+        }
         if (key === 'products') {
             const validCategories = categories.map(cat => cat.name);
             const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
@@ -96,7 +108,8 @@ function loadFromStorage(key, defaultValue) {
 
 function saveToStorage(key, value) {
     try {
-        const testStringify = JSON.stringify(value);
+        const payload = key === 'cart' ? { value, ts: Date.now() } : value;
+        const testStringify = JSON.stringify(payload);
         if (typeof testStringify !== 'string') {
             console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
             return;
@@ -111,7 +124,8 @@ function saveToStorage(key, value) {
         console.error(`Помилка збереження ${key}:`, e);
         if (e.name === 'QuotaExceededError') {
             localStorage.clear();
-            const compressed = LZString.compressToUTF16(JSON.stringify(value));
+            const fallbackPayload = key === 'cart' ? { value, ts: Date.now() } : value;
+            const compressed = LZString.compressToUTF16(JSON.stringify(fallbackPayload));
             localStorage.setItem(key, compressed);
             console.error('Локальне сховище очищено через перевищення квоти.');
         }
@@ -779,13 +793,7 @@ async function initializeData() {
     }
 
     let tempCart = loadFromStorage('cart', []);
-    if (tempCart.some(item => typeof item.id !== 'number')) {
-        console.warn('Corrupted cart data detected, resetting cart');
-        cart = [];
-        cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('cartId', cartId);
-        saveToStorage('cart', cart);
-    }
+    if (!Array.isArray(tempCart)) tempCart = [];
 
     await fetchCsrfToken();
     await loadCartFromServer();
@@ -837,6 +845,16 @@ async function initializeData() {
 
     connectPublicWebSocket();
     await fetchPublicData();
+    // Після отримання/оновлення списку продуктів — синхронізувати ціни в кошику
+    try {
+        await updateCartPrices();
+        const cartNow = loadFromStorage('cart', []);
+        if (Array.isArray(cartNow) && cartNow.length > 0) {
+            await saveCartToServer();
+        }
+    } catch (e) {
+        console.warn('Не вдалося синхронізувати ціни кошика після завантаження даних:', e);
+    }
     
     if (products.length === 0 || categories.length === 0) {
         await new Promise(resolve => {
