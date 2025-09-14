@@ -59,15 +59,7 @@ header {
   width: 100%;
   min-height: 80px;
   z-index: 50;
-<<<<<<< HEAD
-<<<<<<< HEAD
   transition: all 0.3s ease;
-=======
-  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-  transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
   position: relative;
 }
 
@@ -85,33 +77,15 @@ header.scrolled {
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
   padding-left: 10px;
   transition: all 0.3s ease;
-=======
-  padding-left: 10px; /* Невеликий відступ зліва */
-  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-  padding-left: 10px;
-  transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .logo-container img {
   height: 40px;
   width: auto;
   max-width: 200px;
-<<<<<<< HEAD
-<<<<<<< HEAD
   transition: all 0.3s ease;
-=======
-  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-  transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .logo {
@@ -124,15 +98,7 @@ header.scrolled {
     width: 200px;
     height: 60px;
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     max-width: 200px;
 }
 
@@ -182,13 +148,6 @@ header.scrolled {
     white-space: nowrap;
     background: #ffffff;
     border-radius: 25px;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* border: 1px solid #e2e8f0; */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     transition: all 0.3s ease;
 }
 
@@ -200,15 +159,7 @@ header.scrolled {
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%233B82F6" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>') no-repeat center;
     background-size: contain;
     margin-right: 8px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .phones:hover::before {
@@ -219,30 +170,14 @@ header.scrolled {
     font-size: 16px;
     padding: 0 1px 0 0;
     letter-spacing: 0.5px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     color: #1e293b;
 }
 .phones .phone-dropdown-arrow {
     display: inline-flex;
     align-items: center;
     margin-left: 2px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 .phones .phone-dropdown-arrow.active {
     transform: rotate(180deg);
@@ -267,15 +202,7 @@ header.scrolled {
     font-size: 17px;
     padding: 8px 18px;
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     color: #222;
     border: none;
     background: none;
@@ -331,29 +258,12 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 @media (min-width: 768px) and (max-width: 1000px) {
     header { padding-left: 10px; }
     .logo-container { padding-left: 15px; align-items: flex-start; }
     .logo {height: 70px !important;width: 130px !important;max-width: 280px;padding-top: 0 !important;background-size: contain;background-position: left center;}
 }
 
-=======
-/* Медіа-запит для середніх екранів (768px - 1000px) - збільшене лого та стабільне вирівнювання */
-=======
->>>>>>> bc1366a (Оновлення)
-@media (min-width: 768px) and (max-width: 1000px) {
-    header { padding-left: 10px; }
-    .logo-container { padding-left: 15px; align-items: flex-start; }
-    .logo {height: 70px !important;width: 130px !important;max-width: 280px;padding-top: 0 !important;background-size: contain;background-position: left center;}
-}
-
-<<<<<<< HEAD
-/* Медіа-запит для екранів від 1100px до 1199px - плавний перехід */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1100px) and (max-width: 1199px) {
     .logo-container { left: 24px; top: 2px; }
     .logo { width: 200px; height: 110px; max-width: 200px; }
@@ -362,63 +272,26 @@ header.scrolled {
     .search-cart-container { margin-top: 0; }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Медіа-запит для великих екранів (від 1000px) - логотип перекриває 2 рядки (хедер + нав) */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1000px) {
     header {
         position: relative;
         padding: 10px 24px;
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding-left: 260px;
         min-height: 80px;
         z-index: 3000;
         justify-content: flex-start;
-=======
-        padding-left: 260px; /* більше місця між логотипом і телефонами */
-        min-height: 80px;
-        z-index: 3000; /* щоб лого (як нащадок) було над навігацією */
-        justify-content: flex-start; /* телефони одразу після логотипа */
->>>>>>> 451743e (Оновлення)
-=======
-        padding-left: 260px;
-        min-height: 80px;
-        z-index: 3000;
-        justify-content: flex-start;
->>>>>>> bc1366a (Оновлення)
         gap: 16px;
     }
 
     .nav {
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding-left: 260px;
-=======
-        padding-left: 260px; /* вирівнюємо навігацію праворуч від логотипа */
->>>>>>> 451743e (Оновлення)
-=======
-        padding-left: 260px;
->>>>>>> bc1366a (Оновлення)
     }
 
     .logo-container {
         position: absolute;
         top: 0;
         left: 24px;
-<<<<<<< HEAD
-<<<<<<< HEAD
         z-index: 2000;
-=======
-        z-index: 2000; /* вище панелі навігації */
->>>>>>> 451743e (Оновлення)
-=======
-        z-index: 2000;
->>>>>>> bc1366a (Оновлення)
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -435,15 +308,7 @@ header.scrolled {
         background-position: left center;
         background-size: contain;
         display: flex;
-<<<<<<< HEAD
-<<<<<<< HEAD
         align-items: center;
-=======
-        align-items: center; /* вертикальне центр-розміщення в контейнері */
->>>>>>> 451743e (Оновлення)
-=======
-        align-items: center;
->>>>>>> bc1366a (Оновлення)
     }
 
     .logo-text {
@@ -455,15 +320,7 @@ header.scrolled {
     }
 
     .phones {
-<<<<<<< HEAD
-<<<<<<< HEAD
         order: 1;
-=======
-        order: 1; /* між логотипом і пошуком */
->>>>>>> 451743e (Оновлення)
-=======
-        order: 1;
->>>>>>> bc1366a (Оновлення)
         margin: 0 12px 0 0;
         align-self: center;
         position: static;
@@ -474,36 +331,14 @@ header.scrolled {
         order: 2;
         align-self: center;
         margin-top: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
         margin-left: auto;
     }
 }
 
-=======
-        margin-left: auto; /* штовхаємо пошук/кошик вправо */
-    }
-}
-
-/* Точне позиціонування логотипа для різних діапазонів */
->>>>>>> 451743e (Оновлення)
-=======
-        margin-left: auto;
-    }
-}
-
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1000px) and (max-width: 1099px) {
     .logo-container { top: 2px; }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Медіа-запит для екранів від 1300px до 1399px - плавний перехід */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1200px) and (max-width: 1399px) {
     .logo-container { left: 24px; top: 2px; }
     .logo { width: 220px; height: 110px; max-width: 220px; display: flex; align-items: center; padding-top: 0; background-position: left center; background-size: contain; }
@@ -512,13 +347,6 @@ header.scrolled {
     .search-cart-container { margin-top: 0; }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Явне дублювання правил для ≥1200px, щоб лого не «сповзало» вниз */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1200px) {
     header { padding-left: 260px; }
     .nav { padding-left: 260px; }
@@ -528,13 +356,6 @@ header.scrolled {
     .search-cart-container { order: 2; align-self: center; margin-top: 0; margin-left: auto; }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Вирівнювання: на екранах від 1000px пошук/кошик праворуч, телефони по центру між логотипом і пошуком */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1000px) {
     header .search-cart-container { margin-left: auto; }
     header .phones {
@@ -565,26 +386,12 @@ header.scrolled {
     flex-shrink: 0;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні стилі для контейнера пошуку та кошика */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 650px) {
     .search-cart-container {
         gap: 8px;
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Додаткові стилі для екранів 651px-700px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) and (max-width: 700px) {
     .search-cart-container {
         gap: 5px;
@@ -603,13 +410,6 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Остаточне вирівнювання для екранів від 1000px (перекриває пізніші 920+ правила) */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 1000px) {
     header { padding-left: 260px; }
     .nav { padding-left: 260px; }
@@ -626,35 +426,15 @@ header.scrolled {
     min-width: 200px;
     max-width: 350px;
     margin: 0 0px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-
-/* Адаптивні стилі для рядка пошуку на екранах від 650px */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-}
-
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 650px) {
     .search-bar {
         max-width: 300px;
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Більш точні налаштування для екранів 651px-700px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) and (max-width: 700px) {
     .search-bar {
         max-width: 200px;
@@ -717,13 +497,6 @@ header.scrolled {
         margin-top: 0px;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1200px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     #contacts,
     #about {
         padding: 0px 15px !important;
@@ -759,13 +532,6 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Додаткові стилі для дуже малих екранів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 480px) {
     .search-cart-container {
         gap: 3px;
@@ -801,22 +567,9 @@ header.scrolled {
     font-size: 15px;
     color: var(--text-color);
     outline: none;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-
-/* Адаптивні стилі для поля вводу пошуку */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-}
-
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 650px) {
     .search-bar input {
         font-size: 14px;
@@ -824,13 +577,6 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для поля вводу на екранах 651px-700px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) and (max-width: 700px) {
     .search-bar input {
         font-size: 13px;
@@ -864,22 +610,9 @@ header.scrolled {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-
-/* Адаптивні стилі для кнопки пошуку */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-}
-
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 650px) {
     .search-btn {
         width: 28px;
@@ -887,13 +620,6 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для кнопки пошуку на екранах 651px-700px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) and (max-width: 700px) {
     .search-btn {
         width: 26px;
@@ -915,22 +641,9 @@ header.scrolled {
     height: 16px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat center;
     background-size: contain;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-
-/* Адаптивні стилі для іконки пошуку */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-}
-
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 650px) {
     .search-btn::before {
         width: 14px;
@@ -938,13 +651,6 @@ header.scrolled {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для іконки пошуку на екранах 651px-700px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) and (max-width: 700px) {
     .search-btn::before {
         width: 12px;
@@ -974,15 +680,7 @@ header.scrolled {
     border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     margin-right: var(--base-padding);
     flex-shrink: 0;
     white-space: nowrap;
@@ -990,13 +688,6 @@ header.scrolled {
 
 .cart:hover {
     background: var(--border-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -1007,15 +698,7 @@ header.scrolled {
     height: 24px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .cart:hover::before {
@@ -1053,15 +736,7 @@ header.scrolled {
     border-radius: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
@@ -1078,15 +753,7 @@ header.scrolled {
 .favorite-icon svg {
     width: 24px;
     height: 24px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .favorite-icon:hover svg {
@@ -1100,24 +767,10 @@ header.scrolled {
 .favorite-icon.active svg path {
   fill: #1cc289;
   stroke: #28c88f;
-<<<<<<< HEAD
-<<<<<<< HEAD
   transition: all 0.3s ease;
 }
 .favorite-icon svg path {
   transition: all 0.3s ease;
-=======
-  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-.favorite-icon svg path {
-  transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-  transition: all 0.3s ease;
-}
-.favorite-icon svg path {
-  transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 .nav {
     background: #ffffff;
@@ -1125,25 +778,10 @@ header.scrolled {
     text-align: center;
     width: 100%;
     z-index: 99;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
     position: relative;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-    position: relative;
-}
-
-/* Коли фільтри активні, навігація ховається за ними */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-    position: relative;
-}
-
->>>>>>> bc1366a (Оновлення)
 .nav.filters-active {
     z-index: 10;
 }
@@ -1168,15 +806,7 @@ header.scrolled {
     font-size: 18px;
     padding: 8px 15px;
     border-radius: 20px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     cursor: pointer;
     text-transform: uppercase;
 }
@@ -1185,13 +815,6 @@ header.scrolled {
 .nav a:focus {
     background: var(--border-color);
     color: var(--primary-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     outline: none;
 }
 
@@ -1199,13 +822,6 @@ header.scrolled {
     transform: translateY(0);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Покращені стилі для випадаючого меню Каталог в навігації */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .catalog-menu {
     display: inline-flex;
     flex-direction: column;
@@ -1216,15 +832,7 @@ header.scrolled {
     min-width: unset;
     padding: 0;
     margin: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
     z-index: 1000;
-=======
-    z-index: 1000; /* Високий z-index для випадаючого меню */
->>>>>>> 451743e (Оновлення)
-=======
-    z-index: 1000;
->>>>>>> bc1366a (Оновлення)
 }
 
 .catalog-menu {
@@ -1252,21 +860,9 @@ header.scrolled {
     min-width: 200px;
     z-index: 1001;
     padding: 12px 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
     font-family: 'Inter', 'Roboto', Arial, sans-serif;
     font-size: 16px;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-    font-family: 'Inter', 'Roboto', Arial, sans-serif;
-    font-size: 16px; /* Базовий розмір шрифту для адаптації */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-    font-family: 'Inter', 'Roboto', Arial, sans-serif;
-    font-size: 16px;
->>>>>>> bc1366a (Оновлення)
     border: 1px solid var(--border-color);
 }
 
@@ -1277,13 +873,6 @@ header.scrolled {
     transform: translateX(-50%) translateY(0);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Покращені стилі для кнопки Каталог в навігації */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .catalog-menu a {
     color: var(--text-color);
     text-decoration: none;
@@ -1311,22 +900,9 @@ header.scrolled {
 .dropdown-item {
     padding: 10px 20px;
     position: relative;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
     cursor: pointer;
     text-align: left;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-    cursor: pointer;
-    text-align: left;
-    /* Переконаємося, що підкатегорії відображаються знизу */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-    cursor: pointer;
-    text-align: left;
->>>>>>> bc1366a (Оновлення)
     display: block !important;
     float: none !important;
     clear: both !important;
@@ -1340,15 +916,7 @@ header.scrolled {
     cursor: pointer;
     color: var(--text-color);
     font-weight: 500;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     font-size: inherit;
 }
 
@@ -1361,26 +929,11 @@ header.scrolled {
     background: var(--card-bg);
     padding: 4px 0;
     margin-top: 4px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     left: 0;
     position: static;
     width: 100%;
     box-sizing: border-box;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Примусово встановлюємо позиціонування знизу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     display: block !important;
     float: none !important;
     clear: both !important;
@@ -1391,13 +944,6 @@ header.scrolled {
     opacity: 1;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для підкатегорій у випадаючому меню Каталог */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown .sub-list.active {
     display: block !important;
     opacity: 1;
@@ -1411,15 +957,7 @@ header.scrolled {
     padding: 8px 20px;
     color: var(--muted-text);
     font-size: inherit;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     cursor: pointer;
     text-align: left;
 }
@@ -1439,15 +977,7 @@ header.scrolled {
     background: #ffffff00;
     text-align: left;
     box-shadow: 0 2px 6px rgb(255 255 255 / 5%);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     overflow-x: auto;
 }
 
@@ -1466,15 +996,7 @@ header.scrolled {
     text-decoration: none;
     font-weight: 500;
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     padding: 12px 10px;
     display: inline-flex;
     align-items: center;
@@ -1487,15 +1009,7 @@ header.scrolled {
 .breadcrumbs .breadcrumb-btn:hover {
     color: var(--primary-color);
     text-decoration: none;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .breadcrumb-btn {
@@ -1528,15 +1042,7 @@ header.scrolled {
     width: 100%;
     position: relative;
     z-index: 98;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .section {
@@ -1553,26 +1059,11 @@ h2 {
     margin: 15px 0;
     font-weight: 600;
     text-align: left;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 5px;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Базові стилі для всіх h3 */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 h3 {
     font-size: 23px;
     color: var(--text-color);
@@ -1581,33 +1072,13 @@ h3 {
     text-transform: none;
     letter-spacing: 1.5px;
     padding-bottom: 10px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
 }
 
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
-}
-
-/* Стилі для h3 на сторінці кошика */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
-}
-
->>>>>>> bc1366a (Оновлення)
 h3.cart-heading {
     text-align: center;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для h3 на сторінці контактів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 h3.contacts-heading {
     text-align: left;
 }
@@ -1635,40 +1106,17 @@ h3:hover {
     position: relative;
     user-select: none;
     -webkit-user-select: none;
-<<<<<<< HEAD
-<<<<<<< HEAD
     touch-action: manipulation;
 }
 
 .slide-link {
     display: block;
-=======
-    touch-action: manipulation; /* Обмежуємо обробку лише тапами та свайпами */
-=======
-    touch-action: manipulation;
->>>>>>> bc1366a (Оновлення)
-}
-
-.slide-link {
-<<<<<<< HEAD
-    display: block; /* Повне покриття слайду */
->>>>>>> 451743e (Оновлення)
-=======
-    display: block;
->>>>>>> bc1366a (Оновлення)
     width: 100%;
     height: 100%;
     text-decoration: none;
     cursor: pointer;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Решта стилів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .slideshow {
     position: relative;
     margin: 15px auto;
@@ -1826,13 +1274,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .category img:hover {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: none; */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 }
 
 .category p {
@@ -1889,15 +1330,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     flex-shrink: 0;
     min-height: 0;
     box-sizing: border-box;
-<<<<<<< HEAD
-<<<<<<< HEAD
     z-index: 1000;
-=======
-    z-index: 1000; /* Високий z-index для фільтрів */
->>>>>>> 451743e (Оновлення)
-=======
-    z-index: 1000;
->>>>>>> bc1366a (Оновлення)
 }
 
 .filters:hover {
@@ -1986,15 +1419,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     padding: 0 0 80px 0;
-=======
-    padding: 0 0 30px 0;
->>>>>>> 451743e (Оновлення)
-=======
-    padding: 0 0 80px 0;
->>>>>>> bc1366a (Оновлення)
     box-sizing: border-box;
 }
 
@@ -2084,13 +1509,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-align: left;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для прозорих рядків для вирівнювання висоти */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .group-products .group-product-item .price span[style*="visibility: hidden"] {
     height: 1.2em;
     line-height: 1.2em;
@@ -2140,13 +1558,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     -webkit-appearance: none;
     -moz-appearance: textfield;
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Відступи для опису товару тільки на екранах до 1220px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .product-detail-description {
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -2188,8 +1599,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transition: transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
-<<<<<<< HEAD
-<<<<<<< HEAD
     max-width: calc(100% - 40px);
     box-sizing: border-box;
     opacity: 0;
@@ -2200,25 +1609,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
-=======
-    max-width: calc(100% - 40px); /* Обмежуємо ширину, щоб уникнути горизонтальної прокрутки */
-=======
-    max-width: calc(100% - 40px);
->>>>>>> bc1366a (Оновлення)
-    box-sizing: border-box;
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-}
-.floating-group-cart.visible {
-    opacity: 1;
-    transform: translateY(0);
-<<<<<<< HEAD
-    pointer-events: auto; /* Дозволяємо взаємодію */
->>>>>>> 451743e (Оновлення)
-=======
-    pointer-events: auto;
->>>>>>> bc1366a (Оновлення)
 }
 
 .floating-group-price {
@@ -2266,13 +1656,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     margin: 10px 0;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні відступи для розмірів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .dimensions .dimension-label {
     font-size: 12px;
     color: #666;
@@ -2280,13 +1663,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-align: center;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні стилі для назв товарів в групових товарах */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 768px) {
     .group-products .group-product-item h3 {
         word-wrap: normal;
@@ -2310,13 +1686,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-align: center;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Медіа-запити для різних розмірів екрану */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 480px) {
     .dimensions .dimension-label {
         font-size: 10px;
@@ -2337,13 +1706,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні відступи для роздільників */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .dimension-separator {
     margin: 0 1px !important;
 }
@@ -2394,13 +1756,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивний загальний відступ між парами розмірів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .dimensions-container {
     gap: 6px;
 }
@@ -2425,13 +1780,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивна ширина контейнерів пар */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .dimension-pair {
     min-width: 50px;
 }
@@ -2598,28 +1946,13 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     cursor: pointer;
     font-weight: 500;
     font-size: 15px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     margin-left: 3px;
-=======
-    margin-left: 3px; /* Додаємо відступ зліва */
->>>>>>> 451743e (Оновлення)
-=======
-    margin-left: 3px;
->>>>>>> bc1366a (Оновлення)
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
 
 .subcategory-buttons button:hover {
     background: var(--border-color);
     color: var(--text-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 }
 
 .subcategory-buttons button:focus {
@@ -2665,13 +1998,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 .filter-btn:hover, .sort-btn:hover {
     background: var(--border-color);
     color: var(--primary-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -2799,28 +2125,12 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         transition: transform 0.3s ease;
         box-sizing: border-box;
         padding-top: 60px;
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding-bottom: 70px;
-=======
-        padding-bottom: 70px; /* Місце для .back-btn */
->>>>>>> 451743e (Оновлення)
-=======
-        padding-bottom: 70px;
->>>>>>> bc1366a (Оновлення)
     }
 
     .filters.active {
         transform: translateX(0);
-<<<<<<< HEAD
-<<<<<<< HEAD
         z-index: 1001;
-=======
-        z-index: 1001; /* Ще вищий z-index для активних фільтрів */
->>>>>>> 451743e (Оновлення)
-=======
-        z-index: 1001;
->>>>>>> bc1366a (Оновлення)
     }
 
     .filters .back-btn {
@@ -2899,13 +2209,6 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 .show-more-btn:hover {
     background: var(--border-color);
     color: var(--text-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
      box-shadow: 0 4px 12px var(--shadow-color);
 }
 
@@ -3077,15 +2380,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     letter-spacing: normal;
     text-decoration: none !important;
     flex-grow: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
     height: 54px;
-=======
-    height: 54px; /* Фіксована висота для назви */
->>>>>>> 451743e (Оновлення)
-=======
-    height: 54px;
->>>>>>> bc1366a (Оновлення)
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -3114,15 +2409,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-align: center;
     gap: 5px;
     flex-grow: 1;
-<<<<<<< HEAD
-<<<<<<< HEAD
     height: 60px;
-=======
-    height: 60px; /* Фіксована висота для блоку ціни */
->>>>>>> 451743e (Оновлення)
-=======
-    height: 60px;
->>>>>>> bc1366a (Оновлення)
     margin-top: auto;
 }
 
@@ -3257,15 +2544,7 @@ s {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-<<<<<<< HEAD
-<<<<<<< HEAD
     gap: 5px;
-=======
-    gap: 5px; /* Відстань між цінами */
->>>>>>> 451743e (Оновлення)
-=======
-    gap: 5px;
->>>>>>> bc1366a (Оновлення)
 }
 
 .product .price.on-sale s {
@@ -3284,15 +2563,7 @@ s {
     display: flex;
     flex-direction: row;
     align-items: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
     gap: 10px;
-=======
-    gap: 10px; /* Додано пропуск між цінами */
->>>>>>> 451743e (Оновлення)
-=======
-    gap: 10px;
->>>>>>> bc1366a (Оновлення)
 }
 
 .price .regular-price {
@@ -3344,13 +2615,6 @@ s {
 }
 .product .buy-btn:hover {
     background: #059669;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
@@ -3375,13 +2639,6 @@ s {
 
 .product .details-btn:hover {
     background: #E2E8F0;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -3627,15 +2884,7 @@ s {
     top: 110px;
     right: 10px;
     z-index: 1001;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     opacity: 0;
     transform: translateY(10px);
 }
@@ -3658,15 +2907,7 @@ s {
     background: var(--card-bg);
     border-radius: 18px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-icon:hover {
@@ -3715,15 +2956,7 @@ s {
     max-height: 580px;
     overflow-y: auto;
     z-index: 1002;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     transform: translateX(100%);
     opacity: 0;
     border: 1px solid var(--border-color);
@@ -3779,15 +3012,7 @@ s {
     height: 24px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232D3748" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>') no-repeat center;
     background-size: contain;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-content .cart:hover::before {
@@ -3881,15 +3106,7 @@ s {
     text-decoration: none;
     font-size: 16px;
     font-weight: 600;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     border-radius: 8px;
     margin: 5px 0;
 }
@@ -3898,15 +3115,7 @@ s {
     content: "▾";
     margin-left: auto;
     font-size: 14px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-catalog-dropdown.active .burger-catalog-toggle::after {
@@ -3928,15 +3137,7 @@ s {
     border: 1px solid var(--border-color);
     opacity: 0;
     transform: translateY(8px);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     background-color: #f9f9f9;
 }
 .burger-catalog-dropdown.active {
@@ -3958,15 +3159,7 @@ s {
     border-radius: 4px;
     display: block;
     background-color: #ffffff;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-subcategory {
@@ -3981,30 +3174,14 @@ s {
     padding: 6px 10px;
     border-radius: 4px;
     display: block;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-subcategory a:hover {
     background: var(--border-color);
     color: var(--primary-color);
     transform: translateX(0px);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 .burger-contact-info {
     margin: 1px 0;
@@ -4012,15 +3189,7 @@ s {
     border-top: 1px solid var(--border-color);
     font-size: 15px;
     color: var(--text-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 .burger-contact-info p {
     margin: 15px 0;
@@ -4028,15 +3197,7 @@ s {
     flex-direction: column;
     gap: 4px;
     margin-bottom: 0px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-contact-info strong {
@@ -4055,15 +3216,7 @@ s {
     color: var(--text-color);
     margin-bottom: 10px;
     padding: 0px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .burger-social-link {
@@ -4074,15 +3227,7 @@ s {
     text-decoration: none;
     font-size: 13px;
     font-weight: 500;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     border-radius: 6px;
     margin: 4px 0;
 }
@@ -4099,15 +3244,7 @@ s {
     margin: 0 0 15px 0;
     justify-content: flex-start;
     height: 40px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
 }
 
 .quantity-btn {
@@ -4123,15 +3260,7 @@ s {
     display: flex;
     align-items: center;
     justify-content: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
@@ -4151,15 +3280,7 @@ s {
     margin: 0 11px;
     background: #f7fafc00;
     font-size: 15px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     height: 40px;
 }
 
@@ -4177,15 +3298,7 @@ s {
     font-size: 16px;
     background: var(--card-bg);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     cursor: pointer;
     position: relative;
     height: 48px;
@@ -4212,15 +3325,7 @@ s {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     cursor: pointer;
     height: 48px;
 }
@@ -4271,15 +3376,7 @@ s {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
     transition: all 0.3s ease;
-=======
-    transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-    transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2);
     position: relative;
     overflow: hidden;
@@ -4335,13 +3432,6 @@ s {
 #product-details .product-detail-right .buy-btn:hover:not(.added),
 .group-products .buy-btn:hover:not(.added) {
     background: #059669;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 5px 12px rgba(5, 150, 105, 0.3);
 }
 
@@ -4349,13 +3439,6 @@ s {
 #product-details .product-detail-right .buy-btn.added:hover,
 .group-products .buy-btn.added:hover {
     background: #10B981;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     box-shadow: 0 5px 12px rgba(16, 185, 129, 0.3);
 }
 
@@ -4578,42 +3661,19 @@ s {
     font-weight: 700;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Модальне вікно галереї */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .gallery-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-<<<<<<< HEAD
-<<<<<<< HEAD
     background: rgba(0, 0, 0, 0.85);
-=======
-    background: rgba(0, 0, 0, 0.85); /* Трохи темніший фон для контрасту */
->>>>>>> 451743e (Оновлення)
-=======
-    background: rgba(0, 0, 0, 0.85);
->>>>>>> bc1366a (Оновлення)
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     transition: opacity var(--transition-speed) ease;
-<<<<<<< HEAD
-<<<<<<< HEAD
     cursor: pointer;
-=======
-    cursor: pointer; /* Курсор вказує на можливість кліку */
->>>>>>> 451743e (Оновлення)
-=======
-    cursor: pointer;
->>>>>>> bc1366a (Оновлення)
 }
 
 .gallery-modal.active {
@@ -4623,16 +3683,11 @@ s {
 
 .gallery-modal-content {
     position: relative;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
     width: 90vw;
     max-width: 1200px;
     min-height: 0;
     max-height: 90vh;
     padding: 30px;
-<<<<<<< HEAD
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -4650,112 +3705,36 @@ s {
 
 .gallery-image-container {
     position: relative;
-=======
-    width: 90vw; /* Адаптивна ширина */
-    max-width: 1200px; /* Максимальна ширина для великих екранів */
-    min-height: 0; /* Гнучка висота, яка адаптується до вмісту */
-    max-height: 90vh; /* Максимальна висота для великих екранів */
-    padding: 30px; /* Збільшено відступи для створення простору для кнопки */
-=======
->>>>>>> bc1366a (Оновлення)
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    transition: transform var(--transition-speed) ease;
-    display: flex;
-    flex-direction: column;
-    background-color: #ffffff;
-    box-sizing: border-box;
-    cursor: default;
-}
-
-.gallery-modal-content:hover {
-    transform: scale(1.00);
-}
-
-.gallery-image-container {
-<<<<<<< HEAD
-    position: relative; /* Контейнер для зображення та стрілок */
->>>>>>> 451743e (Оновлення)
-=======
-    position: relative;
->>>>>>> bc1366a (Оновлення)
     width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
     overflow: hidden;
-=======
-    overflow: hidden; /* Запобігає виходу зображення за межі контейнера */
->>>>>>> 451743e (Оновлення)
-=======
-    overflow: hidden;
->>>>>>> bc1366a (Оновлення)
 }
 
 .gallery-image {
     width: 100%;
     height: auto;
-<<<<<<< HEAD
-<<<<<<< HEAD
     max-height: 70vh;
     aspect-ratio: 5 / 3;
     object-fit: contain;
     border-radius: 8px;
     margin-bottom: 15px;
     background-color: #ffffff;
-=======
-    max-height: 70vh; /* Обмеження висоти для зображення */
-    aspect-ratio: 5 / 3; /* Нове співвідношення сторін */
-    object-fit: contain; /* Зображення центрується з полями */
-    border-radius: 8px;
-    margin-bottom: 15px; /* Відступ до мініатюр */
-    background-color: #ffffff; /* Білі поля для світлої теми */
->>>>>>> 451743e (Оновлення)
-=======
-    max-height: 70vh;
-    aspect-ratio: 5 / 3;
-    object-fit: contain;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    background-color: #ffffff;
->>>>>>> bc1366a (Оновлення)
     transition: none;
 }
 
 .gallery-thumbnails {
     display: flex;
     justify-content: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
     gap: 10px;
     padding: 10px 15px;
     padding-bottom: 10px;
-=======
-    gap: 10px; /* Зменшено для компактності */
-    padding: 10px 15px;
-    padding-bottom: 10px; /* Невеликий відступ після мініатюр */
->>>>>>> 451743e (Оновлення)
-=======
-    gap: 10px;
-    padding: 10px 15px;
-    padding-bottom: 10px;
->>>>>>> bc1366a (Оновлення)
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
     background-color: inherit;
-<<<<<<< HEAD
-<<<<<<< HEAD
     flex-shrink: 0;
-=======
-    flex-shrink: 0; /* Запобігає стисканню мініатюр */
->>>>>>> 451743e (Оновлення)
-=======
-    flex-shrink: 0;
->>>>>>> bc1366a (Оновлення)
 }
 
 .gallery-thumbnails::-webkit-scrollbar {
@@ -4772,18 +3751,8 @@ s {
 }
 
 .thumbnail {
-<<<<<<< HEAD
-<<<<<<< HEAD
     width: 80px;
     height: 48px;
-=======
-    width: 80px; /* Більші мініатюри */
-    height: 48px; /* Відповідно до співвідношення 5/3 */
->>>>>>> 451743e (Оновлення)
-=======
-    width: 80px;
-    height: 48px;
->>>>>>> bc1366a (Оновлення)
     object-fit: cover;
     border: 2px solid transparent;
     border-radius: 4px;
@@ -4804,24 +3773,10 @@ s {
 
 .gallery-close {
     position: absolute;
-<<<<<<< HEAD
-<<<<<<< HEAD
     top: 20px;
     right: 20px;
     font-size: 20px;
     background: #6B7280;
-=======
-    top: 20px; /* Збільшено для уникнення перекриття вмістом */
-    right: 20px; /* Збільшено для створення простору */
-    font-size: 20px;
-    background: #6B7280; /* Сірий колір */
->>>>>>> 451743e (Оновлення)
-=======
-    top: 20px;
-    right: 20px;
-    font-size: 20px;
-    background: #6B7280;
->>>>>>> bc1366a (Оновлення)
     color: white;
     width: 32px;
     height: 32px;
@@ -4831,30 +3786,12 @@ s {
     justify-content: center;
     cursor: pointer;
     transition: background var(--transition-speed) ease;
-<<<<<<< HEAD
-<<<<<<< HEAD
     z-index: 2;
     margin: 5px;
 }
 
 .gallery-close:hover {
     background: #4B5563;
-=======
-    z-index: 2; /* Підвищено для перебування поверх вмісту */
-    margin: 5px; /* Додатковий відступ навколо кнопки */
-}
-
-.gallery-close:hover {
-    background: #4B5563; /* Темніший сірий при наведенні */
->>>>>>> 451743e (Оновлення)
-=======
-    z-index: 2;
-    margin: 5px;
-}
-
-.gallery-close:hover {
-    background: #4B5563;
->>>>>>> bc1366a (Оновлення)
 }
 
 .gallery-prev,
@@ -4872,15 +3809,7 @@ s {
     cursor: pointer;
     border-radius: 50%;
     transition: background var(--transition-speed) ease;
-<<<<<<< HEAD
-<<<<<<< HEAD
     z-index: 1;
-=======
-    z-index: 1; /* Щоб стрілки були над зображенням */
->>>>>>> 451743e (Оновлення)
-=======
-    z-index: 1;
->>>>>>> bc1366a (Оновлення)
 }
 
 .gallery-prev {
@@ -5250,15 +4179,7 @@ s {
     justify-content: center;
     align-items: center;
     z-index: 1000;
-<<<<<<< HEAD
-<<<<<<< HEAD
     backdrop-filter: blur(3px);
-=======
-    backdrop-filter: blur(3px); /* Легкий ефект розмиття фону */
->>>>>>> 451743e (Оновлення)
-=======
-    backdrop-filter: blur(3px);
->>>>>>> bc1366a (Оновлення)
 }
 
 .confirm-modal.active {
@@ -5273,18 +4194,8 @@ s {
     text-align: center;
     width: 90%;
     max-width: 450px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
-=======
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Легкий контур для елегантності */
-    background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%); /* Градієнтний фон */
->>>>>>> 451743e (Оновлення)
-=======
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
->>>>>>> bc1366a (Оновлення)
 }
 .confirm-btn,
 .cancel-btn {
@@ -5340,15 +4251,7 @@ s {
     header {
         flex-direction: column;
         min-height: auto;
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding: 6px 8px;
-=======
-        padding: 6px 8px; /* трохи менший лівий падінг */
->>>>>>> 451743e (Оновлення)
-=======
-        padding: 6px 8px;
->>>>>>> bc1366a (Оновлення)
         justify-content: center;
         align-items: center;
         gap: 5px;
@@ -5374,18 +4277,8 @@ s {
     cursor: default;
     margin-left: 0px;
     display: flex;
-<<<<<<< HEAD
-<<<<<<< HEAD
     flex-wrap: nowrap;
     white-space: nowrap;
-=======
-    flex-wrap: nowrap; /* не переносити елементи */
-    white-space: nowrap; /* не переносити елементи */
->>>>>>> 451743e (Оновлення)
-=======
-    flex-wrap: nowrap;
-    white-space: nowrap;
->>>>>>> bc1366a (Оновлення)
     gap: 6px;
     justify-content: center;
 }
@@ -5435,7 +4328,6 @@ s {
         width: 16px;
         height: 16px;
         font-size: 12px;
-<<<<<<< HEAD
     }
 
 #contacts h3.contacts-heading {
@@ -5448,24 +4340,6 @@ s {
         font-size: 14px;
     }
 
-=======
-    }
-
-#contacts h3.contacts-heading {
-        font-size: 16px;
-    }
-
-    #contacts p,
-    #contacts a,
-    #contacts span {
-        font-size: 14px;
-    }
-
-<<<<<<< HEAD
-/* Додаємо відступи для розділів Контакти та Про нас */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #contacts,
 #about {
     padding: 0px 15px !important;
@@ -5504,7 +4378,6 @@ s {
     .dropdown {
         font-size: 14px;
         min-width: 180px;
-<<<<<<< HEAD
     }
 
     .dropdown-item {
@@ -5549,52 +4422,6 @@ s {
         margin: 0;
     }
 
-=======
-    }
-
-    .dropdown-item {
-        padding: 8px 15px;
-    }
-
-    .sub-dropdown p {
-        font-size: inherit;
-        padding: 6px 15px;
-    }
-
-.gallery-modal-content {
-        width: 100vw;
-        height: auto;
-        padding: 10px 0 0 0;
-    }
-
-    .gallery-image {
-        width: 100%;
-        height: auto;
-        margin-bottom: 10px;
-        object-fit: contain;
-        padding: 0;
-        aspect-ratio: 4 / 3;
-    }
-
-    .gallery-thumbnails {
-        gap: 8px;
-        padding: 8px 0;
-        padding-bottom: 8px;
-    }
-
-    .thumbnail {
-        width: 60px;
-        height: 36px;
-    }
-
-    .gallery-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        margin: 0;
-    }
-
->>>>>>> 451743e (Оновлення)
     .gallery-prev,
     .gallery-next {
         width: 30px;
@@ -5709,15 +4536,7 @@ s {
     }
 
     .content {
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding: 10px;
-=======
-        padding: 1px;
->>>>>>> 451743e (Оновлення)
-=======
-        padding: 10px;
->>>>>>> bc1366a (Оновлення)
     }
 
     h2 {
@@ -5783,13 +4602,6 @@ s {
         cursor: pointer;
         display: flex;
         flex-direction: column;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        justify-content: space-between;
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     }
 
     .category:hover {
@@ -5807,16 +4619,6 @@ s {
         transition: transform var(--transition-speed) ease;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    .category img:hover {
-        /* transform: none; */
-    }
-
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     .category p {
         font-weight: 600;
         color: var(--text-color);
@@ -5843,13 +4645,6 @@ s {
 
     .category .subcategories p:hover {
         color: var(--primary-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        /* Прибрано будь-які transform, translate, box-shadow */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     }
 
     #catalog .container {
@@ -6124,13 +4919,6 @@ s {
         align-items: center;
         gap: 8px;
         background: #ffffff00;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        /* box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         flex-wrap: wrap;
     }
 
@@ -6178,37 +4966,15 @@ s {
         width: calc(50% - 6px);
         padding: 1px;
         margin: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
         min-height: 280px;
     }
     .product .product-content {
         height: 100px;
-=======
-        min-height: 280px; /* Зменшено для малих екранів */
-    }
-    .product .product-content {
-        height: 100px; /* Зменшено для малих екранів */
->>>>>>> 451743e (Оновлення)
-=======
-        min-height: 280px;
-    }
-    .product .product-content {
-        height: 100px;
->>>>>>> bc1366a (Оновлення)
     }
     .product h3 {
         font-size: 15px;
         margin: 0 0 3px 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
         height: 40px;
-=======
-        height: 40px; /* Зменшено висоту назви */
->>>>>>> 451743e (Оновлення)
-=======
-        height: 40px;
->>>>>>> bc1366a (Оновлення)
     }
     .product .price-container {
         height: 60px;
@@ -6228,15 +4994,7 @@ s {
 .product .cart-icon {
     width: 20px;
     height: 20px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     bottom: 13px;
-=======
-    bottom: 13px; /* Вирівнюємо з рядком ціни */
->>>>>>> 451743e (Оновлення)
-=======
-    bottom: 13px;
->>>>>>> bc1366a (Оновлення)
     right: 8px;
 }
     .product img {
@@ -6430,15 +5188,7 @@ s {
 @media (min-width: 650px) and (max-width: 920px) {
     header {
         padding: var(--base-padding) 15px;
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding-left: 10px;
-=======
-        padding-left: 10px; /* підсуваємо лого ближче до лівого краю */
->>>>>>> 451743e (Оновлення)
-=======
-        padding-left: 10px;
->>>>>>> bc1366a (Оновлення)
         height: 80px;
         display: flex;
         flex-wrap: nowrap;
@@ -6463,27 +5213,11 @@ s {
         margin: 0;
         text-align: center;
         max-width: calc(100% - 30px);
-<<<<<<< HEAD
-<<<<<<< HEAD
         flex-wrap: nowrap;
         white-space: nowrap;
         justify-content: center;
         order: 1;
         flex: 1 1 auto; 
-=======
-        flex-wrap: nowrap; /* не переносити елементи */
-        white-space: nowrap; /* не переносити елементи */
-        justify-content: center;
-        order: 1;
-        flex: 1 1 auto; /* центруємо між лого та пошуком */
->>>>>>> 451743e (Оновлення)
-=======
-        flex-wrap: nowrap;
-        white-space: nowrap;
-        justify-content: center;
-        order: 1;
-        flex: 1 1 auto; 
->>>>>>> bc1366a (Оновлення)
     }
     .phones .main-phone,
     .phones .phone-dropdown-arrow { white-space: nowrap; }
@@ -6533,36 +5267,15 @@ s {
     }
 
 #contacts h3.contacts-heading {
-<<<<<<< HEAD
-<<<<<<< HEAD
         font-size: 17px;
-=======
-        font-size: 17px; /* Зменшений розмір заголовка */
->>>>>>> 451743e (Оновлення)
-=======
-        font-size: 17px;
->>>>>>> bc1366a (Оновлення)
     }
 
     #contacts p,
     #contacts a,
     #contacts span {
-<<<<<<< HEAD
-<<<<<<< HEAD
         font-size: 15px;
     }
 
-=======
-        font-size: 15px; /* Зменшений розмір тексту */
-    }
-
-    /* Стилі для темної теми для розділів Контакти та Про нас */
->>>>>>> 451743e (Оновлення)
-=======
-        font-size: 15px;
-    }
-
->>>>>>> bc1366a (Оновлення)
     #contacts,
     #about {
         padding: 0px 15px !important;
@@ -6597,13 +5310,6 @@ s {
         text-decoration: underline;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаткові стилі для екранів від 920px в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     @media (min-width: 920px) {
         #contacts,
         #about {
@@ -6640,13 +5346,6 @@ s {
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаткові стилі для екранів від 1200px в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     @media (min-width: 1200px) {
         #contacts,
         #about {
@@ -6683,13 +5382,6 @@ s {
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаткові стилі для екранів від 1400px в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     @media (min-width: 1400px) {
         #contacts,
         #about {
@@ -6969,15 +5661,7 @@ s {
     }
 
     .content {
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding: 11px;
-=======
-        padding: 1px;
->>>>>>> 451743e (Оновлення)
-=======
-        padding: 11px;
->>>>>>> bc1366a (Оновлення)
     }
 
     h2 {
@@ -7064,13 +5748,6 @@ s {
         align-items: center;
         gap: 8px;
         background: #fffffff7;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        /* box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         flex-wrap: wrap;
     }
 
@@ -7418,22 +6095,9 @@ s {
         margin: 0;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     @media (min-width: 1000px) {
         header { padding-left: 260px !important; }
         .nav {}
-=======
-    /* Перекриття вирівнювання для великих екранів → пошук праворуч, телефони між логотипом і пошуком */
-    @media (min-width: 1000px) {
-        header { padding-left: 260px !important; }
-        .nav {/* padding-left: 260px !important; */}
->>>>>>> 451743e (Оновлення)
-=======
-    @media (min-width: 1000px) {
-        header { padding-left: 260px !important; }
-        .nav {}
->>>>>>> bc1366a (Оновлення)
         header .search-cart-container { margin-left: auto !important; }
         header .phones {
             order: 1;
@@ -7467,13 +6131,6 @@ s {
         margin-right: 18px;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 920px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     #contacts,
     #about {
         padding: 0px 15px !important;
@@ -7617,15 +6274,7 @@ s {
     }
 
     .content {
-<<<<<<< HEAD
-<<<<<<< HEAD
       padding: 11px;
-=======
-      padding: 1px;
->>>>>>> 451743e (Оновлення)
-=======
-      padding: 11px;
->>>>>>> bc1366a (Оновлення)
     }
 
     h2 {
@@ -7680,15 +6329,7 @@ s {
         top: 0;
         align-self: flex-start;
         height: auto;
-<<<<<<< HEAD
-<<<<<<< HEAD
         max-height: 100vh;
-=======
-        max-height: 100vh; /* Додано для обмеження висоти */
->>>>>>> 451743e (Оновлення)
-=======
-        max-height: 100vh;
->>>>>>> bc1366a (Оновлення)
         overflow-y: auto;
     }
 
@@ -7729,13 +6370,6 @@ s {
     .subcategory-buttons button:hover {
         background: var(--border-color);
         color: var(--text-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-       /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     }
 
     .subcategory-buttons button:focus {
@@ -8107,13 +6741,6 @@ s {
         opacity: 1;
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Стилі для підкатегорій у випадаючому меню Каталог */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     #catalog-dropdown .sub-list.active {
         display: block !important;
         opacity: 1;
@@ -8176,15 +6803,7 @@ s {
     }
 
     .content {
-<<<<<<< HEAD
-<<<<<<< HEAD
         padding: 11px;
-=======
-        padding: 1px;
->>>>>>> 451743e (Оновлення)
-=======
-        padding: 11px;
->>>>>>> bc1366a (Оновлення)
     }
 
     .slide img {
@@ -8249,13 +6868,6 @@ s {
         max-width: 600px;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Додаємо відступи для розділів Контакти та Про нас на екранах від 1400px */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     #contacts,
     #about {
         padding: 0px 15px !important;
@@ -8732,15 +7344,7 @@ s {
 
     .burger-content a {
         color: var(--text-color);
-<<<<<<< HEAD
-<<<<<<< HEAD
         transition: all 0.3s ease;
-=======
-        transition: all 0.3s ease; /* Плавний перехід для всіх змін */
->>>>>>> 451743e (Оновлення)
-=======
-        transition: all 0.3s ease;
->>>>>>> bc1366a (Оновлення)
     }
 
     .burger-content a:hover {
@@ -8859,13 +7463,6 @@ s {
     background: var(--button-hover-background) !important;
     color: #FFFFFF !important;
     box-shadow: 0 4px 8px var(--shadow-color) !important;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 }
 
 .filter-btn:focus,
@@ -8877,13 +7474,6 @@ s {
     .filters .back-btn:hover {
         background: var(--button-hover-background);
         color: #FFFFFF;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-       /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         box-shadow: 0 4px 12px var(--shadow-color);
     }
 
@@ -8898,13 +7488,6 @@ s {
 
     .sort-menu .sort-dropdown button,
     .sort-menu .per-page-dropdown button {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        /* background: var(--button-background) !important; */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         color: var(--button-text-color) !important;
         border: none !important;
         padding: 8px 16px !important;
@@ -9134,8 +7717,6 @@ s {
     }
 
 .gallery-modal {
-<<<<<<< HEAD
-<<<<<<< HEAD
         background: rgba(0, 0, 0, 0.95);
     }
 
@@ -9145,49 +7726,15 @@ s {
 
     .gallery-modal-content {
         background-color: #1f2937;
-=======
-        background: rgba(0, 0, 0, 0.95); /* Темніший фон */
-=======
-        background: rgba(0, 0, 0, 0.95);
->>>>>>> bc1366a (Оновлення)
-    }
-
-.gallery-modal {
-        background: rgba(0, 0, 0, 0.95);
-    }
-
-    .gallery-modal-content {
-<<<<<<< HEAD
-        background-color: #1f2937; /* Темне тло */
->>>>>>> 451743e (Оновлення)
-=======
-        background-color: #1f2937;
->>>>>>> bc1366a (Оновлення)
         box-shadow: 0 8px 24px var(--shadow-color);
     }
 
     .gallery-image {
-<<<<<<< HEAD
-<<<<<<< HEAD
         background-color: #1f2937;
     }
 
     .gallery-close {
         background: #6B7280;
-=======
-        background-color: #1f2937; /* Темні поля для зображень */
-    }
-
-    .gallery-close {
-        background: #6B7280; /* Сірий колір */
->>>>>>> 451743e (Оновлення)
-=======
-        background-color: #1f2937;
-    }
-
-    .gallery-close {
-        background: #6B7280;
->>>>>>> bc1366a (Оновлення)
     }
 
     .gallery-close:hover {
@@ -9479,13 +8026,6 @@ s {
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Адаптивні стилі для темної теми */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     .group-product-item .group-product-info .dimensions .dimension-label {
         color: #aaa;
     }
@@ -9576,13 +8116,6 @@ s {
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Адаптивні стилі для темної теми */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     @media (max-width: 480px) {
         .group-product-item .group-product-info .dimensions .dimension-label {
             font-size: 10px;
@@ -9719,13 +8252,6 @@ s {
 
     .back-to-group-btn:hover {
         background-color: #5A6A82;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-       /* transform: translateY(-2px); */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
     }
 
@@ -10061,13 +8587,6 @@ s {
   color: #999;
   font-size: 0.85em;
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Для матраців, якщо треба чорний і більший 'грн' */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .price-suffix-mattress {
   font-size: 1em;
   color: #000;
@@ -10110,15 +8629,7 @@ s {
   align-items: center;
   gap: 0;
   width: 100%;
-<<<<<<< HEAD
-<<<<<<< HEAD
   padding: 0 2px 10px 2px;
-=======
-  padding: 0 2px 10px 2px; /* мінімальні відступи зліва і справа */
->>>>>>> 451743e (Оновлення)
-=======
-  padding: 0 2px 10px 2px;
->>>>>>> bc1366a (Оновлення)
   box-sizing: border-box;
 }
 
@@ -10163,13 +8674,6 @@ s {
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* --- СТИЛІ ДЛЯ ВИПАДАЮЧОГО МЕНЮ КАТАЛОГ --- */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown {
   min-width: 300px;
   background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
@@ -10189,13 +8693,6 @@ s {
   transition: background 0.18s, box-shadow 0.18s;
   cursor: pointer;
   position: relative;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Покращення для сенсорних екранів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -10224,25 +8721,11 @@ s {
   border-radius: 0 0 10px 10px;
   box-shadow: none;
   transition: background 0.18s;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Повертаємо підкатегорії знизу категорії */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   position: static !important;
   width: 100% !important;
   left: auto !important;
   top: auto !important;
   transform: none !important;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Примусово встановлюємо позиціонування знизу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   display: block !important;
   float: none !important;
   clear: both !important;
@@ -10255,23 +8738,9 @@ s {
   border-radius: 6px;
   transition: background 0.18s, color 0.18s;
   cursor: pointer;
-<<<<<<< HEAD
-<<<<<<< HEAD
   min-height: 36px;
   display: flex;
   align-items: center;
-=======
-  /* Покращення для сенсорних екранів */
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  /* Переконаємося, що підкатегорії відображаються знизу */
->>>>>>> 451743e (Оновлення)
-=======
-  min-height: 36px;
-  display: flex;
-  align-items: center;
->>>>>>> bc1366a (Оновлення)
   position: relative;
 }
 #catalog-dropdown .sub-list p:hover {
@@ -10292,13 +8761,6 @@ s {
     font-size: 13px;
     padding: 5px 0;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Додаткові покращення для сенсорних екранів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   #catalog-dropdown .dropdown-item {
     min-height: 48px;
     padding: 0 12px;
@@ -10307,39 +8769,18 @@ s {
     min-height: 40px;
     padding: 8px 0;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Переконаємося, що підкатегорії відображаються знизу на малих екранах */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   #catalog-dropdown .sub-list {
     position: static !important;
     width: 100% !important;
     left: auto !important;
     top: auto !important;
     transform: none !important;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Примусово встановлюємо позиціонування знизу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     display: block !important;
     float: none !important;
     clear: both !important;
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Додаткові стилі для всіх розмірів екрану */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (min-width: 651px) {
   #catalog-dropdown .sub-list {
     position: static !important;
@@ -10347,25 +8788,11 @@ s {
     left: auto !important;
     top: auto !important;
     transform: none !important;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Примусово встановлюємо позиціонування знизу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     display: block !important;
     float: none !important;
     clear: both !important;
   }
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* --- Ефект наведення для випадаючого меню Каталог --- */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown .dropdown-item:hover,
 #catalog-dropdown .dropdown-item.active {
   background: var(--button-background, #f5f5f5);
@@ -10384,13 +8811,6 @@ s {
   color: inherit;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Прибрати синій колір шрифту */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown .dropdown-item span:hover,
 #catalog-dropdown .dropdown-item span.active,
 #catalog-dropdown .sub-list p:hover,
@@ -10404,13 +8824,6 @@ s {
   scale: none !important;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для мініатюр у випадаючому меню каталогу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown .dropdown-item img {
   border-radius: 4px;
   object-fit: cover;
@@ -10433,13 +8846,6 @@ s {
   transform: scale(1.0);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для підкатегорій без зображень */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 #catalog-dropdown .sub-list p:not(:has(img)) {
   padding-left: 0;
 }
@@ -10477,13 +8883,6 @@ s {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #bdbdbd #f5f5f5;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Покращення для сенсорних екранів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
 }
@@ -10497,13 +8896,6 @@ s {
     border-radius: 6px;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* --- Випадаюче меню Каталог у темній темі --- */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (prefers-color-scheme: dark) {
   #catalog-dropdown {
     background: rgb(26 32 44) !important;
@@ -10530,38 +8922,17 @@ s {
     background: var(--button-background) !important;
     color: #fff !important;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Переконаємося, що підкатегорії відображаються знизу в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   #catalog-dropdown .sub-list {
     position: static !important;
     width: 100% !important;
     left: auto !important;
     top: auto !important;
     transform: none !important;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    /* Примусово встановлюємо позиціонування знизу */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     display: block !important;
     float: none !important;
     clear: both !important;
   }
   
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Стилі для підкатегорій у випадаючому меню Каталог в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   #catalog-dropdown .sub-list.active {
     display: block !important;
     opacity: 1;
@@ -10580,15 +8951,7 @@ s {
     color: #f4f5f6 !important;
   }
   s.price-value {
-<<<<<<< HEAD
-<<<<<<< HEAD
     color: #f4f5f6 !important;
-=======
-    color: #f4f5f6 !important; /* Перекреслена ціна — сіра */
->>>>>>> 451743e (Оновлення)
-=======
-    color: #f4f5f6 !important;
->>>>>>> bc1366a (Оновлення)
   }
   .sale-price .price-value {
     color: #fb5050 !important;
@@ -10610,13 +8973,6 @@ s {
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Базові стилі для випадаючого меню матраців (світла тема) */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .custom-mattress-select {
   position: relative;
   width: 480px;
@@ -10681,13 +9037,6 @@ s {
   background: #f5f5f5;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Додаткові стилі для запобігання переносу тексту в світлій темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .custom-option s {
   white-space: nowrap;
 }
@@ -10704,13 +9053,6 @@ s {
   white-space: nowrap;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні стилі для випадаючого меню матраців */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 650px) {
   .custom-mattress-select {
     width: 100%;
@@ -10735,13 +9077,6 @@ s {
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Темна тема для випадаючого меню матраців */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (prefers-color-scheme: dark) {
   .custom-mattress-select {
     background: #23272f !important;
@@ -10774,13 +9109,6 @@ s {
     background: #3a4250 !important;
     color: #fff !important;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  /* Стилі для цін у темній темі */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
   .custom-option s {
     color: #a0a0a0 !important;
     white-space: nowrap;
@@ -10795,23 +9123,9 @@ s {
   .custom-option span[style*="color:#222"] {
     color: #e2e8f0 !important;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
   .custom-mattress-select .selected-option span[style*="color:#888"] {
     color: #a0a0a0 !important;
   }
-=======
-  /* Стилі для стрілки */
-  .custom-mattress-select .selected-option span[style*="color:#888"] {
-    color: #a0a0a0 !important;
-  }
-  /* Стилі для цін у кнопці випадаючого меню в темній темі */
->>>>>>> 451743e (Оновлення)
-=======
-  .custom-mattress-select .selected-option span[style*="color:#888"] {
-    color: #a0a0a0 !important;
-  }
->>>>>>> bc1366a (Оновлення)
   .custom-mattress-select .selected-option span {
     color: #fff !important;
     white-space: nowrap;
@@ -10829,20 +9143,8 @@ s {
 }
 
 .floating-favorite {
-<<<<<<< HEAD
-<<<<<<< HEAD
     display: none;
     pointer-events: none;
-=======
-    /* ...інші стилі... */
-    display: none;
-    pointer-events: none;
-    /* ...інші стилі... */
->>>>>>> 451743e (Оновлення)
-=======
-    display: none;
-    pointer-events: none;
->>>>>>> bc1366a (Оновлення)
 }
 
 .floating-favorite.visible {
@@ -10851,13 +9153,6 @@ s {
     opacity: 1;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Кольорові кружечки для вибору кольору товару */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .color-circle {
     width: 85px;
     height: 85px;
@@ -10885,15 +9180,7 @@ s {
     left: 50%;
     transform: translateX(-50%);
     font-size: 14px;
-<<<<<<< HEAD
-<<<<<<< HEAD
     width: 80px;
-=======
-    width: 80px; /* або 90% ширини кружечка, якщо кружечок менший */
->>>>>>> 451743e (Оновлення)
-=======
-    width: 80px;
->>>>>>> bc1366a (Оновлення)
     max-width: 90px;
     min-width: 0;
     white-space: normal;
@@ -10909,13 +9196,6 @@ s {
     height: 25px;
     width: 90px;
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Для маленьких кружечків (групові товари) */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .group-color-circle span {
     width: 35px;
     max-width: 40px;
@@ -10967,13 +9247,6 @@ s {
     justify-content: center;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивні відступи для різних екранів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 768px) {
     .group-product-colors .color-options {
         gap: 6px;
@@ -11011,13 +9284,6 @@ s {
     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Темна тема для кольорів групових товарів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (prefers-color-scheme: dark) {
     .group-color-circle {
         border-color: #4B5563;
@@ -11033,13 +9299,6 @@ s {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Плейсхолдер для товарів без кольорів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .group-product-colors-placeholder {
     height: 30px;
     margin-top: 5px;
@@ -11048,13 +9307,6 @@ s {
     pointer-events: none;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Плейсхолдер для товарів без кольорів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .group-product-colors-placeholder {
     height: 40px;
     margin-top: 0px;
@@ -11075,13 +9327,6 @@ s {
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Сучасна пагінація з еліпсисом */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .pagination {
     display: flex;
     align-items: center;
@@ -11145,25 +9390,11 @@ s {
     user-select: none;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для кнопок "Попередня" та "Наступна" */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .pagination-btn[data-direction] {
     font-weight: 600;
     min-width: 40px;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Адаптивність для мобільних пристроїв */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (max-width: 768px) {
     .pagination {
         gap: 6px;
@@ -11214,13 +9445,6 @@ s {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Темна тема для пагінації */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (prefers-color-scheme: dark) {
     .pagination-btn {
         background: #2d3748;
@@ -11253,13 +9477,6 @@ s {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для drag & drop групових товарів */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 .group-product {
     cursor: grab;
     transition: all 0.3s ease;
@@ -11291,13 +9508,6 @@ s {
     cursor: grabbing;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/* Стилі для темної теми */
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 @media (prefers-color-scheme: dark) {
     .group-product {
         background: #2d3748;

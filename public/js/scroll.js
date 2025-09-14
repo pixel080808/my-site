@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
-// public/js/scroll.js
-
-// Функція для плавної прокрутки до елемента
->>>>>>> 451743e (Оновлення)
-=======
-
->>>>>>> bc1366a (Оновлення)
 function scrollToElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
@@ -18,13 +8,6 @@ function scrollToElement(elementId) {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Обробка подій прокрутки для відображення/приховування кнопки "вгору"
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function handleScroll() {
     const scrollTopButton = document.getElementById('scroll-top');
     if (scrollTopButton) {
@@ -32,13 +15,6 @@ function handleScroll() {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Спостереження за змінами в DOM із можливістю відключення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function observeDOMChanges(targetSelector, callback) {
     const target = document.querySelector(targetSelector);
     if (!target) {
@@ -65,23 +41,9 @@ function observeDOMChanges(targetSelector, callback) {
     };
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', handleScroll);
 
-=======
-// Ініціалізація
-=======
->>>>>>> bc1366a (Оновлення)
-document.addEventListener('DOMContentLoaded', () => {
-    window.addEventListener('scroll', handleScroll);
-
-<<<<<<< HEAD
-    // Додаємо обробник для кнопки "вгору"
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const scrollTopButton = document.getElementById('scroll-top');
     if (scrollTopButton) {
         scrollTopButton.addEventListener('click', () => {
@@ -89,26 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Спостерігаємо за змінами в DOM (наприклад, у списку товарів)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const disconnectObserver = observeDOMChanges('#product-list-admin', (mutation) => {
         console.log('Зміни в списку товарів:', mutation);
         handleScroll(); // Оновлюємо видимість кнопки "вгору" при змінах
     });
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-    // Приклад: відключення спостерігача при зміні секції (опціонально)
-    // document.addEventListener('sectionChanged', () => {
-    //     if (disconnectObserver) disconnectObserver();
-    // });
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 });

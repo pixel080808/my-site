@@ -30,13 +30,6 @@ const cartSchema = new mongoose.Schema({
                     message: 'Photo must be a valid URL or empty string'
                 }
             },
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Підтримка масиву кольорів (нова структура)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             colors: {
                 type: [{
                     name: { type: String },
@@ -56,13 +49,6 @@ const cartSchema = new mongoose.Schema({
                 }],
                 default: []
             },
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Підтримка одного кольору (стара структура для зворотної сумісності)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             color: {
                 type: {
                     name: { type: String },
@@ -103,13 +89,6 @@ const cartSchemaValidation = Joi.array().items(
         quantity: Joi.number().min(1).required(),
         price: Joi.number().min(0).required(),
         photo: Joi.string().uri().allow('').optional(),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Валідація для масиву кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         colors: Joi.array().items(
             Joi.object({
                 name: Joi.string().allow('').optional(),
@@ -123,13 +102,6 @@ const cartSchemaValidation = Joi.array().items(
                 globalIndex: Joi.number().optional()
             }).unknown(true)
         ).allow(null).optional(),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Валідація для одного кольору (зворотна сумісність)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         color: Joi.object({
             name: Joi.string().allow('').optional(),
             value: Joi.string().allow('').optional(),

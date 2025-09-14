@@ -68,10 +68,6 @@ function loadFromStorage(key, defaultValue) {
             return defaultValue;
         }
         const data = JSON.parse(decompressed) || defaultValue;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
         if (key === 'cart') {
             const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
             if (data && typeof data === 'object' && data.hasOwnProperty('value') && data.hasOwnProperty('ts')) {
@@ -102,26 +98,6 @@ function loadFromStorage(key, defaultValue) {
             });
             return result;
         }
-=======
-        if (key === 'products') {
-            const validCategories = categories.map(cat => cat.name);
-            const validSubcategories = categories.flatMap(cat => (cat.subcategories || []).map(sub => sub.name));
-            const result = data.map(product => {
-                if (product.subcategory && !validSubcategories.includes(product.subcategory)) {
-                    console.warn(`Очищаємо невалідну підкатегорію ${product.subcategory} для товару ${product.name}`);
-                    return { ...product, subcategory: null };
-                }
-                return product;
-            });
-            result.forEach(p => {
-                if (p.type === 'mattresses') {
-                    p.salePrice = null;
-                    p.saleEnd = null;
-                }
-            });
-            return result;
-        }
->>>>>>> 451743e (Оновлення)
         return data;
     } catch (e) {
         console.error(`Помилка парсингу ${key}:`, e);
@@ -132,17 +108,8 @@ function loadFromStorage(key, defaultValue) {
 
 function saveToStorage(key, value) {
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
         const payload = key === 'cart' ? { value, ts: Date.now() } : value;
         const testStringify = JSON.stringify(payload);
-=======
-        const testStringify = JSON.stringify(value);
->>>>>>> 451743e (Оновлення)
-=======
-        const payload = key === 'cart' ? { value, ts: Date.now() } : value;
-        const testStringify = JSON.stringify(payload);
->>>>>>> bc1366a (Оновлення)
         if (typeof testStringify !== 'string') {
             console.error(`Помилка: Дані для ${key} не можуть бути серіалізовані в JSON`);
             return;
@@ -157,17 +124,8 @@ function saveToStorage(key, value) {
         console.error(`Помилка збереження ${key}:`, e);
         if (e.name === 'QuotaExceededError') {
             localStorage.clear();
-<<<<<<< HEAD
-<<<<<<< HEAD
             const fallbackPayload = key === 'cart' ? { value, ts: Date.now() } : value;
             const compressed = LZString.compressToUTF16(JSON.stringify(fallbackPayload));
-=======
-            const compressed = LZString.compressToUTF16(JSON.stringify(value));
->>>>>>> 451743e (Оновлення)
-=======
-            const fallbackPayload = key === 'cart' ? { value, ts: Date.now() } : value;
-            const compressed = LZString.compressToUTF16(JSON.stringify(fallbackPayload));
->>>>>>> bc1366a (Оновлення)
             localStorage.setItem(key, compressed);
             console.error('Локальне сховище очищено через перевищення квоти.');
         }
@@ -222,20 +180,8 @@ async function loadCartFromServer() {
                     };
                 }
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
                 let colors = null;
                 if (item.color) {
-=======
-                // Для товарів з кольорами відновлюємо структуру кольорів
-                let colors = null;
-                if (item.color) {
-                    // Для старої структури або коли є тільки один колір
->>>>>>> 451743e (Оновлення)
-=======
-                let colors = null;
-                if (item.color) {
->>>>>>> bc1366a (Оновлення)
                     colors = [{
                         name: item.color.name,
                         value: item.color.value || item.color.name,
@@ -246,15 +192,6 @@ async function loadCartFromServer() {
                         colorIndex: 0
                     }];
                 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Примітка: для товарів з кількома кольорами, інформація про всі кольори
-                // не зберігається на сервері, тому після перезавантаження сторінки
-                // буде відображатися тільки ціна без назв всіх кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 
                 return {
                     id: product._id || item.id,
@@ -342,13 +279,6 @@ async function saveCartToServer() {
                             console.warn(`Розмір ${item.size} не знайдено для товару ${item.name}`);
                             return null;
                         }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Спочатку перевіряємо акційну ціну розміру
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
                             price = parseFloat(sizeInfo.salePrice);
                         } else {
@@ -359,13 +289,6 @@ async function saveCartToServer() {
                         console.log(`Матрац ${item.name} без розміру, використовуємо базову ціну: ${price}`);
                     }
                 } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Нова структура - масив кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     let totalColorPriceChange = 0;
                     
                     item.colors.forEach(color => {
@@ -375,21 +298,8 @@ async function saveCartToServer() {
                     });
                     price += totalColorPriceChange;
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
                     colorData = null;
                 } else if (item.color) {
-=======
-                    // Для товарів з кількома кольорами не встановлюємо color,
-                    // щоб уникнути помилки валідації на сервері
-                    colorData = null;
-                } else if (item.color) {
-                    // Стара структура - один колір
->>>>>>> 451743e (Оновлення)
-=======
-                    colorData = null;
-                } else if (item.color) {
->>>>>>> bc1366a (Оновлення)
                     colorData = {
                         name: item.color.name || 'Не вказано',
                         value: item.color.value || item.color.name || '',
@@ -414,23 +324,6 @@ async function saveCartToServer() {
             .filter(item => item !== null && item.name && item.quantity > 0 && item.price >= 0 && !isNaN(item.price));
 
         console.log('Дані кошика перед відправкою:', JSON.stringify(filteredCartItems, null, 2));
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Логування для діагностики (можна видалити після виправлення)
-        // console.log('Детальна інформація про товари в кошику:');
-        // filteredCartItems.forEach((item, index) => {
-        //     console.log(`Товар ${index + 1}:`, {
-        //         id: item.id,
-        //         idType: typeof item.id,
-        //         name: item.name,
-        //         quantity: item.quantity,
-        //         price: item.price
-        //     });
-        // });
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 
         if (!BASE_URL) {
             console.error('BASE_URL не визначено');
@@ -900,21 +793,7 @@ async function initializeData() {
     }
 
     let tempCart = loadFromStorage('cart', []);
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (!Array.isArray(tempCart)) tempCart = [];
-=======
-    if (tempCart.some(item => typeof item.id !== 'number')) {
-        console.warn('Corrupted cart data detected, resetting cart');
-        cart = [];
-        cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('cartId', cartId);
-        saveToStorage('cart', cart);
-    }
->>>>>>> 451743e (Оновлення)
-=======
-    if (!Array.isArray(tempCart)) tempCart = [];
->>>>>>> bc1366a (Оновлення)
 
     await fetchCsrfToken();
     await loadCartFromServer();
@@ -965,8 +844,6 @@ async function initializeData() {
     };
 
     connectPublicWebSocket();
-<<<<<<< HEAD
-<<<<<<< HEAD
     await fetchPublicData();
     // Після отримання/оновлення списку продуктів — синхронізувати ціни в кошику
     try {
@@ -979,27 +856,6 @@ async function initializeData() {
         console.warn('Не вдалося синхронізувати ціни кошика після завантаження даних:', e);
     }
     
-=======
-    // Спочатку спробуємо завантажити дані через HTTP швидко
-=======
->>>>>>> bc1366a (Оновлення)
-    await fetchPublicData();
-    // Після отримання/оновлення списку продуктів — синхронізувати ціни в кошику
-    try {
-        await updateCartPrices();
-        const cartNow = loadFromStorage('cart', []);
-        if (Array.isArray(cartNow) && cartNow.length > 0) {
-            await saveCartToServer();
-        }
-    } catch (e) {
-        console.warn('Не вдалося синхронізувати ціни кошика після завантаження даних:', e);
-    }
-    
-<<<<<<< HEAD
-    // Якщо HTTP не дав результатів, чекаємо на WebSocket
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (products.length === 0 || categories.length === 0) {
         await new Promise(resolve => {
             let receivedData = false;
@@ -1033,13 +889,6 @@ async function initializeData() {
 
     restoreSearchState();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо фільтри та сортування
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (Object.keys(activeFilters).length > 0) {
         applySavedFilters(activeFilters);
     }
@@ -1047,13 +896,6 @@ async function initializeData() {
         sortProducts(currentSort);
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо графічне відображення вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     restoreSelectedColors();
 
     updateHeader();
@@ -1094,13 +936,6 @@ function loadMoreProducts() {
     const productGrid = document.querySelector('.product-grid');
     const productList = document.querySelector('.product-list');
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Визначаємо який елемент використовується
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const productContainer = productGrid || productList;
     if (!productContainer) {
         console.warn('Елемент .product-grid або .product-list не знайдено');
@@ -1140,13 +975,6 @@ function loadMoreProducts() {
 
     console.log('Added products:', addedCount);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо currentPage на основі кількості відображених товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const newDisplayedCount = productContainer.children.length;
     currentPage = Math.ceil(newDisplayedCount / perPage);
     console.log('Updated currentPage to:', currentPage, 'based on displayed count:', newDisplayedCount);
@@ -1223,13 +1051,6 @@ async function updateFloatingGroupCart() {
 
         floatingGroupCart.classList.toggle('visible', hasSelection && currentProduct.type === 'group');
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Відновлюємо графічне відображення вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         restoreSelectedColors();
 
     } catch (error) {
@@ -1241,13 +1062,6 @@ async function updateFloatingGroupCart() {
 function showSection(sectionId) {
     console.log('showSection: Відображаємо секцію:', sectionId);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Очищаємо обробники випадаючих меню розмірів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     document.querySelectorAll('.custom-select').forEach(select => {
         if (select._closeDropdownHandler) {
             document.removeEventListener('click', select._closeDropdownHandler);
@@ -1286,31 +1100,12 @@ function showSection(sectionId) {
         const headerHeight = header ? header.offsetHeight : 0;
         const floatingFavorite = document.getElementById('floating-favorite');
         const handleScroll = () => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Перевіряємо, чи видно постійні кнопки (хедер)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const header = document.querySelector('header');
             const headerBottom = header ? header.offsetTop + header.offsetHeight : 0;
             const isHeaderVisible = window.scrollY < headerBottom;
             
-<<<<<<< HEAD
-<<<<<<< HEAD
             const isHomePage = sectionId === 'home';
             
-=======
-            // Не показуємо плаваючі кнопки на головній сторінці
-            const isHomePage = sectionId === 'home';
-            
-            // Спрощена логіка: показуємо плаваючі кнопки при прокручуванні більше 100px
->>>>>>> 451743e (Оновлення)
-=======
-            const isHomePage = sectionId === 'home';
-            
->>>>>>> bc1366a (Оновлення)
             if (window.scrollY > 100 && !isHomePage) {
                 burgerMenu.classList.add('visible');
                 floatingCart.classList.add('visible');
@@ -1342,13 +1137,6 @@ function showSection(sectionId) {
         window.scrollHandler = handleScroll;
         window.addEventListener('scroll', handleScroll);
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Викликаємо обробник одразу для перевірки поточного стану
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         handleScroll();
     }
 
@@ -1363,13 +1151,6 @@ function showSection(sectionId) {
         searchInput.value = '';
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Скидаємо фільтри при переході на інші сторінки (крім каталогу та кошика)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (sectionId !== 'catalog' && sectionId !== 'product-details' && sectionId !== 'cart') {
         clearFilters();
     }
@@ -1399,13 +1180,6 @@ function showSection(sectionId) {
     newPath = '/';
 } else if (sectionId === 'catalog') {
     if (isSearchActive) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Дозволяємо порожній searchQuery для сторінки пошуку без результатів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 newPath = searchQuery
     ? `/catalog/search/${encodeURIComponent(searchQuery.toLowerCase().replace(/\s+/g, '-'))}`
     : `/catalog/search/`;
@@ -1430,14 +1204,7 @@ newPath = searchQuery
             updateFloatingFavorite();
         }
     } else if (sectionId === 'cart') {
-<<<<<<< HEAD
-<<<<<<< HEAD
         currentProduct = null;
-=======
->>>>>>> 451743e (Оновлення)
-=======
-        currentProduct = null;
->>>>>>> bc1366a (Оновлення)
         parentGroupProduct = null;
         saveToStorage('parentGroupProduct', null);
         if (typeof renderCart === 'function') {
@@ -1448,14 +1215,7 @@ newPath = searchQuery
         }
         newPath = '/cart';
     } else if (sectionId === 'contacts') {
-<<<<<<< HEAD
-<<<<<<< HEAD
         currentProduct = null
-=======
->>>>>>> 451743e (Оновлення)
-=======
-        currentProduct = null
->>>>>>> bc1366a (Оновлення)
         if (typeof renderContacts === 'function') {
             renderContacts();
         }
@@ -1464,14 +1224,7 @@ newPath = searchQuery
         }
         newPath = '/contacts';
     } else if (sectionId === 'about') {
-<<<<<<< HEAD
-<<<<<<< HEAD
         currentProduct = null;
-=======
->>>>>>> 451743e (Оновлення)
-=======
-        currentProduct = null;
->>>>>>> bc1366a (Оновлення)
         if (typeof renderAbout === 'function') {
             renderAbout();
         }
@@ -1548,25 +1301,11 @@ newPath = searchQuery
 
     document.dispatchEvent(new Event('sectionChange'));
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Скидання скролу випадаючого меню Каталог
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const catalogDropdown = document.getElementById('catalog-dropdown');
     if (catalogDropdown) {
         catalogDropdown.scrollTop = 0;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо лічильники обраних товарів при зміні секції
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (typeof updateFavoriteCount === 'function') {
         updateFavoriteCount();
     }
@@ -1645,17 +1384,7 @@ function renderBreadcrumbs() {
     homeSpan.appendChild(homeLink);
     breadcrumbsContainer.appendChild(homeSpan);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (currentProduct) {
-=======
-    // --- Якщо відкритий товар ---
-    if (currentProduct) {
-        // Категорія
->>>>>>> 451743e (Оновлення)
-=======
-    if (currentProduct) {
->>>>>>> bc1366a (Оновлення)
         const cat = categories.find(c => c.slug === currentProduct.category);
         if (cat) {
             breadcrumbsContainer.appendChild(document.createTextNode(' > '));
@@ -1675,27 +1404,11 @@ function renderBreadcrumbs() {
             catSpan.appendChild(catLink);
             breadcrumbsContainer.appendChild(catSpan);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
             if (currentProduct.subcategory) {
                 let subCat = (cat.subcategories || []).find(sc => sc.slug === currentProduct.subcategory);
                 if (!subCat) {
                     subCat = (cat.subcategories || []).find(sc => sc.name === currentProduct.subcategory);
                 }
-=======
-            // Підкатегорія
-            if (currentProduct.subcategory) {
-                const subCat = (cat.subcategories || []).find(
-                    sc => sc.name === currentProduct.subcategory || sc.slug === currentProduct.subcategory
-                );
->>>>>>> 451743e (Оновлення)
-=======
-            if (currentProduct.subcategory) {
-                let subCat = (cat.subcategories || []).find(sc => sc.slug === currentProduct.subcategory);
-                if (!subCat) {
-                    subCat = (cat.subcategories || []).find(sc => sc.name === currentProduct.subcategory);
-                }
->>>>>>> bc1366a (Оновлення)
                 if (subCat) {
                     breadcrumbsContainer.appendChild(document.createTextNode(' > '));
                     const subSpan = document.createElement('span');
@@ -1706,15 +1419,7 @@ function renderBreadcrumbs() {
                     subLink.onclick = (e) => {
                         e.preventDefault();
                         currentCategory = cat.slug;
-<<<<<<< HEAD
-<<<<<<< HEAD
                         currentSubcategory = subCat.slug;
-=======
-                        currentSubcategory = subCat.slug; // ✅ тепер правильно
->>>>>>> 451743e (Оновлення)
-=======
-                        currentSubcategory = subCat.slug;
->>>>>>> bc1366a (Оновлення)
                         currentProduct = null;
                         isSearchActive = false;
                         showSection('catalog');
@@ -1725,13 +1430,6 @@ function renderBreadcrumbs() {
             }
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Сам товар (не клікабельний)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         breadcrumbsContainer.appendChild(document.createTextNode(' > '));
         const productSpan = document.createElement('span');
         productSpan.textContent = currentProduct.name;
@@ -1741,13 +1439,6 @@ function renderBreadcrumbs() {
         return;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Якщо просто перегляд категорій/підкатегорій ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const pathSegments = window.location.pathname.slice(1).split('/').filter(segment => segment);
     if (pathSegments.length > 0) {
         breadcrumbsContainer.appendChild(document.createTextNode(' > '));
@@ -1755,19 +1446,10 @@ function renderBreadcrumbs() {
 
         let skipNext = false;
         pathSegments.forEach((segment, index) => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
             if (skipNext) {
                 skipNext = false;
                 return;
             }
-<<<<<<< HEAD
-=======
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const decodedSegment = decodeURIComponent(segment);
             currentPath = index === 0 ? `/${decodedSegment}` : `${currentPath}/${decodedSegment}`;
 
@@ -1779,10 +1461,6 @@ function renderBreadcrumbs() {
             link.style.padding = '0 5px';
 
             let displayText = decodedSegment;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
             if (decodedSegment === 'contacts') displayText = 'Контакти';
             else if (decodedSegment === 'about') displayText = 'Про нас';
             else if (decodedSegment === 'cart') displayText = 'Кошик';
@@ -1800,19 +1478,6 @@ function renderBreadcrumbs() {
                     if (subCat) {
                         displayText = subCat.name;
                     }
-<<<<<<< HEAD
-=======
-
-            const cat = categories.find(c => c.slug === decodedSegment);
-            if (cat) {
-                displayText = cat.name;
-            } else {
-                let subCat = categories.flatMap(c => c.subcategories || []).find(sc => sc.slug === decodedSegment);
-                if (subCat) {
-                    displayText = subCat.name;
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 }
             }
 
@@ -1826,47 +1491,22 @@ function renderBreadcrumbs() {
                     if (cat) {
                         currentCategory = cat.slug;
                         currentProduct = null;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
                         if (index === 0) {
                             currentSubcategory = null;
                         } else {
                             currentSubcategory = parts[1] || null;
                         }
-<<<<<<< HEAD
-=======
-                        currentSubcategory = parts[1] || null;
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         isSearchActive = false;
                         showSection('catalog');
                     }
                 };
             } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // останній елемент
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 link.onclick = (e) => e.preventDefault();
                 link.style.cursor = 'default';
             }
 
             span.appendChild(link);
-<<<<<<< HEAD
-<<<<<<< HEAD
             if (index < pathSegments.length - 1 + (skipNext ? 1 : 0)) {
-=======
-            if (index < pathSegments.length - 1) {
->>>>>>> 451743e (Оновлення)
-=======
-            if (index < pathSegments.length - 1 + (skipNext ? 1 : 0)) {
->>>>>>> bc1366a (Оновлення)
                 span.appendChild(document.createTextNode(' > '));
             }
             breadcrumbsContainer.appendChild(span);
@@ -1878,24 +1518,10 @@ function renderBreadcrumbs() {
         document.addEventListener('click', (e) => {
             const catalogMenu = document.querySelector('.catalog-menu');
             const dropdown = document.getElementById('catalog-dropdown');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Перевіряємо, чи елементи існують
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (!catalogMenu || !dropdown) return;
 
             if (!catalogMenu.contains(e.target) && dropdown.classList.contains('active')) {
                 dropdown.classList.remove('active');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо клік був по посиланню — блокуємо перехід
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (e.target.closest('a')) {
                     e.preventDefault();
                 }
@@ -1973,15 +1599,7 @@ function renderCategories() {
             subLink.onclick = (e) => {
                 e.preventDefault();
                 currentCategory = cat.slug;
-<<<<<<< HEAD
-<<<<<<< HEAD
                 currentSubcategory = sub.slug;
-=======
-                currentSubcategory = sub.name;
->>>>>>> 451743e (Оновлення)
-=======
-                currentSubcategory = sub.slug;
->>>>>>> bc1366a (Оновлення)
                 currentProduct = null;
                 isSearchActive = false;
                 searchQuery = '';
@@ -2016,25 +1634,11 @@ function renderCatalogDropdown() {
         itemDiv.className = 'dropdown-item';
         itemDiv.dataset.category = cat.slug;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Створюємо контейнер для зображення та тексту
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const contentContainer = document.createElement('div');
         contentContainer.style.display = 'flex';
         contentContainer.style.alignItems = 'center';
         contentContainer.style.gap = '10px';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаємо мініатюру зображення категорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const categoryImg = document.createElement('img');
         categoryImg.src = cat.photo || NO_IMAGE_URL;
         categoryImg.alt = cat.name;
@@ -2057,13 +1661,6 @@ function renderCatalogDropdown() {
         span.style.fontWeight = 'bold';
         span.style.flex = '1';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Динамічний розмір шрифту залежно від розміру екрану
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (window.innerWidth <= 650) {
             span.style.fontSize = '14px';
         } else if (window.innerWidth <= 920) {
@@ -2072,13 +1669,6 @@ function renderCatalogDropdown() {
             span.style.fontSize = '16px';
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Змінні для обробки сенсорних подій
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         let touchStartY = 0;
         let touchStartTime = 0;
         let hasMoved = false;
@@ -2092,13 +1682,6 @@ function renderCatalogDropdown() {
             const subList = currentItem.querySelector('.sub-list');
             const isActive = subList.classList.contains('active');
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Закриваємо всі інші підкатегорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             document.querySelectorAll('.sub-list').forEach(sl => {
                 if (sl !== subList) {
                     sl.classList.remove('active');
@@ -2115,13 +1698,6 @@ function renderCatalogDropdown() {
                 }
             });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Перемикаємо поточну підкатегорію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (subList) {
                 if (isActive) {
                     subList.classList.remove('active');
@@ -2143,23 +1719,9 @@ function renderCatalogDropdown() {
         });
 
         if (cat.subcategories && cat.subcategories.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
             span.addEventListener('click', toggleSubDropdown);
         }
 
-=======
-            // Використовуємо тільки click подію для всіх пристроїв
-            span.addEventListener('click', toggleSubDropdown);
-        }
-
-        // Змінні для обробки сенсорних подій для переходу в категорію
->>>>>>> 451743e (Оновлення)
-=======
-            span.addEventListener('click', toggleSubDropdown);
-        }
-
->>>>>>> bc1366a (Оновлення)
         let categoryTouchStartY = 0;
         let categoryTouchStartTime = 0;
         let categoryHasMoved = false;
@@ -2187,13 +1749,6 @@ function renderCatalogDropdown() {
             }
         };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Використовуємо тільки click подію для всіх пристроїв
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         span.addEventListener('click', goToCategory);
 
         itemDiv.appendChild(contentContainer);
@@ -2202,13 +1757,6 @@ function renderCatalogDropdown() {
         subList.className = 'sub-list';
         subList.style.display = 'none';
         subList.style.paddingLeft = '30px';
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Переконаємося, що підкатегорії відображаються знизу категорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         subList.style.position = 'static';
         subList.style.width = '100%';
         subList.style.left = 'auto';
@@ -2221,25 +1769,11 @@ function renderCatalogDropdown() {
         styleObserver.observe(subList, { attributes: true, attributeFilter: ['class'] });
 
         (cat.subcategories || []).forEach(sub => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Створюємо контейнер для зображення та тексту підкатегорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const subContentContainer = document.createElement('div');
             subContentContainer.style.display = 'flex';
             subContentContainer.style.alignItems = 'center';
             subContentContainer.style.gap = '8px';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо мініатюру зображення підкатегорії тільки якщо є фото
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (sub.photo) {
                 const subcategoryImg = document.createElement('img');
                 subcategoryImg.src = sub.photo;
@@ -2263,13 +1797,6 @@ function renderCatalogDropdown() {
             p.style.fontWeight = 'normal';
             p.style.flex = '1';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Динамічний розмір шрифту для підкатегорій
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (window.innerWidth <= 650) {
                 p.style.fontSize = '12px';
             } else if (window.innerWidth <= 920) {
@@ -2280,33 +1807,14 @@ function renderCatalogDropdown() {
 
             p.onmouseover = (e) => {
                 if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-<<<<<<< HEAD
-<<<<<<< HEAD
                     e.target.style.backgroundColor = '#6b869c';
                 } else {
                     e.target.style.backgroundColor = '#d8d8d8';
-=======
-                    e.target.style.backgroundColor = '#6b869c'; // Темний колір для темної теми
-                } else {
-                    e.target.style.backgroundColor = '#d8d8d8'; // Світлий колір для світлої теми
->>>>>>> 451743e (Оновлення)
-=======
-                    e.target.style.backgroundColor = '#6b869c';
-                } else {
-                    e.target.style.backgroundColor = '#d8d8d8';
->>>>>>> bc1366a (Оновлення)
                 }
             };
             p.onmouseout = (e) => { e.target.style.backgroundColor = ''; };
             subContentContainer.appendChild(p);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Змінні для обробки сенсорних подій для підкатегорій
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             let subcategoryTouchStartY = 0;
             let subcategoryTouchStartTime = 0;
             let subcategoryHasMoved = false;
@@ -2316,15 +1824,7 @@ function renderCatalogDropdown() {
                 e.stopPropagation();
                 currentProduct = null;
                 currentCategory = cat.slug;
-<<<<<<< HEAD
-<<<<<<< HEAD
                 currentSubcategory = sub.slug;
-=======
-                currentSubcategory = sub.name;
->>>>>>> 451743e (Оновлення)
-=======
-                currentSubcategory = sub.slug;
->>>>>>> bc1366a (Оновлення)
                 isSearchActive = false;
                 searchQuery = '';
                 searchResults = [];
@@ -2333,34 +1833,13 @@ function renderCatalogDropdown() {
                 saveToStorage('searchQuery', '');
                 saveToStorage('searchResults', []);
                 showSection('catalog');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // --- Додаємо скидання підсвічування ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 document.querySelectorAll('#catalog-dropdown .dropdown-item').forEach(it => it.classList.remove('active'));
                 document.querySelectorAll('#catalog-dropdown .dropdown-item span').forEach(sp => sp.classList.remove('active'));
                 dropdown.classList.remove('active');
                 document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-<<<<<<< HEAD
-<<<<<<< HEAD
                 dropdown.scrollTop = 0;
             };
 
-=======
-                // Скидання скролу при переході на будь-яку сторінку
-                dropdown.scrollTop = 0;
-            };
-
-            // Використовуємо тільки click подію для всіх пристроїв
->>>>>>> 451743e (Оновлення)
-=======
-                dropdown.scrollTop = 0;
-            };
-
->>>>>>> bc1366a (Оновлення)
             p.addEventListener('click', goToSubcategory);
             subList.appendChild(subContentContainer);
         });
@@ -2377,24 +1856,10 @@ function renderCatalogDropdown() {
         if (!isClickInsideDropdown && !isClickInsideToggle && dropdown.classList.contains('active')) {
             dropdown.classList.remove('active');
             document.querySelectorAll('.sub-list').forEach(sl => sl.classList.remove('active'));
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Блокуємо подію, щоб уникнути небажаних переходів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (e.target.closest('a')) {
                 e.preventDefault();
             }
             e.stopPropagation();
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Скидання скролу при закритті меню
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             dropdown.scrollTop = 0;
             return false;
         }
@@ -2404,24 +1869,10 @@ function renderCatalogDropdown() {
         e.stopPropagation();
     });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Додаємо обробник для відкриття меню Каталог
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const catalogToggle = document.getElementById('catalog-toggle');
     const catalogDropdown = document.getElementById('catalog-dropdown');
     if (catalogToggle && catalogDropdown) {
         catalogToggle.addEventListener('click', function(e) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Відкриваємо меню
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             setTimeout(() => {
                 if (catalogDropdown.classList.contains('active')) {
                     catalogDropdown.scrollTop = 0;
@@ -2528,13 +1979,6 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             return;
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // --- ВИПРАВЛЕНО: Відображаємо назву категорії або підкатегорії ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         let headerText = selectedCat.name;
         let selectedSubCat = null;
         if (subcategory) {
@@ -2572,15 +2016,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
                 btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
                 btnLink.onclick = (e) => {
                     e.preventDefault();
-<<<<<<< HEAD
-<<<<<<< HEAD
                     currentSubcategory = sub.slug;
-=======
-                    currentSubcategory = sub.name;
->>>>>>> 451743e (Оновлення)
-=======
-                    currentSubcategory = sub.slug;
->>>>>>> bc1366a (Оновлення)
                     currentPage = 1;
                     showSection('catalog');
                 };
@@ -2606,13 +2042,6 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             subcategoryName = selectedSubCat ? selectedSubCat.name : subcategory;
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Фільтруємо товари
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         filteredProducts = products.filter(p => 
             p.category === category && 
             (!subcategoryName || p.subcategory === subcategoryName) && 
@@ -2631,24 +2060,10 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
     }
     renderFilters();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо сортування, якщо воно збережено
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (currentSort) {
         sortProducts(currentSort);
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо графічне відображення вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     restoreSelectedColors();
 }
 
@@ -2683,28 +2098,13 @@ function createControlsContainer() {
     filterBtn.style.cursor = 'pointer';
     filterBtn.style.display = 'inline-flex';
     filterBtn.style.alignItems = 'center';
-<<<<<<< HEAD
-<<<<<<< HEAD
     filterBtn.style.width = '120px';
-=======
-    filterBtn.style.width = '120px'; // Фіксована ширина для відповідності кнопці сортування
->>>>>>> 451743e (Оновлення)
-=======
-    filterBtn.style.width = '120px';
->>>>>>> bc1366a (Оновлення)
     filterBtn.style.justifyContent = 'center';
     filterBtn.onclick = () => {
         const filters = document.querySelector('.filters');
         const nav = document.querySelector('.nav');
         if (filters) {
             filters.classList.toggle('active');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо/видаляємо клас filters-active для навігації
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (filters.classList.contains('active')) {
                 nav.classList.add('filters-active');
             } else {
@@ -2739,15 +2139,7 @@ function createSortMenu() {
     sortBtn.style.cursor = 'pointer';
     sortBtn.style.display = 'inline-flex';
     sortBtn.style.alignItems = 'center';
-<<<<<<< HEAD
-<<<<<<< HEAD
     sortBtn.style.width = '120px';
-=======
-    sortBtn.style.width = '120px'; // Фіксована ширина для узгодження з кнопкою фільтру
->>>>>>> 451743e (Оновлення)
-=======
-    sortBtn.style.width = '120px';
->>>>>>> bc1366a (Оновлення)
     sortBtn.style.justifyContent = 'center';
     sortBtn.onclick = (e) => {
         e.stopPropagation();
@@ -2807,13 +2199,6 @@ function createSortMenu() {
     document.addEventListener('click', (e) => {
         if (!sortMenu.contains(e.target) && sortDropdown.style.display === 'block') {
             sortDropdown.style.display = 'none';
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Блокуємо подію, щоб уникнути небажаних переходів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (e.target.closest('a')) {
                 e.preventDefault();
             }
@@ -2870,7 +2255,6 @@ function renderFilters() {
     const materials = [...new Set(relevantProducts.map(p => p.material).filter(Boolean))];
     if (materials.length > 0) {
         filterList.appendChild(createFilterBlock('Матеріал', 'material', materials, activeFilters));
-<<<<<<< HEAD
     }
 
     const priceRanges = ['0-2000', '2000-5000', '5000-10000', '10000+'];
@@ -3020,157 +2404,6 @@ function sortProducts(sortType) {
     currentSort = sortType;
     saveToStorage('currentSort', currentSort);
 
-=======
-    }
-
-    const priceRanges = ['0-2000', '2000-5000', '5000-10000', '10000+'];
-    const priceFiltered = relevantProducts.filter(p => {
-        const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
-        return priceRanges.some(range => {
-            if (range.endsWith('+')) {
-                return price >= parseInt(range.replace('+', ''));
-            }
-            const [min, max] = range.split('-').map(Number);
-            return price >= min && price <= max;
-        });
-    });
-    if (priceFiltered.length > 0) {
-        filterList.appendChild(createFilterBlock('Ціна', 'price', priceRanges, activeFilters));
-    }
-
-    const savedFilters = loadFromStorage('activeFilters', {});
-    if (Object.keys(savedFilters).length > 0) {
-        applySavedFilters(savedFilters);
-    }
-}
-function createFilterBlock(title, name, options, activeFilters = {}) {
-    const block = document.createElement('div');
-    block.className = 'filter-block';
-
-    const h4 = document.createElement('h4');
-    h4.textContent = title;
-    block.appendChild(h4);
-
-    const optionsDiv = document.createElement('div');
-    optionsDiv.className = 'filter-options';
-
-    const relevantProducts = isSearchActive ? baseSearchResults : baseFilteredProducts;
-
-    options.forEach(opt => {
-        let count = 0;
-        if (name === 'promo') {
-            count = relevantProducts.filter(p => p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())).length;
-        } else if (name === 'price') {
-            count = relevantProducts.filter(p => {
-                const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
-                if (opt.endsWith('+')) {
-                    return price >= parseInt(opt.replace('+', ''));
-                }
-                const [min, max] = opt.split('-').map(Number);
-                return price >= min && price <= max;
-            }).length;
-        } else {
-            count = relevantProducts.filter(p => p[name] === opt).length;
-        }
-
-        if (count > 0) {
-            const label = document.createElement('label');
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.name = name;
-            input.value = opt;
-            if (activeFilters[name] && activeFilters[name].includes(opt)) {
-                input.checked = true;
-            }
-            input.onchange = () => filterProducts();
-            label.appendChild(input);
-            label.appendChild(document.createTextNode(` ${opt} (${count})`));
-            optionsDiv.appendChild(label);
-        }
-    });
-
-    if (optionsDiv.children.length > 0) {
-        block.appendChild(optionsDiv);
-        return block;
-    }
-    return null;
-}
-
-function clearFilters() {
-    const filterInputs = document.querySelectorAll('input[name="promo"], input[name="brand"], input[name="material"], input[name="price"]');
-    filterInputs.forEach(input => {
-        input.checked = false;
-    });
-    
-    saveToStorage('activeFilters', {});
-    
-    currentSort = '';
-    saveToStorage('currentSort', '');
-    
-    if (isSearchActive) {
-        searchResults = [...baseSearchResults];
-    } else {
-        filteredProducts = [...baseFilteredProducts];
-    }
-    
-    currentPage = 1;
-    
-    const activeSection = document.querySelector('.section.active');
-    if (activeSection && activeSection.id === 'catalog') {
-        updateHistoryState();
-        renderProducts(isSearchActive ? searchResults : filteredProducts);
-    }
-}
-
-function filterProducts() {
-    let base = isSearchActive ? [...baseSearchResults] : [...baseFilteredProducts];
-    let filtered = [...base];
-    let hasActiveFilters = false;
-
-    const activeFilters = getActiveFilters();
-
-    ['promo', 'brand', 'material', 'price'].forEach(name => {
-        const checked = activeFilters[name] || [];
-        if (checked.length > 0) {
-            hasActiveFilters = true;
-            if (name === 'promo') {
-                filtered = filtered.filter(p => p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()));
-            } else if (name === 'price') {
-                filtered = filtered.filter(p => {
-                    const price = p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date()) ? p.salePrice : p.price;
-                    return checked.some(range => {
-                        if (range.endsWith('+')) {
-                            return price >= parseInt(range.replace('+', ''));
-                        }
-                        const [min, max] = range.split('-').map(Number);
-                        return price >= min && price <= max;
-                    });
-                });
-            } else {
-                filtered = filtered.filter(p => checked.includes(p[name]));
-            }
-        }
-    });
-
-    if (!hasActiveFilters) {
-        filteredProducts = [...base];
-        if (isSearchActive) searchResults = [...base];
-    } else {
-        filteredProducts = filtered;
-        if (isSearchActive) searchResults = filtered;
-    }
-
-    currentPage = 1;
-    saveToStorage('activeFilters', activeFilters);
-    updateHistoryState();
-    renderProducts(isSearchActive ? searchResults : filteredProducts);
-}
-
-function sortProducts(sortType) {
-    currentSort = sortType;
-    saveToStorage('currentSort', currentSort);
-
->>>>>>> 451743e (Оновлення)
     let filtered = isSearchActive ? [...baseSearchResults] : [...baseFilteredProducts];
 
     if (sortType === 'name-asc') {
@@ -3267,13 +2500,6 @@ function renderProducts(filtered) {
     const showMoreBtn = document.querySelector('.show-more-btn');
     const displayedCount = productContainer.children.length;
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо currentPage на основі відображених товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (displayedCount > 0) {
         const calculatedPage = Math.ceil(displayedCount / perPage);
         if (calculatedPage !== currentPage) {
@@ -3296,13 +2522,6 @@ function renderProducts(filtered) {
 
     updateHistoryState();
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо графічне відображення вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     restoreSelectedColors();
 }
 
@@ -3316,19 +2535,8 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     const showMoreBtn = document.createElement('button');
     showMoreBtn.className = 'show-more-btn';
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     const icon = document.createElement('span');
     icon.innerHTML = '&#8634;';
-=======
-    // Створюємо іконку пів кола зі стрілкою
-    const icon = document.createElement('span');
-    icon.innerHTML = '&#8634;'; // Unicode символ для пів кола зі стрілкою
->>>>>>> 451743e (Оновлення)
-=======
-    const icon = document.createElement('span');
-    icon.innerHTML = '&#8634;';
->>>>>>> bc1366a (Оновлення)
     icon.style.cssText = 'font-size: 18px; margin-right: 8px;';
     
     const text = document.createElement('span');
@@ -3343,13 +2551,6 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     const productContainer = productGrid || productList;
     const displayedCount = productContainer ? productContainer.children.length : 0;
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо currentPage на основі відображених товарів тільки якщо autoUpdateCurrentPage = true
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (autoUpdateCurrentPage && displayedCount > 0) {
         const calculatedPage = Math.ceil(displayedCount / perPage);
         if (calculatedPage !== currentPage) {
@@ -3367,13 +2568,6 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
     const paginationInnerDiv = document.createElement('div');
     paginationInnerDiv.className = 'pagination';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Додаємо кнопку "Назад" тільки якщо не перша сторінка і є більше однієї сторінки
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (currentPage > 1 && totalPages > 1) {
         const prevButton = document.createElement('button');
         prevButton.className = 'pagination-btn';
@@ -3402,13 +2596,6 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
         paginationInnerDiv.appendChild(prevButton);
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Функція для створення кнопки сторінки
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     function createPageButton(pageNum, text = pageNum, isActive = false) {
         const btn = document.createElement('button');
         btn.textContent = text;
@@ -3444,13 +2631,6 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
         return btn;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Функція для створення еліпсиса
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     function createEllipsis() {
         const span = document.createElement('span');
         span.textContent = '...';
@@ -3458,64 +2638,26 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
         return span;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     const pages = [];
     
     if (totalPages <= 7) {
-=======
-    // Логіка відображення сторінок
-    const pages = [];
-    
-    if (totalPages <= 7) {
-        // Якщо сторінок мало, показуємо всі
->>>>>>> 451743e (Оновлення)
-=======
-    const pages = [];
-    
-    if (totalPages <= 7) {
->>>>>>> bc1366a (Оновлення)
         for (let i = 1; i <= totalPages; i++) {
             pages.push(createPageButton(i, i, i === currentPage));
         }
     } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (currentPage <= 4) {
-=======
-        // Якщо сторінок багато, використовуємо еліпсис
-        if (currentPage <= 4) {
-            // Показуємо перші 5 сторінок + еліпсис + останню
->>>>>>> 451743e (Оновлення)
-=======
-        if (currentPage <= 4) {
->>>>>>> bc1366a (Оновлення)
             for (let i = 1; i <= 5; i++) {
                 pages.push(createPageButton(i, i, i === currentPage));
             }
             pages.push(createEllipsis());
             pages.push(createPageButton(totalPages, totalPages, false));
         } else if (currentPage >= totalPages - 3) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Показуємо першу + еліпсис + останні 5 сторінок
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             pages.push(createPageButton(1, 1, false));
             pages.push(createEllipsis());
             for (let i = totalPages - 4; i <= totalPages; i++) {
                 pages.push(createPageButton(i, i, i === currentPage));
             }
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Показуємо першу + еліпсис + поточну та 2 сусідні + еліпсис + останню
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             pages.push(createPageButton(1, 1, false));
             pages.push(createEllipsis());
             for (let i = currentPage - 1; i <= currentPage + 1; i++) {
@@ -3526,20 +2668,8 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     pages.forEach(pageBtn => paginationInnerDiv.appendChild(pageBtn));
 
-=======
-    // Додаємо всі кнопки сторінок
-    pages.forEach(pageBtn => paginationInnerDiv.appendChild(pageBtn));
-
-    // Додаємо кнопку "Вперед" тільки якщо не остання сторінка і є більше однієї сторінки
->>>>>>> 451743e (Оновлення)
-=======
-    pages.forEach(pageBtn => paginationInnerDiv.appendChild(pageBtn));
-
->>>>>>> bc1366a (Оновлення)
     if (currentPage < totalPages && totalPages > 1) {
         const nextButton = document.createElement('button');
         nextButton.className = 'pagination-btn';
@@ -3632,13 +2762,6 @@ function createPaginationDiv() {
     return paginationDiv;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Функція для отримання всіх кольорів з блоків
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function getAllColors(product) {
     if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
         const allColors = [];
@@ -3658,13 +2781,6 @@ function getAllColors(product) {
         });
         return allColors;
     } else if (product.colors && Array.isArray(product.colors)) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Для старої структури
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         return product.colors.map((color, index) => ({
             ...color,
             blockIndex: 0,
@@ -3713,13 +2829,6 @@ async function renderProductDetails() {
             }
         });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Очищення вмісту productDetails
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         while (productDetails.firstChild) {
             productDetails.removeChild(productDetails.firstChild);
         }
@@ -3770,13 +2879,6 @@ async function renderProductDetails() {
             thumbImg.className = 'thumbnail';
             thumbImg.alt = `Мініатюра ${index + 1}`;
             thumbImg.loading = 'lazy';
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо відкриття галереї по кліку на мініатюру (тільки на сторінці товару)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             thumbImg.onclick = () => {
                 if (typeof openGallery === 'function') {
                     openGallery(product.slug, index);
@@ -3794,13 +2896,6 @@ async function renderProductDetails() {
         h2.textContent = product.name;
         rightDiv.appendChild(h2);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Для матраців не відображаємо ціну зверху
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
         const priceDiv = document.createElement('div');
         priceDiv.className = 'price product-detail-price';
@@ -3820,15 +2915,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             const minPrice = Math.min(...groupPrices);
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-<<<<<<< HEAD
-<<<<<<< HEAD
             regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
-=======
-        regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
->>>>>>> 451743e (Оновлення)
-=======
-            regularSpan.innerHTML = `<span class='price-suffix'>від</span> <span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
->>>>>>> bc1366a (Оновлення)
             priceDiv.appendChild(regularSpan);
         const emptySpan = document.createElement('span');
         emptySpan.style.visibility = 'hidden';
@@ -3865,13 +2952,6 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             }
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаємо select для вибору розміру матрацу
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (product.type === 'mattresses' && product.sizes?.length > 0) {
             const sizeDiv = document.createElement('div');
             sizeDiv.className = 'mattress-size-select';
@@ -3880,26 +2960,11 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             sizeLabel.setAttribute('for', `mattress-size-${product._id}`);
             sizeDiv.appendChild(sizeLabel);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Кастомний селект
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const customSelect = document.createElement('div');
             customSelect.className = 'custom-mattress-select';
             customSelect.tabIndex = 0;
             customSelect.style.position = 'relative';
-<<<<<<< HEAD
-<<<<<<< HEAD
             customSelect.style.width = '260px';
-=======
-            customSelect.style.width = '260px'; // ширше
->>>>>>> 451743e (Оновлення)
-=======
-            customSelect.style.width = '260px';
->>>>>>> bc1366a (Оновлення)
             customSelect.style.minWidth = '305px';
 
             const selectedDiv = document.createElement('div');
@@ -3918,13 +2983,6 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             selectedDiv.style.position = 'relative';
             selectedDiv.style.minWidth = '285px';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо стрілку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const arrow = document.createElement('span');
             arrow.innerHTML = '&#9662;';
             arrow.style.marginLeft = '12px';
@@ -3935,15 +2993,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-<<<<<<< HEAD
-<<<<<<< HEAD
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s>           <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
-=======
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
->>>>>>> 451743e (Оновлення)
-=======
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s>           <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
->>>>>>> bc1366a (Оновлення)
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;" class="price-value">${size.price}</span> <span class="price-suffix">грн</span></span>`;
                 }
@@ -3954,13 +3004,6 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             selectedDiv.appendChild(arrow);
             customSelect.appendChild(selectedDiv);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Список опцій
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const optionsList = document.createElement('ul');
             optionsList.className = 'custom-options-list';
             optionsList.style.position = 'absolute';
@@ -4006,13 +3049,6 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
             });
             customSelect.appendChild(optionsList);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Відкриття/закриття списку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 let wasJustClosed = false;
             selectedDiv.onclick = function(e) {
                 e.stopPropagation();
@@ -4024,25 +3060,11 @@ let wasJustClosed = false;
         arrow.style.transform = 'rotate(180deg)';
     }
             };
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Створюємо унікальний обробник для цього випадаючого меню
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const closeDropdownHandler = function(e) {
     if (!customSelect.contains(e.target) && optionsList.style.display === 'block') {
                     optionsList.style.display = 'none';
                     arrow.style.transform = 'none';
         wasJustClosed = true;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Блокуємо подію, щоб уникнути небажаних переходів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         e.preventDefault();
         e.stopPropagation();
         setTimeout(() => { wasJustClosed = false; }, 0);
@@ -4057,13 +3079,6 @@ let wasJustClosed = false;
             };
 document.addEventListener('click', closeDropdownHandler, true);
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Зберігаємо посилання на обробник для можливого видалення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             customSelect._closeDropdownHandler = closeDropdownHandler;
             customSelect.onkeydown = function(e) {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -4074,13 +3089,6 @@ document.addEventListener('click', closeDropdownHandler, true);
 
             sizeDiv.appendChild(customSelect);
             rightDiv.appendChild(sizeDiv);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Встановлюємо вибраний розмір за замовчуванням (тільки якщо ще не вибрано)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (!selectedMattressSizes[product._id]) {
                 selectedMattressSizes[product._id] = selectedSize.name;
                 saveToStorage('selectedMattressSizes', selectedMattressSizes);
@@ -4112,13 +3120,6 @@ document.addEventListener('click', closeDropdownHandler, true);
             rightDiv.appendChild(qtyDiv);
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // === Кнопка купити та favorite ===
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const actionsRow = document.createElement('div');
         actionsRow.style.display = 'flex';
         actionsRow.style.alignItems = 'center';
@@ -4130,13 +3131,6 @@ document.addEventListener('click', closeDropdownHandler, true);
         buyBtn.onclick = typeof addToCartWithColor === 'function' ? () => addToCartWithColor(product._id) : null;
         if (product.type !== 'group') actionsRow.appendChild(buyBtn);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаємо іконку серця поруч з кнопкою купити
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const favoriteIcon = document.createElement('div');
         favoriteIcon.className = 'favorite-icon';
         favoriteIcon.style.display = 'inline-block';
@@ -4164,16 +3158,6 @@ document.addEventListener('click', closeDropdownHandler, true);
         actionsRow.appendChild(favoriteIcon);
         rightDiv.appendChild(actionsRow);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Функція для отримання всіх кольорів з блоків
-
-
-        // Відображаємо кольори згруповано по блоках
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
             product.colorBlocks.forEach((block, blockIndex) => {
                 if (block.colors && Array.isArray(block.colors) && block.colors.length > 0) {
@@ -4193,13 +3177,6 @@ document.addEventListener('click', closeDropdownHandler, true);
                         const span = document.createElement('span');
                         span.textContent = c.name;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо клас expanded лише для вибраного кольору
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const globalIndex = getAllColors(product).findIndex(color => 
                             color.blockIndex === blockIndex && color.colorIndex === i
                         );
@@ -4208,23 +3185,9 @@ document.addEventListener('click', closeDropdownHandler, true);
                         }
 
                         circle.onclick = () => {
-<<<<<<< HEAD
-<<<<<<< HEAD
                             const allSpans = colorDiv.querySelectorAll('span');
                             allSpans.forEach(s => s.classList.remove('expanded'));
                             span.classList.add('expanded');
-=======
-                            // Знімаємо expanded з усіх span в цьому блоці
-=======
->>>>>>> bc1366a (Оновлення)
-                            const allSpans = colorDiv.querySelectorAll('span');
-                            allSpans.forEach(s => s.classList.remove('expanded'));
-                            span.classList.add('expanded');
-<<<<<<< HEAD
-                            // Викликаємо вибір кольору
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                             if (typeof selectColor === 'function') selectColor(product._id, blockIndex, globalIndex);
                         };
 
@@ -4235,13 +3198,6 @@ document.addEventListener('click', closeDropdownHandler, true);
                 }
             });
         } else if (product.colors && Array.isArray(product.colors) && product.colors.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Для старої структури
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const colorP = document.createElement('p');
             colorP.innerHTML = '<strong>Колір:</strong>';
             rightDiv.appendChild(colorP);
@@ -4257,35 +3213,14 @@ document.addEventListener('click', closeDropdownHandler, true);
                 const span = document.createElement('span');
                 span.textContent = c.name;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Додаємо клас expanded лише для вибраного кольору
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (selectedColors[product._id]?.[0] === i) {
                     span.classList.add('expanded');
                 }
 
                 circle.onclick = () => {
-<<<<<<< HEAD
-<<<<<<< HEAD
                     const allSpans = colorDiv.querySelectorAll('span');
                     allSpans.forEach(s => s.classList.remove('expanded'));
                     span.classList.add('expanded');
-=======
-                    // Знімаємо expanded з усіх span
-=======
->>>>>>> bc1366a (Оновлення)
-                    const allSpans = colorDiv.querySelectorAll('span');
-                    allSpans.forEach(s => s.classList.remove('expanded'));
-                    span.classList.add('expanded');
-<<<<<<< HEAD
-                    // Викликаємо вибір кольору (якщо потрібно)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     if (typeof selectColor === 'function') selectColor(product._id, 0, i);
                 };
 
@@ -4297,29 +3232,12 @@ document.addEventListener('click', closeDropdownHandler, true);
 
         const charDiv = document.createElement('div');
         charDiv.className = 'product-characteristics';
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (product.brand && product.brand.trim() !== '' && product.brand !== 'Не вказано') {
             charDiv.appendChild(createCharP('Виробник', product.brand));
         }
         if (product.material && product.material.trim() !== '') {
             charDiv.appendChild(createCharP('Матеріал', product.material));
         }
-=======
-        // Виробник
-=======
->>>>>>> bc1366a (Оновлення)
-        if (product.brand && product.brand.trim() !== '' && product.brand !== 'Не вказано') {
-            charDiv.appendChild(createCharP('Виробник', product.brand));
-        }
-        if (product.material && product.material.trim() !== '') {
-            charDiv.appendChild(createCharP('Матеріал', product.material));
-        }
-<<<<<<< HEAD
-        // Розміри
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const dimensions = [];
         if (product.widthCm) dimensions.push({ label: 'Ширина', value: product.widthCm });
         if (product.heightCm) dimensions.push({ label: 'Висота', value: product.heightCm });
@@ -4348,13 +3266,6 @@ if (product.description && product.description.trim() !== '') {
             groupDiv.className = 'group-products';
 
             const savedSelection = loadFromStorage(`groupSelection_${product._id}`, {});
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Завантажуємо повну інформацію про товари у групі
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const groupProductsData = [];
             for (const id of product.groupProducts) {
                 let p = products.find(p => p._id === id);
@@ -4363,13 +3274,6 @@ if (product.description && product.description.trim() !== '') {
                     continue;
                 }
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо товар не має повної інформації про кольори, спробуємо завантажити його окремо
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (!p.colorBlocks && !p.colors) {
                     try {
                         const response = await fetch(`${BASE_URL}/api/public/products?slug=${p.slug}`);
@@ -4377,13 +3281,6 @@ if (product.description && product.description.trim() !== '') {
                             const productsData = await response.json();
                             const fullProduct = productsData.find(prod => prod._id === id);
                             if (fullProduct) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                                // Оновлюємо товар в масиві products
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                                 const index = products.findIndex(prod => prod._id === id);
                                 if (index !== -1) {
                                     products[index] = { ...products[index], ...fullProduct };
@@ -4404,20 +3301,10 @@ if (product.description && product.description.trim() !== '') {
                 itemDiv.className = 'group-product-item product';
 
                 const imgLink = document.createElement('a');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
                 const category = categories.find(c => c.slug === p.category);
                 const subcategory = category?.subcategories?.find(sub => sub.slug === p.subcategory);
                 const subcategorySlug = subcategory ? subcategory.slug : '';
                 imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${p.slug}`;
-<<<<<<< HEAD
-=======
-                imgLink.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 imgLink.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -4435,15 +3322,7 @@ if (product.description && product.description.trim() !== '') {
                 itemDiv.appendChild(imgLink);
 
                 const h3Link = document.createElement('a');
-<<<<<<< HEAD
-<<<<<<< HEAD
                 h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${p.slug}`;
-=======
-                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${p.subcategory ? `/${transliterate(p.subcategory.replace('ь', ''))}` : ''}/${p.slug}`;
->>>>>>> 451743e (Оновлення)
-=======
-                h3Link.href = `/${transliterate(p.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${p.slug}`;
->>>>>>> bc1366a (Оновлення)
                 h3Link.onclick = (e) => {
                     e.preventDefault();
                     parentGroupProduct = product;
@@ -4458,17 +3337,7 @@ if (product.description && product.description.trim() !== '') {
                 h3Link.appendChild(h3);
                 itemDiv.appendChild(h3Link);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                 if (p.colorBlocks && Array.isArray(p.colorBlocks) && p.colorBlocks.length > 0) {
-=======
-                // Додаємо вибір кольорів відразу під назвою товару
-                if (p.colorBlocks && Array.isArray(p.colorBlocks) && p.colorBlocks.length > 0) {
-                    // Нова структура з блоками кольорів
->>>>>>> 451743e (Оновлення)
-=======
-                if (p.colorBlocks && Array.isArray(p.colorBlocks) && p.colorBlocks.length > 0) {
->>>>>>> bc1366a (Оновлення)
                     p.colorBlocks.forEach((block, blockIndex) => {
                         if (block.colors && Array.isArray(block.colors) && block.colors.length > 0) {
                             const colorDiv = document.createElement('div');
@@ -4488,13 +3357,6 @@ if (product.description && product.description.trim() !== '') {
                             colorOptionsDiv.style.flexWrap = 'wrap';
                             colorOptionsDiv.style.justifyContent = 'center';
                             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                            // Адаптивні відступи залежно від розміру екрану
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                             if (window.innerWidth <= 480) {
                                 colorOptionsDiv.style.gap = '11px';
                                 colorOptionsDiv.style.padding = '0 1px';
@@ -4507,13 +3369,6 @@ if (product.description && product.description.trim() !== '') {
                             }
                             
                             block.colors.forEach((color, colorIndex) => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                                // Обчислюємо глобальний індекс кольору
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                                 let globalIndex = colorIndex;
                                 for (let i = 0; i < blockIndex; i++) {
                                     if (p.colorBlocks[i] && p.colorBlocks[i].colors) {
@@ -4534,13 +3389,6 @@ if (product.description && product.description.trim() !== '') {
                                 colorCircle.setAttribute('data-color-index', globalIndex);
                                 colorCircle.setAttribute('data-block-index', blockIndex);
                                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                                // Перевіряємо, чи цей колір вже вибраний
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                                 const currentSelectedColor = selectedColors[p._id]?.[blockIndex];
                                 if (currentSelectedColor === globalIndex) {
                                     colorCircle.classList.add('selected');
@@ -4549,13 +3397,6 @@ if (product.description && product.description.trim() !== '') {
                                 
                                 colorCircle.onclick = () => selectGroupProductColor(p._id, blockIndex, globalIndex);
                                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                                // Додаємо назву кольору при наведенні
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                                 colorCircle.title = color.name;
                                 
                                 colorOptionsDiv.appendChild(colorCircle);
@@ -4566,13 +3407,6 @@ if (product.description && product.description.trim() !== '') {
                         }
                     });
                 } else if (p.colors && Array.isArray(p.colors) && p.colors.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Стара структура з одним блоком кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const colorDiv = document.createElement('div');
                     colorDiv.className = 'group-product-colors';
                     colorDiv.style.marginTop = '5px';
@@ -4590,13 +3424,6 @@ if (product.description && product.description.trim() !== '') {
                     colorOptionsDiv.style.flexWrap = 'wrap';
                     colorOptionsDiv.style.justifyContent = 'center';
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Адаптивні відступи залежно від розміру екрану
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     if (window.innerWidth <= 480) {
                         colorOptionsDiv.style.gap = '11px';
                         colorOptionsDiv.style.padding = '0 1px';
@@ -4622,13 +3449,6 @@ if (product.description && product.description.trim() !== '') {
                         colorCircle.setAttribute('data-color-index', colorIndex);
                         colorCircle.setAttribute('data-block-index', '0');
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Перевіряємо, чи цей колір вже вибраний
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const currentSelectedColor = selectedColors[p._id]?.[0];
                         if (currentSelectedColor === colorIndex) {
                             colorCircle.classList.add('selected');
@@ -4637,13 +3457,6 @@ if (product.description && product.description.trim() !== '') {
                         
                         colorCircle.onclick = () => selectGroupProductColor(p._id, 0, colorIndex);
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо назву кольору при наведенні
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         colorCircle.title = color.name;
                         
                         colorOptionsDiv.appendChild(colorCircle);
@@ -4652,13 +3465,6 @@ if (product.description && product.description.trim() !== '') {
                     colorDiv.appendChild(colorOptionsDiv);
                     itemDiv.appendChild(colorDiv);
                 } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Додаємо прозорий плейсхолдер для товарів без кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const colorPlaceholder = document.createElement('div');
                     colorPlaceholder.className = 'group-product-colors-placeholder';
                     colorPlaceholder.style.height = '30px';
@@ -4679,13 +3485,6 @@ if (product.description && product.description.trim() !== '') {
 
                     const labels = ['Шир.', 'Вис.', 'Гл.', 'Дов.'];
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Створюємо контейнер для всіх пар позначення-значення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const dimensionsContainer = document.createElement('div');
                     dimensionsContainer.style.display = 'flex';
                     dimensionsContainer.style.justifyContent = 'center';
@@ -4693,13 +3492,6 @@ if (product.description && product.description.trim() !== '') {
                     dimensionsContainer.style.gap = '6px';
                     dimensionsContainer.className = 'dimensions-container';
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Прибираємо відступи на екранах до 480px
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     if (window.innerWidth <= 480) {
                         dimensionsContainer.style.gap = '0px';
                         dimensionsContainer.style.flexWrap = 'nowrap';
@@ -4710,13 +3502,6 @@ if (product.description && product.description.trim() !== '') {
                     }
 
                     for (let i = 0; i < dimensions.length; i++) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Створюємо контейнер для кожної пари позначення-значення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const pairContainer = document.createElement('div');
                         pairContainer.style.display = 'flex';
                         pairContainer.style.flexDirection = 'column';
@@ -4724,13 +3509,6 @@ if (product.description && product.description.trim() !== '') {
                         pairContainer.style.minWidth = '50px';
                         pairContainer.className = 'dimension-pair';
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Налаштовуємо для екранів до 480px
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         if (window.innerWidth <= 480) {
                             pairContainer.style.minWidth = 'auto';
                             pairContainer.style.margin = '0';
@@ -4741,25 +3519,11 @@ if (product.description && product.description.trim() !== '') {
                             pairContainer.style.alignItems = 'center';
                         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо позначення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const labelSpan = document.createElement('span');
                         labelSpan.className = 'dimension-label';
                         labelSpan.textContent = labels[i];
                         labelSpan.style.textAlign = 'center';
                         labelSpan.style.fontSize = '12px';
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо підтримку темної теми
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                             labelSpan.style.color = '#ffffff';
                         } else {
@@ -4767,30 +3531,13 @@ if (product.description && product.description.trim() !== '') {
                         }
                         labelSpan.style.marginBottom = '2px';
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
                         if (window.innerWidth <= 480) {
-=======
-                        // Адаптивний розмір шрифту на екранах до 480px
-                        if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 8px, максимум 14px, залежить від ширини вікна
->>>>>>> 451743e (Оновлення)
-=======
-                        if (window.innerWidth <= 480) {
->>>>>>> bc1366a (Оновлення)
                             const fontSize = Math.max(8, Math.min(14, window.innerWidth * 0.035));
                             labelSpan.style.fontSize = fontSize + 'px';
                         }
                         
                         pairContainer.appendChild(labelSpan);
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо значення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const valueSpan = document.createElement('span');
                         valueSpan.className = 'dimension-value';
                         const formattedValue = Number.isInteger(dimensions[i]) ? dimensions[i] : dimensions[i].toFixed(1).replace('.', ',');
@@ -4798,17 +3545,7 @@ if (product.description && product.description.trim() !== '') {
                         valueSpan.style.textAlign = 'center';
                         valueSpan.style.fontSize = '14px';
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
                         if (window.innerWidth <= 480) {
-=======
-                        // Адаптивний розмір шрифту на екранах до 480px
-                        if (window.innerWidth <= 480) {
-                            // Адаптивний розмір шрифту: мінімум 9px, максимум 14px, залежить від ширини вікна
->>>>>>> 451743e (Оновлення)
-=======
-                        if (window.innerWidth <= 480) {
->>>>>>> bc1366a (Оновлення)
                             const fontSize = Math.max(9, Math.min(14, window.innerWidth * 0.04));
                             valueSpan.style.fontSize = fontSize + 'px';
                         }
@@ -4817,32 +3554,13 @@ if (product.description && product.description.trim() !== '') {
 
                         dimensionsContainer.appendChild(pairContainer);
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо роздільник між парами (крім останньої)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         if (i < dimensions.length - 1) {
                             const separator = document.createElement('span');
                             separator.textContent = '×';
                             separator.style.color = '#666';
                             separator.style.fontSize = '14px';
-<<<<<<< HEAD
-<<<<<<< HEAD
                         if (window.innerWidth <= 480) {
                             separator.style.margin = '0';
-=======
-                            // Прибираємо відступи навколо роздільника на екранах до 480px
-                        if (window.innerWidth <= 480) {
-                            separator.style.margin = '0';
-                            // Адаптивний розмір шрифту: мінімум 8px, максимум 14px, залежить від ширини вікна
->>>>>>> 451743e (Оновлення)
-=======
-                        if (window.innerWidth <= 480) {
-                            separator.style.margin = '0';
->>>>>>> bc1366a (Оновлення)
                             const fontSize = Math.max(8, Math.min(14, window.innerWidth * 0.04));
                             separator.style.fontSize = fontSize + 'px';
                         } else {
@@ -4856,13 +3574,6 @@ if (product.description && product.description.trim() !== '') {
                     dimensionsDiv.appendChild(dimensionsContainer);
                     itemDiv.appendChild(dimensionsDiv);
                 } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Додаємо прозорий плейсхолдер для товарів без розмірів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const dimensionsPlaceholder = document.createElement('div');
                     dimensionsPlaceholder.className = 'dimensions';
                     dimensionsPlaceholder.style.visibility = 'hidden';
@@ -4887,13 +3598,6 @@ if (product.description && product.description.trim() !== '') {
                         saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
                         emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
@@ -4915,13 +3619,6 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                         saleSpan.innerHTML = `<span class='price-value'>${p.salePrice}</span> <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(saleSpan);
                     } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
                         emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
@@ -4963,55 +3660,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
             });
 
             container.appendChild(groupDiv);
-<<<<<<< HEAD
-=======
 
-            const floatingContainer = document.createElement('div');
-            floatingContainer.className = 'floating-group-cart';
-            floatingContainer.id = 'floating-group-cart';
-            const floatingPrice = document.createElement('span');
-            floatingPrice.className = 'floating-group-price';
-            floatingPrice.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">0 грн</span>`;
-            floatingContainer.appendChild(floatingPrice);
-
-            const floatingBtn = document.createElement('button');
-            floatingBtn.className = 'floating-group-buy-btn';
-            floatingBtn.textContent = 'Додати в кошик';
-            floatingBtn.onclick = typeof addGroupToCart === 'function' ? () => addGroupToCart(product._id) : null;
-            floatingContainer.appendChild(floatingBtn);
-            container.appendChild(floatingContainer);
-
-            if (typeof updateGroupSelectionWithQuantity === 'function') {
-                await updateGroupSelectionWithQuantity(product._id);
-            }
-            await updateFloatingGroupCart();
-            
-            product.groupProducts.forEach(groupProductId => {
-                if (selectedColors[groupProductId] !== undefined) {
-                    updateGroupProductPrice(groupProductId);
-                }
-            });
-
-            const handleScroll = () => {
-                const groupProducts = document.querySelector('.group-products');
-                if (groupProducts) {
-                    const rect = groupProducts.getBoundingClientRect();
-                    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-                    floatingContainer.classList.toggle('visible', isVisible && product.type === 'group');
-                }
-            };
-
-            handleScroll();
-
-            window.addEventListener('scroll', handleScroll);
-            const cleanup = () => {
-                window.removeEventListener('scroll', handleScroll);
-            };
-            document.addEventListener('sectionChange', cleanup, { once: true });
-        }
->>>>>>> 451743e (Оновлення)
-
-<<<<<<< HEAD
             const floatingContainer = document.createElement('div');
             floatingContainer.className = 'floating-group-cart';
             floatingContainer.id = 'floating-group-cart';
@@ -5059,15 +3708,6 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
         productDetails.appendChild(container);
 
         if (product.type === 'mattresses' && selectedMattressSizes[product._id]) {
-<<<<<<< HEAD
-=======
-            // document.getElementById(`mattress-size-${product._id}`).value = selectedMattressSizes[product._id]; // Видалено, бо кастомний селект
->>>>>>> 451743e (Оновлення)
-=======
-        productDetails.appendChild(container);
-
-        if (product.type === 'mattresses' && selectedMattressSizes[product._id]) {
->>>>>>> bc1366a (Оновлення)
             if (typeof updateMattressPrice === 'function') {
                 await updateMattressPrice(product._id);
             }
@@ -5091,23 +3731,9 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
             await renderBreadcrumbs();
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (selectedColors[product._id] !== undefined) {
             if (product.type === 'group') {
                 updateFloatingGroupCart();
-=======
-        // Оновлюємо ціну при завантаженні сторінки, якщо вибраний колір
-        if (selectedColors[product._id] !== undefined) {
-            if (product.type === 'group') {
-                updateFloatingGroupCart();
-                // Оновлюємо ціни всіх товарів у групі
->>>>>>> 451743e (Оновлення)
-=======
-        if (selectedColors[product._id] !== undefined) {
-            if (product.type === 'group') {
-                updateFloatingGroupCart();
->>>>>>> bc1366a (Оновлення)
                 if (product.groupProducts) {
                     product.groupProducts.forEach(groupProductId => {
                         if (selectedColors[groupProductId] !== undefined) {
@@ -5116,33 +3742,14 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                     });
                 }
             } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Невелика затримка для забезпечення рендерингу DOM
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 setTimeout(() => {
                     updateColorPrice(product._id);
                 }, 100);
             }
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         updateFavoriteIconsOnPage();
         
-=======
-        // ОНОВЛЮЄМО СТАН ІКОНКИ ПІСЛЯ РЕНДЕРУ
-        updateFavoriteIconsOnPage();
-        
-        // Відновлюємо графічне відображення вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
-        updateFavoriteIconsOnPage();
-        
->>>>>>> bc1366a (Оновлення)
         restoreSelectedColors();
 
         return Promise.resolve();
@@ -5183,13 +3790,6 @@ async function addGroupToCart(productId) {
         return;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Перевіряємо, чи вибрані кольори для товарів з кольорами
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const productsNeedingColors = [];
     for (const [id, quantity] of Object.entries(selectedItems)) {
         const qty = parseInt(quantity);
@@ -5198,13 +3798,6 @@ async function addGroupToCart(productId) {
         const p = products.find(p => p._id === id);
         if (!p) continue;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Якщо у товару є кольори і їх більше одного
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const allColors = getAllColors(p);
         if (allColors.length > 1) {
             const selectedColorIndices = selectedColors[p._id];
@@ -5244,25 +3837,11 @@ async function addGroupToCart(productId) {
         if (allColors.length > 0) {
             let selectedColorsForCart = [];
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Якщо у товару тільки один колір - вибираємо його автоматично
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (allColors.length === 1) {
                 selectedColors[p._id] = { 0: 0 };
                 saveToStorage('selectedColors', selectedColors);
                 selectedColorsForCart.push(allColors[0]);
             } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо кольорів більше - використовуємо вибрані
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const selectedColorIndices = selectedColors[p._id];
                 if (!selectedColorIndices || Object.keys(selectedColorIndices).length === 0) {
                     console.warn(`Кольори не вибрані для товару ${p.name}`);
@@ -5270,13 +3849,6 @@ async function addGroupToCart(productId) {
                     continue;
                 }
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Отримуємо всі вибрані кольори
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 Object.values(selectedColorIndices).forEach(globalIndex => {
                     const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
                     if (selectedColor) {
@@ -5285,24 +3857,10 @@ async function addGroupToCart(productId) {
                 });
             }
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо зміну ціни від усіх вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             selectedColorsForCart.forEach(color => {
                 price += parseFloat(color.priceChange || 0);
             });
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Створюємо об'єкт кольорів для кошика
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             selectedColor = selectedColorsForCart.length === 1 ? selectedColorsForCart[0] : selectedColorsForCart;
         }
 
@@ -5310,13 +3868,6 @@ async function addGroupToCart(productId) {
             selectedSize = selectedMattressSizes[p._id];
             const sizeInfo = p.sizes?.find(s => s.name === selectedSize);
             if (sizeInfo) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Перевіряємо акційну ціну розміру
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
                     price = parseFloat(sizeInfo.salePrice);
                 } else {
@@ -5329,13 +3880,6 @@ async function addGroupToCart(productId) {
             }
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Створюємо унікальний ключ для кошика
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         let normalizedColorName = 'no-color';
         if (Array.isArray(selectedColor)) {
             normalizedColorName = selectedColor.map(c => c.name.toLowerCase().replace(/\s+/g, '-')).join('_');
@@ -5416,13 +3960,6 @@ async function addGroupToCart(productId) {
 }
 
 async function fetchProductBySlug(slug) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Перевіряємо, чи slug відповідає категорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const category = categories.find(c => transliterate(c.name.replace('ь', '')) === slug);
     if (category) {
         console.log('fetchProductBySlug: slug відповідає категорії:', category.name);
@@ -5432,22 +3969,9 @@ async function fetchProductBySlug(slug) {
         isSearchActive = false;
         renderCatalog(currentCategory, null);
         showSection('catalog');
-<<<<<<< HEAD
-<<<<<<< HEAD
         return null;
     }
 
-=======
-        return null; // Повертаємо null, щоб позначити, що це не продукт
-    }
-
-    // Перевіряємо, чи slug відповідає підкатегорії
->>>>>>> 451743e (Оновлення)
-=======
-        return null;
-    }
-
->>>>>>> bc1366a (Оновлення)
     const subcategory = categories
         .flatMap(c => c.subcategories || [])
         .find(sc => sc.slug === slug || transliterate(sc.name.replace('ь', '')) === slug);
@@ -5456,38 +3980,15 @@ async function fetchProductBySlug(slug) {
         if (parentCategory) {
             console.log('fetchProductBySlug: slug відповідає підкатегорії:', subcategory.name);
             currentCategory = parentCategory.name;
-<<<<<<< HEAD
-<<<<<<< HEAD
             currentSubcategory = subcategory.slug;
-=======
-            currentSubcategory = subcategory.name;
->>>>>>> 451743e (Оновлення)
-=======
-            currentSubcategory = subcategory.slug;
->>>>>>> bc1366a (Оновлення)
             currentProduct = null;
             isSearchActive = false;
             renderCatalog(currentCategory, currentSubcategory);
             showSection('catalog');
-<<<<<<< HEAD
-<<<<<<< HEAD
             return null;
         }
     }
 
-=======
-            return null; // Повертаємо null, щоб позначити, що це не продукт
-        }
-    }
-
-    // Якщо це не категорія і не підкатегорія, шукаємо продукт
->>>>>>> 451743e (Оновлення)
-=======
-            return null;
-        }
-    }
-
->>>>>>> bc1366a (Оновлення)
     const cachedProduct = products.find(p => p.slug === slug);
     if (cachedProduct) {
         console.log('Продукт знайдено в локальному кеші:', cachedProduct.name, 'ID:', cachedProduct._id);
@@ -5545,13 +4046,6 @@ async function validateAndFixPageState() {
     const path = window.location.pathname.slice(1) || '';
     const parts = path.split('/').filter(p => p).map(p => decodeURIComponent(p));
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Якщо шлях порожній, показуємо головну сторінку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (!parts.length) {
         currentCategory = null;
         currentSubcategory = null;
@@ -5582,13 +4076,6 @@ const searchSlug = parts[2] || '';
 searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
     isSearchActive = true;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Дочекатися завантаження продуктів, якщо їх ще немає або це не масив
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (!Array.isArray(products) || !products.length) {
         try {
             await initializeData();
@@ -5597,13 +4084,6 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Додаткова перевірка, якщо products все ще не масив — зробити порожній масив
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (!Array.isArray(products)) {
         products = [];
     }
@@ -5622,32 +4102,14 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
     baseSearchResults = [...searchResults];
     renderCatalog(null, null, null, searchResults);
     showSection('catalog');
-<<<<<<< HEAD
-<<<<<<< HEAD
     return;
-=======
-    return; // <--- обов'язково!
->>>>>>> 451743e (Оновлення)
-=======
-    return;
->>>>>>> bc1366a (Оновлення)
 }
 
     const cat = categories.find(c => c.slug === parts[0]);
     if (cat) {
         currentCategory = cat.slug;
-<<<<<<< HEAD
-<<<<<<< HEAD
         currentProduct = null;
         currentSubcategory = parts[1] || null;
-=======
-        currentSubcategory = null;
-        currentProduct = null;
->>>>>>> 451743e (Оновлення)
-=======
-        currentProduct = null;
-        currentSubcategory = parts[1] || null;
->>>>>>> bc1366a (Оновлення)
         isSearchActive = false;
 
         if (parts.length === 2) {
@@ -5663,13 +4125,6 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
                 showSection('catalog');
                 return;
             }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Якщо parts[1] не підкатегорія, можливо це товар у цій категорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const product = products.find(p => p.slug === parts[1]);
             if (product) {
                 currentProduct = product;
@@ -5679,23 +4134,9 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
                 return;
             }
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (parts.length === 3) {
             let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
             
-=======
-        // 3. Підкатегорія + товар
-=======
->>>>>>> bc1366a (Оновлення)
-        if (parts.length === 3) {
-            let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
-            
-<<<<<<< HEAD
-            // Якщо не знайдено, шукаємо по транслитерованому slug
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (!subCat) {
                 subCat = (cat.subcategories || []).find(sub => transliterate(sub.name.replace('ь', '')) === parts[1]);
             }
@@ -5710,37 +4151,16 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
                     showSection('product-details');
                     return;
                 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо підкатегорія є, але товару немає — показуємо підкатегорію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 renderCatalog(currentCategory, currentSubcategory);
                 showSection('catalog');
                 return;
             }
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Якщо тільки категорія
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         renderCatalog(currentCategory, null);
         showSection('catalog');
         return;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Якщо не знайдено категорію, шукаємо товар по slug серед усіх продуктів ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (parts.length >= 1) {
         const productSlug = parts[parts.length - 1];
         const product = products.find(p => p.slug === productSlug);
@@ -5752,13 +4172,6 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
             return;
         }
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Якщо товар не знайдено в локальних даних, спробуємо завантажити з сервера
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (parts.length === 1) {
             const fetchedProduct = await fetchProductFromServer(productSlug);
             if (fetchedProduct) {
@@ -5771,13 +4184,6 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Якщо нічого не знайдено, показуємо головну сторінку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     console.warn('Сторінку не знайдено для шляху:', path);
     clearFilters();
     showSection('home');
@@ -5867,10 +4273,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
         return;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
     let subcategorySlug = null;
     if (product.subcategory) {
         const category = categories.find(c => c.slug === product.category);
@@ -5883,21 +4285,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
                 subcategorySlug = sub.slug;
             }
         }
-<<<<<<< HEAD
-=======
-    const subCategoryExists = product.subcategory 
-        ? categories
-        .filter(cat => cat.slug === product.category)
-            .flatMap(cat => cat.subcategories || [])
-            .some(sub => sub.name === product.subcategory)
-        : true;
-    if (!subCategoryExists) {
-        console.warn('Subcategory does not exist:', product.subcategory, 'for product:', product.name);
-        product.subcategory = null;
-        currentSubcategory = null;
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     }
     currentSubcategory = subcategorySlug || null;
 
@@ -5912,8 +4299,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
 
     currentProduct = product;
     currentCategory = product.category;
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     const catSlug = transliterate(currentCategory.replace('ь', ''));
     
@@ -5921,22 +4306,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
     if (currentSubcategory) {
         const category = categories.find(c => c.slug === product.category);
         const subcategory = category?.subcategories?.find(sub => sub.slug === currentSubcategory);
-=======
-    currentSubcategory = product.subcategory || null;
-=======
->>>>>>> bc1366a (Оновлення)
-
-    const catSlug = transliterate(currentCategory.replace('ь', ''));
-    
-    let subCatSlug = '';
-    if (currentSubcategory) {
-        const category = categories.find(c => c.slug === product.category);
-<<<<<<< HEAD
-        const subcategory = category?.subcategories?.find(sub => sub.name === currentSubcategory);
->>>>>>> 451743e (Оновлення)
-=======
-        const subcategory = category?.subcategories?.find(sub => sub.slug === currentSubcategory);
->>>>>>> bc1366a (Оновлення)
         subCatSlug = subcategory ? subcategory.slug : '';
     }
     
@@ -5951,13 +4320,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
         isSearchActive: isSearchActive,
         searchQuery: searchQuery,
         searchResults: searchResults.map(p => p._id),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Зберігаємо інформацію про те, що товар був знайдений через пошук
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         wasFoundViaSearch: isSearchActive
     };
     history.pushState(state, '', newPath);
@@ -5968,13 +4330,6 @@ const categoryExists = categories.some(cat => cat.slug === product.category);
 function normalizeString(str) {
     return str ? str.normalize('NFC').toLowerCase() : '';
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function searchProducts(query = '') {
     const searchInput = document.getElementById('search');
     const burgerSearchInput = document.querySelector('#burger-search');
@@ -6082,28 +4437,11 @@ async function updateCartPrices() {
         const product = products.find(p => p._id === item.id || p.id === item.id);
         if (!product) return;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         let shouldRecalculate = true;
         
         if (!item.colors && !item.color) {
             shouldRecalculate = false;
         } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-=======
-        // Завжди перераховуємо ціну для товарів з кольорами, щоб гарантувати правильність
-        // Це особливо важливо для товарів з кількома кольорами, де ціна може бути неправильною
-=======
->>>>>>> bc1366a (Оновлення)
-        let shouldRecalculate = true;
-        
-        if (!item.colors && !item.color) {
-            shouldRecalculate = false;
-        } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-<<<<<<< HEAD
-            // Якщо є кольори, завжди перераховуємо ціну
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             shouldRecalculate = true;
         } else if (item.color && !item.color.priceChange) {
             shouldRecalculate = false;
@@ -6120,13 +4458,6 @@ async function updateCartPrices() {
             const sizeInfo = product.sizes?.find(s => s.name === item.size);
             if (sizeInfo) {
                 console.log('updateCartPrices - Size info for', item.size, ':', sizeInfo);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Спочатку перевіряємо акційну ціну розміру
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
                     price = sizeInfo.salePrice;
                     console.log('updateCartPrices - Using sale price for size:', sizeInfo.salePrice);
@@ -6136,20 +4467,8 @@ async function updateCartPrices() {
                 }
             }
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
             let totalColorPriceChange = 0;
             
-=======
-            // Обробляємо кольори
-            let totalColorPriceChange = 0;
-            
-            // Нова структура (масив кольорів)
->>>>>>> 451743e (Оновлення)
-=======
-            let totalColorPriceChange = 0;
-            
->>>>>>> bc1366a (Оновлення)
             if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
                 item.colors.forEach(color => {
                     if (color && color.priceChange) {
@@ -6157,24 +4476,10 @@ async function updateCartPrices() {
                     }
                 });
             } 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Стара структура (один колір)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             else if (item.color && item.color.priceChange) {
                 totalColorPriceChange += parseFloat(item.color.priceChange);
             }
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Використовуємо базову ціну товару + зміну від кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const basePrice = isOnSale ? product.salePrice : product.price;
             price = basePrice + totalColorPriceChange;
         }
@@ -6281,26 +4586,12 @@ async function renderCart() {
             const allColors = getAllColors(product);
             
             if (item.colors && Array.isArray(item.colors)) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Перевіряємо всі кольори з нової структури
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 isAvailable = item.colors.every(itemColor => {
                     const itemColorName = itemColor.name.toLowerCase().trim();
                     return allColors.some(color => color.name?.toLowerCase().trim() === itemColorName);
                 });
                 console.log(`Перевірка кольорів для товару ${item.name}: кольори ${item.colors.map(c => c.name)}, доступні: ${isAvailable}, поточні кольори:`, allColors.map(c => c.name));
             } else if (item.color && item.color.name) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Для старої структури (один колір)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const itemColorName = item.color.name.toLowerCase().trim();
                 isAvailable = allColors.some(color => color.name?.toLowerCase().trim() === itemColorName);
                 console.log(`Перевірка кольору для товару ${item.name}: колір ${itemColorName}, доступний: ${isAvailable}, поточні кольори:`, allColors.map(c => c.name));
@@ -6330,28 +4621,11 @@ async function renderCart() {
                 displayName = `${item.name} (${item.size})`;
             }
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
             if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-=======
-            // Обробляємо кольори
-            if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-                // Сортуємо кольори за blockIndex для правильного порядку відображення
->>>>>>> 451743e (Оновлення)
-=======
-            if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
->>>>>>> bc1366a (Оновлення)
                 const sortedColors = item.colors.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
                 const colorNames = sortedColors.map(color => color.name).join(', ');
                 displayName += ` (${colorNames})`;
             } else if (item.color && item.color.name) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Для старої структури (один колір)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 displayName += ` (${item.color.name})`;
             }
             if (item.size) {
@@ -6581,13 +4855,6 @@ async function updateCartQuantity(index, change) {
     if (cart[index]) {
         cart[index].quantity = Math.max(1, cart[index].quantity + change);
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Оновлюємо ціни для товарів з кольорами
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         await updateCartPrices();
         
         saveToStorage('cart', cart);
@@ -6606,8 +4873,6 @@ async function updateCartQuantity(index, change) {
 function updateCartCount() {
     const cart = loadFromStorage('cart') || [];
     const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-<<<<<<< HEAD
-=======
 
     const headerCartCount = document.querySelector('.cart .cart-count');
     if (headerCartCount) {
@@ -6624,26 +4889,6 @@ function updateCartCount() {
         floatingCartCount.textContent = totalItems > 0 ? totalItems : '';
     }
 }
-<<<<<<< HEAD
->>>>>>> 451743e (Оновлення)
-
-    const headerCartCount = document.querySelector('.cart .cart-count');
-    if (headerCartCount) {
-        headerCartCount.textContent = totalItems > 0 ? totalItems : '';
-    }
-
-    const burgerCartCount = document.querySelector('.burger-content .cart span');
-    if (burgerCartCount) {
-        burgerCartCount.textContent = totalItems > 0 ? totalItems : '';
-    }
-
-    const floatingCartCount = document.querySelector('.floating-cart .cart-count');
-    if (floatingCartCount) {
-        floatingCartCount.textContent = totalItems > 0 ? totalItems : '';
-    }
-}
-=======
->>>>>>> bc1366a (Оновлення)
 async function submitOrder() {
     const customer = orderFields.reduce((acc, field) => {
         const input = document.getElementById(`order-${field.name}`);
@@ -6739,17 +4984,7 @@ async function submitOrder() {
             const product = products.find(p => p._id === item.id || p.id === item.id);
             let colorData = null;
             
-<<<<<<< HEAD
-<<<<<<< HEAD
             if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-=======
-            // Обробка масиву кольорів (нова структура)
-            if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
-                // Сортуємо кольори за blockIndex для правильного порядку
->>>>>>> 451743e (Оновлення)
-=======
-            if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
->>>>>>> bc1366a (Оновлення)
                 const sortedColors = item.colors.sort((a, b) => (a.blockIndex || 0) - (b.blockIndex || 0));
                 const colorNames = sortedColors.map(color => color.name).join(', ');
                 colorData = {
@@ -6759,13 +4994,6 @@ async function submitOrder() {
                     photo: sortedColors.find(color => color.photo)?.photo || ''
                 };
             } else if (item.color && item.color.name) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Стара структура (один колір)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 colorData = {
                     name: item.color.name || 'Не вказано',
                     value: item.color.value || item.color.name || '',
@@ -6785,21 +5013,9 @@ async function submitOrder() {
             
             const itemName = product?.type === 'mattresses' && item.size ? `${item.name} (${item.size})` : item.name;
             const orderItem = {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 id: item.id,
                 name: itemName,
                 brand: product?.brand || '',
-=======
-                id: item.id, // Залишаємо ID як є (рядок або число)
-                name: itemName,
-                brand: product?.brand || '', // Додаємо бренд
->>>>>>> 451743e (Оновлення)
-=======
-                id: item.id,
-                name: itemName,
-                brand: product?.brand || '',
->>>>>>> bc1366a (Оновлення)
                 quantity: Number(item.quantity),
                 price: Number(item.price),
                 photo: item.photo || (product?.photos?.[0] || NO_IMAGE_URL),
@@ -6942,45 +5158,17 @@ function updateHeader() {
     if (logoText) logoText.textContent = settings.name || '';
     const phones = document.getElementById('phones');
     if (phones) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Очищаємо попередній вміст
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         phones.innerHTML = '';
         const phonesRaw = settings.contacts?.phones || '';
         const phoneList = phonesRaw.split(/\n|,|;/).map(p => p.trim()).filter(Boolean);
         if (phoneList.length === 0) return;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Основний телефон (перший)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const mainPhone = document.createElement('span');
         mainPhone.className = 'main-phone';
         mainPhone.textContent = phoneList[0];
         phones.appendChild(mainPhone);
-<<<<<<< HEAD
-<<<<<<< HEAD
         let phoneMenu = null;
         let arrow = null;
         let closeDropdownHandler = null;
-=======
-        // Стрілка для меню
-        let phoneMenu = null;
-        let arrow = null;
-        let closeDropdownHandler = null;
-        // Видаляємо старе меню, якщо воно є
->>>>>>> 451743e (Оновлення)
-=======
-        let phoneMenu = null;
-        let arrow = null;
-        let closeDropdownHandler = null;
->>>>>>> bc1366a (Оновлення)
         if (window.__phoneDropdownMenu) {
             window.__phoneDropdownMenu.remove();
             window.__phoneDropdownMenu = null;
@@ -6994,13 +5182,6 @@ function updateHeader() {
             arrow.className = 'phone-dropdown-arrow';
             arrow.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
             phones.appendChild(arrow);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Меню створюємо у body
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             function createPhoneMenu() {
                 if (window.__phoneDropdownMenu) {
                     window.__phoneDropdownMenu.remove();
@@ -7034,13 +5215,6 @@ function updateHeader() {
                     }
                 }
                 applyMenuTheme();
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Динамічне перемикання теми
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 window.__phoneDropdownThemeListener = function() {
                     applyMenuTheme();
                     phoneMenu.querySelectorAll('.phone-dropdown-item').forEach(item => {
@@ -7051,13 +5225,6 @@ function updateHeader() {
                         }
                     });
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Якщо меню відкрите, оновлюємо його позицію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     if (phoneMenu.style.display === 'block') {
                         updateMenuPosition();
                     }
@@ -7082,20 +5249,8 @@ function updateHeader() {
                 document.body.appendChild(phoneMenu);
                 window.__phoneDropdownMenu = phoneMenu;
             }
-<<<<<<< HEAD
-<<<<<<< HEAD
             phones.onclick = (e) => {
                 e.stopPropagation();
-=======
-            // Відкриття/закриття меню
-            phones.onclick = (e) => {
-                e.stopPropagation();
-                // Якщо меню не існує або було видалено — створити заново
->>>>>>> 451743e (Оновлення)
-=======
-            phones.onclick = (e) => {
-                e.stopPropagation();
->>>>>>> bc1366a (Оновлення)
                 if (!window.__phoneDropdownMenu || !document.body.contains(window.__phoneDropdownMenu)) {
                     createPhoneMenu();
                 }
@@ -7104,47 +5259,18 @@ function updateHeader() {
                     phoneMenu.style.display = 'none';
                     arrow.classList.remove('active');
                 } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Позиціонуємо меню під телефоном
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const rect = phones.getBoundingClientRect();
                     phoneMenu.style.display = 'block';
                     arrow.classList.add('active');
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Невелика затримка для правильного розрахунку ширини меню
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     setTimeout(() => {
                         const menuWidth = phoneMenu.offsetWidth || 170;
                         let left = rect.left + rect.width/2 - menuWidth/2;
                         
-<<<<<<< HEAD
-<<<<<<< HEAD
                         if (left < 10) {
                             left = 10;
                         } else if (left + menuWidth > window.innerWidth - 10) {
                             left = window.innerWidth - menuWidth - 10;
-=======
-                        // Перевіряємо, чи меню не виходить за межі екрану
-=======
->>>>>>> bc1366a (Оновлення)
-                        if (left < 10) {
-                            left = 10;
-                        } else if (left + menuWidth > window.innerWidth - 10) {
-<<<<<<< HEAD
-                            left = window.innerWidth - menuWidth - 10; // Мінімальний відступ від правого краю
->>>>>>> 451743e (Оновлення)
-=======
-                            left = window.innerWidth - menuWidth - 10;
->>>>>>> bc1366a (Оновлення)
                         }
                         
                         phoneMenu.style.left = left + 'px';
@@ -7153,98 +5279,40 @@ function updateHeader() {
                 }
             };
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Оновлюємо позицію меню при прокрутці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const updateMenuPosition = () => {
                 if (phoneMenu && phoneMenu.style.display === 'block') {
                     const rect = phones.getBoundingClientRect();
                     const menuWidth = phoneMenu.offsetWidth || 170;
                     let left = rect.left + rect.width/2 - menuWidth/2;
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
                     if (left < 10) {
                         left = 10;
                     } else if (left + menuWidth > window.innerWidth - 10) {
                         left = window.innerWidth - menuWidth - 10;
-=======
-                    // Перевіряємо, чи меню не виходить за межі екрану
-=======
->>>>>>> bc1366a (Оновлення)
-                    if (left < 10) {
-                        left = 10;
-                    } else if (left + menuWidth > window.innerWidth - 10) {
-<<<<<<< HEAD
-                        left = window.innerWidth - menuWidth - 10; // Мінімальний відступ від правого краю
->>>>>>> 451743e (Оновлення)
-=======
-                        left = window.innerWidth - menuWidth - 10;
->>>>>>> bc1366a (Оновлення)
                     }
                     
                     phoneMenu.style.left = left + 'px';
                     phoneMenu.style.top = (rect.bottom + 6) + 'px';
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Додатково переконуємося, що меню має правильну позицію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     phoneMenu.style.position = 'fixed';
                     phoneMenu.style.zIndex = '2147483647';
                 }
             };
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Закриваємо меню при прокрутці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const closeMenuOnScroll = () => {
                 if (phoneMenu && phoneMenu.style.display === 'block') {
                     phoneMenu.style.display = 'none';
                     if (arrow) arrow.classList.remove('active');
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Додатково переконуємося, що меню має правильну позицію при закритті
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     phoneMenu.style.position = 'fixed';
                     phoneMenu.style.zIndex = '2147483647';
                 }
             };
             
-<<<<<<< HEAD
-<<<<<<< HEAD
             window.addEventListener('scroll', updateMenuPosition);
             window.addEventListener('scroll', closeMenuOnScroll);
             window.addEventListener('resize', updateMenuPosition);
             closeDropdownHandler = function(e) {
-=======
-            // Додаємо обробник прокрутки
-=======
->>>>>>> bc1366a (Оновлення)
-            window.addEventListener('scroll', updateMenuPosition);
-            window.addEventListener('scroll', closeMenuOnScroll);
-            window.addEventListener('resize', updateMenuPosition);
-            closeDropdownHandler = function(e) {
-<<<<<<< HEAD
-                // Перевіряємо, чи елементи існують
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 if (!phones || !phoneMenu) return;
                 
                 if (!phones.contains(e.target) && !phoneMenu.contains(e.target)) {
@@ -7254,13 +5322,6 @@ function updateHeader() {
             };
             document.addEventListener('click', closeDropdownHandler);
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Зберігаємо посилання на обробники для очищення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const scrollHandler = updateMenuPosition;
             const scrollCloseHandler = closeMenuOnScroll;
             const resizeHandler = updateMenuPosition;
@@ -7273,13 +5334,6 @@ function updateHeader() {
                 window.removeEventListener('resize', resizeHandler);
             });
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Якщо лише один телефон, клік дзвонить
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             phones.onclick = () => {
                 window.location.href = `tel:${phoneList[0].replace(/[^+\d]/g, '')}`;
             };
@@ -7382,27 +5436,12 @@ function renderSlideshow() {
     slideshow.style.display = 'block';
     while (slideshow.firstChild) slideshow.removeChild(slideshow.firstChild);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     let isProcessing = false;
-=======
-    let isProcessing = false; // Захист від повторних викликів
->>>>>>> 451743e (Оновлення)
-=======
-    let isProcessing = false;
->>>>>>> bc1366a (Оновлення)
 
     slides.forEach((slide, i) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Обробка вмісту слайду
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (slide.link) {
             const linkWrapper = document.createElement('a');
             linkWrapper.href = slide.link;
@@ -7448,55 +5487,22 @@ function renderSlideshow() {
             slideDiv.appendChild(contentDiv);
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Підтримка сенсорних жестів (тільки свайп)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         let touchStartX = 0;
         let touchEndX = 0;
         let touchStartY = 0;
         let touchEndY = 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
         const minSwipeDistance = 50;
         const maxVerticalDistance = 30;
 
         slideDiv.addEventListener('touchstart', (e) => {
             if (!slide.link) {
                 e.preventDefault();
-=======
-        const minSwipeDistance = 50; // Мінімальна відстань для свайпу
-        const maxVerticalDistance = 30; // Максимальна вертикальна відстань для розпізнавання свайпу
-
-        slideDiv.addEventListener('touchstart', (e) => {
-            if (!slide.link) {
-                e.preventDefault(); // Блокуємо стандартну поведінку лише для слайдів без посилань
->>>>>>> 451743e (Оновлення)
-=======
-        const minSwipeDistance = 50;
-        const maxVerticalDistance = 30;
-
-        slideDiv.addEventListener('touchstart', (e) => {
-            if (!slide.link) {
-                e.preventDefault();
->>>>>>> bc1366a (Оновлення)
             }
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
             touchEndX = 0;
             touchEndY = 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
         }, { passive: !slide.link });
-=======
-        }, { passive: !slide.link }); // passive: false лише для слайдів без посилань
->>>>>>> 451743e (Оновлення)
-=======
-        }, { passive: !slide.link });
->>>>>>> bc1366a (Оновлення)
 
         slideDiv.addEventListener('touchmove', (e) => {
             touchEndX = e.changedTouches[0].screenX;
@@ -7525,22 +5531,9 @@ function renderSlideshow() {
             }, 100);
         }, { passive: true });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         slideDiv.addEventListener('click', (e) => {
             if (!slide.link) {
                 e.preventDefault();
-=======
-        // Запобігаємо перемиканню слайдів при кліках (крім посилань)
-        slideDiv.addEventListener('click', (e) => {
-            if (!slide.link) {
-                e.preventDefault(); // Блокуємо кліки для слайдів без посилань
->>>>>>> 451743e (Оновлення)
-=======
-        slideDiv.addEventListener('click', (e) => {
-            if (!slide.link) {
-                e.preventDefault();
->>>>>>> bc1366a (Оновлення)
             }
         }, { passive: false });
 
@@ -7622,13 +5615,6 @@ function openGallery(productSlug, index = 0) {
         img.src = currentGalleryImages[currentGalleryIndex];
         console.log('Встановлено зображення:', img.src);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Clear and rebuild thumbnails
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         thumbnails.innerHTML = '';
         currentGalleryImages.forEach((photo, i) => {
             const thumbImg = document.createElement('img');
@@ -7636,13 +5622,6 @@ function openGallery(productSlug, index = 0) {
             thumbImg.className = `thumbnail ${i === currentGalleryIndex ? 'active' : ''}`;
             thumbImg.alt = `Мініатюра ${i + 1}`;
             thumbImg.loading = 'lazy';
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо відкриття галереї по кліку на мініатюру (тільки на сторінці товару)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             thumbImg.onclick = () => {
                 if (typeof openGallery === 'function') {
                     openGallery(product.slug, i);
@@ -7654,8 +5633,6 @@ function openGallery(productSlug, index = 0) {
         modal.style.display = 'flex';
         modal.classList.add('active');
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         document.body.style.overflow = 'hidden';
         
         const handleWheel = (e) => {
@@ -7663,99 +5640,34 @@ function openGallery(productSlug, index = 0) {
             if (e.deltaY > 0) {
                 nextGalleryImage();
             } else {
-=======
-        // Блокуємо прокрутку основної сторінки
-=======
->>>>>>> bc1366a (Оновлення)
-        document.body.style.overflow = 'hidden';
-        
-        const handleWheel = (e) => {
-            e.preventDefault();
-            if (e.deltaY > 0) {
-                nextGalleryImage();
-            } else {
-<<<<<<< HEAD
-                // Прокрутка вгору - попереднє фото
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 prevGalleryImage();
             }
         };
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         modal._wheelHandler = handleWheel;
         modal.addEventListener('wheel', handleWheel, { passive: false });
         
         window.scrollTo(0, 0);
         
-=======
-        // Зберігаємо обробник для подальшого видалення
-=======
->>>>>>> bc1366a (Оновлення)
-        modal._wheelHandler = handleWheel;
-        modal.addEventListener('wheel', handleWheel, { passive: false });
-        
-        window.scrollTo(0, 0);
-        
-<<<<<<< HEAD
-        // Додаємо обробник клавіші Escape для закриття галереї
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 closeGallery();
             } else if (e.key === 'ArrowLeft') {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 prevGalleryImage();
             } else if (e.key === 'ArrowRight') {
-=======
-                // Стрілка вліво - попереднє фото
-                prevGalleryImage();
-            } else if (e.key === 'ArrowRight') {
-                // Стрілка вправо - наступне фото
->>>>>>> 451743e (Оновлення)
-=======
-                prevGalleryImage();
-            } else if (e.key === 'ArrowRight') {
->>>>>>> bc1366a (Оновлення)
                 nextGalleryImage();
             }
         };
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         modal._keyHandler = handleKeyDown;
         document.addEventListener('keydown', handleKeyDown);
         
-=======
-        // Зберігаємо обробник для подальшого видалення
-        modal._keyHandler = handleKeyDown;
-        document.addEventListener('keydown', handleKeyDown);
-        
-        // Додаємо обробник кліку на фон для закриття галереї
->>>>>>> 451743e (Оновлення)
-=======
-        modal._keyHandler = handleKeyDown;
-        document.addEventListener('keydown', handleKeyDown);
-        
->>>>>>> bc1366a (Оновлення)
         const handleModalClick = (e) => {
             if (e.target === modal) {
                 closeGallery();
             }
         };
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Зберігаємо обробник для подальшого видалення
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         modal._clickHandler = handleModalClick;
         modal.addEventListener('click', handleModalClick);
         
@@ -7803,44 +5715,18 @@ function closeGallery() {
         modal.style.display = 'none';
         modal.classList.remove('active');
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         document.body.style.overflow = '';
         
-=======
-        // Відновлюємо прокрутку основної сторінки
-        document.body.style.overflow = '';
-        
-        // Видаляємо обробник колеса миші
->>>>>>> 451743e (Оновлення)
-=======
-        document.body.style.overflow = '';
-        
->>>>>>> bc1366a (Оновлення)
         if (modal._wheelHandler) {
             modal.removeEventListener('wheel', modal._wheelHandler);
             delete modal._wheelHandler;
         }
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Видаляємо обробник клавіші Escape
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (modal._keyHandler) {
             document.removeEventListener('keydown', modal._keyHandler);
             delete modal._keyHandler;
         }
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Видаляємо обробник кліку на фон
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (modal._clickHandler) {
             modal.removeEventListener('click', modal._clickHandler);
             delete modal._clickHandler;
@@ -7873,13 +5759,6 @@ function changeQuantity(productId, change) {
 }
 
 function changeGroupQuantity(groupId, productId, change) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Отримуємо поточний вибір з localStorage
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const selectionKey = `groupSelection_${groupId}`;
     const selection = loadFromStorage(selectionKey, {});
     let currentQty = parseInt(selection[productId] || 0);
@@ -7889,36 +5768,15 @@ function changeGroupQuantity(groupId, productId, change) {
     selection[productId] = newQty;
     saveToStorage(selectionKey, selection);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо input на сторінці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const qtyInput = document.getElementById(`group-quantity-${groupId}-${productId}`);
     if (qtyInput) {
         qtyInput.value = newQty;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо плаваючу панель з ціною
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (typeof updateFloatingGroupCart === 'function') {
         updateFloatingGroupCart();
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Оновлюємо ціну товару в групі з урахуванням вибраного кольору
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (selectedColors[productId] !== undefined) {
         updateGroupProductPrice(productId);
     }
@@ -7944,13 +5802,6 @@ async function handleNavigation(path, isPopstate = false) {
             currentSubcategory = null;
             currentProduct = null;
             isSearchActive = false;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Скидаємо фільтри при переході на головну сторінку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             clearFilters();
             showSection('home');
             if (!isPopstate) {
@@ -8015,13 +5866,6 @@ async function handleNavigation(path, isPopstate = false) {
                 saveToStorage('searchResults', []);
             }
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Викликаємо validateAndFixPageState для обробки шляху
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         await validateAndFixPageState();
                         return;
         }
@@ -8265,13 +6109,6 @@ renderCatalogDropdown();
                     const categoryItem = document.createElement('div');
                     categoryItem.classList.add('burger-category-item');
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Створюємо посилання для категорії
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const categoryLink = document.createElement('a');
                     categoryLink.href = '#';
                     categoryLink.textContent = category.name;
@@ -8294,23 +6131,9 @@ renderCatalogDropdown();
                     });
                     categoryItem.appendChild(categoryLink);
                     
-<<<<<<< HEAD
-<<<<<<< HEAD
                     const subcategoryContainer = document.createElement('div');
                     subcategoryContainer.className = 'burger-subcategory';
                     
-=======
-                    // Створюємо контейнер для підкатегорій
-                    const subcategoryContainer = document.createElement('div');
-                    subcategoryContainer.className = 'burger-subcategory';
-                    
-                    // Додаємо підкатегорії
->>>>>>> 451743e (Оновлення)
-=======
-                    const subcategoryContainer = document.createElement('div');
-                    subcategoryContainer.className = 'burger-subcategory';
-                    
->>>>>>> bc1366a (Оновлення)
                     (category.subcategories || []).forEach(sub => {
                         const subcategoryLink = document.createElement('a');
                         subcategoryLink.href = '#';
@@ -8319,15 +6142,7 @@ renderCatalogDropdown();
                             e.preventDefault();
                             currentProduct = null;
                             currentCategory = category.slug;
-<<<<<<< HEAD
-<<<<<<< HEAD
                             currentSubcategory = sub.slug;
-=======
-                            currentSubcategory = sub.name;
->>>>>>> 451743e (Оновлення)
-=======
-                            currentSubcategory = sub.slug;
->>>>>>> bc1366a (Оновлення)
                             isSearchActive = false;
                             searchQuery = '';
                             searchResults = [];
@@ -8382,13 +6197,6 @@ renderCatalogDropdown();
             console.warn('Елементи бургер-меню не знайдено');
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Викликаємо validateAndFixPageState для обробки початкового шляху
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         await validateAndFixPageState();
 
         const activeSection = document.querySelector('.section.active');
@@ -8424,13 +6232,6 @@ renderCatalogDropdown();
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 if (filters) filters.classList.remove('active');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Видаляємо клас filters-active з навігації
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const nav = document.querySelector('.nav');
                 if (nav) nav.classList.remove('filters-active');
                 toggleBodyScroll(false);
@@ -8450,13 +6251,6 @@ renderCatalogDropdown();
         if (filterToggle) {
             filterToggle.addEventListener('click', () => {
                 filters.classList.add('active');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Додаємо клас filters-active для навігації
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const nav = document.querySelector('.nav');
                 if (nav) nav.classList.add('filters-active');
                 toggleBodyScroll(true);
@@ -8516,13 +6310,6 @@ renderCatalogDropdown();
         }
     }
 });
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 window.addEventListener('popstate', async (event) => {
     try {
         console.log('Подія popstate:', location.pathname, 'state:', event.state);
@@ -8680,13 +6467,6 @@ window.addEventListener('popstate', async (event) => {
                 let productSlug = parts[parts.length - 1];
                 let subCatSlug = parts.length >= 3 ? parts[1] : null;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Спочатку спробуємо знайти продукт за slug
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 let product = products.find(p => p.slug === productSlug);
                 if (!product) {
                     console.log('Продукт не знайдено в локальному кеші, запитуємо з сервера:', productSlug);
@@ -8717,13 +6497,6 @@ window.addEventListener('popstate', async (event) => {
                     return;
                 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо продукт не знайдено, перевіряємо чи це підкатегорія
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
                 if (category) {
                     const subcategory = category.subcategories?.find(sub => 
@@ -8751,13 +6524,6 @@ window.addEventListener('popstate', async (event) => {
                     }
                 }
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо не знайдено ні продукт, ні підкатегорію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 console.error('popstate: Продукт або підкатегорію не знайдено для slug:', productSlug);
                 showNotification('Товар не знайдено!', 'error');
                 showSection('home');
@@ -8839,21 +6605,12 @@ if (!document.getElementById('mattress-select-style')) {
     document.head.appendChild(mattressSelectStyle);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Додаю функцію для додавання товару в кошик
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function addToCart(cartItem) {
     console.log('addToCart called with cartItem:', cartItem);
     console.log('addToCart - cartItem.price:', cartItem.price);
     let cart = loadFromStorage('cart', []);
     if (!Array.isArray(cart)) cart = [];
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     const isSameColors = (a, b) => {
         if (!a && !b) return true;
         
@@ -8861,54 +6618,17 @@ function addToCart(cartItem) {
         
         if (!a || !b) return false;
         
-=======
-    // Для товарів з кольорами порівнюємо ключові властивості
-=======
->>>>>>> bc1366a (Оновлення)
-    const isSameColors = (a, b) => {
-        if (!a && !b) return true;
-        
-        if ((!a && Array.isArray(b) && b.length === 0) || (!b && Array.isArray(a) && a.length === 0)) return true;
-        
-        if (!a || !b) return false;
-        
-<<<<<<< HEAD
-        // Якщо це масив кольорів (нова структура)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (Array.isArray(a) && Array.isArray(b)) {
             if (a.length !== b.length) return false;
             return a.every((colorA, index) => {
                 const colorB = b[index];
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Порівнюємо основні властивості, blockIndex може бути відсутнім
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 return colorA.name === colorB.name && 
                        colorA.value === colorB.value && 
                        Number(colorA.priceChange) === Number(colorB.priceChange) && 
                        colorA.photo === colorB.photo;
-<<<<<<< HEAD
-<<<<<<< HEAD
             });
         }
         
-=======
-                // Видаляємо перевірку blockIndex, оскільки вона може бути відсутньою
-            });
-        }
-        
-        // Для старої структури (один колір)
->>>>>>> 451743e (Оновлення)
-=======
-            });
-        }
-        
->>>>>>> bc1366a (Оновлення)
         return a.name === b.name && a.value === b.value && Number(a.priceChange) === Number(b.priceChange) && a.photo === b.photo;
     };
     
@@ -8951,38 +6671,16 @@ function addToCart(cartItem) {
     console.log('Cart saved, current cart:', cart);
     console.log('Cart saved - first item price:', cart[0]?.price);
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // НЕ викликаємо updateCartPrices тут, оскільки ціна вже правильно розрахована
-    // updateCartPrices() буде викликано в renderCart при необхідності
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     
     if (typeof saveCartToServer === 'function') {
         saveCartToServer();
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// === ФУНКЦІЇ ДЛЯ ОБРАНОГО === //
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function getFavorites() {
     const favorites = loadFromStorage('favorites', []);
     console.log('getFavorites: loaded favorites =', favorites);
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Перевіряємо, чи всі ID товарів існують в списку товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (favorites.length > 0 && typeof products !== 'undefined' && products.length > 0) {
         const validFavorites = favorites.filter(id => {
             const productExists = products.some(p => p._id === id);
@@ -9027,13 +6725,6 @@ window.addEventListener('DOMContentLoaded', () => {
     updateFloatingFavorite();
 });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Функція для примусового оновлення лічильників обраних товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function forceUpdateFavoriteCounters() {
     console.log('forceUpdateFavoriteCounters: forcing update');
     updateFavoriteCount();
@@ -9096,15 +6787,7 @@ function removeFavorite(productId) {
     if (typeof updateFloatingFavorite === 'function') {
         updateFloatingFavorite();
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
     updateFavoriteIconsOnPage();
-=======
-    updateFavoriteIconsOnPage(); // ОНОВЛЮЄМО ВСІ ІКОНКИ
->>>>>>> 451743e (Оновлення)
-=======
-    updateFavoriteIconsOnPage();
->>>>>>> bc1366a (Оновлення)
 }
 
 function toggleFavorite(productId) {
@@ -9256,13 +6939,6 @@ function renderFavoriteModal() {
             title.onclick = () => { closeFavoriteModal(); openProduct(p.slug); };
             title.classList.add('fav-link');
             itemDiv.appendChild(title);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // === Ціна для матраців ===
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (p.type === 'mattresses' && p.sizes?.length > 0) {
                 const saleSizes = p.sizes.filter(s => s.salePrice && s.salePrice < s.price);
                 const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
@@ -9327,13 +7003,6 @@ function renderFavoriteModal() {
     modal.appendChild(listDiv);
     modalBg.appendChild(modal);
     document.body.appendChild(modalBg);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Після оновлення списку модалки оновлюємо іконки на сторінці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     updateFavoriteIconsOnPage();
 }
 
@@ -9370,21 +7039,9 @@ function createCharP(label, value) {
 
     if (typeof value === 'string') {
         const span = document.createElement('span');
-<<<<<<< HEAD
-<<<<<<< HEAD
         span.innerHTML = value;
         span.style.marginLeft = '10px';
         span.style.whiteSpace = 'pre-wrap';
-=======
-        span.innerHTML = value; // Використовуємо innerHTML для обробки <br>
-        span.style.marginLeft = '10px';
-        span.style.whiteSpace = 'pre-wrap'; // Дозволяє відображати перенос рядків
->>>>>>> 451743e (Оновлення)
-=======
-        span.innerHTML = value;
-        span.style.marginLeft = '10px';
-        span.style.whiteSpace = 'pre-wrap';
->>>>>>> bc1366a (Оновлення)
         p.appendChild(span);
     } else {
         const span = document.createElement('span');
@@ -9396,21 +7053,12 @@ function createCharP(label, value) {
 
     return p;
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
 function createProductElement(product) {
     const productElement = document.createElement('div');
     productElement.className = 'product';
     productElement.dataset.id = product._id;
     productElement.style.position = 'relative';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     const imgLink = document.createElement('a');
     let subcategorySlug = null;
     if (product.subcategory) {
@@ -9426,31 +7074,6 @@ function createProductElement(product) {
         }
     }
     currentSubcategory = subcategorySlug || null;
-=======
-    // --- Зображення ---
-    const imgLink = document.createElement('a');
-    // Знаходимо slug підкатегорії за назвою
-    const category = categories.find(c => c.slug === product.category);
-    const subcategory = category?.subcategories?.find(sub => sub.name === product.subcategory);
-    const subcategorySlug = subcategory ? subcategory.slug : '';
->>>>>>> 451743e (Оновлення)
-=======
-    const imgLink = document.createElement('a');
-    let subcategorySlug = null;
-    if (product.subcategory) {
-        const category = categories.find(c => c.slug === product.category);
-        if (category) {
-            let sub = (category.subcategories || []).find(s => s.slug === product.subcategory);
-            if (!sub) {
-                sub = (category.subcategories || []).find(s => s.name === product.subcategory);
-            }
-            if (sub) {
-                subcategorySlug = sub.slug;
-            }
-        }
-    }
-    currentSubcategory = subcategorySlug || null;
->>>>>>> bc1366a (Оновлення)
     
     imgLink.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     imgLink.onclick = (e) => {
@@ -9460,10 +7083,6 @@ function createProductElement(product) {
     imgLink.style.display = 'block';
     imgLink.style.position = 'relative';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> bc1366a (Оновлення)
 const img = document.createElement('img');
 img.src = product.photos?.[0] || NO_IMAGE_URL;
 img.alt = product.name;
@@ -9474,26 +7093,8 @@ img.style.height = '250px';         // висота секції/картки (�
 img.style.objectFit = 'contain';    // фото вміщується повністю, без обрізання
 img.style.backgroundColor = '#ffffff00'; // фон рамок (можна прозорий або інший колір)
 imgLink.appendChild(img);
-<<<<<<< HEAD
     productElement.appendChild(imgLink);
 
-=======
-    const img = document.createElement('img');
-    img.src = product.photos?.[0] || NO_IMAGE_URL;
-    img.alt = product.name;
-    img.loading = 'lazy';
-    img.style.display = 'block';
-    img.style.width = '100%';
-    img.style.height = 'auto';
-    imgLink.appendChild(img);
-    productElement.appendChild(imgLink);
-
-    // --- Назва ---
->>>>>>> 451743e (Оновлення)
-=======
-    productElement.appendChild(imgLink);
-
->>>>>>> bc1366a (Оновлення)
     const h3Link = document.createElement('a');
     h3Link.href = `/${transliterate(product.category.replace('ь', ''))}${subcategorySlug ? `/${subcategorySlug}` : ''}/${product.slug}`;
     h3Link.onclick = (e) => {
@@ -9505,13 +7106,6 @@ imgLink.appendChild(img);
     h3Link.appendChild(h3);
     productElement.appendChild(h3Link);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Ціна ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const priceDiv = document.createElement('div');
     priceDiv.className = 'price';
     priceDiv.style.display = 'flex';
@@ -9519,13 +7113,6 @@ imgLink.appendChild(img);
     priceDiv.style.justifyContent = 'flex-start';
     priceDiv.style.minHeight = '2.6em';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Нижній рядок: ціна (без кнопок) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const rowBottom = document.createElement('div');
     rowBottom.className = 'product-row-bottom';
     rowBottom.style.display = 'flex';
@@ -9534,13 +7121,6 @@ imgLink.appendChild(img);
     rowBottom.style.gap = '8px';
     rowBottom.style.minWidth = '0';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Ціна (priceFlex) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const priceFlex = document.createElement('div');
     priceFlex.className = 'price-flex';
     priceFlex.style.flex = '1 1 auto';
@@ -9548,13 +7128,6 @@ imgLink.appendChild(img);
     priceFlex.style.display = 'flex';
     priceFlex.style.alignItems = 'center';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Кнопки справа внизу (favorite + cart) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const actionsColFixed = document.createElement('div');
     actionsColFixed.style.position = 'absolute';
     actionsColFixed.style.right = '10px';
@@ -9565,13 +7138,6 @@ imgLink.appendChild(img);
     actionsColFixed.style.gap = '8px';
     actionsColFixed.style.zIndex = '2';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Серце (favorite) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const favoriteIcon = document.createElement('div');
     favoriteIcon.className = 'favorite-icon';
     favoriteIcon.setAttribute('data-product-id', product._id);
@@ -9595,13 +7161,6 @@ imgLink.appendChild(img);
     };
     actionsColFixed.appendChild(favoriteIcon);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Кошик (cart) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     let cartIcon = null;
     if (product.type !== 'mattresses' && product.type !== 'group') {
         cartIcon = document.createElement('div');
@@ -9621,13 +7180,6 @@ imgLink.appendChild(img);
         actionsColFixed.appendChild(cartIcon);
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Верхній рядок: перекреслена ціна (якщо є акція) ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     let hasOldPrice = false;
     const isOnSale = product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date());
 
@@ -9636,13 +7188,6 @@ imgLink.appendChild(img);
         const minSale = saleSizes.length > 0 ? Math.min(...saleSizes.map(s => s.salePrice)) : null;
         const minPrice = Math.min(...product.sizes.map(s => s.price));
         if (minSale !== null && minSale < minPrice) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Верхній рядок — перекреслена ціна
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const oldRow = document.createElement('div');
             oldRow.style.display = 'flex';
             oldRow.style.alignItems = 'center';
@@ -9654,37 +7199,16 @@ imgLink.appendChild(img);
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Нижній рядок — акційна ціна
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const saleSpan = document.createElement('span');
             saleSpan.className = 'sale-price';
             saleSpan.innerHTML = `<span class='price-value'>${minSale}</span> <span class='price-suffix'>грн</span>`;
             priceFlex.appendChild(saleSpan);
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const emptyRow = document.createElement('div');
             emptyRow.style.minHeight = '1.2em';
             emptyRow.style.visibility = 'hidden';
             emptyRow.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(emptyRow);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Один рядок — звичайна ціна (тепер на тому ж рівні, що й акційна ціна)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
             regularSpan.innerHTML = `<span class='price-value'>${minPrice}</span> <span class='price-suffix'>грн</span>`;
@@ -9703,13 +7227,6 @@ imgLink.appendChild(img);
             return (p.salePrice && (p.saleEnd === null || new Date(p.saleEnd) > new Date())) ? p.salePrice : p.price;
         });
         const minPrice = Math.min(...groupPrices);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const emptyRow = document.createElement('div');
         emptyRow.style.minHeight = '1.2em';
         emptyRow.style.visibility = 'hidden';
@@ -9721,13 +7238,6 @@ imgLink.appendChild(img);
         priceFlex.appendChild(regularSpan);
     } else {
         if (isOnSale) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Верхній рядок — перекреслена ціна
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const oldRow = document.createElement('div');
             oldRow.style.display = 'flex';
             oldRow.style.alignItems = 'center';
@@ -9739,37 +7249,16 @@ imgLink.appendChild(img);
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Нижній рядок — акційна ціна
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const saleSpan = document.createElement('span');
             saleSpan.className = 'sale-price';
             saleSpan.innerHTML = `<span class='price-value'>${product.salePrice}</span> <span class='price-suffix'>грн</span>`;
             priceFlex.appendChild(saleSpan);
         } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Додаємо прозорий рядок для вирівнювання з товарами, що мають акцію
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const emptyRow = document.createElement('div');
             emptyRow.style.minHeight = '1.2em';
             emptyRow.style.visibility = 'hidden';
             emptyRow.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
             priceDiv.appendChild(emptyRow);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Один рядок — звичайна ціна (тепер на тому ж рівні, що й акційна ціна)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
             regularSpan.innerHTML = `<span class='price-value'>${product.price}</span> <span class='price-suffix'>грн</span>`;
@@ -9777,24 +7266,10 @@ imgLink.appendChild(img);
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Додаємо priceFlex у rowBottom ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     rowBottom.appendChild(priceFlex);
     priceDiv.appendChild(rowBottom);
     productElement.appendChild(priceDiv);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // --- Додаємо actionsColFixed (favorite + cart) у productElement ---
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     productElement.appendChild(actionsColFixed);
 
     return productElement;
@@ -9807,23 +7282,9 @@ async function addToCartWithColor(productId) {
         return;
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     const allColors = getAllColors(product);
     const selectedColorIndices = selectedColors[product._id] || {};
     
-=======
-    // Отримуємо всі кольори з блоків
-    const allColors = getAllColors(product);
-    const selectedColorIndices = selectedColors[product._id] || {};
-    
-    // Перевіряємо, чи вибрано хоча б один колір з кожного блоку
->>>>>>> 451743e (Оновлення)
-=======
-    const allColors = getAllColors(product);
-    const selectedColorIndices = selectedColors[product._id] || {};
-    
->>>>>>> bc1366a (Оновлення)
     if (product.colorBlocks && product.colorBlocks.length > 0) {
         const requiredBlocks = product.colorBlocks.length;
         const selectedBlocks = Object.keys(selectedColorIndices).length;
@@ -9834,13 +7295,6 @@ async function addToCartWithColor(productId) {
             return;
         }
     } else if (allColors.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Для старої структури або одного блоку
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         if (!selectedColorIndices[0] && allColors.length > 1) {
             console.warn('Виберіть потрібний колір');
             showNotification('Виберіть потрібний колір', 'warning');
@@ -9866,13 +7320,6 @@ async function addToCartWithColor(productId) {
         const sizeInfo = product.sizes.find(s => s.name === size);
         if (sizeInfo) {
             console.log('Size info for', size, ':', sizeInfo);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Спочатку перевіряємо акційну ціну розміру
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             if (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) {
                 price = sizeInfo.salePrice;
                 console.log('Using sale price for size:', sizeInfo.salePrice);
@@ -9883,17 +7330,7 @@ async function addToCartWithColor(productId) {
         }
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
-=======
-    // Перевіряємо загальну акційну ціну товару (якщо немає розміру або акційної ціни розміру)
-    if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
-        // Для матраців з розмірами використовуємо акційну ціну тільки якщо немає акційної ціни розміру
->>>>>>> 451743e (Оновлення)
-=======
-    if (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) {
->>>>>>> bc1366a (Оновлення)
         if (product.type === 'mattresses' && size) {
             const sizeInfo = product.sizes.find(s => s.name === size);
             if (!sizeInfo || !sizeInfo.salePrice || sizeInfo.salePrice >= sizeInfo.price) {
@@ -9904,13 +7341,6 @@ async function addToCartWithColor(productId) {
         }
     }
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Додаємо зміну ціни від усіх вибраних кольорів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     let totalPriceChange = 0;
     Object.values(selectedColorIndices).forEach(globalIndex => {
         const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
@@ -9923,13 +7353,6 @@ async function addToCartWithColor(productId) {
     
     console.log('addToCartWithColor - Product:', product.name, 'Type:', product.type, 'Final price:', price, 'Original price:', product.price, 'Sale price:', product.salePrice);
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Створюємо об'єкт кольорів для кошика
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const selectedColorsForCart = [];
     Object.entries(selectedColorIndices).forEach(([blockIndex, globalIndex]) => {
         const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
@@ -9947,15 +7370,7 @@ async function addToCartWithColor(productId) {
         quantity,
         price: parseFloat(price),
         photo: product.photos?.[0] || NO_IMAGE_URL,
-<<<<<<< HEAD
-<<<<<<< HEAD
         colors: selectedColorsForCart,
-=======
-        colors: selectedColorsForCart, // Зберігаємо всі вибрані кольори
->>>>>>> 451743e (Оновлення)
-=======
-        colors: selectedColorsForCart,
->>>>>>> bc1366a (Оновлення)
         size
     };
     
@@ -9967,16 +7382,6 @@ async function addToCartWithColor(productId) {
     showNotification('Товар додано в кошик!', 'success');
     updateCartCount();
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // НЕ викликаємо updateCartPrices тут, оскільки ціна вже правильно розрахована
-    // updateCartPrices() буде викликано в renderCart при необхідності
-    
-    // Оновлюємо плаваючий кошик, якщо він є
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     if (typeof updateFloatingGroupCart === 'function' && currentProduct && currentProduct.type === 'group') {
         updateFloatingGroupCart();
     }
@@ -9989,34 +7394,13 @@ function selectColor(productId, blockIndex, globalIndex) {
     selectedColors[productId][blockIndex] = globalIndex;
     saveToStorage('selectedColors', selectedColors);
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     const product = products.find(p => p._id === productId || p.id === productId);
     if (!product) return;
     
-=======
-    // Знаходимо товар для отримання інформації про блоки
-    const product = products.find(p => p._id === productId || p.id === productId);
-    if (!product) return;
-    
-    // Отримуємо всі кольори з блоками
->>>>>>> 451743e (Оновлення)
-=======
-    const product = products.find(p => p._id === productId || p.id === productId);
-    if (!product) return;
-    
->>>>>>> bc1366a (Оновлення)
     const allColors = getAllColors(product);
     const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
     
     if (selectedColor) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Підсвічування вибраного кольору в правильному блоці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const colorCircles = document.querySelectorAll(`#color-options-${productId}-${selectedColor.blockIndex} .color-circle`);
         colorCircles.forEach((circle, idx) => {
             if (idx === selectedColor.colorIndex) {
@@ -10026,20 +7410,8 @@ function selectColor(productId, blockIndex, globalIndex) {
             }
         });
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         updateColorPrice(productId);
         
-=======
-        // Оновлюємо ціну після вибору кольору
-        updateColorPrice(productId);
-        
-        // Додатково оновлюємо ціну для групових товарів
->>>>>>> 451743e (Оновлення)
-=======
-        updateColorPrice(productId);
-        
->>>>>>> bc1366a (Оновлення)
         if (currentProduct && currentProduct.type === 'group') {
             updateFloatingGroupCart();
         }
@@ -10053,25 +7425,11 @@ function selectGroupProductColor(productId, blockIndex, globalIndex) {
     selectedColors[productId][blockIndex] = globalIndex;
     saveToStorage('selectedColors', selectedColors);
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Підсвічування вибраних кольорів в групових товарах
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     const colorCircles = document.querySelectorAll(`.group-color-circle[data-product-id="${productId}"]`);
     colorCircles.forEach((circle) => {
         const circleColorIndex = parseInt(circle.getAttribute('data-color-index'));
         const circleBlockIndex = parseInt(circle.getAttribute('data-block-index') || '0');
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Перевіряємо, чи цей колір вибраний у своєму блоці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const isSelectedInBlock = selectedColors[productId]?.[circleBlockIndex] === circleColorIndex;
         
         if (isSelectedInBlock) {
@@ -10083,29 +7441,12 @@ function selectGroupProductColor(productId, blockIndex, globalIndex) {
         }
     });
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (currentProduct && currentProduct.type === 'group') {
         updateFloatingGroupCart();
     } else {
         updateColorPrice(productId);
     }
     
-=======
-    // Оновлюємо ціну в плаваючому кошику
-=======
->>>>>>> bc1366a (Оновлення)
-    if (currentProduct && currentProduct.type === 'group') {
-        updateFloatingGroupCart();
-    } else {
-        updateColorPrice(productId);
-    }
-    
-<<<<<<< HEAD
-    // Оновлюємо ціну товару в груповому товарі
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     updateGroupProductPrice(productId);
 }
 
@@ -10125,13 +7466,6 @@ function updateColorPrice(productId) {
             }
         });
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Знаходимо елемент ціни на сторінці товару - шукаємо в різних місцях
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         let priceElement = document.querySelector('#product-details .price');
         if (!priceElement) {
             priceElement = document.querySelector('.product-details .price');
@@ -10145,42 +7479,16 @@ function updateColorPrice(productId) {
             let basePrice = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
             let finalPrice = basePrice + totalPriceChange;
             
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Оновлюємо відображення ціни
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const priceValueElements = priceElement.querySelectorAll('.price-value');
             if (priceValueElements.length > 0) {
                 priceValueElements.forEach(element => {
                     if (element.parentElement.classList.contains('sale-price')) {
-<<<<<<< HEAD
-<<<<<<< HEAD
                         element.textContent = finalPrice.toFixed(0);
                     } else if (!element.parentElement.classList.contains('original-price')) {
-=======
-                        // Для акційної ціни
-                        element.textContent = finalPrice.toFixed(0);
-                    } else if (!element.parentElement.classList.contains('original-price')) {
-                        // Для звичайної ціни
->>>>>>> 451743e (Оновлення)
-=======
-                        element.textContent = finalPrice.toFixed(0);
-                    } else if (!element.parentElement.classList.contains('original-price')) {
->>>>>>> bc1366a (Оновлення)
                         element.textContent = finalPrice.toFixed(0);
                     }
                 });
             } else {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Якщо немає елементів .price-value, оновлюємо весь текст ціни
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 priceElement.textContent = finalPrice.toFixed(0) + ' грн';
             }
         }
@@ -10188,13 +7496,6 @@ function updateColorPrice(productId) {
 }
 
 function restoreSelectedColors() {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    // Відновлюємо графічне відображення вибраних кольорів для всіх товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
     Object.keys(selectedColors).forEach(productId => {
         const product = products.find(p => p._id === productId || p.id === productId);
         if (!product) return;
@@ -10202,26 +7503,12 @@ function restoreSelectedColors() {
         const selectedColorIndices = selectedColors[productId];
         if (!selectedColorIndices) return;
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Для групових товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const groupColorCircles = document.querySelectorAll(`.group-color-circle[data-product-id="${productId}"]`);
         if (groupColorCircles.length > 0) {
             groupColorCircles.forEach((circle) => {
                 const circleColorIndex = parseInt(circle.getAttribute('data-color-index'));
                 const circleBlockIndex = parseInt(circle.getAttribute('data-block-index') || '0');
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                // Перевіряємо, чи цей колір вибраний у своєму блоці
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                 const isSelectedInBlock = selectedColorIndices[circleBlockIndex] === circleColorIndex;
                 
                 if (isSelectedInBlock) {
@@ -10234,13 +7521,6 @@ function restoreSelectedColors() {
             });
         }
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Для звичайних товарів
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         Object.entries(selectedColorIndices).forEach(([blockIndex, globalIndex]) => {
             const allColors = getAllColors(product);
             const selectedColor = allColors.find(color => color.globalIndex === globalIndex);
@@ -10275,25 +7555,10 @@ function updateGroupProductPrice(productId) {
             }
         });
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Знаходимо елемент ціни товару в груповому товарі
-        // Шукаємо всі елементи з ціною в групових товарах
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         const groupProducts = document.querySelectorAll('.group-product-item');
         let priceElement = null;
         
         for (const item of groupProducts) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            // Перевіряємо, чи це правильний товар (за назвою або іншими атрибутами)
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
             const productName = item.querySelector('h3')?.textContent;
             if (productName === product.name) {
                 priceElement = item.querySelector('.price');
@@ -10306,27 +7571,11 @@ function updateGroupProductPrice(productId) {
             let basePrice = isOnSale ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
             let finalPrice = basePrice + totalPriceChange;
             
-<<<<<<< HEAD
-<<<<<<< HEAD
             const priceValueElements = priceElement.querySelectorAll('.price-value');
             priceValueElements.forEach(element => {
                 if (element.parentElement.classList.contains('sale-price')) {
                     element.textContent = finalPrice.toFixed(0);
                 } else if (!element.parentElement.classList.contains('original-price')) {
-=======
-            // Оновлюємо відображення ціни
-=======
->>>>>>> bc1366a (Оновлення)
-            const priceValueElements = priceElement.querySelectorAll('.price-value');
-            priceValueElements.forEach(element => {
-                if (element.parentElement.classList.contains('sale-price')) {
-                    element.textContent = finalPrice.toFixed(0);
-                } else if (!element.parentElement.classList.contains('original-price')) {
-<<<<<<< HEAD
-                    // Для звичайної ціни
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     element.textContent = finalPrice.toFixed(0);
                 }
             });
@@ -10334,14 +7583,6 @@ function updateGroupProductPrice(productId) {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// ... existing code ...
-        // Додаю закриття меню фільтрів при кліку поза ним
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         document.addEventListener('click', function(e) {
             const filters = document.querySelector('.filters');
             const isFiltersOpen = filters && filters.classList.contains('active');
@@ -10351,13 +7592,6 @@ function updateGroupProductPrice(productId) {
                 const isFilterBtn = filterBtn && filterBtn.contains(e.target);
                 if (!isFilters && !isFilterBtn) {
                     filters.classList.remove('active');
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    // Видаляємо клас filters-active з навігації
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
                     const nav = document.querySelector('.nav');
                     if (nav) nav.classList.remove('filters-active');
                     e.stopPropagation();
@@ -10366,17 +7600,7 @@ function updateGroupProductPrice(productId) {
                 }
             }
         }, true);
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
-// ... existing code ...
-
-// Додаю закриття меню "Телефони" при кліку поза ним з блокуванням переходу
->>>>>>> 451743e (Оновлення)
-=======
-
->>>>>>> bc1366a (Оновлення)
 document.addEventListener('click', function(e) {
     const phoneMenu = window.__phoneDropdownMenu;
     const arrow = document.querySelector('.phone-dropdown-arrow');
@@ -10395,13 +7619,6 @@ document.addEventListener('click', function(e) {
     }
 }, true);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаю закриття меню "Сортування" при кліку поза ним з блокуванням переходу
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         document.addEventListener('click', function(e) {
             const sortDropdown = document.querySelector('.sort-dropdown');
             const isSortOpen = sortDropdown && sortDropdown.style.display === 'block';
@@ -10418,13 +7635,6 @@ document.addEventListener('click', function(e) {
             }
         }, true);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаю закриття меню "Каталог" при кліку поза ним з блокуванням переходу
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         document.addEventListener('click', function(e) {
             const catalogDropdown = document.getElementById('catalog-dropdown');
             const catalogToggle = document.getElementById('catalog-toggle');
@@ -10442,13 +7652,6 @@ document.addEventListener('click', function(e) {
             }
         }, true);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        // Додаю закриття випадаючих меню розмірів матраців при кліку поза ними з блокуванням переходу
->>>>>>> 451743e (Оновлення)
-=======
->>>>>>> bc1366a (Оновлення)
         document.addEventListener('click', function(e) {
             const customSelects = document.querySelectorAll('.custom-select');
             customSelects.forEach(select => {
