@@ -1824,14 +1824,19 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 return res.status(400).json({ error: `Елемент ${i} не має _id` });
             }
             
-            // Перевіряємо чи ID є валідним ObjectId
-            if (!mongoose.Types.ObjectId.isValid(update._id)) {
-                logger.error(`Невірний формат ObjectId в елементі ${i}:`, update._id);
-                logger.error(`Тип ID:`, typeof update._id);
-                logger.error(`Довжина ID:`, update._id ? update._id.length : 'undefined');
-                await session.abortTransaction();
-                return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
-            }
+        // Перевіряємо чи ID є валідним ObjectId
+        const idString = String(update._id).trim();
+        logger.info(`Перевіряємо ID: "${idString}" (довжина: ${idString.length})`);
+        
+        if (!mongoose.Types.ObjectId.isValid(idString)) {
+            logger.error(`Невірний формат ObjectId в елементі ${i}:`, update._id);
+            logger.error(`Тип ID:`, typeof update._id);
+            logger.error(`Довжина ID:`, update._id ? update._id.length : 'undefined');
+            logger.error(`ID як рядок:`, idString);
+            logger.error(`Довжина ID як рядка:`, idString.length);
+            await session.abortTransaction();
+            return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
+        }
             
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок в елементі ${i}:`, update.order);
@@ -1844,8 +1849,9 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
 
         logger.info("Оновлюємо категорії в базі даних...");
         for (const update of categoryUpdates) {
-            await Category.findByIdAndUpdate(update._id, { order: update.order }, { new: true, session });
-            logger.info(`Оновлено категорію ${update._id} з порядком ${update.order}`);
+            const idString = String(update._id).trim();
+            await Category.findByIdAndUpdate(idString, { order: update.order }, { new: true, session });
+            logger.info(`Оновлено категорію ${idString} з порядком ${update.order}`);
         }
 
         const allCategories = await Category.find().session(session);

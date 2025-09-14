@@ -3202,6 +3202,12 @@ async function moveCategory(categoryIndex, direction) {
             }))
         };
 
+        console.log('Переміщення категорії:', {
+            categoryIndex,
+            direction,
+            movedCategory: { _id: movedCategory._id, order: movedCategory.order },
+            targetCategory: { _id: targetCategory._id, order: targetCategory.order }
+        });
         console.log('Відправляємо дані для оновлення порядку:', payload);
         console.log('Тип payload.categories:', typeof payload.categories);
         console.log('Довжина payload.categories:', payload.categories.length);
@@ -3684,15 +3690,25 @@ async function deleteSubcategory(categoryId, subcategoryId) {
 async function moveSubcategory(categoryId, subIndex, direction) {
     const category = categories.find(c => c._id === categoryId);
     if (!category) return;
-        const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // Сортуємо підкатегорії для отримання правильного порядку
+    const sortedSubcategories = [...category.subcategories].sort((a, b) => (a.order || 0) - (b.order || 0));
     if ((direction === -1 && subIndex <= 0) || (direction === 1 && subIndex >= sortedSubcategories.length - 1)) return;
 
-        const sub1 = sortedSubcategories[subIndex];
+    // Використовуємо відсортований масив для отримання правильних підкатегорій
+    const sub1 = sortedSubcategories[subIndex];
     const sub2 = sortedSubcategories[subIndex + direction];
 
+    // Обмінюємо порядки
     const tempOrder = sub1.order;
     sub1.order = sub2.order;
     sub2.order = tempOrder;
+    
+    // Оновлюємо порядки в оригінальному масиві категорії
+    const originalSub1 = category.subcategories.find(s => s._id === sub1._id);
+    const originalSub2 = category.subcategories.find(s => s._id === sub2._id);
+    if (originalSub1) originalSub1.order = sub1.order;
+    if (originalSub2) originalSub2.order = sub2.order;
 
     const payload = {
         subcategories: sortedSubcategories.map(sub => ({
@@ -3700,6 +3716,15 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             order: Number(sub.order)
         }))
     };
+    
+    console.log('Переміщення підкатегорії:', {
+        categoryId,
+        subIndex,
+        direction,
+        sub1: { _id: sub1._id, order: sub1.order },
+        sub2: { _id: sub2._id, order: sub2.order },
+        payload
+    });
 
     try {
         const response = await fetchWithAuth(`/api/categories/${categoryId}/subcategories/order`, {
