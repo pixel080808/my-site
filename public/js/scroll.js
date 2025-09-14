@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 
+=======
+// public/js/scroll.js
+
+// Функція для плавної прокрутки до елемента
+>>>>>>> 451743e (Оновлення)
 function scrollToElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
@@ -8,6 +14,10 @@ function scrollToElement(elementId) {
     }
 }
 
+<<<<<<< HEAD
+=======
+// Обробка подій прокрутки для відображення/приховування кнопки "вгору"
+>>>>>>> 451743e (Оновлення)
 function handleScroll() {
     const scrollTopButton = document.getElementById('scroll-top');
     if (scrollTopButton) {
@@ -15,6 +25,10 @@ function handleScroll() {
     }
 }
 
+<<<<<<< HEAD
+=======
+// Спостереження за змінами в DOM із можливістю відключення
+>>>>>>> 451743e (Оновлення)
 function observeDOMChanges(targetSelector, callback) {
     const target = document.querySelector(targetSelector);
     if (!target) {
@@ -41,9 +55,18 @@ function observeDOMChanges(targetSelector, callback) {
     };
 }
 
+<<<<<<< HEAD
 document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', handleScroll);
 
+=======
+// Ініціалізація
+document.addEventListener('DOMContentLoaded', () => {
+    // Додаємо обробник подій прокрутки
+    window.addEventListener('scroll', handleScroll);
+
+    // Додаємо обробник для кнопки "вгору"
+>>>>>>> 451743e (Оновлення)
     const scrollTopButton = document.getElementById('scroll-top');
     if (scrollTopButton) {
         scrollTopButton.addEventListener('click', () => {
@@ -51,8 +74,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+<<<<<<< HEAD
+=======
+    // Спостерігаємо за змінами в DOM (наприклад, у списку товарів)
+>>>>>>> 451743e (Оновлення)
     const disconnectObserver = observeDOMChanges('#product-list-admin', (mutation) => {
         console.log('Зміни в списку товарів:', mutation);
         handleScroll(); // Оновлюємо видимість кнопки "вгору" при змінах
     });
+<<<<<<< HEAD
+=======
+
+    // Приклад: відключення спостерігача при зміні секції (опціонально)
+    // document.addEventListener('sectionChanged', () => {
+    //     if (disconnectObserver) disconnectObserver();
+    // });
+>>>>>>> 451743e (Оновлення)
 });

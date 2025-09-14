@@ -6,10 +6,18 @@ const Counter = require('./Counter');
 const productSchema = new mongoose.Schema({
     id: { type: Number, unique: true, sparse: true },
     name: { type: String, required: true, trim: true },
+<<<<<<< HEAD
     category: { type: String, required: true, trim: true },
     subcategory: { 
         type: String, 
         trim: true,
+=======
+    category: { type: String, required: true, trim: true }, // Тепер тут зберігається slug категорії, а не name
+    subcategory: { 
+        type: String, 
+        trim: true,
+        // Note: Stores the slug of the subcategory, not the name
+>>>>>>> 451743e (Оновлення)
     },
     price: { 
         type: Number, 
@@ -42,7 +50,11 @@ const productSchema = new mongoose.Schema({
     sizes: [{
         name: { type: String, required: true },
         price: { type: Number, required: true, min: 0 },
+<<<<<<< HEAD
         salePrice: { type: Number },
+=======
+        salePrice: { type: Number }, // Додаю це поле, якщо його не було
+>>>>>>> 451743e (Оновлення)
         saleEnd: { type: Date, default: null }
     }],
     colorBlocks: [{

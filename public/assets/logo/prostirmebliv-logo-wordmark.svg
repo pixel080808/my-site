@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="60" viewBox="0 0 320 60" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Prostir Mebliv — wordmark</title>
+  <desc id="desc">Brand name in two-tone with subtle weight contrast</desc>
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif" letter-spacing="0.2px">
+    <text x="10" y="36" font-size="28" font-weight="700" fill="#111827">Prostir</text>
+    <text x="132" y="36" font-size="28" font-weight="600" fill="#10B981">Mebliv</text>
+  </g>
+</svg>

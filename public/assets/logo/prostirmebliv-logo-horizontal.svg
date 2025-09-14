@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="56" viewBox="0 0 256 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Prostir Mebliv — logo</title>
+  <desc id="desc">Minimal monogram PM in green rounded square with brand wordmark</desc>
+
+  <!-- Symbol background -->
+  <rect x="6" y="8" width="40" height="40" rx="10" fill="#10B981"/>
+
+  <!-- Monogram PM -->
+  <g fill="#FFFFFF">
+    <!-- P -->
+    <path d="M18 18h8c4.418 0 8 3.134 8 7s-3.582 7-8 7h-4v8h-4V18zm4 4v6h4c2.21 0 4-1.343 4-3s-1.79-3-4-3h-4z"/>
+    <!-- M -->
+    <path d="M18 40v-4h6.2l3.8-4 3.8 4H38v4h-8.2l-3.8-4-3.8 4H18z"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif" letter-spacing="0.2px">
+    <text x="60" y="28" font-size="20" font-weight="700" fill="#111827">Prostir</text>
+    <text x="60" y="44" font-size="20" font-weight="600" fill="#10B981">Mebliv</text>
+  </g>
+</svg>
