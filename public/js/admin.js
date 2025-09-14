@@ -404,10 +404,6 @@ async function fetchWithAuth(url, options = {}) {
             }
             console.error('Помилка запиту:', { url, status: response.status, errorData });
             
-<<<<<<< HEAD
-=======
-            // Покращене логування деталей помилки
->>>>>>> 451743e (Оновлення)
             if (errorData.details) {
                 console.error('Деталі помилки валідації:', errorData.details);
                 if (Array.isArray(errorData.details)) {
@@ -1758,10 +1754,6 @@ async function updateStoreInfo() {
             metaKeywords: metaKeywords
         };
 
-<<<<<<< HEAD
-=======
-        // Видаляємо undefined та null значення
->>>>>>> 451743e (Оновлення)
         Object.keys(updatedSettings).forEach(key => {
             if (updatedSettings[key] === undefined || updatedSettings[key] === null) {
                 updatedSettings[key] = '';
@@ -1977,10 +1969,6 @@ async function updateAbout() {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Зберігаємо саме HTML з редактора, а не textarea
->>>>>>> 451743e (Оновлення)
         settings.about = aboutEditor ? aboutEditor.root.innerHTML : document.getElementById('about-edit').value;
 
         console.log('Надсилаємо "Про нас":', settings.about);
@@ -2290,10 +2278,6 @@ function renderCategoriesAdmin() {
         `;
     }).join('');
 
-<<<<<<< HEAD
-=======
-    // Видаляємо старий слухач подій, якщо він існує
->>>>>>> 451743e (Оновлення)
     const handleClick = debounce((event) => {
         const target = event.target;
         if (target.classList.contains('move-up')) {
@@ -2339,14 +2323,8 @@ function renderCategoriesAdmin() {
         }
     }, 300);
 
-<<<<<<< HEAD
     categoryList.removeEventListener('click', categoryList._clickHandler);
     categoryList._clickHandler = handleClick;
-=======
-    // Видаляємо попередній слухач, якщо він був доданий
-    categoryList.removeEventListener('click', categoryList._clickHandler);
-    categoryList._clickHandler = handleClick; // Зберігаємо посилання на новий слухач
->>>>>>> 451743e (Оновлення)
     categoryList.addEventListener('click', handleClick);
 
     const subcatSelect = document.getElementById('subcategory-category');
@@ -2503,11 +2481,7 @@ function renderSettingsAdmin() {
 }
 
 function openNewSlideModal() {
-<<<<<<< HEAD
     renderSlideModal();
-=======
-    renderSlideModal(); // Викликаємо модальне вікно для нового слайду
->>>>>>> 451743e (Оновлення)
 }
 
 function renderSlideModal(slide = {}) {
@@ -2530,19 +2504,11 @@ function renderSlideModal(slide = {}) {
     showModal(modalContent);
 }
 
-<<<<<<< HEAD
-=======
-// Окрема функція для закриття модального вікна слайдів
->>>>>>> 451743e (Оновлення)
 function closeSlideModal() {
     const modal = document.getElementById('modal');
     if (modal) {
         modal.classList.remove('active');
-<<<<<<< HEAD
         modal.style.display = '';
-=======
-        modal.style.display = ''; // Скидаємо display для слайдів
->>>>>>> 451743e (Оновлення)
         modal.innerHTML = '';
         isModalOpen = false;
         console.log('Модальне вікно слайдів закрито');
@@ -2592,10 +2558,6 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
 
     const page = containerId === 'order-pagination' ? ordersCurrentPage : productsCurrentPage;
 
-<<<<<<< HEAD
-=======
-    // Функція для створення кнопки сторінки
->>>>>>> 451743e (Оновлення)
     function createPageButton(pageNum, text = pageNum, isActive = false) {
         const btn = document.createElement('button');
         btn.textContent = text;
@@ -2611,10 +2573,6 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         return btn;
     }
 
-<<<<<<< HEAD
-=======
-    // Функція для створення еліпсиса
->>>>>>> 451743e (Оновлення)
     function createEllipsis() {
         const span = document.createElement('span');
         span.textContent = '...';
@@ -2623,10 +2581,6 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         return span;
     }
 
-<<<<<<< HEAD
-=======
-    // Кнопка "Попередня"
->>>>>>> 451743e (Оновлення)
     const prevBtn = document.createElement('button');
     prevBtn.textContent = '← Попередня';
     prevBtn.disabled = page <= 1;
@@ -2646,48 +2600,26 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     };
     container.appendChild(prevBtn);
 
-<<<<<<< HEAD
     const pages = [];
     
     if (totalPages <= 7) {
-=======
-    // Логіка відображення сторінок
-    const pages = [];
-    
-    if (totalPages <= 7) {
-        // Якщо сторінок мало, показуємо всі
->>>>>>> 451743e (Оновлення)
         for (let i = 1; i <= totalPages; i++) {
             pages.push(createPageButton(i, i, i === page));
         }
     } else {
-<<<<<<< HEAD
         if (page <= 4) {
-=======
-        // Якщо сторінок багато, використовуємо еліпсис
-        if (page <= 4) {
-            // Показуємо перші 5 сторінок + еліпсис + останню
->>>>>>> 451743e (Оновлення)
             for (let i = 1; i <= 5; i++) {
                 pages.push(createPageButton(i, i, i === page));
             }
             pages.push(createEllipsis());
             pages.push(createPageButton(totalPages, totalPages, false));
         } else if (page >= totalPages - 3) {
-<<<<<<< HEAD
-=======
-            // Показуємо першу + еліпсис + останні 5 сторінок
->>>>>>> 451743e (Оновлення)
             pages.push(createPageButton(1, 1, false));
             pages.push(createEllipsis());
             for (let i = totalPages - 4; i <= totalPages; i++) {
                 pages.push(createPageButton(i, i, i === page));
             }
         } else {
-<<<<<<< HEAD
-=======
-            // Показуємо першу + еліпсис + поточну та 2 сусідні + еліпсис + останню
->>>>>>> 451743e (Оновлення)
             pages.push(createPageButton(1, 1, false));
             pages.push(createEllipsis());
             for (let i = page - 1; i <= page + 1; i++) {
@@ -2698,15 +2630,8 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
         }
     }
 
-<<<<<<< HEAD
     pages.forEach(pageBtn => container.appendChild(pageBtn));
 
-=======
-    // Додаємо всі кнопки сторінок
-    pages.forEach(pageBtn => container.appendChild(pageBtn));
-
-    // Кнопка "Наступна"
->>>>>>> 451743e (Оновлення)
     const nextBtn = document.createElement('button');
     nextBtn.textContent = 'Наступна →';
     nextBtn.disabled = page >= totalPages;
@@ -2726,10 +2651,6 @@ function renderPagination(totalItems, itemsPerPage, containerId, currentPage) {
     };
     container.appendChild(nextBtn);
 
-<<<<<<< HEAD
-=======
-    // Додаємо інформацію про загальну кількість
->>>>>>> 451743e (Оновлення)
     const infoSpan = document.createElement('span');
     infoSpan.textContent = `Сторінка ${page} з ${totalPages} (всього ${totalItems} елементів)`;
     infoSpan.style.cssText = 'margin-left: 15px; color: #666; font-size: 14px;';
@@ -2740,10 +2661,6 @@ function closeModal() {
     const modal = document.getElementById('modal');
     if (modal) {
         modal.classList.remove('active');
-<<<<<<< HEAD
-=======
-        // Скидаємо display тільки якщо він був встановлений
->>>>>>> 451743e (Оновлення)
         if (modal.style.display === 'block') {
             modal.style.display = '';
         }
@@ -2751,13 +2668,8 @@ function closeModal() {
         isModalOpen = false;
         console.log('Модальне вікно закрито');
     }
-<<<<<<< HEAD
     newProduct = {};
     unsavedChanges = false;
-=======
-    newProduct = {}; // Скидаємо newProduct
-    unsavedChanges = false; // Скидаємо прапорець незбережених змін
->>>>>>> 451743e (Оновлення)
     resetInactivityTimer();
 }
 
@@ -2775,11 +2687,7 @@ function validateFile(file) {
 
 function sanitize(str) {
     if (typeof str !== 'string' || str === null || str === undefined) {
-<<<<<<< HEAD
         return '';
-=======
-        return ''; // Повертаємо порожній рядок лише для некоректних значень
->>>>>>> 451743e (Оновлення)
     }
     return str.replace(/[<>"]/g, (char) => ({
         '<': '&lt;',
@@ -2975,10 +2883,6 @@ async function updateCategoryData(categoryId) {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Вибираємо форму саме з модального вікна
->>>>>>> 451743e (Оновлення)
         const modal = document.getElementById('modal');
         const nameInput = modal.querySelector('#category-name');
         const slugInput = modal.querySelector('#category-slug');
@@ -3038,20 +2942,12 @@ async function updateCategoryData(categoryId) {
         } else if (photoUrl) {
             photo = photoUrl;
         }
-<<<<<<< HEAD
-=======
-        // Якщо ні файл, ні URL не вказані, залишаємо photo порожнім
->>>>>>> 451743e (Оновлення)
 
         const category = categories.find(c => c._id === categoryId);
         const updatedCategory = {
             name,
             slug,
-<<<<<<< HEAD
             photo: photo,
-=======
-            photo: photo, // Дозволяємо порожнє значення
->>>>>>> 451743e (Оновлення)
             visible,
             order: category ? category.order : 0,
             subcategories: category ? category.subcategories : [],
@@ -3270,10 +3166,6 @@ async function moveCategory(categoryIndex, direction) {
         const movedCategory = categories[categoryIndex];
         let targetCategory;
 
-<<<<<<< HEAD
-=======
-        // Конвертуємо числові напрямки в рядки
->>>>>>> 451743e (Оновлення)
         if (direction === -1 || direction === 'up') {
             if (categoryIndex > 0) {
                 targetCategory = categories[categoryIndex - 1];
@@ -3293,18 +3185,10 @@ async function moveCategory(categoryIndex, direction) {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Міняємо порядки
->>>>>>> 451743e (Оновлення)
         const tempOrder = movedCategory.order;
         movedCategory.order = targetCategory.order;
         targetCategory.order = tempOrder;
 
-<<<<<<< HEAD
-=======
-        // Сортуємо категорії за новим порядком
->>>>>>> 451743e (Оновлення)
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
         console.log('sortedCategories:', sortedCategories);
@@ -3345,10 +3229,6 @@ async function moveCategory(categoryIndex, direction) {
         const result = await response.json();
         showNotification('Порядок категорій оновлено', 'success');
         
-<<<<<<< HEAD
-=======
-        // Оновлюємо локальні дані після успішного оновлення
->>>>>>> 451743e (Оновлення)
         if (result.categories) {
             categories = result.categories;
         renderCategoriesAdmin();
@@ -3358,17 +3238,9 @@ async function moveCategory(categoryIndex, direction) {
         console.error('Помилка зміни порядку категорій:', error);
         showNotification('Помилка зміни порядку категорій: ' + error.message, 'error');
         
-<<<<<<< HEAD
         if (typeof renderCategoriesAdmin === 'function') {
             renderCategoriesAdmin();
         } else {
-=======
-        // Відновлюємо початковий порядок
-        if (typeof renderCategoriesAdmin === 'function') {
-            renderCategoriesAdmin();
-        } else {
-            // Якщо функція renderCategoriesAdmin не існує, просто перезавантажуємо сторінку
->>>>>>> 451743e (Оновлення)
             location.reload();
         }
     }
@@ -3430,10 +3302,6 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Вибираємо форму саме з модального вікна
->>>>>>> 451743e (Оновлення)
         const modal = document.getElementById('modal');
         const nameInput = modal.querySelector('#subcategory-name');
         const slugInput = modal.querySelector('#subcategory-slug');
@@ -3513,16 +3381,11 @@ async function updateSubcategoryData(categoryId, subcategoryId) {
             if (!data.url) throw new Error('Помилка завантаження фото');
             photo = data.url;
         }
-        // Якщо ні файл, ні URL не вказані, залишаємо photo порожнім
 
         const updatedSubcategory = {
             name,
             slug,
-<<<<<<< HEAD
             photo: photo,
-=======
-            photo: photo, // Дозволяємо порожнє значення
->>>>>>> 451743e (Оновлення)
             visible,
             order: typeof subcategory.order === "number" ? subcategory.order : 0,
             metaTitle,
@@ -3806,10 +3669,6 @@ async function deleteSubcategory(categoryId, subcategoryId) {
         categories[categoryIndex] = { ...updatedCategory, subcategories: updatedCategory.subcategories || [] };
         localStorage.setItem('categories', JSON.stringify(categories));
 
-<<<<<<< HEAD
-=======
-        // Підкатегорія успішно видалена
->>>>>>> 451743e (Оновлення)
         showNotification('Підкатегорію видалено!');
         resetInactivityTimer();
     } catch (err) {
@@ -3857,10 +3716,6 @@ async function moveSubcategory(categoryId, subIndex, direction) {
             throw new Error(errorData.error || response.statusText);
         }
 
-<<<<<<< HEAD
-=======
-        // Оновлюємо локальні дані одразу
->>>>>>> 451743e (Оновлення)
         const updatedCategory = await response.json();
         categories = categories.map(c =>
             c._id === categoryId ? updatedCategory : c
@@ -3976,10 +3831,6 @@ async function updateSlide(slideId) {
 
         console.log('Надсилаємо оновлені дані слайду:', slideData);
 
-<<<<<<< HEAD
-=======
-        // Використовуємо slide.id замість slideId для API запиту
->>>>>>> 451743e (Оновлення)
         const apiId = slide.id || slideId;
         const response = await fetchWithAuth(`/api/slides/${apiId}`, {
             method: 'PUT',
@@ -4092,10 +3943,6 @@ async function addSlide() {
         closeSlideModal();
         showNotification('Слайд додано!');
         
-<<<<<<< HEAD
-=======
-        // Оновлюємо список слайдів з сервера
->>>>>>> 451743e (Оновлення)
         await loadSlides();
         resetInactivityTimer();
     } catch (err) {
@@ -4242,22 +4089,11 @@ function editSlide(order) {
                 throw new Error(`Помилка видалення слайду: ${errorData.error || response.statusText}`);
             }
 
-<<<<<<< HEAD
             slides.splice(index, 1);
             
             renderSlidesAdmin();
             showNotification('Слайд видалено!');
             
-=======
-            // Видаляємо слайд з локального масиву
-            slides.splice(index, 1);
-            
-            // Оновлюємо відображення
-            renderSlidesAdmin();
-            showNotification('Слайд видалено!');
-            
-            // Оновлюємо список слайдів з сервера
->>>>>>> 451743e (Оновлення)
             await loadSlides();
             resetInactivityTimer();
         } catch (err) {
@@ -4301,10 +4137,6 @@ async function exportProductsBackup() {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Отримуємо всі товари з сервера
->>>>>>> 451743e (Оновлення)
         const response = await fetchWithAuth('/api/products/export');
         if (!response.ok) {
             const text = await response.text();
@@ -4463,10 +4295,6 @@ async function importProductsBackup() {
                     return;
                 }
 
-<<<<<<< HEAD
-=======
-                // Просто очищаємо системні поля, сервер сам обробить зв'язки
->>>>>>> 451743e (Оновлення)
                 const cleanedProductsData = productsData.map(product => {
                     const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
 
@@ -4477,10 +4305,6 @@ async function importProductsBackup() {
                         });
                     }
 
-<<<<<<< HEAD
-=======
-                    // Обробляємо нову структуру colorBlocks
->>>>>>> 451743e (Оновлення)
                     if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
                         cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
                             const { _id, ...cleanedBlock } = block;
@@ -4495,15 +4319,8 @@ async function importProductsBackup() {
                             return cleanedBlock;
                         });
                         
-<<<<<<< HEAD
                         delete cleanedProduct.colors;
                     } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-=======
-                        // Видаляємо стару структуру colors, якщо є colorBlocks
-                        delete cleanedProduct.colors;
-                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        // Обробляємо стару структуру colors для зворотної сумісності
->>>>>>> 451743e (Оновлення)
                         cleanedProduct.colors = cleanedProduct.colors.map(color => {
                             const { _id, ...cleanedColor } = color;
                             return cleanedColor;
@@ -4513,10 +4330,6 @@ async function importProductsBackup() {
                     return cleanedProduct;
                 });
 
-<<<<<<< HEAD
-=======
-                // Створюємо FormData і додаємо файл
->>>>>>> 451743e (Оновлення)
                 const formData = new FormData();
                 const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
                 formData.append('file', blob, 'products-backup.json');
@@ -4583,10 +4396,6 @@ async function importProductsAdd() {
                     return;
                 }
 
-<<<<<<< HEAD
-=======
-                // Просто очищаємо системні поля, сервер сам обробить зв'язки
->>>>>>> 451743e (Оновлення)
                 const cleanedProductsData = productsData.map(product => {
                     const { _id, createdAt, updatedAt, __v, tempNumber, id, ...cleanedProduct } = product;
 
@@ -4597,10 +4406,6 @@ async function importProductsAdd() {
                         });
                     }
 
-<<<<<<< HEAD
-=======
-                    // Обробляємо нову структуру colorBlocks
->>>>>>> 451743e (Оновлення)
                     if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
                         cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
                             const { _id, ...cleanedBlock } = block;
@@ -4615,15 +4420,8 @@ async function importProductsAdd() {
                             return cleanedBlock;
                         });
                         
-<<<<<<< HEAD
                         delete cleanedProduct.colors;
                     } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-=======
-                        // Видаляємо стару структуру colors, якщо є colorBlocks
-                        delete cleanedProduct.colors;
-                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        // Обробляємо стару структуру colors для зворотної сумісності
->>>>>>> 451743e (Оновлення)
                         cleanedProduct.colors = cleanedProduct.colors.map(color => {
                             const { _id, ...cleanedColor } = color;
                             return cleanedColor;
@@ -4633,10 +4431,6 @@ async function importProductsAdd() {
                     return cleanedProduct;
                 });
 
-<<<<<<< HEAD
-=======
-                // Створюємо FormData і додаємо файл
->>>>>>> 451743e (Оновлення)
                 const formData = new FormData();
                 const blob = new Blob([JSON.stringify(cleanedProductsData)], { type: 'application/json' });
                 formData.append('file', blob, 'products-add.json');
@@ -5028,10 +4822,6 @@ modal.classList.add('active');
             console.warn('Кнопка #save-product-btn не знайдена');
         }
 
-<<<<<<< HEAD
-=======
-        // Додаємо обробник подій для акційної ціни в режимі додавання
->>>>>>> 451743e (Оновлення)
         const salePriceInput = document.getElementById('product-sale-price');
         if (salePriceInput) {
             salePriceInput.addEventListener('input', function() {
@@ -5039,21 +4829,11 @@ modal.classList.add('active');
                 const price = parseFloat(document.getElementById('product-price')?.value || 0);
                 
                 if (!isNaN(salePrice) && salePrice > 0) {
-<<<<<<< HEAD
                     if (!newProduct.saleEnd) {
                         newProduct.saleEnd = null;
                         console.log('Встановлено безкінечну акцію для нового товару');
                     }
                 } else if (isNaN(salePrice) || salePrice <= 0) {
-=======
-                    // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
-                    if (!newProduct.saleEnd) {
-                        newProduct.saleEnd = null; // null означає безкінечну акцію
-                        console.log('Встановлено безкінечну акцію для нового товару');
-                    }
-                } else if (isNaN(salePrice) || salePrice <= 0) {
-                    // Якщо акційна ціна видаляється, видаляємо і дату закінчення
->>>>>>> 451743e (Оновлення)
                     newProduct.saleEnd = null;
                     console.log('Видалено акцію для нового товару');
                 }
@@ -5100,10 +4880,6 @@ function renderPriceFields() {
             <label for="product-sale-price">Акційна ціна (грн)</label>
         `;
         
-<<<<<<< HEAD
-=======
-        // Додаємо обробник подій для акційної ціни
->>>>>>> 451743e (Оновлення)
         const salePriceInput = document.getElementById('product-sale-price');
         if (salePriceInput) {
             salePriceInput.addEventListener('input', function() {
@@ -5111,21 +4887,11 @@ function renderPriceFields() {
                 const price = parseFloat(document.getElementById('product-price')?.value || 0);
                 
                 if (!isNaN(salePrice) && salePrice > 0) {
-<<<<<<< HEAD
                     if (!newProduct.saleEnd) {
                         newProduct.saleEnd = null;
                         console.log('Встановлено безкінечну акцію для товару');
                     }
                 } else if (isNaN(salePrice) || salePrice <= 0) {
-=======
-                    // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
-                    if (!newProduct.saleEnd) {
-                        newProduct.saleEnd = null; // null означає безкінечну акцію
-                        console.log('Встановлено безкінечну акцію для товару');
-                    }
-                } else if (isNaN(salePrice) || salePrice <= 0) {
-                    // Якщо акційна ціна видаляється, видаляємо і дату закінчення
->>>>>>> 451743e (Оновлення)
                     newProduct.saleEnd = null;
                     console.log('Видалено акцію для товару');
                 }
@@ -5179,10 +4945,6 @@ async function updateSubcategories() {
         console.warn('Категорія не знайдена або subcategories не є масивом:', category);
     }
 
-<<<<<<< HEAD
-=======
-    // Відновлюємо вибір підкатегорії
->>>>>>> 451743e (Оновлення)
     if (newProduct.subcategory) {
         const category = categories.find(c => c.slug === categorySlug);
         if (category && category.subcategories.some(sub => sub.slug === newProduct.subcategory && sub.visible !== false)) {
@@ -5389,10 +5151,6 @@ function removeColorBlock(blockIndex) {
         blockElement.remove();
     }
     
-<<<<<<< HEAD
-=======
-    // Оновлюємо індекси для всіх блоків
->>>>>>> 451743e (Оновлення)
     updateColorBlockIndexes();
     resetInactivityTimer();
 }
@@ -5402,10 +5160,6 @@ function updateColorBlockIndexes() {
     blocks.forEach((block, newIndex) => {
         block.setAttribute('data-block-index', newIndex);
         
-<<<<<<< HEAD
-=======
-        // Оновлюємо ID всіх елементів у блоці
->>>>>>> 451743e (Оновлення)
         const inputs = block.querySelectorAll('input, label, button, div');
         inputs.forEach(input => {
             if (input.id) {
@@ -5423,10 +5177,6 @@ function updateColorBlockIndexes() {
         });
     });
     
-<<<<<<< HEAD
-=======
-    // Оновлюємо масив colorBlocks
->>>>>>> 451743e (Оновлення)
     newProduct.colorBlocks = newProduct.colorBlocks.map((block, index) => ({
         ...block,
         blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName
@@ -5705,19 +5455,11 @@ async function searchGroupProducts(query = '') {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Формуємо параметри запиту
->>>>>>> 451743e (Оновлення)
         const params = new URLSearchParams({
             page: groupProductPage.toString(),
             limit: groupProductLimit.toString()
         });
 
-<<<<<<< HEAD
-=======
-        // Додаємо фільтр для включення простих товарів та матраців, але виключаємо групові товари
->>>>>>> 451743e (Оновлення)
         params.append('types', 'simple,mattresses');
         params.append('excludeType', 'group');
 
@@ -5753,10 +5495,6 @@ async function searchGroupProducts(query = '') {
             `;
         }).join('');
 
-<<<<<<< HEAD
-=======
-        // Рендеринг пагінації
->>>>>>> 451743e (Оновлення)
         if (pagination) {
             const totalPages = Math.ceil(groupProductTotal / groupProductLimit);
             pagination.innerHTML = `
@@ -5808,11 +5546,7 @@ function renderGroupProductModal() {
         </div>
     `;
     showModal(modalContent);
-<<<<<<< HEAD
     searchGroupProducts();
-=======
-    searchGroupProducts(); // Завантажуємо першу сторінку за замовчуванням
->>>>>>> 451743e (Оновлення)
 }
 
 function renderGroupProducts() {
@@ -5826,10 +5560,6 @@ function renderGroupProducts() {
         return;
     }
     
-<<<<<<< HEAD
-=======
-    // Спочатку показуємо ID товарів для швидкого drag & drop
->>>>>>> 451743e (Оновлення)
     groupList.innerHTML = `
         <button type="button" class="add-group-products-btn" onclick="openGroupProductsModal()" style="margin-bottom:10px;">Додати товари до групи</button>
         ${newProduct.groupProducts.map((pid, index) => `
@@ -5842,10 +5572,6 @@ function renderGroupProducts() {
     
     resetInactivityTimer();
     
-<<<<<<< HEAD
-=======
-    // Асинхронно завантажуємо назви товарів
->>>>>>> 451743e (Оновлення)
     loadGroupProductNames();
 }
 
@@ -5856,10 +5582,6 @@ async function loadGroupProductNames() {
     const productIds = newProduct.groupProducts.join(',');
     const cacheKey = productIds;
     
-<<<<<<< HEAD
-=======
-    // Перевіряємо кеш
->>>>>>> 451743e (Оновлення)
     if (groupProductsCache[cacheKey]) {
         updateGroupProductDisplay(groupProductsCache[cacheKey]);
         return;
@@ -5880,20 +5602,12 @@ async function loadGroupProductNames() {
         const data = await response.json();
         const groupProducts = data.products || [];
         
-<<<<<<< HEAD
-=======
-        // Зберігаємо в кеш
->>>>>>> 451743e (Оновлення)
         groupProductsCache[cacheKey] = groupProducts;
         
         updateGroupProductDisplay(groupProducts);
         
     } catch (err) {
         console.error('Помилка завантаження назв товарів:', err);
-<<<<<<< HEAD
-=======
-        // Не показуємо помилку користувачу, залишаємо ID
->>>>>>> 451743e (Оновлення)
     }
 }
 
@@ -5901,19 +5615,11 @@ function updateGroupProductDisplay(groupProducts) {
     const groupList = document.getElementById('group-product-list');
     if (!groupList) return;
     
-<<<<<<< HEAD
-=======
-    // Створюємо мапу товарів за ID для швидкого пошуку
->>>>>>> 451743e (Оновлення)
     const productsMap = {};
     groupProducts.forEach(product => {
         productsMap[product._id] = product;
     });
     
-<<<<<<< HEAD
-=======
-    // Використовуємо порядок з newProduct.groupProducts
->>>>>>> 451743e (Оновлення)
     const orderedProducts = newProduct.groupProducts.map(productId => {
         return productsMap[productId] || { _id: productId, name: `Товар ID: ${productId}` };
     });
@@ -5936,10 +5642,6 @@ function updateGroupProductDisplay(groupProducts) {
 }
 
 function openGroupProductsModal() {
-<<<<<<< HEAD
-=======
-    // Створюємо модальне вікно
->>>>>>> 451743e (Оновлення)
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.id = 'group-products-modal';
@@ -5957,20 +5659,12 @@ function openGroupProductsModal() {
     document.body.style.overflow = 'hidden';
     renderGroupProductsListModal();
     
-<<<<<<< HEAD
-=======
-    // Додаємо debounce для пошуку
->>>>>>> 451743e (Оновлення)
     let searchTimeout;
     document.getElementById('group-products-search').addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             renderGroupProductsListModal();
-<<<<<<< HEAD
         }, 300);
-=======
-        }, 300); // Затримка 300мс
->>>>>>> 451743e (Оновлення)
     });
 }
 
@@ -5996,14 +5690,8 @@ async function renderGroupProductsListModal() {
             return;
         }
 
-<<<<<<< HEAD
         const params = new URLSearchParams({
             limit: '1000',
-=======
-        // Формуємо параметри запиту для отримання всіх товарів
-        const params = new URLSearchParams({
-            limit: '1000', // Завантажуємо багато товарів
->>>>>>> 451743e (Оновлення)
             types: 'simple,mattresses',
             excludeType: 'group'
         });
@@ -6052,10 +5740,6 @@ async function renderGroupProductsListModal() {
 async function addGroupProductModal(productId) {
     if (!newProduct.groupProducts.includes(productId)) {
         newProduct.groupProducts.push(productId);
-<<<<<<< HEAD
-=======
-        // Очищаємо кеш при зміні списку товарів
->>>>>>> 451743e (Оновлення)
         groupProductsCache = {};
         await renderGroupProductsListModal();
         renderGroupProducts();
@@ -6065,27 +5749,14 @@ async function addGroupProductModal(productId) {
 
 async function removeGroupProductModal(productId) {
     newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
-<<<<<<< HEAD
-=======
-    // Очищаємо кеш при зміні списку товарів
->>>>>>> 451743e (Оновлення)
     groupProductsCache = {};
     await renderGroupProductsListModal();
     renderGroupProducts();
     resetInactivityTimer();
 }
 
-<<<<<<< HEAD
 let groupProductsCache = {};
 
-=======
-
-
-// Кеш для даних про товари
-let groupProductsCache = {};
-
-// Функції для drag & drop групових товарів
->>>>>>> 451743e (Оновлення)
 function dragGroupProduct(event, index) {
     event.dataTransfer.setData('text/plain', index);
     event.target.classList.add('dragging');
@@ -6101,10 +5772,6 @@ function dropGroupProduct(event, targetIndex) {
     if (sourceIndex !== targetIndex) {
         const [movedProduct] = newProduct.groupProducts.splice(sourceIndex, 1);
         newProduct.groupProducts.splice(targetIndex, 0, movedProduct);
-<<<<<<< HEAD
-=======
-        // Не очищаємо кеш при drag & drop, тільки перерендерюємо
->>>>>>> 451743e (Оновлення)
         renderGroupProducts();
         unsavedChanges = true;
         resetInactivityTimer();
@@ -6114,10 +5781,6 @@ function dropGroupProduct(event, targetIndex) {
 
 function deleteGroupProduct(productId) {
     newProduct.groupProducts = newProduct.groupProducts.filter(pid => pid !== productId);
-<<<<<<< HEAD
-=======
-    // Очищаємо кеш при зміні списку товарів
->>>>>>> 451743e (Оновлення)
     groupProductsCache = {};
     renderGroupProducts();
     resetInactivityTimer();
@@ -6360,10 +6023,6 @@ if (
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-<<<<<<< HEAD
-=======
-        // Завантажуємо фото кольорів
->>>>>>> 451743e (Оновлення)
         for (let blockIndex = 0; blockIndex < newProduct.colorBlocks.length; blockIndex++) {
             const block = newProduct.colorBlocks[blockIndex];
             for (let colorIndex = 0; colorIndex < block.colors.length; colorIndex++) {
@@ -6401,10 +6060,6 @@ if (
             console.warn('Поле id все ще присутнє перед відправкою:', product.id);
         }
 
-<<<<<<< HEAD
-=======
-        // Нормалізація: photo завжди рядок
->>>>>>> 451743e (Оновлення)
         if (product.colorBlocks) {
             product.colorBlocks.forEach(block => {
                 if (block.colors) {
@@ -6462,18 +6117,10 @@ async function openEditProductModal(productId) {
         return;
     }
 
-<<<<<<< HEAD
-=======
-    // Конвертуємо стару структуру кольорів в нову, якщо потрібно
->>>>>>> 451743e (Оновлення)
     let colorBlocks = [];
     if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
         colorBlocks = [...product.colorBlocks];
     } else if (product.colors && Array.isArray(product.colors)) {
-<<<<<<< HEAD
-=======
-        // Конвертуємо стару структуру в нову
->>>>>>> 451743e (Оновлення)
         colorBlocks = [{
             blockName: 'Колір',
             colors: [...product.colors]
@@ -6493,10 +6140,6 @@ async function openEditProductModal(productId) {
         groupProducts: [...product.groupProducts]
     };
 
-<<<<<<< HEAD
-=======
-    // Екранування HTML-символів для назви товару
->>>>>>> 451743e (Оновлення)
     const escapedName = product.name
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')
@@ -6621,39 +6264,20 @@ async function openEditProductModal(productId) {
     updateProductType();
     initializeProductEditor(product.description || '', product.descriptionDelta || null);
 
-<<<<<<< HEAD
-=======
-    // Завантажуємо категорії перед оновленням підкатегорій
->>>>>>> 451743e (Оновлення)
     await loadCategories();
 
     const categorySelect = document.getElementById('product-category');
     const subcatSelect = document.getElementById('product-subcategory');
     if (categorySelect && subcatSelect) {
-<<<<<<< HEAD
-=======
-        // Оновлюємо список категорій
->>>>>>> 451743e (Оновлення)
         categorySelect.innerHTML = '<option value="">Без категорії</option>' + 
             categories.map(c => `<option value="${c.slug}" ${c.slug === product.category ? 'selected' : ''}>${c.name}</option>`).join('');
         categorySelect.addEventListener('change', updateSubcategories);
 
-<<<<<<< HEAD
         await updateSubcategories();
 
         if (product.subcategory) {
             const category = categories.find(c => c.slug === product.category);
             if (category && category.subcategories.some(sub => sub.name === product.subcategory && sub.visible !== false)) {
-=======
-        // Оновлюємо підкатегорії
-        await updateSubcategories();
-
-        // Встановлюємо підкатегорію
-        if (product.subcategory) {
-            const category = categories.find(c => c.slug === product.category);
-            if (category && category.subcategories.some(sub => sub.name === product.subcategory && sub.visible !== false)) {
-                // Знаходимо slug підкатегорії за назвою
->>>>>>> 451743e (Оновлення)
                 const subcategory = category.subcategories.find(sub => sub.name === product.subcategory);
                 subcatSelect.value = subcategory.slug;
                 console.log('Встановлено subcategory:', product.subcategory, 'slug:', subcategory.slug);
@@ -6666,10 +6290,6 @@ async function openEditProductModal(productId) {
         console.warn('Елемент #product-category або #product-subcategory не знайдено');
     }
 
-<<<<<<< HEAD
-=======
-    // Рендеримо кольори для кожного блоку
->>>>>>> 451743e (Оновлення)
     newProduct.colorBlocks.forEach((block, blockIndex) => {
         renderColorsList(blockIndex);
     });
@@ -6691,10 +6311,6 @@ async function openEditProductModal(productId) {
         });
     }
 
-<<<<<<< HEAD
-=======
-    // Додаємо обробники для фото кольорів у кожному блоці
->>>>>>> 451743e (Оновлення)
     newProduct.colorBlocks.forEach((block, blockIndex) => {
         const colorPhotoInput = document.getElementById(`product-color-photo-file-${blockIndex}`);
         if (colorPhotoInput) {
@@ -6723,10 +6339,6 @@ async function openEditProductModal(productId) {
         console.warn('Кнопка #save-product-btn не знайдена');
     }
 
-<<<<<<< HEAD
-=======
-    // Додаємо обробник подій для акційної ціни в режимі редагування
->>>>>>> 451743e (Оновлення)
     const salePriceInput = document.getElementById('product-sale-price');
     if (salePriceInput) {
         salePriceInput.addEventListener('input', function() {
@@ -6734,21 +6346,11 @@ async function openEditProductModal(productId) {
             const price = parseFloat(document.getElementById('product-price')?.value || 0);
             
             if (!isNaN(salePrice) && salePrice > 0) {
-<<<<<<< HEAD
                 if (!newProduct.saleEnd) {
                     newProduct.saleEnd = null;
                     console.log('Встановлено безкінечну акцію для товару при редагуванні');
                 }
             } else if (isNaN(salePrice) || salePrice <= 0) {
-=======
-                // Якщо встановлюється акційна ціна, встановлюємо акцію на безкінечний період за замовчуванням
-                if (!newProduct.saleEnd) {
-                    newProduct.saleEnd = null; // null означає безкінечну акцію
-                    console.log('Встановлено безкінечну акцію для товару при редагуванні');
-                }
-            } else if (isNaN(salePrice) || salePrice <= 0) {
-                // Якщо акційна ціна видаляється, видаляємо і дату закінчення
->>>>>>> 451743e (Оновлення)
                 newProduct.saleEnd = null;
                 console.log('Видалено акцію для товару при редагуванні');
             }
@@ -6762,10 +6364,6 @@ async function openEditProductModal(productId) {
         console.warn('Кнопка #cancel-product-btn не знайдена');
     }
 
-<<<<<<< HEAD
-=======
-    // Додаємо обробники для кнопок "Додати колір" у кожному блоці
->>>>>>> 451743e (Оновлення)
     newProduct.colorBlocks.forEach((block, blockIndex) => {
         const addColorBtn = document.querySelector(`button[onclick="addProductColor(${blockIndex})"]`);
         if (addColorBtn) {
@@ -6773,10 +6371,6 @@ async function openEditProductModal(productId) {
         }
     });
 
-<<<<<<< HEAD
-=======
-    // Оновлюємо відображення полів відповідно до типу товару
->>>>>>> 451743e (Оновлення)
     updateProductType();
 
     resetInactivityTimer();
@@ -6864,10 +6458,6 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Валідація підкатегорії
->>>>>>> 451743e (Оновлення)
         let subcategorySlug = '';
         if (subcategory) {
             const subcategoryObj = categoryObj.subcategories.find(sub => sub.slug === subcategory);
@@ -6898,10 +6488,6 @@ async function saveEditedProduct(productId) {
             return;
         }
 
-<<<<<<< HEAD
-=======
-        // Валідація groupProducts
->>>>>>> 451743e (Оновлення)
         let validatedGroupProducts = newProduct.groupProducts;
         if (newProduct.type === 'group' && newProduct.groupProducts.length > 0) {
             const response = await fetchWithAuth(`/api/products?ids=${encodeURIComponent(newProduct.groupProducts.join(','))}`);
@@ -6938,10 +6524,6 @@ async function saveEditedProduct(productId) {
             }
         }
 
-<<<<<<< HEAD
-=======
-        // Валідуємо кольори в кожному блоці
->>>>>>> 451743e (Оновлення)
         const validatedColorBlocks = newProduct.colorBlocks.map((block, index) => ({
             blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName,
             colors: block.colors.filter(color => {
@@ -7096,10 +6678,6 @@ if (
 
         product.photos.push(...newProduct.photos.filter(photo => typeof photo === 'string'));
 
-<<<<<<< HEAD
-=======
-        // Завантажуємо фото кольорів
->>>>>>> 451743e (Оновлення)
         for (let blockIndex = 0; blockIndex < validatedColorBlocks.length; blockIndex++) {
             const block = validatedColorBlocks[blockIndex];
             for (let colorIndex = 0; colorIndex < block.colors.length; colorIndex++) {
@@ -7132,10 +6710,6 @@ if (
 
         console.log('Надсилаємо продукт на сервер:', JSON.stringify(product, null, 2));
 
-<<<<<<< HEAD
-=======
-        // Нормалізація: photo завжди рядок
->>>>>>> 451743e (Оновлення)
         if (product.colorBlocks) {
             product.colorBlocks.forEach(block => {
                 if (block.colors) {
@@ -7481,10 +7055,6 @@ async function uploadBulkPrices() {
             let updated = 0;
             let counter = 1;
             
-<<<<<<< HEAD
-=======
-            // Створюємо мапу порядкових номерів до товарів
->>>>>>> 451743e (Оновлення)
             const productMap = new Map();
             const activeProducts = products.filter(p => p.active && p.type !== 'group');
             
@@ -7510,10 +7080,6 @@ async function uploadBulkPrices() {
             console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
             console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
             
-<<<<<<< HEAD
-=======
-            // Групуємо рядки за товарами для правильного оновлення матраців
->>>>>>> 451743e (Оновлення)
             const productUpdates = new Map();
             
             for (const line of lines) {
@@ -7541,10 +7107,6 @@ async function uploadBulkPrices() {
                     continue;
                 }
 
-<<<<<<< HEAD
-=======
-                // Ініціалізуємо оновлення для товару, якщо ще не існує
->>>>>>> 451743e (Оновлення)
                 if (!productUpdates.has(product._id)) {
                 const { _id, createdAt, updatedAt, __v, id: productId, tempNumber, ...cleanedProduct } = product;
 
@@ -7555,10 +7117,6 @@ async function uploadBulkPrices() {
                     });
                 }
 
-<<<<<<< HEAD
-=======
-                    // Обробляємо нову структуру colorBlocks
->>>>>>> 451743e (Оновлення)
                     if (cleanedProduct.colorBlocks && Array.isArray(cleanedProduct.colorBlocks)) {
                         cleanedProduct.colorBlocks = cleanedProduct.colorBlocks.map(block => {
                             const { _id, ...cleanedBlock } = block;
@@ -7573,15 +7131,8 @@ async function uploadBulkPrices() {
                             return cleanedBlock;
                         });
                         
-<<<<<<< HEAD
                         delete cleanedProduct.colors;
                     } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-=======
-                        // Видаляємо стару структуру colors, якщо є colorBlocks
-                        delete cleanedProduct.colors;
-                    } else if (cleanedProduct.colors && Array.isArray(cleanedProduct.colors)) {
-                        // Обробляємо стару структуру colors для зворотної сумісності
->>>>>>> 451743e (Оновлення)
                         cleanedProduct.colors = cleanedProduct.colors.map(color => {
                             const { _id, ...cleanedColor } = color;
                             return cleanedColor;
@@ -7609,20 +7160,10 @@ async function uploadBulkPrices() {
                         console.log(`Підготовлено оновлення ціни товару "${product.name}" з ${product.price} на ${price}`);
                     }
                     
-<<<<<<< HEAD
                     if (parts.length > 4) {
                         if (!isNaN(salePrice) && salePrice >= 0) {
                             if (salePrice <= price) {
                                 update.data.salePrice = salePrice;
-=======
-                    // Обробка акційної ціни
-                    if (parts.length > 4) {
-                        if (!isNaN(salePrice) && salePrice >= 0) {
-                            // Акційна ціна може бути меншою або рівною звичайній
-                            if (salePrice <= price) {
-                                update.data.salePrice = salePrice;
-                                // Встановлюємо акцію на безкінечний період за замовчуванням
->>>>>>> 451743e (Оновлення)
                                 update.data.saleEnd = null;
                                 update.updates.push(`акційна ціна: ${product.salePrice || 'відсутня'} → ${salePrice}`);
                                 console.log(`Підготовлено оновлення акційної ціни товару "${product.name}" на ${salePrice} (безкінечна акція)`);
@@ -7633,10 +7174,6 @@ async function uploadBulkPrices() {
                             console.warn(`Невірна акційна ціна "${parts[4]}" для товару "${product.name}"`);
                         }
                     } else {
-<<<<<<< HEAD
-=======
-                        // Якщо акційної ціни немає в файлі, видаляємо її
->>>>>>> 451743e (Оновлення)
                         if (product.salePrice !== null) {
                             update.data.salePrice = null;
                             update.data.saleEnd = null;
@@ -7660,10 +7197,6 @@ async function uploadBulkPrices() {
                             update.updates.push(`розмір "${size}": ${oldPrice} → ${price}`);
                             console.log(`Підготовлено оновлення ціни матрацу "${product.name}" розміру "${size}" з ${oldPrice} на ${price}`);
                         }
-<<<<<<< HEAD
-=======
-                        // ОНОВЛЕННЯ АКЦІЙНОЇ ЦІНИ ДЛЯ КОЖНОГО РОЗМІРУ
->>>>>>> 451743e (Оновлення)
                         if (sizeObj) {
                             if (parts.length > 5 && !isNaN(salePrice) && salePrice >= 0 && salePrice <= price) {
                                 const oldSale = sizeObj.salePrice;
@@ -7671,10 +7204,6 @@ async function uploadBulkPrices() {
                                 update.updates.push(`акційна ціна для розміру "${size}": ${oldSale ?? 'відсутня'} → ${salePrice}`);
                                 console.log(`Підготовлено оновлення акційної ціни для розміру "${size}" на ${salePrice}`);
                             } else if (parts.length <= 5 || isNaN(salePrice) || salePrice === null) {
-<<<<<<< HEAD
-=======
-                                // Якщо акційної ціни немає або вона некоректна — видалити
->>>>>>> 451743e (Оновлення)
                                 if (sizeObj.salePrice !== undefined && sizeObj.salePrice !== null) {
                                     sizeObj.salePrice = null;
                                     update.updates.push(`акційна ціна для розміру "${size}": видалена`);
@@ -7688,10 +7217,6 @@ async function uploadBulkPrices() {
             
             console.log(`Групування завершено. Підготовлено оновлень для ${productUpdates.size} товарів`);
             
-<<<<<<< HEAD
-=======
-            // Тепер оновлюємо кожен товар один раз з усіма змінами
->>>>>>> 451743e (Оновлення)
             for (const [productId, update] of productUpdates) {
                 if (update.updates.length > 0) {
                     console.log(`Оновлюємо товар "${update.product.name}" з змінами: ${update.updates.join(', ')}`);
@@ -7715,10 +7240,6 @@ async function uploadBulkPrices() {
             console.log(`Завершено імпорт. Успішно оновлено ${updated} товарів з ${lines.length} рядків`);
             console.log(`Загальна статистика: ${productUpdates.size} товарів було оброблено, ${updated} оновлено`);
             
-<<<<<<< HEAD
-=======
-            // Підраховуємо кількість оновлень акційних цін
->>>>>>> 451743e (Оновлення)
             let salePriceUpdates = 0;
             for (const [productId, update] of productUpdates) {
                 if (update.updates.some(u => u.includes('акційна ціна'))) {
@@ -7754,10 +7275,6 @@ async function uploadBulkPrices() {
 
             console.log('Експортуємо ціни всіх товарів...');
             
-<<<<<<< HEAD
-=======
-            // Отримуємо всі товари з сервера
->>>>>>> 451743e (Оновлення)
             const response = await fetchWithAuth('/api/products/export-prices');
             if (!response.ok) {
                 const text = await response.text();
@@ -7780,10 +7297,6 @@ async function uploadBulkPrices() {
             a.click();
             URL.revokeObjectURL(url);
             
-<<<<<<< HEAD
-=======
-            // Підраховуємо товари з акційними цінами
->>>>>>> 451743e (Оновлення)
             const lines = csvContent.split('\n').filter(line => line.trim());
             const productsWithSale = lines.filter(line => line.includes(',') && line.split(',').length > 4);
             
@@ -7849,10 +7362,6 @@ function viewOrder(index) {
                 ${
                     order.items && Array.isArray(order.items) && order.items.length > 0
                         ? order.items.map(item => {
-<<<<<<< HEAD
-=======
-                              // Формуємо інформацію про колір або розмір
->>>>>>> 451743e (Оновлення)
                               let additionalInfo = '';
                               if (item.color && typeof item.color === 'object' && item.color.name) {
                                   additionalInfo = `, Колір: ${item.color.name}`;
@@ -7860,10 +7369,6 @@ function viewOrder(index) {
                                   additionalInfo = `, Розмір: ${item.size}`;
                               }
                               
-<<<<<<< HEAD
-=======
-                              // Формуємо назву товару з брендом
->>>>>>> 451743e (Оновлення)
                               let productName = item.name || 'Невідомий товар';
                               if (item.brand) {
                                   productName = `${item.name} (${item.brand})`;
@@ -8158,10 +7663,6 @@ socket.onmessage = (event) => {
             console.log('Оновлено brands:', brands);
             updateBrandOptions();
         } else if (type === 'error') {
-<<<<<<< HEAD
-=======
-            // Перевіряємо, чи є data об'єктом і чи має властивість error
->>>>>>> 451743e (Оновлення)
             const errorMessage = data && typeof data === 'object' && data.error ? data.error : 'Невідома помилка';
             console.error('WebSocket помилка від сервера:', errorMessage);
             showNotification(`Помилка WebSocket: ${errorMessage}`);
