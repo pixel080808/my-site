@@ -1824,8 +1824,11 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 return res.status(400).json({ error: `Елемент ${i} не має _id` });
             }
             
+            // Перевіряємо чи ID є валідним ObjectId
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ObjectId в елементі ${i}:`, update._id);
+                logger.error(`Тип ID:`, typeof update._id);
+                logger.error(`Довжина ID:`, update._id ? update._id.length : 'undefined');
                 await session.abortTransaction();
                 return res.status(400).json({ error: `Невірний формат ID категорії: ${update._id}` });
             }

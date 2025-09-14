@@ -1542,7 +1542,10 @@ function renderCategories() {
         return;
     }
 
-    categories.forEach(cat => {
+    // Сортуємо категорії за полем order
+    const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    sortedCategories.forEach(cat => {
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'category';
 
@@ -1593,7 +1596,9 @@ function renderCategories() {
 
         const subcategoriesDiv = document.createElement('div');
         subcategoriesDiv.className = 'subcategories';
-        (cat.subcategories || []).forEach(sub => {
+        // Сортуємо підкатегорії за полем order
+        const sortedSubcategories = (cat.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        sortedSubcategories.forEach(sub => {
             const subLink = document.createElement('a');
             subLink.href = `/${cat.slug}/${sub.slug}`;
             subLink.onclick = (e) => {
@@ -1629,7 +1634,9 @@ function renderCatalogDropdown() {
     if (!dropdown || !categories) return;
     while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
 
-    categories.forEach(cat => {
+    // Сортуємо категорії за полем order
+    const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    sortedCategories.forEach(cat => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'dropdown-item';
         itemDiv.dataset.category = cat.slug;
@@ -1768,7 +1775,9 @@ function renderCatalogDropdown() {
         });
         styleObserver.observe(subList, { attributes: true, attributeFilter: ['class'] });
 
-        (cat.subcategories || []).forEach(sub => {
+        // Сортуємо підкатегорії за полем order
+        const sortedSubcategories = (cat.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        sortedSubcategories.forEach(sub => {
             const subContentContainer = document.createElement('div');
             subContentContainer.style.display = 'flex';
             subContentContainer.style.alignItems = 'center';
@@ -1931,7 +1940,9 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
 
         const categoryList = document.createElement('div');
         categoryList.className = 'category-list';
-        categories.forEach(cat => {
+        // Сортуємо категорії за полем order
+        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+        sortedCategories.forEach(cat => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'category-item';
 
@@ -2011,7 +2022,9 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             allBtnLink.appendChild(allBtn);
             subButtonsDiv.appendChild(allBtnLink);
 
-            (selectedCat.subcategories || []).forEach(sub => {
+            // Сортуємо підкатегорії за полем order
+            const sortedSubcategories = (selectedCat.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+            sortedSubcategories.forEach(sub => {
                 const btnLink = document.createElement('a');
                 btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
                 btnLink.onclick = (e) => {
@@ -6105,7 +6118,9 @@ renderCatalogDropdown();
                     burgerCatalogDropdown.removeChild(burgerCatalogDropdown.firstChild);
                 }
 
-                categories.forEach(category => {
+                // Сортуємо категорії за полем order
+                const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+                sortedCategories.forEach(category => {
                     const categoryItem = document.createElement('div');
                     categoryItem.classList.add('burger-category-item');
                     
@@ -6134,7 +6149,9 @@ renderCatalogDropdown();
                     const subcategoryContainer = document.createElement('div');
                     subcategoryContainer.className = 'burger-subcategory';
                     
-                    (category.subcategories || []).forEach(sub => {
+                    // Сортуємо підкатегорії за полем order
+                    const sortedSubcategories = (category.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+                    sortedSubcategories.forEach(sub => {
                         const subcategoryLink = document.createElement('a');
                         subcategoryLink.href = '#';
                         subcategoryLink.textContent = sub.name;
