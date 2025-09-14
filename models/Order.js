@@ -46,6 +46,7 @@ const orderSchema = new mongoose.Schema({
     },
     items: [{
 <<<<<<< HEAD
+<<<<<<< HEAD
         id: { type: mongoose.Schema.Types.Mixed, required: true },
         name: { type: String, required: true },
         brand: { type: String, default: '' },
@@ -54,6 +55,11 @@ const orderSchema = new mongoose.Schema({
         name: { type: String, required: true },
         brand: { type: String, default: '' }, // Додаємо поле для бренду
 >>>>>>> 451743e (Оновлення)
+=======
+        id: { type: mongoose.Schema.Types.Mixed, required: true },
+        name: { type: String, required: true },
+        brand: { type: String, default: '' },
+>>>>>>> bc1366a (Оновлення)
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true, min: 0 },
         photo: {

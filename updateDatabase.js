@@ -26,9 +26,12 @@ async function updateDatabase() {
         console.log('Оновлення categories:', categoryResult);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Встановлення (або оновлення) налаштувань сайту: назва, логотип, фавікон
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         const settingsCol = mongoose.connection.db.collection('settings');
         const absoluteBase = 'https://mebli.onrender.com';
         const update = {

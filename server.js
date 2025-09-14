@@ -195,9 +195,12 @@ if (!process.env.JWT_SECRET) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // --- Простий варіант: логін і пароль у коді ---
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD_HASH = '$2a$12$iNXyrBLxGyJkG8ts2t9NRuwztve6a1Y/ZRNELSGVEAOg8WcivwRE6';
 
@@ -407,9 +410,12 @@ const server = app.listen(process.env.PORT || 3000, async () => {
   logger.info(`Сервер запущено на порту ${process.env.PORT || 3000}`)
   
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   // Запускаємо міграцію товарів при старті сервера
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
   try {
     await migrateProducts()
   } catch (error) {
@@ -838,9 +844,12 @@ app.get("/api/public/products", async (req, res) => {
           product.subcategory = null
         } else {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
           // Перевіряємо, чи subcategory є назвою або slug
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
           const subcategoryByName = category.subcategories?.find((sub) => sub.name === product.subcategory)
           const subcategoryBySlug = category.subcategories?.find((sub) => sub.slug === product.subcategory)
           
@@ -849,9 +858,12 @@ app.get("/api/public/products", async (req, res) => {
             product.subcategory = null
           } else if (subcategoryBySlug && !subcategoryByName) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Якщо знайдено за slug, але не за назвою, конвертуємо в назву
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             logger.info(`Конвертуємо slug підкатегорії в назву для товару ${product.name}: ${product.subcategory} -> ${subcategoryBySlug.name}`)
             product.subcategory = subcategoryBySlug.name
           }
@@ -970,9 +982,12 @@ app.get("/api/products", authenticateToken, async (req, res) => {
     }
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Пошук за конкретними ID
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (req.query.ids) {
       const ids = req.query.ids.split(',').filter(id => id.trim() !== '');
       if (ids.length > 0) {
@@ -984,9 +999,12 @@ app.get("/api/products", authenticateToken, async (req, res) => {
     }
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Фільтрація за типами товарів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (req.query.types) {
       const types = req.query.types.split(',')
       query.type = { $in: types }
@@ -994,6 +1012,7 @@ app.get("/api/products", authenticateToken, async (req, res) => {
       query.type = req.query.type
     }
     
+<<<<<<< HEAD
 <<<<<<< HEAD
     if (req.query.excludeType) {
       if (query.type) {
@@ -1005,18 +1024,21 @@ app.get("/api/products", authenticateToken, async (req, res) => {
       } else {
 =======
     // Виключення певного типу товарів
+=======
+>>>>>>> bc1366a (Оновлення)
     if (req.query.excludeType) {
       if (query.type) {
-        // Якщо вже є фільтр по типах, додаємо виключення
         if (Array.isArray(query.type.$in)) {
           query.type.$in = query.type.$in.filter(t => t !== req.query.excludeType)
         } else if (query.type === req.query.excludeType) {
-          // Якщо тип співпадає з виключаємим, видаляємо фільтр
           delete query.type
         }
       } else {
+<<<<<<< HEAD
         // Якщо немає фільтра по типах, додаємо виключення
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         query.type = { $ne: req.query.excludeType }
       }
     }
@@ -1046,9 +1068,12 @@ app.get("/api/products", authenticateToken, async (req, res) => {
       }
     } else {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // За замовчуванням сортуємо за _id в спадному порядку (найновіші спочатку)
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       sortOptions["_id"] = -1
     }
 
@@ -1142,9 +1167,12 @@ app.post("/api/products", authenticateToken, csrfProtection, async (req, res) =>
       })
     } else if (productData.colors) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Конвертуємо стару структуру в нову
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       productData.colorBlocks = [{
         blockName: 'Колір',
         colors: productData.colors.map((color) => {
@@ -1216,9 +1244,12 @@ if (error) {
         })
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Зберігаємо назву підкатегорії замість slug
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       productData.subcategory = subcategory.name;
     }
 
@@ -1340,9 +1371,12 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
       });
     } else if (productData.colors) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Конвертуємо стару структуру в нову
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       productData.colorBlocks = [{
         blockName: 'Колір',
         colors: productData.colors.map((color) => {
@@ -1418,9 +1452,12 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
         });
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Зберігаємо назву підкатегорії замість slug
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       productData.subcategory = subcategory.name;
     }
 
@@ -1476,9 +1513,12 @@ app.delete("/api/products/:id", authenticateToken, csrfProtection, async (req, r
       });
     } else if (product.colors) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Для старої структури
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       product.colors.forEach(color => {
         if (color.photo) {
           colorPhotos.push(color.photo);
@@ -1723,9 +1763,12 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Дозволяємо порожнє значення для photo
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (categoryData.photo === "") categoryData.photo = "";
     
     categoryData.subcategories =
@@ -1733,10 +1776,14 @@ app.put("/api/categories/:id", authenticateToken, csrfProtection, async (req, re
         ...sub,
         _id: sub._id && mongoose.Types.ObjectId.isValid(sub._id) ? sub._id : undefined,
 <<<<<<< HEAD
+<<<<<<< HEAD
         photo: sub.photo || "",
 =======
         photo: sub.photo || "", // Дозволяємо порожнє значення
 >>>>>>> 451743e (Оновлення)
+=======
+        photo: sub.photo || "",
+>>>>>>> bc1366a (Оновлення)
         visible: sub.visible ?? true,
         order: sub.order || 0,
       })) || [];
@@ -1836,6 +1883,7 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
     session.startTransaction();
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
         logger.info("=== ПОЧАТОК ОБРОБКИ КАТЕГОРІЙ ===");
         logger.info("req.body:", req.body);
         
@@ -1846,15 +1894,23 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         
         // Безпечно отримуємо categories з req.body
 >>>>>>> 451743e (Оновлення)
+=======
+        logger.info("=== ПОЧАТОК ОБРОБКИ КАТЕГОРІЙ ===");
+        logger.info("req.body:", req.body);
+        
+>>>>>>> bc1366a (Оновлення)
         const categories = req.body.categories;
         logger.info("categories з req.body:", categories);
         logger.info("Тип categories:", typeof categories);
         logger.info("Array.isArray(categories):", Array.isArray(categories));
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Перевіряємо, чи categories існує і є масивом
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         if (!categories) {
             logger.error("categories відсутні в req.body");
             await session.abortTransaction();
@@ -1862,9 +1918,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Якщо categories не є масивом, спробуємо перетворити
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         let categoryUpdates = categories;
         if (!Array.isArray(categories)) {
             logger.info("categories не є масивом, спробуємо перетворити");
@@ -1874,9 +1933,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
                 logger.info("Ключі об'єкта categories:", keys);
                 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                 // Перевіряємо, чи всі ключі числові
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
                 const hasNumericKeys = keys.every(key => !isNaN(parseInt(key)));
                 logger.info("Чи всі ключі числові:", hasNumericKeys);
                 
@@ -1899,18 +1961,24 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         logger.info("Довжина масиву:", categoryUpdates.length);
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Перевіряємо кожен елемент масиву
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         for (let i = 0; i < categoryUpdates.length; i++) {
             const update = categoryUpdates[i];
             logger.info(`Обробляємо елемент ${i}:`, update);
             logger.info(`Тип елемента:`, typeof update);
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Перевіряємо, чи елемент є об'єктом
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             if (!update || typeof update !== 'object') {
                 logger.error(`Елемент ${i} не є об'єктом:`, update);
                 await session.abortTransaction();
@@ -1918,9 +1986,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             }
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Перевіряємо _id
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             if (!update._id) {
                 logger.error(`Елемент ${i} не має _id:`, update);
                 await session.abortTransaction();
@@ -1928,9 +1999,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             }
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Перевіряємо валідність ObjectId
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             if (!mongoose.Types.ObjectId.isValid(update._id)) {
                 logger.error(`Невірний формат ObjectId в елементі ${i}:`, update._id);
                 await session.abortTransaction();
@@ -1938,9 +2012,12 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
             }
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Перевіряємо order
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             if (typeof update.order !== 'number' || update.order < 0) {
                 logger.error(`Невірний порядок в елементі ${i}:`, update.order);
                 await session.abortTransaction();
@@ -1951,15 +2028,19 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Оновлюємо категорії в базі даних
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         logger.info("Оновлюємо категорії в базі даних...");
         for (const update of categoryUpdates) {
             await Category.findByIdAndUpdate(update._id, { order: update.order }, { new: true, session });
             logger.info(`Оновлено категорію ${update._id} з порядком ${update.order}`);
         }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
         const allCategories = await Category.find().session(session);
         logger.info("Отримано оновлені категорії:", allCategories.length);
@@ -1968,14 +2049,18 @@ app.put("/api/categories/order", authenticateToken, csrfProtection, async (req, 
         
 =======
         // Отримуємо оновлені категорії
+=======
+>>>>>>> bc1366a (Оновлення)
         const allCategories = await Category.find().session(session);
         logger.info("Отримано оновлені категорії:", allCategories.length);
         
-        // Відправляємо оновлення через WebSocket
         broadcast("categories", allCategories);
         
+<<<<<<< HEAD
         // Підтверджуємо транзакцію
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         await session.commitTransaction();
         logger.info("Транзакція підтверджена");
         
@@ -2243,14 +2328,18 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
         let { subcategories: subcategoryUpdates } = req.body;
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Додаткове логування
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         logger.info("Отримано дані для оновлення підкатегорій:", req.body);
         console.log("subcategoryUpdates:", subcategoryUpdates);
         console.log("Тип subcategoryUpdates:", typeof subcategoryUpdates);
         console.log("Array.isArray(subcategoryUpdates):", Array.isArray(subcategoryUpdates));
         
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (!Array.isArray(subcategoryUpdates)) {
             if (subcategoryUpdates && typeof subcategoryUpdates === 'object') {
@@ -2260,6 +2349,10 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
             if (subcategoryUpdates && typeof subcategoryUpdates === 'object') {
                 // Перевіряємо, чи це об'єкт з числовими ключами (як масив)
 >>>>>>> 451743e (Оновлення)
+=======
+        if (!Array.isArray(subcategoryUpdates)) {
+            if (subcategoryUpdates && typeof subcategoryUpdates === 'object') {
+>>>>>>> bc1366a (Оновлення)
                 const keys = Object.keys(subcategoryUpdates);
                 const hasNumericKeys = keys.every(key => !isNaN(parseInt(key)));
                 
@@ -2268,9 +2361,12 @@ app.put("/api/categories/:categoryId/subcategories/order", authenticateToken, cs
                     console.log("Після Object.values для підкатегорій (числові ключі):", subcategoryUpdates);
                 } else {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                     // Якщо це не числові ключі, можливо це об'єкт з іншими властивостями
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
                     console.log("Об'єкт підкатегорій має нечислові ключі:", keys);
             await session.abortTransaction();
                     return res.status(400).json({ error: "subcategories має неправильну структуру" });
@@ -2472,9 +2568,12 @@ app.delete("/api/slides/:id", authenticateToken, csrfProtection, async (req, res
     logger.info(`Спроба видалення слайду з ID: ${slideId}`)
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Перевіряємо, чи це MongoDB ObjectId
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (!mongoose.Types.ObjectId.isValid(slideId)) {
       logger.error(`Невірний формат ID слайду: ${slideId}`)
       return res.status(400).json({ error: "Невірний формат ID слайду" })
@@ -2610,9 +2709,12 @@ app.put("/api/settings", authenticateToken, csrfProtection, async (req, res) => 
     const { _id, __v, createdAt, updatedAt, ...cleanedSettingsData } = settingsData
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Додаю дефолтні значення для SEO-полів, якщо вони не передані
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     cleanedSettingsData.metaTitle = typeof cleanedSettingsData.metaTitle === 'string' ? cleanedSettingsData.metaTitle : '';
     cleanedSettingsData.metaDescription = typeof cleanedSettingsData.metaDescription === 'string' ? cleanedSettingsData.metaDescription : '';
     cleanedSettingsData.metaKeywords = typeof cleanedSettingsData.metaKeywords === 'string' ? cleanedSettingsData.metaKeywords : '';
@@ -2819,9 +2921,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
       logger.info(`Шукаємо продукт з ID: ${item.id}, тип: ${typeof item.id}`);
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Спробуємо знайти продукт за _id (MongoDB ObjectId)
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (mongoose.Types.ObjectId.isValid(item.id)) {
         logger.info(`Спроба пошуку за _id: ${item.id}`);
         product = await Product.findOne({ _id: item.id }).session(session);
@@ -2831,9 +2936,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Якщо не знайдено за _id, спробуємо за числовим id
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (!product) {
         const numericId = parseInt(item.id);
         if (!isNaN(numericId)) {
@@ -2846,9 +2954,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Якщо все ще не знайдено, спробуємо пошук за рядковим id (можливо це slug або інший ідентифікатор)
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (!product) {
         logger.info(`Спроба пошуку за рядковим id: ${item.id}`);
         product = await Product.findOne({ 
@@ -2885,9 +2996,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         item.photo = item.photo || product.photos[0] || ""
       } else if (item.colors && Array.isArray(item.colors) && item.colors.length > 0) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Обробка масиву кольорів (нова структура)
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         let totalPriceChange = 0;
         let colorPhoto = null;
         
@@ -2895,9 +3009,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
           let color = null;
           
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
           // Шукаємо в новій структурі colorBlocks
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
           if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
             for (const block of product.colorBlocks) {
               if (block.colors && Array.isArray(block.colors)) {
@@ -2908,9 +3025,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
           }
           
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
           // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
           if (!color && product.colors && Array.isArray(product.colors)) {
             color = product.colors.find((c) => c.name === itemColor.name && c.value === itemColor.value);
           }
@@ -2927,9 +3047,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
           }
           
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
           // Оновлюємо інформацію про колір в кошику
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
           itemColor.priceChange = color.priceChange || 0;
         }
         
@@ -2947,6 +3070,7 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
       } else if (item.color && item.color.name) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         let color = null;
         
 =======
@@ -2955,6 +3079,10 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         
         // Спочатку шукаємо в новій структурі colorBlocks
 >>>>>>> 451743e (Оновлення)
+=======
+        let color = null;
+        
+>>>>>>> bc1366a (Оновлення)
         if (product.colorBlocks && Array.isArray(product.colorBlocks)) {
           for (const block of product.colorBlocks) {
             if (block.colors && Array.isArray(block.colors)) {
@@ -2965,9 +3093,12 @@ app.post("/api/cart", csrfProtection, async (req, res) => {
         }
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Якщо не знайдено в colorBlocks, шукаємо в старій структурі colors
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         if (!color && product.colors && Array.isArray(product.colors)) {
           color = product.colors.find((c) => c.name === item.color.name && c.value === item.color.value);
         }
@@ -3071,9 +3202,12 @@ const cleanupOldCarts = async () => {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // Функція міграції товарів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
 const migrateProducts = async () => {
   try {
     logger.info("Початок міграції товарів...")
@@ -3100,17 +3234,23 @@ const migrateProducts = async () => {
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Перевіряємо, чи subcategory є slug або назвою
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       const subcategoryByName = category.subcategories?.find(sub => sub.name === product.subcategory)
       const subcategoryBySlug = category.subcategories?.find(sub => sub.slug === product.subcategory)
       
       if (subcategoryBySlug && !subcategoryByName) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Конвертуємо slug в назву
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         logger.info(`Мігруємо товар ${product.name}: ${product.subcategory} -> ${subcategoryBySlug.name}`)
         product.subcategory = subcategoryBySlug.name
         await product.save()
@@ -3580,6 +3720,7 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     let products = JSON.parse(await fs.promises.readFile(req.file.path, "utf8"))
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     const idMapping = new Map()
     
     const processedProducts = products.map((product, index) => {
@@ -3587,30 +3728,40 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
       
 =======
     // Створюємо мапу для зберігання зв'язків originalId -> новий _id
+=======
+>>>>>>> bc1366a (Оновлення)
     const idMapping = new Map()
     
-    // Перший прохід: обробляємо всі товари і створюємо мапу ID
     const processedProducts = products.map((product, index) => {
       const { id, _id, __v, originalId, ...cleanedProduct } = product
       
+<<<<<<< HEAD
       // Зберігаємо зв'язок originalId -> тимчасовий індекс
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (originalId) {
         idMapping.set(originalId, `temp_${index}`)
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Обробляємо groupProducts - замінюємо на порожній масив для валідації
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
         cleanedProduct.groupProducts = []
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Обробляємо порожні значення для обов'язкових полів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (!cleanedProduct.material || cleanedProduct.material === '') {
         cleanedProduct.material = ''
       }
@@ -3637,9 +3788,12 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     })
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Валідація всіх товарів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     for (const product of processedProducts) {
       const { error } = productSchemaValidation.validate(product, { abortEarly: false })
       if (error) {
@@ -3649,19 +3803,24 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     await Product.deleteMany({})
     
     const insertedProducts = await Product.insertMany(processedProducts)
     
 =======
     // Видаляємо всі існуючі товари
+=======
+>>>>>>> bc1366a (Оновлення)
     await Product.deleteMany({})
     
-    // Вставляємо нові товари
     const insertedProducts = await Product.insertMany(processedProducts)
     
+<<<<<<< HEAD
     // Оновлюємо мапу ID з реальними _id
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     insertedProducts.forEach((product, index) => {
       const originalId = products[index].originalId
       if (originalId) {
@@ -3670,9 +3829,12 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     })
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Другий прохід: оновлюємо groupProducts з правильними ID
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     const updatePromises = []
     
     for (let i = 0; i < insertedProducts.length; i++) {
@@ -3681,6 +3843,7 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
       
       if (product.type === 'group' && originalProduct.groupProducts && Array.isArray(originalProduct.groupProducts)) {
         const updatedGroupProducts = originalProduct.groupProducts.map(item => {
+<<<<<<< HEAD
 <<<<<<< HEAD
           if (typeof item === 'object' && item !== null && item.originalId) {
             return idMapping.get(item.originalId) || item.originalId
@@ -3698,25 +3861,27 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
         
 =======
           // Якщо це об'єкт з originalId, використовуємо мапу
+=======
+>>>>>>> bc1366a (Оновлення)
           if (typeof item === 'object' && item !== null && item.originalId) {
             return idMapping.get(item.originalId) || item.originalId
           }
-          // Якщо це рядок (ID), спробуємо знайти в мапі
           else if (typeof item === 'string') {
             return idMapping.get(item) || item
           }
-          // Якщо це об'єкт без originalId, спробуємо знайти _id
           else if (typeof item === 'object' && item !== null && item._id) {
             return idMapping.get(item._id) || item._id
           }
-          // Якщо це щось інше, конвертуємо в рядок
           else {
             return item.toString()
           }
-        }).filter(id => id && id !== 'undefined') // Фільтруємо невалідні ID
+        }).filter(id => id && id !== 'undefined')
         
+<<<<<<< HEAD
         // Оновлюємо товар з правильними groupProducts
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         updatePromises.push(
           Product.findByIdAndUpdate(product._id, { groupProducts: updatedGroupProducts })
         )
@@ -3724,17 +3889,23 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
     }
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Виконуємо всі оновлення
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (updatePromises.length > 0) {
       await Promise.all(updatePromises)
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Очищаємо всі кошики, оскільки ID товарів змінилися
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     await Cart.deleteMany({})
     logger.info("Всі кошики очищено після імпорту товарів")
 
@@ -3771,6 +3942,7 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     let products = JSON.parse(await fs.promises.readFile(req.file.path, "utf8"))
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     const idMapping = new Map()
     
     const processedProducts = products.map((product, index) => {
@@ -3778,22 +3950,29 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
       
 =======
     // Створюємо мапу для зберігання зв'язків originalId -> новий _id
+=======
+>>>>>>> bc1366a (Оновлення)
     const idMapping = new Map()
     
-    // Перший прохід: обробляємо всі товари і створюємо мапу ID
     const processedProducts = products.map((product, index) => {
       const { id, _id, __v, originalId, ...cleanedProduct } = product
       
+<<<<<<< HEAD
       // Зберігаємо зв'язок originalId -> тимчасовий індекс
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (originalId) {
         idMapping.set(originalId, `temp_${index}`)
       }
       
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       // Обробляємо groupProducts - замінюємо на порожній масив для валідації
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
         cleanedProduct.groupProducts = []
       }
@@ -3802,9 +3981,12 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     })
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Валідація всіх товарів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     for (const product of processedProducts) {
       const { error } = productSchemaValidation.validate(product, { abortEarly: false })
       if (error) {
@@ -3814,6 +3996,7 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     const insertedProducts = await Product.insertMany(processedProducts)
     
 =======
@@ -3822,6 +4005,10 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     
     // Оновлюємо мапу ID з реальними _id
 >>>>>>> 451743e (Оновлення)
+=======
+    const insertedProducts = await Product.insertMany(processedProducts)
+    
+>>>>>>> bc1366a (Оновлення)
     insertedProducts.forEach((product, index) => {
       const originalId = products[index].originalId
       if (originalId) {
@@ -3830,9 +4017,12 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     })
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Другий прохід: оновлюємо groupProducts з правильними ID
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     const updatePromises = []
     
     for (let i = 0; i < insertedProducts.length; i++) {
@@ -3841,6 +4031,7 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
       
       if (product.type === 'group' && originalProduct.groupProducts && Array.isArray(originalProduct.groupProducts)) {
         const updatedGroupProducts = originalProduct.groupProducts.map(item => {
+<<<<<<< HEAD
 <<<<<<< HEAD
           if (typeof item === 'object' && item !== null && item.originalId) {
             return idMapping.get(item.originalId) || item.originalId
@@ -3858,25 +4049,27 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
         
 =======
           // Якщо це об'єкт з originalId, використовуємо мапу
+=======
+>>>>>>> bc1366a (Оновлення)
           if (typeof item === 'object' && item !== null && item.originalId) {
             return idMapping.get(item.originalId) || item.originalId
           }
-          // Якщо це рядок (ID), спробуємо знайти в мапі
           else if (typeof item === 'string') {
             return idMapping.get(item) || item
           }
-          // Якщо це об'єкт без originalId, спробуємо знайти _id
           else if (typeof item === 'object' && item !== null && item._id) {
             return idMapping.get(item._id) || item._id
           }
-          // Якщо це щось інше, конвертуємо в рядок
           else {
             return item.toString()
           }
-        }).filter(id => id && id !== 'undefined') // Фільтруємо невалідні ID
+        }).filter(id => id && id !== 'undefined')
         
+<<<<<<< HEAD
         // Оновлюємо товар з правильними groupProducts
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         updatePromises.push(
           Product.findByIdAndUpdate(product._id, { groupProducts: updatedGroupProducts })
         )
@@ -3884,9 +4077,12 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
     }
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Виконуємо всі оновлення
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (updatePromises.length > 0) {
       await Promise.all(updatePromises)
     }
@@ -4039,9 +4235,12 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Перевірка унікальності slug та name
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     if (category.subcategories.some(sub => sub._id.toString() !== subcategoryId && sub.slug === subcategoryData.slug)) {
       await session.abortTransaction();
       return res.status(400).json({ error: "Підкатегорія з таким slug уже існує в цій категорії" });
@@ -4054,10 +4253,14 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
     subcategory.name = subcategoryData.name;
     subcategory.slug = subcategoryData.slug;
 <<<<<<< HEAD
+<<<<<<< HEAD
     subcategory.photo = subcategoryData.photo || "";
 =======
     subcategory.photo = subcategoryData.photo || ""; // Дозволяємо порожнє значення
 >>>>>>> 451743e (Оновлення)
+=======
+    subcategory.photo = subcategoryData.photo || "";
+>>>>>>> bc1366a (Оновлення)
     subcategory.visible = subcategoryData.visible !== undefined ? subcategoryData.visible : true;
     subcategory.order = typeof subcategoryData.order === "number" ? subcategoryData.order : subcategory.order;
     subcategory.metaTitle = subcategoryData.metaTitle || "";
@@ -4081,9 +4284,12 @@ app.put("/api/categories/:categoryId/subcategories/:subcategoryId", authenticate
 });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // --- Генератор bcrypt-хешу (тільки для себе, не підключайте на продакшн!) ---
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
 app.post('/api/auth/generate-password-hash', (req, res) => {
   const { newPassword } = req.body;
   if (!newPassword) {
@@ -4098,6 +4304,7 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
     logger.info(`GET /api/products/export: user=${req.user.username}`)
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     const allProducts = await Product.find({}).sort({ _id: -1 })
     
     const productsForExport = allProducts.map(product => {
@@ -4107,21 +4314,25 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
       
 =======
     // Отримуємо всі товари без пагінації
+=======
+>>>>>>> bc1366a (Оновлення)
     const allProducts = await Product.find({}).sort({ _id: -1 })
     
-    // Обробляємо товари для експорту
     const productsForExport = allProducts.map(product => {
       const productCopy = product.toObject()
       
-      // Додаємо originalId для всіх товарів
       productCopy.originalId = product._id.toString()
       
+<<<<<<< HEAD
       // Якщо це груповий товар, замінюємо ID на повну інформацію про товари
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
       if (productCopy.type === 'group' && productCopy.groupProducts && Array.isArray(productCopy.groupProducts)) {
         const fullGroupProducts = []
         
         for (const groupProductId of productCopy.groupProducts) {
+<<<<<<< HEAD
 <<<<<<< HEAD
           const groupProduct = allProducts.find(p => p._id.toString() === groupProductId.toString())
           if (groupProduct) {
@@ -4129,13 +4340,17 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
             
 =======
           // Знаходимо повну інформацію про товар в групі
+=======
+>>>>>>> bc1366a (Оновлення)
           const groupProduct = allProducts.find(p => p._id.toString() === groupProductId.toString())
           if (groupProduct) {
-            // Створюємо копію товару без системних полів
             const { _id, createdAt, updatedAt, __v, ...cleanedGroupProduct } = groupProduct.toObject()
             
+<<<<<<< HEAD
             // Очищаємо вкладені об'єкти
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             if (cleanedGroupProduct.sizes && Array.isArray(cleanedGroupProduct.sizes)) {
               cleanedGroupProduct.sizes = cleanedGroupProduct.sizes.map(size => {
                 const { _id, ...cleanedSize } = size
@@ -4151,18 +4366,24 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
             }
             
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Додаємо оригінальний ID як посилання
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
             cleanedGroupProduct.originalId = _id.toString()
             fullGroupProducts.push(cleanedGroupProduct)
           }
         }
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Замінюємо масив ID на масив повних об'єктів товарів
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         productCopy.groupProducts = fullGroupProducts
       }
       
@@ -4185,9 +4406,12 @@ app.get("/api/products/export-prices", authenticateToken, async (req, res) => {
     logger.info(`GET /api/products/export-prices: user=${req.user.username}`)
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Отримуємо всі активні товари без пагінації
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
     const allProducts = await Product.find({ active: true, type: { $ne: 'group' } }).sort({ _id: -1 })
     
     let counter = 1
@@ -4196,18 +4420,24 @@ app.get("/api/products/export-prices", authenticateToken, async (req, res) => {
     for (const product of allProducts) {
       if (product.type === 'simple') {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Додаємо акційну ціну, якщо вона є
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         const salePrice = product.salePrice ? `,${product.salePrice}` : ''
         const line = `${counter},${product.name},${product.brand || 'Без бренду'},${product.price || '0'}${salePrice}`
         exportData.push(line)
         counter++
       } else if (product.type === 'mattresses') {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Для матраців для кожного розміру експортуємо свою акційну ціну
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
         for (const size of product.sizes) {
           const salePrice = size.salePrice ? `,${size.salePrice}` : ''
           const line = `${counter},${product.name},${product.brand || 'Без бренду'},Розмір: ${size.name},${size.price || '0'}${salePrice}`
@@ -4231,9 +4461,12 @@ app.get("/api/products/export-prices", authenticateToken, async (req, res) => {
 })
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // Catch-all маршрут для SPA (повинен бути в кінці)
 >>>>>>> 451743e (Оновлення)
+=======
+>>>>>>> bc1366a (Оновлення)
 app.get("*", (req, res) => {
   logger.info(`Отримано запит на ${req.path}, відправляємо index.html`)
   res.sendFile(indexPath, (err) => {
