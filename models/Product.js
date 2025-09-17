@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
-const sanitizeHtml = require('sanitize-html');
+// const sanitizeHtml = require('sanitize-html');
 const Counter = require('./Counter');
 
 const productSchema = new mongoose.Schema({
@@ -106,10 +106,10 @@ productSchema.pre('save', async function(next) {
 
 productSchema.pre('save', function(next) {
     if (this.description) {
-        this.description = sanitizeHtml(this.description, {
-            allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li', 'br'],
-            allowedAttributes: { 'a': ['href'] }
-        });
+        // this.description = sanitizeHtml(this.description, {
+        //     allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li', 'br'],
+        //     allowedAttributes: { 'a': ['href'] }
+        // });
     }
     if ('_id' in this && !mongoose.Types.ObjectId.isValid(this._id)) {
         delete this._id;

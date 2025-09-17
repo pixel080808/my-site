@@ -3,7 +3,7 @@ const app = express();
 app.set("trust proxy", 1);
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
-const sanitizeHtml = require("sanitize-html");
+// const sanitizeHtml = require("sanitize-html");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
@@ -2484,24 +2484,24 @@ app.put("/api/settings", authenticateToken, csrfProtection, async (req, res) => 
     }
 
     if (cleanedSettingsData.about) {
-      cleanedSettingsData.about = sanitizeHtml(cleanedSettingsData.about, {
-        allowedTags: ["b", "i", "em", "strong", "a", "p", "ul", "li"],
-        allowedAttributes: { a: ["href"] },
-      })
+      // cleanedSettingsData.about = sanitizeHtml(cleanedSettingsData.about, {
+      //   allowedTags: ["b", "i", "em", "strong", "a", "p", "ul", "li"],
+      //   allowedAttributes: { a: ["href"] },
+      // })
     }
     if (cleanedSettingsData.contacts) {
-      cleanedSettingsData.contacts.phones = sanitizeHtml(cleanedSettingsData.contacts.phones || "", {
-        allowedTags: [],
-        allowedAttributes: {},
-      })
-      cleanedSettingsData.contacts.addresses = sanitizeHtml(cleanedSettingsData.contacts.addresses || "", {
-        allowedTags: [],
-        allowedAttributes: {},
-      })
-      cleanedSettingsData.contacts.schedule = sanitizeHtml(cleanedSettingsData.contacts.schedule || "", {
-        allowedTags: [],
-        allowedAttributes: {},
-      })
+      // cleanedSettingsData.contacts.phones = sanitizeHtml(cleanedSettingsData.contacts.phones || "", {
+      //   allowedTags: [],
+      //   allowedAttributes: {},
+      // })
+      // cleanedSettingsData.contacts.addresses = sanitizeHtml(cleanedSettingsData.contacts.addresses || "", {
+      //   allowedTags: [],
+      //   allowedAttributes: {},
+      // })
+      // cleanedSettingsData.contacts.schedule = sanitizeHtml(cleanedSettingsData.contacts.schedule || "", {
+      //   allowedTags: [],
+      //   allowedAttributes: {},
+      // })
     }
 
     let settings = await Settings.findOne()
