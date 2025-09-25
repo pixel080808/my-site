@@ -2938,7 +2938,7 @@ if (!(product.type === 'mattresses' && product.sizes?.length > 0)) {
             if (isOnSale) {
             const regularSpan = document.createElement('span');
                 regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
                 priceDiv.appendChild(regularSpan);
                 const saleSpan = document.createElement('span');
                 saleSpan.className = 'sale-price';
@@ -3006,7 +3006,7 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class
 
             function getOptionHTML(size) {
                 if (size.salePrice && size.salePrice < size.price) {
-                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s>           <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
+                    return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:258px;">${size.name} — <s style="color:#888;">${size.price} грн</s> <span style="color:#fb5050;font-weight:bold;">${size.salePrice} грн</span></span>`;
                 } else {
                     return `<span style="display:inline-flex;align-items:center;gap:8px;min-width:180px;">${size.name} — <span style="color:#222;" class="price-value">${size.price}</span> <span class="price-suffix">грн</span></span>`;
                 }
@@ -3179,33 +3179,42 @@ document.addEventListener('click', closeDropdownHandler, true);
                     rightDiv.appendChild(colorP);
                     const colorDiv = document.createElement('div');
                     colorDiv.id = `color-options-${product._id}-${blockIndex}`;
+                    colorDiv.style.display = 'flex';
+                    colorDiv.style.flexWrap = 'wrap';
+                    colorDiv.style.justifyContent = 'center';
 
                     block.colors.forEach((c, i) => {
+                        const colorWrapper = document.createElement('div');
+                        colorWrapper.className = 'color-sample-wrapper';
+                        colorWrapper.style.display = 'flex';
+                        colorWrapper.style.flexDirection = 'column';
+                        colorWrapper.style.alignItems = 'center';
+                        colorWrapper.style.margin = '0 8px 12px 8px';
+
                         const circle = document.createElement('div');
                         circle.className = 'color-circle';
                         circle.style.background = c.photo ? `url(${c.photo})` : c.value;
                         circle.setAttribute('data-index', i);
                         circle.setAttribute('data-block-index', blockIndex);
-
-                        const span = document.createElement('span');
-                        span.textContent = c.name;
-
                         const globalIndex = getAllColors(product).findIndex(color => 
                             color.blockIndex === blockIndex && color.colorIndex === i
                         );
-                        if (selectedColors[product._id]?.[blockIndex] === globalIndex) {
-                            span.classList.add('expanded');
-                        }
-
                         circle.onclick = () => {
-                            const allSpans = colorDiv.querySelectorAll('span');
-                            allSpans.forEach(s => s.classList.remove('expanded'));
-                            span.classList.add('expanded');
                             if (typeof selectColor === 'function') selectColor(product._id, blockIndex, globalIndex);
                         };
 
-                        circle.appendChild(span);
-                        colorDiv.appendChild(circle);
+                        const label = document.createElement('div');
+                        label.className = 'color-label';
+                        label.textContent = c.name;
+                        label.style.textAlign = 'center';
+                        label.style.fontSize = '14px';
+                        label.style.marginTop = '6px';
+                        label.style.wordBreak = 'break-word';
+                        label.style.maxWidth = '90px';
+
+                        colorWrapper.appendChild(circle);
+                        colorWrapper.appendChild(label);
+                        colorDiv.appendChild(colorWrapper);
                     });
                     rightDiv.appendChild(colorDiv);
                 }
@@ -3216,29 +3225,38 @@ document.addEventListener('click', closeDropdownHandler, true);
             rightDiv.appendChild(colorP);
             const colorDiv = document.createElement('div');
             colorDiv.id = `color-options-${product._id}`;
+            colorDiv.style.display = 'flex';
+            colorDiv.style.flexWrap = 'wrap';
+            colorDiv.style.justifyContent = 'center';
 
             product.colors.forEach((c, i) => {
+                const colorWrapper = document.createElement('div');
+                colorWrapper.className = 'color-sample-wrapper';
+                colorWrapper.style.display = 'flex';
+                colorWrapper.style.flexDirection = 'column';
+                colorWrapper.style.alignItems = 'center';
+                colorWrapper.style.margin = '0 8px 12px 8px';
+
                 const circle = document.createElement('div');
                 circle.className = 'color-circle';
                 circle.style.background = c.photo ? `url(${c.photo})` : c.value;
                 circle.setAttribute('data-index', i);
-
-                const span = document.createElement('span');
-                span.textContent = c.name;
-
-                if (selectedColors[product._id]?.[0] === i) {
-                    span.classList.add('expanded');
-                }
-
                 circle.onclick = () => {
-                    const allSpans = colorDiv.querySelectorAll('span');
-                    allSpans.forEach(s => s.classList.remove('expanded'));
-                    span.classList.add('expanded');
                     if (typeof selectColor === 'function') selectColor(product._id, 0, i);
                 };
 
-                circle.appendChild(span);
-                colorDiv.appendChild(circle);
+                const label = document.createElement('div');
+                label.className = 'color-label';
+                label.textContent = c.name;
+                label.style.textAlign = 'center';
+                label.style.fontSize = '14px';
+                label.style.marginTop = '6px';
+                label.style.wordBreak = 'break-word';
+                label.style.maxWidth = '90px';
+
+                colorWrapper.appendChild(circle);
+                colorWrapper.appendChild(label);
+                colorDiv.appendChild(colorWrapper);
             });
             rightDiv.appendChild(colorDiv);
         }
@@ -3604,7 +3622,7 @@ if (product.description && product.description.trim() !== '') {
                     if (minSale !== null && minSale < minPrice) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3613,7 +3631,7 @@ if (product.description && product.description.trim() !== '') {
                     } else {
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3625,7 +3643,7 @@ if (product.description && product.description.trim() !== '') {
                     if (isOnSaleP) {
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
-regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(regularSpan);
                         const saleSpan = document.createElement('span');
                         saleSpan.className = 'sale-price';
@@ -3634,7 +3652,7 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='pric
                     } else {
                         const emptySpan = document.createElement('span');
                         emptySpan.style.visibility = 'hidden';
-                        emptySpan.innerHTML = `<s class='price-value'>${p.price}</s> <span class='price-suffix'>грн</span>`;
+                        emptySpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='price-suffix'>грн</span>`;
                         priceDiv.appendChild(emptySpan);
                         const regularSpan = document.createElement('span');
                         regularSpan.className = 'regular-price';
@@ -3787,7 +3805,6 @@ function updateFavoriteIconsOnPage() {
         }
     });
 }
-
 async function addGroupToCart(productId) {
     const product = products.find(p => p._id === productId);
     if (!product || product.type !== 'group') {
@@ -4502,7 +4519,6 @@ async function updateCartPrices() {
     
     saveToStorage('cart', cart);
 }
-
 async function renderCart() {
     const cartItems = document.getElementById('cart-items');
     const cartContent = document.getElementById('cart-content');
@@ -5150,7 +5166,6 @@ async function submitOrder() {
         }
     }
 }
-
 function updateHeader() {
     document.title = settings.name || 'Меблевий магазин';
     const logo = document.getElementById('logo');
@@ -5945,14 +5960,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.section').forEach(el => {
             el.style.display = 'none';
         });
-
 await initializeData();
 console.log('Дані ініціалізовано. Категорії:', categories.length, 'Продукти:', products.length);
 
 if (!Array.isArray(products)) {
     products = [];
 }
-
 updateHeader();
 updateCartCount();
 if (typeof updateFloatingFavorite === 'function') {
@@ -6747,7 +6760,6 @@ function forceUpdateFavoriteCounters() {
     updateFavoriteCount();
     updateFloatingFavorite();
 }
-
 function updateFloatingFavorite() {
     const favBtn = document.getElementById('floating-favorite');
     const badge = document.getElementById('floating-favorite-count');
@@ -7212,7 +7224,7 @@ imgLink.appendChild(img);
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${minPrice}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${minPrice}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -7262,7 +7274,7 @@ imgLink.appendChild(img);
             oldRow.style.minHeight = '1.2em';
             const regularSpan = document.createElement('span');
             regularSpan.className = 'regular-price';
-            regularSpan.innerHTML = `<s class='price-value'>${product.price}</s> <span class='price-suffix'>грн</span>`;
+            regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span class='price-suffix'>грн</span>`;
             oldRow.appendChild(regularSpan);
             priceDiv.appendChild(oldRow);
             hasOldPrice = true;
@@ -7511,7 +7523,6 @@ function updateColorPrice(productId) {
         }
     }
 }
-
 function restoreSelectedColors() {
     Object.keys(selectedColors).forEach(productId => {
         const product = products.find(p => p._id === productId || p.id === productId);
