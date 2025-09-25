@@ -3783,42 +3783,6 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='pri
         
         restoreSelectedColors();
 
-        // Додаємо floating cart для простих і матраців
-        if (product.type !== 'group') {
-            const floatingContainer = document.createElement('div');
-            floatingContainer.className = 'floating-product-cart';
-            floatingContainer.id = 'floating-product-cart';
-            const floatingPrice = document.createElement('span');
-            floatingPrice.className = 'floating-product-price';
-            let priceText = '';
-            if (isOnSale) {
-                priceText = `<span style="color:#fb5050;font-weight:bold;">${product.salePrice} грн</span> <s style="color:#A0AEC0;font-size:16px;">${product.price} грн</s>`;
-            } else {
-                priceText = `<span>${product.price} грн</span>`;
-            }
-            floatingPrice.innerHTML = `Ціна: ${priceText}`;
-            floatingContainer.appendChild(floatingPrice);
-            const floatingBtn = document.createElement('button');
-            floatingBtn.className = 'floating-product-buy-btn';
-            floatingBtn.textContent = 'Додати в кошик';
-            floatingBtn.onclick = () => addToCart(product._id);
-            floatingContainer.appendChild(floatingBtn);
-            container.appendChild(floatingContainer);
-
-            // scroll logic
-            const handleScroll = () => {
-                const mainBtn = document.querySelector('.add-to-cart-btn');
-                if (!mainBtn) return floatingContainer.classList.remove('visible');
-                const rect = mainBtn.getBoundingClientRect();
-                const isBelow = rect.bottom < 0;
-                floatingContainer.classList.toggle('visible', isBelow);
-            };
-            handleScroll();
-            window.addEventListener('scroll', handleScroll);
-            const cleanup = () => window.removeEventListener('scroll', handleScroll);
-            document.addEventListener('sectionChange', cleanup, { once: true });
-        }
-
         return Promise.resolve();
     } catch (error) {
         console.error('Помилка в renderProductDetails:', error.message, error.stack);

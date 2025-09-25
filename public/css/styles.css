@@ -3977,6 +3977,7 @@ s {
     outline: none;
     box-shadow: 0 0 8px rgba(49, 130, 206, 0.2);
 }
+
 .submit-order {
     grid-column: 1 / -1;
     width: 100%;
@@ -4770,6 +4771,7 @@ s {
     .subcategory-filter {
         justify-content: center;
     }
+
 .subcategory-buttons button {
         font-size: 13px;
         padding: 8px 15px;
@@ -5544,6 +5546,7 @@ s {
     h3 {
         font-size: 20px;
     }
+
 .slide img {
         max-height: 250px;
     }
@@ -7140,6 +7143,7 @@ s {
     .filter-options .range-values {
         color: var(--muted-text);
     }
+
 .floating-cart {
         background: var(--card-bg);
         box-shadow: 0 4px 12px var(--shadow-color);
