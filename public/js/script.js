@@ -3273,10 +3273,11 @@ document.addEventListener('click', closeDropdownHandler, true);
         if (product.heightCm) dimensions.push({ label: 'Висота', value: product.heightCm });
         if (product.depthCm) dimensions.push({ label: 'Глибина', value: product.depthCm });
         if (product.lengthCm) dimensions.push({ label: 'Довжина', value: product.lengthCm });
+        if (product.sleepingPlace) dimensions.push({ label: 'Спальне місце', value: product.sleepingPlace });
         if (dimensions.length > 0 && product.type !== 'group') {
             dimensions.forEach(dim => {
-                const formattedValue = Number.isInteger(dim.value) ? dim.value : dim.value.toFixed(1).replace('.', ',');
-                charDiv.appendChild(createCharP(dim.label, `${formattedValue} см`));
+                const formattedValue = (dim.label === 'Спальне місце') ? dim.value : (Number.isInteger(dim.value) ? dim.value : dim.value.toFixed(1).replace('.', ','));
+                charDiv.appendChild(createCharP(dim.label, dim.label === 'Спальне місце' ? formattedValue : `${formattedValue} см`));
             });
         }
         rightDiv.appendChild(charDiv);

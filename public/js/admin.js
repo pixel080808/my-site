@@ -3012,7 +3012,6 @@ function deepEqual(a, b) {
     }
     return true;
 }
-
 async function addCategory() {
     try {
         const tokenRefreshed = await refreshToken();
@@ -4728,6 +4727,8 @@ function openAddProductModal() {
             <label for="product-height-cm">Висота (см)</label>
             <input type="number" id="product-length-cm" placeholder="Довжина (см)" min="0" step="0.1"><br/>
             <label for="product-length-cm">Довжина (см)</label>
+            <input type="text" id="product-sleeping-place" placeholder="Спальне місце"><br/>
+            <label for="product-sleeping-place">Спальне місце</label>
             <h4>Фотографії</h4>
             <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
             <label for="product-photo-url">URL фотографії</label>
@@ -5841,6 +5842,7 @@ async function saveNewProduct() {
         const depthCmInput = document.getElementById('product-depth-cm');
         const heightCmInput = document.getElementById('product-height-cm');
         const lengthCmInput = document.getElementById('product-length-cm');
+        const sleepingPlaceInput = document.getElementById('product-sleeping-place');
         const metaTitleInput = document.getElementById('product-meta-title');
         const metaDescriptionInput = document.getElementById('product-meta-description');
         const metaKeywordsInput = document.getElementById('product-meta-keywords');
@@ -5873,6 +5875,7 @@ async function saveNewProduct() {
         const depthCm = depthCmInput ? parseFloat(depthCmInput.value) || null : null;
         const heightCm = heightCmInput ? parseFloat(heightCmInput.value) || null : null;
         const lengthCm = lengthCmInput ? parseFloat(lengthCmInput.value) || null : null;
+        const sleepingPlace = sleepingPlaceInput ? sleepingPlaceInput.value.trim() : '';
         const metaTitle = metaTitleInput ? metaTitleInput.value.trim() : '';
         const metaDescription = metaDescriptionInput ? metaDescriptionInput.value.trim() : '';
         const metaKeywords = metaKeywordsInput ? metaKeywordsInput.value.trim() : '';
@@ -5949,6 +5952,7 @@ async function saveNewProduct() {
             depthCm,
             heightCm,
             lengthCm,
+            sleepingPlace,
             photos: [],
             colorBlocks: newProduct.colorBlocks.map((block, index) => ({
                 blockName: document.getElementById(`color-block-name-${index}`)?.value || block.blockName,
@@ -6226,6 +6230,8 @@ async function openEditProductModal(productId) {
             <label for="product-height-cm">Висота (см)</label>
             <input type="number" id="product-length-cm" value="${product.lengthCm || ''}" placeholder="Довжина (см)" min="0" step="0.1"><br/>
             <label for="product-length-cm">Довжина (см)</label>
+            <input type="text" id="product-sleeping-place" value="${product.sleepingPlace || ''}" placeholder="Спальне місце"><br/>
+            <label for="product-sleeping-place">Спальне місце</label>
             <h4>Фотографії</h4>
             <input type="text" id="product-photo-url" placeholder="URL фотографії"><br/>
             <label for="product-photo-url">URL фотографії</label>
@@ -6449,6 +6455,7 @@ async function saveEditedProduct(productId) {
         const depthCm = parseFloat(document.getElementById('product-depth-cm')?.value) || null;
         const heightCm = parseFloat(document.getElementById('product-height-cm')?.value) || null;
         const lengthCm = parseFloat(document.getElementById('product-length-cm')?.value) || null;
+        const sleepingPlace = document.getElementById('product-sleeping-place')?.value.trim() || '';
         const metaTitleInput = document.getElementById('product-meta-title');
         const metaDescriptionInput = document.getElementById('product-meta-description');
         const metaKeywordsInput = document.getElementById('product-meta-keywords');
@@ -6602,6 +6609,7 @@ async function saveEditedProduct(productId) {
             depthCm,
             heightCm,
             lengthCm,
+            sleepingPlace,
             photos: [],
             colorBlocks: validatedColorBlocks.map(block => ({
                 blockName: block.blockName,
