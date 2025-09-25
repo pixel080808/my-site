@@ -1932,6 +1932,7 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     margin-bottom: 15px;
     display: flex;
     gap: 10px;
+    row-gap: 10px;
     flex-wrap: wrap;
     padding-left: 0;
 }
@@ -1947,6 +1948,14 @@ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     font-size: 15px;
     margin-left: 3px;
     transition: background var(--transition-speed) ease, color var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.subcategory-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    row-gap: 4px;
+    align-items: flex-start;
 }
 
 .subcategory-buttons button:hover {
