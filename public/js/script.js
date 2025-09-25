@@ -3181,7 +3181,6 @@ document.addEventListener('click', closeDropdownHandler, true);
                     colorDiv.id = `color-options-${product._id}-${blockIndex}`;
                     colorDiv.style.display = 'flex';
                     colorDiv.style.flexWrap = 'wrap';
-                    colorDiv.style.justifyContent = 'center';
 
                     block.colors.forEach((c, i) => {
                         const colorWrapper = document.createElement('div');
