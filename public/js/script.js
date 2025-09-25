@@ -1059,6 +1059,48 @@ async function updateFloatingGroupCart() {
     }
 }
 
+function updateFloatingProductCart() {
+    const floatingCart = document.getElementById('floating-product-cart');
+    if (!floatingCart || !currentProduct || currentProduct.type === 'group') {
+        if (floatingCart) floatingCart.classList.remove('visible');
+        return;
+    }
+
+    try {
+        const product = currentProduct;
+        let basePrice = 0;
+        if (product.type === 'mattresses') {
+            const sizeName = selectedMattressSizes[product._id];
+            const sizeInfo = product.sizes?.find(s => s.name === sizeName);
+            if (sizeInfo) {
+                basePrice = (sizeInfo.salePrice && sizeInfo.salePrice < sizeInfo.price) ? parseFloat(sizeInfo.salePrice) : parseFloat(sizeInfo.price);
+            } else {
+                basePrice = (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
+            }
+        } else {
+            basePrice = (product.salePrice && (product.saleEnd === null || new Date(product.saleEnd) > new Date())) ? parseFloat(product.salePrice) : parseFloat(product.price || 0);
+        }
+
+        let colorsDelta = 0;
+        const all = getAllColors(product);
+        const selected = selectedColors[product._id];
+        if (selected) {
+            Object.values(selected).forEach(globalIndex => {
+                const c = all.find(x => x.globalIndex === globalIndex);
+                if (c) colorsDelta += parseFloat(c.priceChange || 0);
+            });
+        }
+        const total = Math.max(0, (basePrice || 0) + colorsDelta);
+
+        const priceSpan = floatingCart.querySelector('.floating-group-price span');
+        if (priceSpan) {
+            priceSpan.textContent = `${total} грн`;
+        }
+    } catch (e) {
+        console.error('Помилка в updateFloatingProductCart:', e);
+    }
+}
+
 function showSection(sectionId) {
     console.log('showSection: Відображаємо секцію:', sectionId);
 
@@ -3057,11 +3099,13 @@ regularSpan.innerHTML = `<s class='price-value'>${product.price}ktur  <span clas
                     selectedMattressSizes[product._id] = size.name;
                     saveToStorage('selectedMattressSizes', selectedMattressSizes);
                     if (typeof updateMattressPrice === 'function') updateMattressPrice(product._id);
+                    if (currentProduct && (currentProduct._id === product._id || currentProduct.id === product._id)) {
+                        updateFloatingProductCart();
+                    }
                 };
                 optionsList.appendChild(li);
             });
             customSelect.appendChild(optionsList);
-
 let wasJustClosed = false;
             selectedDiv.onclick = function(e) {
                 e.stopPropagation();
@@ -3102,9 +3146,11 @@ document.addEventListener('click', closeDropdownHandler, true);
 
             sizeDiv.appendChild(customSelect);
             rightDiv.appendChild(sizeDiv);
-            if (!selectedMattressSizes[product._id]) {
-                selectedMattressSizes[product._id] = selectedSize.name;
-                saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            // Завжди встановлюємо базовий розмір на перший елемент при відкритті сторінки
+            selectedMattressSizes[product._id] = selectedSize.name;
+            saveToStorage('selectedMattressSizes', selectedMattressSizes);
+            if (currentProduct && (currentProduct._id === product._id || currentProduct.id === product._id)) {
+                updateFloatingProductCart();
             }
         }
 
@@ -3775,6 +3821,9 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='pri
             } else {
                 setTimeout(() => {
                     updateColorPrice(product._id);
+                    if (currentProduct && (currentProduct._id === product._id || currentProduct.id === product._id)) {
+                        updateFloatingProductCart();
+                    }
                 }, 100);
             }
         }
@@ -3782,6 +3831,37 @@ regularSpan.innerHTML = `<s class='price-value'>${p.price}ktur  <span class='pri
         updateFavoriteIconsOnPage();
         
         restoreSelectedColors();
+
+        // Додаємо floating cart для простих і матраців з тими самими класами, що й у групових
+        if (product.type !== 'group') {
+            const floatingContainer = document.createElement('div');
+            floatingContainer.className = 'floating-group-cart';
+            floatingContainer.id = 'floating-product-cart';
+            const floatingPrice = document.createElement('span');
+            floatingPrice.className = 'floating-group-price';
+            floatingPrice.innerHTML = `Загальна ціна: <span style="white-space: nowrap;">0 грн</span>`;
+            floatingContainer.appendChild(floatingPrice);
+            const floatingBtn = document.createElement('button');
+            floatingBtn.className = 'floating-group-buy-btn';
+            floatingBtn.textContent = 'Додати в кошик';
+            floatingBtn.onclick = typeof addToCartWithColor === 'function' ? () => addToCartWithColor(product._id) : null;
+            floatingContainer.appendChild(floatingBtn);
+            container.appendChild(floatingContainer);
+
+            const handleScroll = () => {
+                const mainBtn = container.querySelector('.buy-btn');
+                if (!mainBtn) return floatingContainer.classList.remove('visible');
+                const rect = mainBtn.getBoundingClientRect();
+                const isBelow = rect.bottom < 0;
+                floatingContainer.classList.toggle('visible', isBelow);
+            };
+            handleScroll();
+            window.addEventListener('scroll', handleScroll);
+            const cleanup = () => window.removeEventListener('scroll', handleScroll);
+            document.addEventListener('sectionChange', cleanup, { once: true });
+
+            updateFloatingProductCart();
+        }
 
         return Promise.resolve();
     } catch (error) {
@@ -7443,6 +7523,8 @@ function selectColor(productId, blockIndex, globalIndex) {
         
         if (currentProduct && currentProduct.type === 'group') {
             updateFloatingGroupCart();
+        } else if (currentProduct && (currentProduct._id === productId || currentProduct.id === productId)) {
+            updateFloatingProductCart();
         }
     }
 }
