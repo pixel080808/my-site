@@ -1136,6 +1136,8 @@ function showSection(sectionId) {
 
     section.classList.add('active');
     section.style.display = 'block';
+    // Примусово прокручуємо на початок при зміні секції
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
 
     if (burgerMenu && floatingCart) {
         const header = document.querySelector('header');
@@ -6036,6 +6038,10 @@ function saveScrollPosition() {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('Ініціалізація програми...');
+        // Вимикаємо нативне відновлення прокрутки браузером
+        if ('scrollRestoration' in history) {
+            try { history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
+        }
 
         document.querySelectorAll('.section').forEach(el => {
             el.style.display = 'none';
@@ -6495,9 +6501,8 @@ window.addEventListener('popstate', async (event) => {
                 }
 
                 showSection('catalog');
-                if (state.scrollY) {
-                    window.scrollTo(0, state.scrollY);
-                }
+                // Завжди починаємо з самого верху при навігації історією
+                try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
 
                 const showMoreBtn = document.querySelector('.show-more-btn');
                 if (showMoreBtn) {
