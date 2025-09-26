@@ -1012,6 +1012,44 @@ app.get("/api/products", authenticateToken, async (req, res) => {
     let products
     let total
 
+    // If specific IDs are requested, return all matching items without pagination
+    if (req.query.ids) {
+      if (sort && sort.startsWith("price-")) {
+        const [_, order] = sort.split("-")
+        const pipeline = [
+          { $match: query },
+          {
+            $addFields: {
+              effectivePrice: {
+                $cond: {
+                  if: { $eq: ["$type", "simple"] },
+                  then: "$price",
+                  else: { $min: "$sizes.price" },
+                },
+              },
+            },
+          },
+          { $sort: { effectivePrice: order === "asc" ? 1 : -1 } },
+          {
+            $project: {
+              effectivePrice: 0,
+            },
+          },
+        ]
+        products = await Product.aggregate(pipeline)
+        total = products.length
+      } else {
+        products = await Product.find(query).sort(sortOptions)
+        total = products.length
+      }
+      return res.json({
+        products: products || [],
+        total: total || 0,
+        page: parsedPage,
+        limit: total || 0,
+      })
+    }
+
     if (sort && sort.startsWith("price-")) {
       const [_, order] = sort.split("-")
       const pipeline = [
