@@ -577,3 +577,31 @@
 {"level":"error","message":"Помилка міграції товарів: Operation `categories.find()` buffering timed out after 10000ms","stack":"MongooseError: Operation `categories.find()` buffering timed out after 10000ms\n    at Timeout.<anonymous> (C:\\my-site\\node_modules\\mongoose\\lib\\drivers\\node-mongodb-native\\collection.js:187:23)\n    at listOnTimeout (node:internal/timers:611:17)\n    at process.processTimers (node:internal/timers:546:7)","timestamp":"2025-08-19T18:04:21.764Z"}
 {"level":"error","message":"Помилка при отриманні кошика: Operation `carts.findOne()` buffering timed out after 10000ms","stack":"MongooseError: Operation `carts.findOne()` buffering timed out after 10000ms\n    at Timeout.<anonymous> (C:\\my-site\\node_modules\\mongoose\\lib\\drivers\\node-mongodb-native\\collection.js:187:23)\n    at listOnTimeout (node:internal/timers:611:17)\n    at process.processTimers (node:internal/timers:546:7)","timestamp":"2025-08-19T18:04:23.365Z"}
 {"level":"error","message":"Помилка при отриманні кошика: Operation `carts.findOne()` buffering timed out after 10000ms","stack":"MongooseError: Operation `carts.findOne()` buffering timed out after 10000ms\n    at Timeout.<anonymous> (C:\\my-site\\node_modules\\mongoose\\lib\\drivers\\node-mongodb-native\\collection.js:187:23)\n    at listOnTimeout (node:internal/timers:611:17)\n    at process.processTimers (node:internal/timers:546:7)","timestamp":"2025-08-19T18:04:41.923Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:29.491Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:30.002Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:31.015Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:33.036Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:36.682Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:37.195Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:38.202Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:40.209Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:43:44.223Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:18.653Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:19.168Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:20.183Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:23.043Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:24.018Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:24.533Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:25.544Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:27.790Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:44:31.813Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:46:18.589Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:46:19.098Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:46:20.111Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:46:22.126Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:46:26.140Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:48:08.016Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:48:08.524Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:48:09.542Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:48:11.558Z"}
+{"level":"error","message":"Невірний параметр limit:","timestamp":"2025-09-29T16:48:15.581Z"}

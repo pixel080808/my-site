@@ -531,18 +531,13 @@ async function fetchWithRetry(url, options = {}, retries = 5, backoff = 500) {
 async function fetchPublicData() {
     try {
         console.log('Fetching products...');
-        const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`);
-        if (productResponse && productResponse.ok) {
-            const productJson = await productResponse.json();
-            const productArray = Array.isArray(productJson)
-                ? productJson
-                : (Array.isArray(productJson?.products) ? productJson.products : []);
-            products = productArray.filter(p => p.id && p.name && p.slug && p.visible !== false);
-            console.log('Відфільтровані продукти:', products);
-            saveToStorage('products', products);
-        } else {
-            products = loadFromStorage('products', []);
+        const allProducts = await fetchAllProductsPaginated();
+        const filtered = allProducts.filter(p => (p.id || p._id) && p.name && p.slug && p.visible !== false);
+        if (filtered.length > 0 && filtered.length >= (Array.isArray(products) ? products.length : 0)) {
+            products = filtered;
         }
+        console.log('Відфільтровані продукти:', products);
+        saveToStorage('products', products);
 
 console.log('Fetching categories...');
 const catResponse = await fetchWithRetry(`${BASE_URL}/api/public/categories`);
@@ -610,6 +605,31 @@ if (catResponse && catResponse.ok) {
         });
         // Тихий fallback: використано локальні дані
     }
+}
+
+async function fetchAllProductsPaginated() {
+    const result = [];
+    let cursor = null;
+    const limit = 100;
+    let safety = 0;
+    while (safety < 100) {
+        const url = new URL(`${BASE_URL}/api/public/products`);
+        url.searchParams.set('limit', String(limit));
+        if (cursor) url.searchParams.set('cursor', cursor);
+        const resp = await fetchWithRetry(url.toString());
+        if (!resp || !resp.ok) break;
+        const data = await resp.json();
+        const batch = Array.isArray(data) ? data : (Array.isArray(data.products) ? data.products : []);
+        if (batch.length === 0) break;
+        result.push(...batch);
+        if (data && data.nextCursor) {
+            cursor = data.nextCursor;
+            safety++;
+        } else {
+            break;
+        }
+    }
+    return result;
 }
 
 async function fetchCsrfToken(retries = 3, delay = 1000) {
@@ -935,8 +955,8 @@ async function initializeData() {
 
 async function updateProducts() {
     try {
-        const response = await fetchWithRetry(`${BASE_URL}/api/public/products?_v=${Date.now()}`);
-        products = await response.json();
+        const allProducts = await fetchAllProductsPaginated();
+        products = allProducts;
         saveToStorage('products', products);
         const productList = document.getElementById('product-list');
         if (productList) {
@@ -948,7 +968,7 @@ async function updateProducts() {
         if (document.getElementById('catalog').classList.contains('active')) {
             renderCatalog(currentCategory, currentSubcategory, currentProduct);
         } else if (document.getElementById('product-details').classList.contains('active') && currentProduct) {
-            currentProduct = products.find(p => p._id === currentProduct._id) || currentProduct;
+            currentProduct = products.find(p => (p._id || p.id) === (currentProduct._id || currentProduct.id)) || currentProduct;
             renderProductDetails();
         }
         updateCartPrices();
@@ -3265,15 +3285,25 @@ document.addEventListener('click', closeDropdownHandler, true);
                     relatedSection.id = relatedContainerId;
                     relatedSection.style.marginTop = '30px';
                 }
+                // Для групових товарів показуємо секцію лише якщо в адмінці явно задано relatedProducts
+                if (product.type === 'group') {
+                    const hasExplicitRelated = Array.isArray(product.relatedProducts) && product.relatedProducts.length > 0;
+                    if (!hasExplicitRelated) {
+                        if (relatedSection && relatedSection.parentNode) {
+                            relatedSection.parentNode.removeChild(relatedSection);
+                        }
+                        return;
+                    }
+                }
                 while (relatedSection.firstChild) relatedSection.removeChild(relatedSection.firstChild);
 
                 const titleText = (product.relatedTitle && product.relatedTitle.trim())
                     ? product.relatedTitle.trim()
-                    : (Array.isArray(product.groupProducts) && product.groupProducts.length > 0 ? 'Інші товари з серії' : '');
+                    : '';
 
                 const relatedIds = Array.isArray(product.relatedProducts) && product.relatedProducts.length > 0
                     ? product.relatedProducts
-                    : (Array.isArray(product.groupProducts) ? product.groupProducts : []);
+                    : [];
 
                 const allById = new Map((products || []).map(p => [p._id, p]));
                 const relatedItemsOrdered = relatedIds
