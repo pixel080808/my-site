@@ -557,9 +557,12 @@ if (catResponse && catResponse.ok) {
         console.log('Fetching slides...');
         const slidesResponse = await fetchWithRetry(`${BASE_URL}/api/public/slides`);
         if (slidesResponse && slidesResponse.ok) {
-            slides = await slidesResponse.json();
-            console.log('Slides fetched:', slides.length);
-            saveToStorage('slides', slides);
+            const slidesJson = await slidesResponse.json();
+            const slidesArray = Array.isArray(slidesJson)
+                ? slidesJson
+                : (Array.isArray(slidesJson?.slides) ? slidesJson.slides : []);
+            slides = slidesArray;
+            saveToStorage('slides', slidesArray);
         } else {
             slides = loadFromStorage('slides', []);
         }
@@ -5667,7 +5670,8 @@ function renderAbout() {
 
 function renderSlideshow() {
     const slideshow = document.getElementById('slideshow');
-    if (!slideshow || !settings.showSlides || slides.length === 0) {
+    const slidesArray = Array.isArray(slides) ? slides : [];
+    if (!slideshow || !settings.showSlides || slidesArray.length === 0) {
         if (slideshow) slideshow.style.display = 'none';
         clearInterval(slideInterval);
         return;
@@ -5677,7 +5681,7 @@ function renderSlideshow() {
 
     let isProcessing = false;
 
-    slides.forEach((slide, i) => {
+    slidesArray.forEach((slide, i) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slide${i === currentSlideIndex ? ' active' : ''}`;
 
@@ -5757,9 +5761,9 @@ function renderSlideshow() {
 
             if (Math.abs(swipeDistanceX) > minSwipeDistance && swipeDistanceY < maxVerticalDistance) {
                 if (swipeDistanceX < 0) {
-                    currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+                    currentSlideIndex = (currentSlideIndex + 1) % slidesArray.length;
                 } else {
-                    currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+                    currentSlideIndex = (currentSlideIndex - 1 + slidesArray.length) % slidesArray.length;
                 }
                 renderSlideshow();
                 startSlideshow();
@@ -5781,7 +5785,7 @@ function renderSlideshow() {
 
     const navDiv = document.createElement('div');
     navDiv.className = 'slide-nav';
-    slides.forEach((_, i) => {
+    slidesArray.forEach((_, i) => {
         const btn = document.createElement('button');
         btn.className = `slide-btn${i === currentSlideIndex ? ' active' : ''}`;
         btn.onclick = () => { 
@@ -5804,7 +5808,7 @@ function renderSlideshow() {
     prevBtn.onclick = () => { 
         if (!isProcessing) {
             isProcessing = true;
-            currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+            currentSlideIndex = (currentSlideIndex - 1 + slidesArray.length) % slidesArray.length;
             renderSlideshow();
             startSlideshow();
             setTimeout(() => { isProcessing = false; }, 100);
@@ -5819,7 +5823,7 @@ function renderSlideshow() {
     nextBtn.onclick = () => { 
         if (!isProcessing) {
             isProcessing = true;
-            currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+            currentSlideIndex = (currentSlideIndex + 1) % slidesArray.length;
             renderSlideshow();
             startSlideshow();
             setTimeout(() => { isProcessing = false; }, 100);
@@ -5830,10 +5834,11 @@ function renderSlideshow() {
     startSlideshow();
 }
         function startSlideshow() {
-            if (!settings.showSlides || slides.length <= 1) return;
+    const slidesArray = Array.isArray(slides) ? slides : [];
+    if (!settings.showSlides || slidesArray.length <= 1) return;
             clearInterval(slideInterval);
             slideInterval = setInterval(() => {
-                currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+        currentSlideIndex = (currentSlideIndex + 1) % slidesArray.length;
                 renderSlideshow();
             }, settings.slideInterval || 3000);
         }
