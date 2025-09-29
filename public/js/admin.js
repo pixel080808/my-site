@@ -5626,15 +5626,21 @@ function renderRelatedProducts() {
     const list = document.getElementById('related-product-list');
     if (!list) return;
     if (!newProduct.relatedProducts || newProduct.relatedProducts.length === 0) {
-        list.innerHTML = '<div style="margin:8px 0;color:#888;">Список порожній</div>';
+        list.innerHTML = `
+            <div style="margin:8px 0;color:#888;">Список порожній</div>
+        `;
         return;
     }
-    list.innerHTML = newProduct.relatedProducts.map((pid) => `
-        <div class="group-product">
-            <strong>Товар ID: ${pid}</strong>
-            <button class="delete-btn" onclick="deleteRelatedProduct('${pid}')">Видалити</button>
-        </div>
-    `).join('');
+    // Попередній рендер мінімальний, деталі назв будуть підтягнуті окремо
+    list.innerHTML = `
+        ${newProduct.relatedProducts.map((pid, index) => `
+            <div class="group-product draggable" draggable="true" ondragstart="dragRelatedProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropRelatedProduct(event, ${index})">
+                <strong>Товар ID: ${pid}</strong>
+                <button class="delete-btn" onclick="deleteRelatedProduct('${pid}')">Видалити</button>
+            </div>
+        `).join('')}
+    `;
+    loadRelatedProductNames();
 }
 
 function deleteRelatedProduct(productId) {
@@ -5716,6 +5722,75 @@ async function removeRelatedProductModal(productId) {
     await renderRelatedProductsListModal();
     renderRelatedProducts();
     resetInactivityTimer();
+}
+
+// Кеш для пов'язаних товарів (за списком ID)
+let relatedProductsCache = {};
+
+async function loadRelatedProductNames() {
+    const list = document.getElementById('related-product-list');
+    if (!list || !newProduct.relatedProducts || newProduct.relatedProducts.length === 0) return;
+
+    const productIds = newProduct.relatedProducts.join(',');
+    const cacheKey = productIds;
+    if (relatedProductsCache[cacheKey]) {
+        updateRelatedProductDisplay(relatedProductsCache[cacheKey]);
+        return;
+    }
+    try {
+        const tokenRefreshed = await refreshToken();
+        if (!tokenRefreshed) return;
+        const response = await fetchWithAuth(`/api/products?ids=${productIds}`);
+        if (!response.ok) {
+            throw new Error(`Помилка запиту: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        const items = data.products || [];
+        relatedProductsCache[cacheKey] = items;
+        updateRelatedProductDisplay(items);
+    } catch (err) {
+        console.error('Помилка завантаження назв пов\'язаних товарів:', err);
+    }
+}
+
+function updateRelatedProductDisplay(relatedProducts) {
+    const list = document.getElementById('related-product-list');
+    if (!list) return;
+    const productsMap = {};
+    relatedProducts.forEach(p => { productsMap[p._id] = p; });
+    const ordered = newProduct.relatedProducts.map(id => productsMap[id] || { _id: id, name: `Товар ID: ${id}` });
+    list.innerHTML = `
+        ${ordered.map((p, index) => {
+            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0
+                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                : (p.price ? `${p.price} грн` : '');
+            return `
+                <div class="group-product draggable" draggable="true" ondragstart="dragRelatedProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropRelatedProduct(event, ${index})">
+                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(
+${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
+                    <button class="delete-btn" onclick="deleteRelatedProduct('${p._id}')">Видалити</button>
+                </div>
+            `;
+        }).join('')}
+    `;
+}
+
+function dragRelatedProduct(event, index) {
+    event.dataTransfer.setData('text/plain', index);
+    event.target.classList.add('dragging');
+}
+
+function dropRelatedProduct(event, targetIndex) {
+    event.preventDefault();
+    const sourceIndex = parseInt(event.dataTransfer.getData('text/plain'));
+    if (Number.isInteger(sourceIndex) && sourceIndex !== targetIndex) {
+        const [moved] = newProduct.relatedProducts.splice(sourceIndex, 1);
+        newProduct.relatedProducts.splice(targetIndex, 0, moved);
+        relatedProductsCache = {};
+        renderRelatedProducts();
+        resetInactivityTimer();
+    }
+    document.querySelectorAll('.group-product').forEach(item => item.classList.remove('dragging'));
 }
 
 async function loadGroupProductNames() {

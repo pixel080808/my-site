@@ -3242,44 +3242,51 @@ document.addEventListener('click', closeDropdownHandler, true);
             rightDiv.appendChild(qtyDiv);
         }
 
-        // Секція "Інші товари з серії"
-        try {
-            const relatedContainerId = 'related-products-section';
-            let relatedSection = document.getElementById(relatedContainerId);
-            if (!relatedSection) {
-                relatedSection = document.createElement('div');
-                relatedSection.id = relatedContainerId;
-                relatedSection.style.marginTop = '30px';
-                productDetails.appendChild(relatedSection);
+        // Секція "Інші товари з серії" — переносимо в самий низ сторінки під описом
+        // Рендер пізніше, після основних елементів, щоб завжди бути внизу
+        setTimeout(() => {
+            try {
+                const relatedContainerId = 'related-products-section';
+                let relatedSection = document.getElementById(relatedContainerId);
+                if (!relatedSection) {
+                    relatedSection = document.createElement('div');
+                    relatedSection.id = relatedContainerId;
+                    relatedSection.style.marginTop = '30px';
+                }
+                while (relatedSection.firstChild) relatedSection.removeChild(relatedSection.firstChild);
+
+                const titleText = (product.relatedTitle && product.relatedTitle.trim())
+                    ? product.relatedTitle.trim()
+                    : (Array.isArray(product.groupProducts) && product.groupProducts.length > 0 ? 'Інші товари з серії' : '');
+
+                const relatedIds = Array.isArray(product.relatedProducts) && product.relatedProducts.length > 0
+                    ? product.relatedProducts
+                    : (Array.isArray(product.groupProducts) ? product.groupProducts : []);
+
+                const relatedItems = (products || []).filter(p => relatedIds.includes(p._id) && p.visible);
+                if (titleText && relatedItems.length > 0) {
+                    const h2Related = document.createElement('h2');
+                    h2Related.textContent = titleText;
+                    relatedSection.appendChild(h2Related);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'product-grid';
+                    relatedSection.appendChild(grid);
+
+                    relatedItems.forEach(rp => {
+                        const el = createProductElement(rp);
+                        grid.appendChild(el);
+                    });
+                }
+
+                // Вставляємо секцію в кінець контейнера деталей товару
+                if (productDetails && productDetails.appendChild) {
+                    productDetails.appendChild(relatedSection);
+                }
+            } catch (e) {
+                console.warn("Помилка відмальовування пов'язаних товарів (низ):", e);
             }
-            while (relatedSection.firstChild) relatedSection.removeChild(relatedSection.firstChild);
-
-            const titleText = (product.relatedTitle && product.relatedTitle.trim())
-                ? product.relatedTitle.trim()
-                : (Array.isArray(product.groupProducts) && product.groupProducts.length > 0 ? 'Інші товари з серії' : '');
-
-            const relatedIds = Array.isArray(product.relatedProducts) && product.relatedProducts.length > 0
-                ? product.relatedProducts
-                : (Array.isArray(product.groupProducts) ? product.groupProducts : []);
-
-            const relatedItems = (products || []).filter(p => relatedIds.includes(p._id) && p.visible);
-            if (titleText && relatedItems.length > 0) {
-                const h2Related = document.createElement('h2');
-                h2Related.textContent = titleText;
-                relatedSection.appendChild(h2Related);
-
-                const grid = document.createElement('div');
-                grid.className = 'product-grid';
-                relatedSection.appendChild(grid);
-
-                relatedItems.forEach(rp => {
-                    const el = createProductElement(rp);
-                    grid.appendChild(el);
-                });
-            }
-        } catch (e) {
-            console.warn('Помилка відмальовування пов\'язаних товарів:', e);
-        }
+        }, 0);
 
         const actionsRow = document.createElement('div');
         actionsRow.style.display = 'flex';
