@@ -533,12 +533,14 @@ async function fetchPublicData() {
         console.log('Fetching products...');
         const productResponse = await fetchWithRetry(`${BASE_URL}/api/public/products`);
         if (productResponse && productResponse.ok) {
-            products = await productResponse.json();
-            products = products.filter(p => p.id && p.name && p.slug && p.visible !== false);
+            const productJson = await productResponse.json();
+            const productArray = Array.isArray(productJson)
+                ? productJson
+                : (Array.isArray(productJson?.products) ? productJson.products : []);
+            products = productArray.filter(p => p.id && p.name && p.slug && p.visible !== false);
             console.log('Відфільтровані продукти:', products);
             saveToStorage('products', products);
         } else {
-            console.warn('Не вдалося отримати продукти, використовуємо локальні дані');
             products = loadFromStorage('products', []);
         }
 
@@ -549,7 +551,6 @@ if (catResponse && catResponse.ok) {
     console.log('Categories fetched:', categories.length, 'Details:', JSON.stringify(categories, null, 2));
     saveToStorage('categories', categories);
 } else {
-    console.warn('Не вдалося отримати категорії, використовуємо локальні дані');
     categories = loadFromStorage('categories', []);
 }
 
@@ -560,7 +561,6 @@ if (catResponse && catResponse.ok) {
             console.log('Slides fetched:', slides.length);
             saveToStorage('slides', slides);
         } else {
-            console.warn('Не вдалося отримати слайди, використовуємо локальні дані');
             slides = loadFromStorage('slides', []);
         }
 
@@ -571,7 +571,6 @@ if (catResponse && catResponse.ok) {
             console.log('Settings fetched:', settings);
             saveToStorage('settings', settings);
         } else {
-            console.warn('Не вдалося отримати налаштування, використовуємо локальні дані');
             settings = loadFromStorage('settings', {
                 name: 'Меблевий магазин',
                 logo: NO_IMAGE_URL,
@@ -590,7 +589,7 @@ if (catResponse && catResponse.ok) {
             throw new Error('Дані не завантажено: продукти або категорії відсутні');
         }
     } catch (e) {
-        console.error('Помилка завантаження даних через HTTP:', e);
+        // Приховуємо повідомлення для користувачів; помилки вже видно у dev
         products = loadFromStorage('products', []);
         categories = loadFromStorage('categories', []);
         slides = loadFromStorage('slides', []);
@@ -606,7 +605,7 @@ if (catResponse && catResponse.ok) {
             slideInterval: 3000,
             favicon: ''
         });
-        console.warn('Не вдалося завантажити дані з сервера. Використано локальні дані.');
+        // Тихий fallback: використано локальні дані
     }
 }
 
