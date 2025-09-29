@@ -1385,7 +1385,11 @@ app.put("/api/products/:id", authenticateToken, csrfProtection, async (req, res)
     }
 
     if (productData.subcategory && productData.subcategory.trim()) {
-      const subcategory = category.subcategories.find(sub => sub.slug === productData.subcategory);
+      const normalize = (val) => String(val || '').trim().toLowerCase();
+      const requested = normalize(productData.subcategory);
+      const subcategory = category.subcategories.find(sub =>
+        normalize(sub.slug) === requested || normalize(sub.name) === requested
+      );
       if (!subcategory) {
         logger.error("Підкатегорія не знайдено:", productData.subcategory);
         return res.status(400).json({
