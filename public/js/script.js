@@ -33,6 +33,16 @@ let searchQuery = '';
 const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://mebli.onrender.com';
 const NO_IMAGE_URL = 'https://placehold.co/300x200?text=Фото+відсутнє';
 
+// Вирубаємо зайве логування на публічному сайті (адмін не чіпаємо)
+const IS_DEV_ENV = window.location.hostname === 'localhost';
+if (!IS_DEV_ENV) {
+    const noop = function() {};
+    // Інформаційні логи та попередження ховаємо для користувачів сайту
+    // Помилки залишаємо видимими
+    try { console.log = noop; } catch (e) {}
+    try { console.warn = noop; } catch (e) {}
+}
+
 function debounce(func, wait) {
     let timeout;
     return function (...args) {
