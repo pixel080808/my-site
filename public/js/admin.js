@@ -6399,6 +6399,12 @@ async function openEditProductModal(productId) {
             </div>
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
+                <hr/>
+                <h4>Інші товари з серії (для простих товарів)</h4>
+                <input type="text" id="related-title" placeholder="Заголовок секції (напр., Інші товари з — Модульна система...)"/><br/>
+                <label for="related-title">Заголовок секції</label>
+                <div id="related-product-list"></div>
+                <button type="button" class="add-group-products-btn" onclick="openRelatedProductsModal()" style="margin-top:10px;">Додати пов'язані товари</button>
             </div>
             <input type="text" id="product-meta-title" value="${product.metaTitle || ''}" placeholder="Meta Title (SEO заголовок)"><br/>
             <label for="product-meta-title">Meta Title (SEO заголовок)</label>
@@ -6448,6 +6454,17 @@ async function openEditProductModal(productId) {
     renderPhotoList();
     renderMattressSizes();
     renderGroupProducts();
+
+    // Ініціалізуємо значення полів для пов'язаних товарів у модалі редагування
+    const relatedTitleInput = document.getElementById('related-title');
+    if (relatedTitleInput) {
+        relatedTitleInput.value = newProduct.relatedTitle || '';
+        relatedTitleInput.addEventListener('input', () => {
+            newProduct.relatedTitle = relatedTitleInput.value;
+            resetInactivityTimer();
+        });
+    }
+    renderRelatedProducts();
 
     const photoInput = document.getElementById('product-photo-file');
     if (photoInput) {
@@ -6741,7 +6758,7 @@ async function saveEditedProduct(productId) {
                     photo: color.photo || null
                 }))
             })),
-sizes: newProduct.type === 'mattresses'
+            sizes: newProduct.type === 'mattresses'
     ? validatedSizes.map(size => {
         const obj = {
             name: size.name,
@@ -6756,8 +6773,10 @@ if (
 }
         return obj;
     })
-    : validatedSizes,
+                : validatedSizes,
             groupProducts: validatedGroupProducts,
+            relatedProducts: Array.isArray(newProduct.relatedProducts) ? newProduct.relatedProducts : [],
+            relatedTitle: newProduct.relatedTitle || '',
             active: newProduct.active,
             visible,
             metaTitle,
