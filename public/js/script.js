@@ -3263,8 +3263,11 @@ document.addEventListener('click', closeDropdownHandler, true);
                     ? product.relatedProducts
                     : (Array.isArray(product.groupProducts) ? product.groupProducts : []);
 
-                const relatedItems = (products || []).filter(p => relatedIds.includes(p._id) && p.visible);
-                if (titleText && relatedItems.length > 0) {
+                const allById = new Map((products || []).map(p => [p._id, p]));
+                const relatedItemsOrdered = relatedIds
+                    .map(id => allById.get(id))
+                    .filter(p => p && p.visible);
+                if (titleText && relatedItemsOrdered.length > 0) {
                     const h2Related = document.createElement('h2');
                     h2Related.textContent = titleText;
                     relatedSection.appendChild(h2Related);
@@ -3273,7 +3276,7 @@ document.addEventListener('click', closeDropdownHandler, true);
                     grid.className = 'product-grid';
                     relatedSection.appendChild(grid);
 
-                    relatedItems.forEach(rp => {
+                    relatedItemsOrdered.forEach(rp => {
                         const el = createProductElement(rp);
                         grid.appendChild(el);
                     });
