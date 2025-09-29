@@ -4778,7 +4778,7 @@ function openAddProductModal() {
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
                 <hr/>
-                <h4>Інші товари з серії (для простих товарів)</h4>
+                <h4>Інші товари з серії</h4>
                 <input type="text" id="related-title" placeholder="Заголовок секції (напр., Інші товари з — Модульна система...)"/><br/>
                 <label for="related-title">Заголовок секції</label>
                 <div id="related-product-list"></div>
@@ -5687,17 +5687,34 @@ async function renderRelatedProductsListModal() {
     const container = document.getElementById('related-products-list-modal');
     if (!container) return;
     try {
-        const response = await fetchWithAuth(`/api/products?limit=30&excludeType=group`);
+        const response = await fetchWithAuth(`/api/products?limit=50`);
         const data = await response.json();
         const allProducts = data.products || [];
-        container.innerHTML = allProducts.map(p => {
+        // Фільтруємо пошук
+        const searchTerm = document.getElementById('related-products-search')?.value?.toLowerCase() || '';
+        const filteredProducts = allProducts.filter(p => 
+            !searchTerm || 
+            p.name.toLowerCase().includes(searchTerm) || 
+            (p.brand && p.brand.toLowerCase().includes(searchTerm))
+        );
+        
+        container.innerHTML = filteredProducts.map(p => {
             const isAdded = newProduct.relatedProducts.includes(p._id);
-            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
-                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                : p.price ? `${p.price} грн` : '';
+            let priceDisplay = '';
+            let typeDisplay = p.type;
+            
+            if (p.type === 'mattresses' && p.sizes && p.sizes.length > 0) {
+                priceDisplay = `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`;
+            } else if (p.type === 'group' && p.groupProducts && p.groupProducts.length > 0) {
+                priceDisplay = `Група з ${p.groupProducts.length} товарів`;
+                typeDisplay = 'Група';
+            } else if (p.price) {
+                priceDisplay = `${p.price} грн`;
+            }
+            
             return `
                 <div class="group-product" style="justify-content:space-between;">
-                    <div><strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span></div>
+                    <div><strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${typeDisplay} • ${priceDisplay}</span></div>
                     ${isAdded ? `<button class="delete-btn" onclick="removeRelatedProductModal('${p._id}')">Видалити</button>` : `<button class="edit-btn" onclick="addRelatedProductModal('${p._id}')">Додати</button>`}
                 </div>
             `;
@@ -5761,13 +5778,25 @@ function updateRelatedProductDisplay(relatedProducts) {
     const ordered = newProduct.relatedProducts.map(id => productsMap[id] || { _id: id, name: `Товар ID: ${id}` });
     list.innerHTML = `
         ${ordered.map((p, index) => {
-            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0
-                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
-                : (p.price ? `${p.price} грн` : '');
+            let priceDisplay = '';
+            let typeDisplay = p.type || 'simple';
+            
+            if (p.type === 'mattresses' && p.sizes && p.sizes.length > 0) {
+                priceDisplay = `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`;
+            } else if (p.type === 'group' && p.groupProducts && p.groupProducts.length > 0) {
+                priceDisplay = `Група з ${p.groupProducts.length} товарів`;
+                typeDisplay = 'Група';
+            } else if (p.price) {
+                priceDisplay = `${p.price} грн`;
+            }
+            
             return `
                 <div class="group-product draggable" draggable="true" ondragstart="dragRelatedProduct(event, ${index})" ondragover="allowDropGroupProduct(event)" ondrop="dropRelatedProduct(event, ${index})">
-                    <strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(
-${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span>
+                    <div>
+                        <strong>${p.name || `Товар ID: ${p._id}`}</strong>
+                        ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''}
+                        <span style='color:#888;'>${typeDisplay} • ${priceDisplay}</span>
+                    </div>
                     <button class="delete-btn" onclick="deleteRelatedProduct('${p._id}')">Видалити</button>
                 </div>
             `;
@@ -6475,7 +6504,7 @@ async function openEditProductModal(productId) {
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
                 <hr/>
-                <h4>Інші товари з серії (для простих товарів)</h4>
+                <h4>Інші товари з серії</h4>
                 <input type="text" id="related-title" placeholder="Заголовок секції (напр., Інші товари з — Модульна система...)"/><br/>
                 <label for="related-title">Заголовок секції</label>
                 <div id="related-product-list"></div>
