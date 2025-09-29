@@ -815,7 +815,7 @@ app.get("/api/public/products", async (req, res) => {
 
     products = await Product.find(query)
       .select(
-        "id name category subcategory price salePrice saleEnd brand material filters photos visible active slug type sizes colors groupProducts description widthCm depthCm heightCm lengthCm popularity",
+        "id name category subcategory price salePrice saleEnd brand material filters photos visible active slug type sizes colorBlocks sizes groupProducts relatedProducts relatedTitle description widthCm depthCm heightCm lengthCm popularity",
       )
       .sort({ _id: 1 })
       .limit(parsedLimit + 1)

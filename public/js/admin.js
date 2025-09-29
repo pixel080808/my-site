@@ -6,6 +6,8 @@ let newProduct = {
     colorBlocks: [],
     sizes: [],
     groupProducts: [],
+    relatedProducts: [],
+    relatedTitle: '',
     active: true,
     visible: true
 };
@@ -4669,6 +4671,8 @@ function openAddProductModal() {
         }],
         sizes: [],
         groupProducts: [],
+        relatedProducts: [],
+        relatedTitle: '',
         active: true,
         visible: true
     };
@@ -4773,6 +4777,12 @@ function openAddProductModal() {
             </div>
             <div id="group-products" class="type-specific">
                 <div id="group-product-list"></div>
+                <hr/>
+                <h4>Інші товари з серії (для простих товарів)</h4>
+                <input type="text" id="related-title" placeholder="Заголовок секції (напр., Інші товари з — Модульна система...)"/><br/>
+                <label for="related-title">Заголовок секції</label>
+                <div id="related-product-list"></div>
+                <button type="button" class="add-group-products-btn" onclick="openRelatedProductsModal()" style="margin-top:10px;">Додати пов'язані товари</button>
             </div>
             <input type="text" id="product-meta-title" placeholder="Meta Title (SEO заголовок)"><br/>
             <label for="product-meta-title">Meta Title (SEO заголовок)</label>
@@ -4887,7 +4897,7 @@ function updateProductType() {
     document.querySelectorAll('.type-specific').forEach(el => el.classList.remove('active'));
     if (newProduct.type === 'mattresses') {
         document.getElementById('mattress-sizes')?.classList.add('active');
-    } else if (newProduct.type === 'group') {
+    } else if (newProduct.type === 'group' || newProduct.type === 'simple') {
         document.getElementById('group-products')?.classList.add('active');
     }
     renderPriceFields();
@@ -5599,6 +5609,113 @@ function renderGroupProducts() {
     resetInactivityTimer();
     
     loadGroupProductNames();
+
+    // Відновити поля для related
+    const relatedTitleInput = document.getElementById('related-title');
+    if (relatedTitleInput) {
+        relatedTitleInput.value = newProduct.relatedTitle || '';
+        relatedTitleInput.addEventListener('input', () => {
+            newProduct.relatedTitle = relatedTitleInput.value;
+            resetInactivityTimer();
+        });
+    }
+    renderRelatedProducts();
+}
+
+function renderRelatedProducts() {
+    const list = document.getElementById('related-product-list');
+    if (!list) return;
+    if (!newProduct.relatedProducts || newProduct.relatedProducts.length === 0) {
+        list.innerHTML = '<div style="margin:8px 0;color:#888;">Список порожній</div>';
+        return;
+    }
+    list.innerHTML = newProduct.relatedProducts.map((pid) => `
+        <div class="group-product">
+            <strong>Товар ID: ${pid}</strong>
+            <button class="delete-btn" onclick="deleteRelatedProduct('${pid}')">Видалити</button>
+        </div>
+    `).join('');
+}
+
+function deleteRelatedProduct(productId) {
+    newProduct.relatedProducts = newProduct.relatedProducts.filter(id => id !== productId);
+    renderRelatedProducts();
+    resetInactivityTimer();
+}
+
+function openRelatedProductsModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'related-products-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <h3>Додати пов'язані товари</h3>
+            <input type="text" id="related-products-search" placeholder="Пошук по назві або бренду..." style="width:100%;margin-bottom:10px;">
+            <div id="related-products-list-modal"></div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="cancel-btn" onclick="closeRelatedProductsModal()">Закрити</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    renderRelatedProductsListModal();
+    let searchTimeout;
+    document.getElementById('related-products-search').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            renderRelatedProductsListModal();
+        }, 300);
+    });
+}
+
+function closeRelatedProductsModal() {
+    const modal = document.getElementById('related-products-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+        document.body.style.overflow = '';
+    }
+}
+
+async function renderRelatedProductsListModal() {
+    const container = document.getElementById('related-products-list-modal');
+    if (!container) return;
+    try {
+        const response = await fetchWithAuth(`/api/products?limit=30&excludeType=group`);
+        const data = await response.json();
+        const allProducts = data.products || [];
+        container.innerHTML = allProducts.map(p => {
+            const isAdded = newProduct.relatedProducts.includes(p._id);
+            const priceDisplay = p.type === 'mattresses' && p.sizes && p.sizes.length > 0 
+                ? `${p.sizes.length} розмірів від ${Math.min(...p.sizes.map(s => s.price))} грн`
+                : p.price ? `${p.price} грн` : '';
+            return `
+                <div class="group-product" style="justify-content:space-between;">
+                    <div><strong>${p.name}</strong> ${p.brand ? `<span style='color:#888;'>(${p.brand})</span>` : ''} <span style='color:#888;'>${priceDisplay}</span></div>
+                    ${isAdded ? `<button class="delete-btn" onclick="removeRelatedProductModal('${p._id}')">Видалити</button>` : `<button class="edit-btn" onclick="addRelatedProductModal('${p._id}')">Додати</button>`}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Помилка завантаження списку пов\'язаних товарів:', e);
+        container.innerHTML = '<div style="color:#c00;">Помилка завантаження</div>';
+    }
+}
+
+async function addRelatedProductModal(productId) {
+    if (!newProduct.relatedProducts.includes(productId)) {
+        newProduct.relatedProducts.push(productId);
+        await renderRelatedProductsListModal();
+        renderRelatedProducts();
+        resetInactivityTimer();
+    }
+}
+
+async function removeRelatedProductModal(productId) {
+    newProduct.relatedProducts = newProduct.relatedProducts.filter(id => id !== productId);
+    await renderRelatedProductsListModal();
+    renderRelatedProducts();
+    resetInactivityTimer();
 }
 
 async function loadGroupProductNames() {
@@ -5980,6 +6097,8 @@ if (
     })
     : newProduct.sizes,
             groupProducts: newProduct.groupProducts,
+            relatedProducts: newProduct.relatedProducts,
+            relatedTitle: newProduct.relatedTitle,
             active: true,
             visible,
             metaTitle,
@@ -6166,7 +6285,9 @@ async function openEditProductModal(productId) {
         colorBlocks: colorBlocks,
         photos: [...product.photos],
         sizes: product.sizes ? product.sizes.filter(size => size.name && typeof size.price === 'number' && size.price >= 0) : [],
-        groupProducts: [...product.groupProducts]
+        groupProducts: [...product.groupProducts],
+        relatedProducts: [...(product.relatedProducts || [])],
+        relatedTitle: product.relatedTitle || ''
     };
 
     const escapedName = product.name

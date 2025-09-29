@@ -63,6 +63,9 @@ const productSchema = new mongoose.Schema({
         }]
     }],
     groupProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    // Серія/пов'язані товари (для простих товарів): список пов'язаних товарів та кастомний заголовок секції
+    relatedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    relatedTitle: { type: String, trim: true },
     description: { type: String, trim: true },
     widthCm: { type: Number, min: 0 },
     depthCm: { type: Number, min: 0 },
@@ -172,6 +175,10 @@ const productSchemaValidation = Joi.object({
     groupProducts: Joi.array().items(
         Joi.string().regex(/^[0-9a-fA-F]{24}$/)
     ).optional(),
+    relatedProducts: Joi.array().items(
+        Joi.string().regex(/^[0-9a-fA-F]{24}$/)
+    ).optional(),
+    relatedTitle: Joi.string().trim().allow('').optional(),
     description: Joi.string().trim().allow('').optional(),
     widthCm: Joi.number().min(0).allow(null).optional(),
     depthCm: Joi.number().min(0).allow(null).optional(),

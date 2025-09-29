@@ -9,6 +9,7 @@ let settings = {};
 let currentProduct = null;
 let currentCategory = null;
 let currentSubcategory = null;
+let forceSubcategoryInPath = false; // одноразовий прапорець для кліку по підкатегорії в категорії
 let currentSort = '';
 let currentPage = 1;
 const perPage = 20;
@@ -729,7 +730,21 @@ function connectPublicWebSocket() {
                 categories = data;
                 saveToStorage('categories', categories);
                 renderCategories();
-                renderCatalogDropdown();
+        renderCatalogDropdown();
+
+        // Якщо поточний шлях — лише категорія, гарантуємо, що підкатегорія не вибрана
+        try {
+            const parts = (window.location.pathname.slice(1) || '').split('/').filter(p => p);
+            if (parts.length === 1) {
+                const cat = categories.find(c => c.slug === parts[0]);
+                if (cat) {
+                    currentCategory = cat.slug;
+                    currentSubcategory = null;
+                    saveToStorage('currentCategory', currentCategory);
+                    saveToStorage('currentSubcategory', null);
+                }
+            }
+        } catch (_) {}
                 if (document.getElementById('catalog').classList.contains('active')) {
                     renderCatalog(currentCategory, currentSubcategory, currentProduct);
                 }
@@ -1222,7 +1237,7 @@ function showSection(sectionId) {
         updateFloatingFavorite();
     }
     newPath = '/';
-} else if (sectionId === 'catalog') {
+    } else if (sectionId === 'catalog') {
     if (isSearchActive) {
 newPath = searchQuery
     ? `/catalog/search/${encodeURIComponent(searchQuery.toLowerCase().replace(/\s+/g, '-'))}`
@@ -1232,10 +1247,15 @@ newPath = searchQuery
         }
     } else if (currentCategory) {
             const catSlug = transliterate(currentCategory.replace('ь', ''));
-            const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
+            // Якщо поточний URL має лише категорію — не додаємо підкатегорію в новий шлях,
+            // крім випадку явного кліку на підкатегорію (forceSubcategoryInPath)
+            const currentParts = (window.location.pathname.slice(1) || '').split('/').filter(p => p);
+            const allowSubInPath = forceSubcategoryInPath || currentParts.length >= 2;
+            const subCatSlug = allowSubInPath && currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
             newPath = `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}`;
             if (typeof renderCatalog === 'function') {
-                renderCatalog(currentCategory, currentSubcategory, null);
+                const effectiveSubcategory = allowSubInPath ? currentSubcategory : null;
+                renderCatalog(currentCategory, effectiveSubcategory, null);
             }
         } else {
             showSection('home');
@@ -1936,13 +1956,16 @@ function renderCatalogDropdown() {
 }
 
 function renderCatalog(category = null, subcategory = null, product = null, searchResultsParam = null) {
+    // зберігаємо в глобальних (будемо нормалізувати нижче)
     currentCategory = category;
     currentSubcategory = subcategory;
+
     if (product) {
         currentProduct = product;
         showSection('product-details');
         return;
     }
+
     const productsDiv = document.getElementById('products');
     if (!productsDiv) return;
     while (productsDiv.firstChild) productsDiv.removeChild(productsDiv.firstChild);
@@ -1956,6 +1979,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
 
     baseFilteredProducts = null;
 
+    // --- Рендер результатів пошуку ---
     if (isSearchActive && searchResultsParam) {
         const h2 = document.createElement('h2');
         h2.textContent = `Результати пошуку за "${searchQuery}"`;
@@ -1977,14 +2001,17 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             p.textContent = 'Нічого не знайдено';
             productList.appendChild(p);
         }
-    } else if (!category) {
+        return;
+    }
+
+    // --- Показ списку категорій (якщо category === null) ---
+    if (!category) {
         const h2 = document.createElement('h2');
         h2.textContent = 'Виберіть категорію';
         productsDiv.appendChild(h2);
 
         const categoryList = document.createElement('div');
         categoryList.className = 'category-list';
-        // Сортуємо категорії за полем order
         const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
         sortedCategories.forEach(cat => {
             const itemDiv = document.createElement('div');
@@ -2004,6 +2031,7 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             img.src = cat.image || cat.photo || NO_IMAGE_URL;
             img.alt = cat.name;
             img.loading = 'lazy';
+            img.onerror = () => { img.src = NO_IMAGE_URL; };
             imgLink.appendChild(img);
             itemDiv.appendChild(imgLink);
 
@@ -2025,102 +2053,133 @@ function renderCatalog(category = null, subcategory = null, product = null, sear
             categoryList.appendChild(itemDiv);
         });
         productsDiv.appendChild(categoryList);
-    } else {
-        const selectedCat = categories.find(c => c.slug === category);
-        if (!selectedCat) {
-            const p = document.createElement('p');
-            p.textContent = 'Категорія не знайдена';
-            productsDiv.appendChild(p);
-            return;
-        }
+        return;
+    }
 
-        let headerText = selectedCat.name;
-        let selectedSubCat = null;
-        if (subcategory) {
-            selectedSubCat = selectedCat.subcategories?.find(sub => sub.slug === subcategory);
-            if (selectedSubCat) {
-                headerText = selectedSubCat.name;
-            }
-        }
-            const h2 = document.createElement('h2');
-        h2.textContent = headerText;
-            productsDiv.appendChild(h2);
+    // --- Нормалізований пошук категорії (підтримуємо slug, name, транслітерацію) ---
+    const selectedCat = categories.find(c =>
+        c.slug === category ||
+        c.name === category ||
+        transliterate(c.name.replace('ь', '')) === category
+    );
 
-        if (!currentProduct) {
-            const subFilterDiv = document.createElement('div');
-            subFilterDiv.id = 'subcategory-filter';
-            subFilterDiv.className = 'subcategory-filter';
-            const subButtonsDiv = document.createElement('div');
-            subButtonsDiv.className = 'subcategory-buttons';
+    if (!selectedCat) {
+        const p = document.createElement('p');
+        p.textContent = 'Категорія не знайдена';
+        productsDiv.appendChild(p);
+        return;
+    }
 
-            const allBtnLink = document.createElement('a');
-            allBtnLink.href = `/${selectedCat.slug}`;
-            allBtnLink.onclick = (e) => {
+    // Заголовок: показуємо назву категорії, а підкатегорію — лише якщо вона явно присутня у URL
+    let headerText = selectedCat.name;
+    let selectedSubCatObj = null;
+    if (subcategory && (window.location.pathname.split('/').filter(Boolean).length >= 2)) {
+        selectedSubCatObj = selectedCat.subcategories?.find(sub =>
+            sub.slug === subcategory ||
+            sub.name === subcategory ||
+            transliterate(sub.name.replace('ь', '')) === subcategory
+        );
+        if (selectedSubCatObj) headerText = selectedSubCatObj.name;
+    }
+
+    const h2 = document.createElement('h2');
+    h2.textContent = headerText;
+    productsDiv.appendChild(h2);
+
+    // --- Фільтр підкатегорій (кнопки) ---
+    if (!currentProduct) {
+        const subFilterDiv = document.createElement('div');
+        subFilterDiv.id = 'subcategory-filter';
+        subFilterDiv.className = 'subcategory-filter';
+        const subButtonsDiv = document.createElement('div');
+        subButtonsDiv.className = 'subcategory-buttons';
+
+        const allBtnLink = document.createElement('a');
+        allBtnLink.href = `/${selectedCat.slug}`;
+        allBtnLink.onclick = (e) => {
+            e.preventDefault();
+            currentSubcategory = null;
+            currentPage = 1;
+            showSection('catalog');
+        };
+        const allBtn = document.createElement('button');
+        allBtn.textContent = 'Усі';
+        allBtnLink.appendChild(allBtn);
+        subButtonsDiv.appendChild(allBtnLink);
+
+        const sortedSubcategories = (selectedCat.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        sortedSubcategories.forEach(sub => {
+            const btnLink = document.createElement('a');
+            btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
+            btnLink.onclick = (e) => {
                 e.preventDefault();
-                currentSubcategory = null;
+                // Переходимо до підкатегорії зі сторінки категорії
+                currentSubcategory = sub.slug;
+                forceSubcategoryInPath = true;
                 currentPage = 1;
                 showSection('catalog');
+                forceSubcategoryInPath = false;
             };
-            const allBtn = document.createElement('button');
-            allBtn.textContent = 'Усі';
-            allBtnLink.appendChild(allBtn);
-            subButtonsDiv.appendChild(allBtnLink);
+            const btn = document.createElement('button');
+            btn.textContent = sub.name;
+            btnLink.appendChild(btn);
+            subButtonsDiv.appendChild(btnLink);
+        });
 
-            // Сортуємо підкатегорії за полем order
-            const sortedSubcategories = (selectedCat.subcategories || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-            sortedSubcategories.forEach(sub => {
-                const btnLink = document.createElement('a');
-                btnLink.href = `/${selectedCat.slug}/${sub.slug}`;
-                btnLink.onclick = (e) => {
-                    e.preventDefault();
-                    currentSubcategory = sub.slug;
-                    currentPage = 1;
-                    showSection('catalog');
-                };
-                const btn = document.createElement('button');
-                btn.textContent = sub.name;
-                btnLink.appendChild(btn);
-                subButtonsDiv.appendChild(btnLink);
-            });
-            subFilterDiv.appendChild(subButtonsDiv);
-            productsDiv.appendChild(subFilterDiv);
+        subFilterDiv.appendChild(subButtonsDiv);
+        productsDiv.appendChild(subFilterDiv);
 
-            productsDiv.appendChild(createControlsContainer());
-        }
-
-        const productList = document.createElement('div');
-        productList.id = 'product-list';
-        productList.className = 'product-grid';
-        productsDiv.appendChild(productList);
-
-        let subcategoryName = null;
-        if (subcategory) {
-            const selectedSubCat = selectedCat.subcategories?.find(sub => sub.slug === subcategory);
-            subcategoryName = selectedSubCat ? selectedSubCat.name : subcategory;
-        }
-
-        filteredProducts = products.filter(p => 
-            p.category === category && 
-            (!subcategoryName || p.subcategory === subcategoryName) && 
-            p.visible
-        );
-
-        baseFilteredProducts = [...filteredProducts];
-
-        if (filteredProducts.length === 0) {
-            const p = document.createElement('p');
-            p.textContent = 'Нічого не знайдено';
-            productList.appendChild(p);
-        } else {
-            renderProducts(filteredProducts);
-        }
+        productsDiv.appendChild(createControlsContainer());
     }
+
+    const productList = document.createElement('div');
+    productList.id = 'product-list';
+    productList.className = 'product-grid';
+    productsDiv.appendChild(productList);
+
+    // --- Нормалізований subcategorySlug (працюємо зі slug всюди),
+    // але ігноруємо його, якщо шлях містить лише категорію
+    let subcategorySlug = null;
+    const pathPartsLen = window.location.pathname.split('/').filter(Boolean).length;
+    if (subcategory && (pathPartsLen >= 2 || forceSubcategoryInPath)) {
+        const sel = selectedCat.subcategories?.find(sub =>
+            sub.slug === subcategory ||
+            transliterate(sub.name.replace('ь', '')) === subcategory ||
+            sub.name === subcategory
+        );
+        subcategorySlug = sel ? sel.slug : subcategory;
+    }
+
+    // --- Фільтрація продуктів: підтримка product.category як slug або name ---
+    filteredProducts = products.filter(p => {
+        const productCategory = p.category || '';
+        const catMatches =
+            productCategory === selectedCat.slug ||
+            productCategory === selectedCat.name ||
+            transliterate(productCategory.replace('ь', '')) === selectedCat.slug;
+        const subMatches = !subcategorySlug || transliterate((p.subcategory || '').replace('ь','')) === subcategorySlug || (selectedCat.subcategories||[]).some(sc => sc.slug === subcategorySlug && sc.name === p.subcategory);
+        return catMatches && subMatches && p.visible;
+    });
+
+    // Нормалізуємо глобальний currentSubcategory до slug
+    currentSubcategory = subcategorySlug || null;
+
+    baseFilteredProducts = [...filteredProducts];
+
+    if (filteredProducts.length === 0) {
+        const p = document.createElement('p');
+        p.textContent = 'Нічого не знайдено';
+        productList.appendChild(p);
+    } else {
+        renderProducts(filteredProducts);
+    }
+
     renderFilters();
 
     if (currentSort) {
         sortProducts(currentSort);
     }
-    
+
     restoreSelectedColors();
 }
 
@@ -2762,10 +2821,12 @@ function renderPagination(totalPages, totalItems, autoUpdateCurrentPage = true) 
 function updateHistoryState() {
     const catSlug = currentCategory ? transliterate(currentCategory.replace('ь', '')) : '';
     const subCatSlug = currentSubcategory ? transliterate(currentSubcategory.replace('ь', '')) : '';
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const allowSubInPath = forceSubcategoryInPath || pathParts.length >= 2;
     let newPath = isSearchActive
         ? `/catalog/search/${transliterate(searchQuery.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-'))}`
         : currentCategory
-        ? `/${catSlug}${subCatSlug ? `/${subCatSlug}` : ''}`
+        ? `/${catSlug}${(allowSubInPath && subCatSlug) ? `/${subCatSlug}` : ''}`
         : '/catalog';
 
     const activeFilters = getActiveFilters();
@@ -3179,6 +3240,45 @@ document.addEventListener('click', closeDropdownHandler, true);
             plusBtn.onclick = typeof changeQuantity === 'function' ? () => changeQuantity(product._id, 1) : null;
             qtyDiv.appendChild(plusBtn);
             rightDiv.appendChild(qtyDiv);
+        }
+
+        // Секція "Інші товари з серії"
+        try {
+            const relatedContainerId = 'related-products-section';
+            let relatedSection = document.getElementById(relatedContainerId);
+            if (!relatedSection) {
+                relatedSection = document.createElement('div');
+                relatedSection.id = relatedContainerId;
+                relatedSection.style.marginTop = '30px';
+                productDetails.appendChild(relatedSection);
+            }
+            while (relatedSection.firstChild) relatedSection.removeChild(relatedSection.firstChild);
+
+            const titleText = (product.relatedTitle && product.relatedTitle.trim())
+                ? product.relatedTitle.trim()
+                : (Array.isArray(product.groupProducts) && product.groupProducts.length > 0 ? 'Інші товари з серії' : '');
+
+            const relatedIds = Array.isArray(product.relatedProducts) && product.relatedProducts.length > 0
+                ? product.relatedProducts
+                : (Array.isArray(product.groupProducts) ? product.groupProducts : []);
+
+            const relatedItems = (products || []).filter(p => relatedIds.includes(p._id) && p.visible);
+            if (titleText && relatedItems.length > 0) {
+                const h2Related = document.createElement('h2');
+                h2Related.textContent = titleText;
+                relatedSection.appendChild(h2Related);
+
+                const grid = document.createElement('div');
+                grid.className = 'product-grid';
+                relatedSection.appendChild(grid);
+
+                relatedItems.forEach(rp => {
+                    const el = createProductElement(rp);
+                    grid.appendChild(el);
+                });
+            }
+        } catch (e) {
+            console.warn('Помилка відмальовування пов\'язаних товарів:', e);
         }
 
         const actionsRow = document.createElement('div');
@@ -4232,7 +4332,8 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
             }
             
             if (subCat) {
-                currentSubcategory = subCat.name;
+                // Якщо явно передана підкатегорія у шляху /:category/:subcategory – показуємо її (зберігаємо slug)
+                currentSubcategory = subCat.slug;
                 renderCatalog(currentCategory, currentSubcategory);
                 showSection('catalog');
                 return;
@@ -4245,6 +4346,12 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
                 showSection('product-details');
                 return;
             }
+            // Якщо друга частина шляху не є валідною підкатегорією або товаром – очищаємо підкатегорію
+            currentSubcategory = null;
+            saveToStorage('currentSubcategory', null);
+            renderCatalog(currentCategory, null);
+            showSection('catalog');
+            return;
         }
         if (parts.length === 3) {
             let subCat = (cat.subcategories || []).find(sub => sub.slug === parts[1]);
@@ -4254,7 +4361,7 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
             }
             
             if (subCat) {
-                currentSubcategory = subCat.name;
+                currentSubcategory = subCat.slug;
                 const product = products.find(p => p.slug === parts[2]);
                 if (product) {
                     currentProduct = product;
@@ -4268,6 +4375,9 @@ searchQuery = decodeURIComponent(searchSlug).replace(/-/g, ' ').toLowerCase();
                 return;
             }
         }
+        // На прямому шляху категорії гарантуємо, що підкатегорія не вибрана
+        currentSubcategory = null;
+        saveToStorage('currentSubcategory', null);
         renderCatalog(currentCategory, null);
         showSection('catalog');
         return;
@@ -5976,8 +6086,23 @@ async function handleNavigation(path, isPopstate = false) {
                 saveToStorage('searchResults', []);
             }
         } else {
+            // Для решти шляхів (категорія/підкатегорія/товар) не змінюємо URL штучно,
+            // а лише валідно встановлюємо стан згідно з поточним шляхом
         await validateAndFixPageState();
-                        return;
+        // Після валідації: якщо URL має лише категорію — не підставляти підкатегорію
+        try {
+            const partsNow = (window.location.pathname.slice(1) || '').split('/').filter(p => p);
+            if (partsNow.length === 1) {
+                const catNow = categories.find(c => c.slug === partsNow[0]);
+                if (catNow) {
+                    currentCategory = catNow.slug;
+                    currentSubcategory = null;
+                    saveToStorage('currentCategory', currentCategory);
+                    saveToStorage('currentSubcategory', null);
+                }
+            }
+        } catch (_) {}
+        return;
         }
 
         if (!isPopstate) {
@@ -6614,12 +6739,12 @@ window.addEventListener('popstate', async (event) => {
 
                 const category = categories.find(c => transliterate(c.name.replace('ь', '')) === parts[0]);
                 if (category) {
-                    const subcategory = category.subcategories?.find(sub => 
+            const subcategory = category.subcategories?.find(sub => 
                         sub.slug === subCatSlug || transliterate(sub.name.replace('ь', '')) === subCatSlug
                     );
                     if (subcategory) {
                         currentCategory = category.name;
-                        currentSubcategory = subcategory.name;
+                        currentSubcategory = subcategory.slug;
                         console.log('popstate: Знайдено підкатегорію:', currentSubcategory);
                         renderCatalog(currentCategory, currentSubcategory);
                         showSection('catalog');
