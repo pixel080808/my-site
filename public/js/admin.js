@@ -7303,7 +7303,12 @@ async function uploadBulkPrices() {
             let updated = 0;
             let counter = 1;
             
-            const productMap = new Map();
+            // Карта відповідності по порядковому номеру (старий спосіб)
+            const productMapByIndex = new Map();
+            // Карта відповідності по ключу name+brand (новий стабільний спосіб)
+            const productMapByKey = new Map();
+            const buildKey = (name, brand) => `${String(name||'').trim().toLowerCase()}|${String(brand||'').trim().toLowerCase()}`;
+            
             const activeProducts = products.filter(p => p.active && p.type !== 'group');
             
             if (activeProducts.length === 0) {
@@ -7312,18 +7317,19 @@ async function uploadBulkPrices() {
             }
             
             activeProducts.forEach(p => {
-                if (p.type === 'simple') {
-                    productMap.set(counter, p);
-                    counter++;
-                } else if (p.type === 'mattresses') {
-                    productMap.set(counter, p);
+                if (p.type === 'simple' || p.type === 'mattresses') {
+                    productMapByIndex.set(counter, p);
+                    const key = buildKey(p.name, p.brand || 'Без бренду');
+                    if (!productMapByKey.has(key)) {
+                        productMapByKey.set(key, p);
+                    }
                     counter++;
                 }
             });
 
             console.log(`Початок обробки ${lines.length} рядків з файлу`);
-            console.log(`Створено мапу з ${productMap.size} товарів для імпорту`);
-            console.log('Мапа товарів:', Array.from(productMap.entries()).map(([num, p]) => `${num}: ${p.name}`));
+            console.log(`Створено мапу з ${productMapByIndex.size} товарів (за індексом) і ${productMapByKey.size} (за name+brand)`);
+            console.log('Мапа (індекс→назва):', Array.from(productMapByIndex.entries()).map(([num, p]) => `${num}: ${p.name}`));
             console.log('Починаємо групування оновлень за товарами...');
             console.log('Формат файлу: порядковий_номер,назва,бренд,ціна[,акційна_ціна]');
             console.log('Для матраців: порядковий_номер,назва,бренд,розмір,ціна[,акційна_ціна]');
@@ -7340,13 +7346,21 @@ async function uploadBulkPrices() {
                 console.log(`Обробка рядка: ${line} (${parts.length} частин)`);
                 
                 const orderNumber = parseInt(parts[0].trim());
-                const product = productMap.get(orderNumber);
+                // Для простих і матраців формат: порядковий, назва, бренд, ...
+                const nameFromFile = (parts[1] || '').trim();
+                const brandFromFile = (parts[2] || '').trim() || 'Без бренду';
+                const keyFromFile = buildKey(nameFromFile, brandFromFile);
+                let product = productMapByKey.get(keyFromFile);
+                if (!product) {
+                    // fallback на старий спосіб за індексом
+                    product = productMapByIndex.get(orderNumber);
+                }
                 
                 console.log(`Обробка рядка: ${line}`);
                 console.log(`Порядковий номер: ${orderNumber}, знайдений товар:`, product ? product.name : 'не знайдено');
                 
                 if (!product) {
-                    console.error(`Товар з порядковим номером ${orderNumber} не знайдено`);
+                    console.error(`Товар не знайдено за ключем name+brand="${nameFromFile}"|"${brandFromFile}" і індексом ${orderNumber}`);
                     continue;
                 }
 
