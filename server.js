@@ -3442,6 +3442,12 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
       if (cleanedProduct.groupProducts && Array.isArray(cleanedProduct.groupProducts)) {
         cleanedProduct.groupProducts = []
       }
+      if (cleanedProduct.relatedProducts && Array.isArray(cleanedProduct.relatedProducts)) {
+        cleanedProduct.relatedProducts = []
+      }
+      if (cleanedProduct.relatedProducts && Array.isArray(cleanedProduct.relatedProducts)) {
+        cleanedProduct.relatedProducts = []
+      }
       
       if (!cleanedProduct.material || cleanedProduct.material === '') {
         cleanedProduct.material = ''
@@ -3493,6 +3499,8 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
       const product = insertedProducts[i]
       const originalProduct = products[i]
       
+      const updateDoc = {}
+      
       if (product.type === 'group' && originalProduct.groupProducts && Array.isArray(originalProduct.groupProducts)) {
         const updatedGroupProducts = originalProduct.groupProducts.map(item => {
           if (typeof item === 'object' && item !== null && item.originalId) {
@@ -3508,9 +3516,30 @@ app.post("/api/import/products", authenticateToken, csrfProtection, importUpload
             return item.toString()
           }
         }).filter(id => id && id !== 'undefined')
-        
+        updateDoc.groupProducts = updatedGroupProducts
+      }
+      
+      if (originalProduct.relatedProducts && Array.isArray(originalProduct.relatedProducts)) {
+        const updatedRelatedProducts = originalProduct.relatedProducts.map(item => {
+          if (typeof item === 'object' && item !== null && item.originalId) {
+            return idMapping.get(item.originalId) || item.originalId
+          }
+          else if (typeof item === 'string') {
+            return idMapping.get(item) || item
+          }
+          else if (typeof item === 'object' && item !== null && item._id) {
+            return idMapping.get(item._id) || item._id
+          }
+          else {
+            return item.toString()
+          }
+        }).filter(id => id && id !== 'undefined')
+        updateDoc.relatedProducts = updatedRelatedProducts
+      }
+      
+      if (Object.keys(updateDoc).length > 0) {
         updatePromises.push(
-          Product.findByIdAndUpdate(product._id, { groupProducts: updatedGroupProducts })
+          Product.findByIdAndUpdate(product._id, updateDoc)
         )
       }
     }
@@ -3593,6 +3622,8 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
       const product = insertedProducts[i]
       const originalProduct = products[i]
       
+      const updateDoc = {}
+      
       if (product.type === 'group' && originalProduct.groupProducts && Array.isArray(originalProduct.groupProducts)) {
         const updatedGroupProducts = originalProduct.groupProducts.map(item => {
           if (typeof item === 'object' && item !== null && item.originalId) {
@@ -3608,9 +3639,30 @@ app.post("/api/import/products/add", authenticateToken, csrfProtection, importUp
             return item.toString()
           }
         }).filter(id => id && id !== 'undefined')
-        
+        updateDoc.groupProducts = updatedGroupProducts
+      }
+      
+      if (originalProduct.relatedProducts && Array.isArray(originalProduct.relatedProducts)) {
+        const updatedRelatedProducts = originalProduct.relatedProducts.map(item => {
+          if (typeof item === 'object' && item !== null && item.originalId) {
+            return idMapping.get(item.originalId) || item.originalId
+          }
+          else if (typeof item === 'string') {
+            return idMapping.get(item) || item
+          }
+          else if (typeof item === 'object' && item !== null && item._id) {
+            return idMapping.get(item._id) || item._id
+          }
+          else {
+            return item.toString()
+          }
+        }).filter(id => id && id !== 'undefined')
+        updateDoc.relatedProducts = updatedRelatedProducts
+      }
+      
+      if (Object.keys(updateDoc).length > 0) {
         updatePromises.push(
-          Product.findByIdAndUpdate(product._id, { groupProducts: updatedGroupProducts })
+          Product.findByIdAndUpdate(product._id, updateDoc)
         )
       }
     }
@@ -3848,6 +3900,9 @@ app.get("/api/products/export", authenticateToken, async (req, res) => {
         }
         
         productCopy.groupProducts = fullGroupProducts
+      }
+      if (productCopy.relatedProducts && Array.isArray(productCopy.relatedProducts)) {
+        productCopy.relatedProducts = productCopy.relatedProducts.map(relId => ({ originalId: relId.toString() }))
       }
       
       return productCopy
