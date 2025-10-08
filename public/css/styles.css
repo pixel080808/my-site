@@ -2671,7 +2671,7 @@ s {
 }
 
 .product-detail-container {
-    max-width: 1200px;
+    max-width: 2200px;
     margin: 0 auto;
     padding: 0px;
     display: flex;
@@ -6157,6 +6157,7 @@ s {
 
     .content {
       padding: 11px;
+      padding-left: 30px;
     }
 
     h2 {
@@ -6686,6 +6687,7 @@ s {
 
     .content {
         padding: 11px;
+        padding-left: 30px;
     }
 
     .slide img {
